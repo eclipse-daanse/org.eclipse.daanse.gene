@@ -1,6 +1,6 @@
 {
   "name": "@eclipse-daanse/gene",
-  "version": "0.0.1-next.1",
+  "version": "0.0.1-next.2",
   "description": "Eclipse Daanse Gene",
   "type": "module",
   "main": "./dist/gene.umd.cjs",
