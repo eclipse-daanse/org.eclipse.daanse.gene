@@ -1,0 +1,21 @@
+{
+  "id": "metamodeler",
+  "name": "Metamodeler",
+  "version": "0.1.0",
+  "description": "Visual Ecore Metamodel Editor with OCL Support",
+  "entry": "src/index.ts",
+  "dependencies": [
+    "gene-app",
+    "ui-layout"
+  ],
+  "provides": [
+    {
+      "id": "ui.metamodeler.components",
+      "description": "Metamodeler UI components"
+    },
+    {
+      "id": "ui.metamodeler.composables",
+      "description": "Metamodeler composables"
+    }
+  ]
+}

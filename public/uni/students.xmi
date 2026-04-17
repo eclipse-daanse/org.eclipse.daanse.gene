@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uni:University xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:uni="http://example.org/university"
+    name="TU Berlin" location="Berlin, Germany">
+  <departments name="Computer Science">
+    <courses name="Software Engineering" credits="6"/>
+    <courses name="Databases" credits="6"/>
+    <courses name="Algorithms" credits="9"/>
+  </departments>
+  <departments name="Mathematics">
+    <courses name="Linear Algebra" credits="6"/>
+    <courses name="Calculus" credits="9"/>
+  </departments>
+  <students name="Max Mustermann" email="max@tu-berlin.de" studentId="123456" semester="3"/>
+  <students name="Anna Schmidt" email="anna@tu-berlin.de" studentId="234567" semester="5"/>
+  <students name="Peter Mueller" email="peter@tu-berlin.de" studentId="345678" semester="1"/>
+</uni:University>

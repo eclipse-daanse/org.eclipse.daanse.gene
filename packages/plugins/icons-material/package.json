@@ -1,0 +1,25 @@
+{
+  "name": "plugin-icons-material",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "vite build --config vite.tsm.config.ts",
+    "build:dev": "vite build --config vite.tsm.config.ts --mode development",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "vue": "^3.5.26"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.3",
+    "typescript": "~5.9.3",
+    "vite": "^6.3.5",
+    "vue-tsc": "^3.2.2"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0",
+    "@eclipse-daanse/tsm": "^0.0.1-next.1"
+  }
+}

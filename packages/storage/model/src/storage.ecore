@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="storage"
+    nsURI="https://eclipse.org/gene/storage"
+    nsPrefix="storage">
+
+  <!-- ============================================ -->
+  <!-- WORKSPACE                                    -->
+  <!-- ============================================ -->
+  <eClassifiers xsi:type="ecore:EClass" name="Workspace">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Root container for all repositories in the workspace"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="repositories" upperBound="-1"
+        eType="#//Repository" containment="true" eOpposite="#//Repository/workspace"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="activeRepository"
+        eType="#//Repository"/>
+  </eClassifiers>
+
+  <!-- ============================================ -->
+  <!-- REPOSITORY                                   -->
+  <!-- ============================================ -->
+  <eClassifiers xsi:type="ecore:EClass" name="Repository" abstract="true">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Abstract base for storage repositories"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="uri" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Unique identifier URI for this repository"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="state"
+        eType="#//RepositoryState" defaultValueLiteral="DISCONNECTED"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="errorMessage"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="root"
+        eType="#//Folder" containment="true" eOpposite="#//Folder/repository"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="workspace"
+        eType="#//Workspace" eOpposite="#//Workspace/repositories"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="RepositoryState">
+    <eLiterals name="DISCONNECTED" value="0"/>
+    <eLiterals name="CONNECTING" value="1"/>
+    <eLiterals name="CONNECTED" value="2"/>
+    <eLiterals name="SYNCING" value="3"/>
+    <eLiterals name="ERROR" value="4"/>
+  </eClassifiers>
+
+  <!-- ============================================ -->
+  <!-- LOCAL REPOSITORY (IndexedDB)                 -->
+  <!-- ============================================ -->
+  <eClassifiers xsi:type="ecore:EClass" name="LocalRepository" eSuperTypes="#//Repository">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Browser-local storage using IndexedDB"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="databaseName"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+        defaultValueLiteral="gene-workspace"/>
+  </eClassifiers>
+
+  <!-- ============================================ -->
+  <!-- GIT REPOSITORY                               -->
+  <!-- ============================================ -->
+  <eClassifiers xsi:type="ecore:EClass" name="GitRepository" eSuperTypes="#//Repository">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Git-based storage (GitHub, Gitea, etc.)"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="provider" lowerBound="1"
+        eType="#//GitProvider" defaultValueLiteral="GITHUB"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="owner" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="repo" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="baseUrl"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Custom base URL for self-hosted instances (Gitea)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="token"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" transient="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Authentication token (not persisted)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="currentBranch"
+        eType="#//Branch"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="branches" upperBound="-1"
+        eType="#//Branch" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="currentCommit"
+        eType="#//Commit"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="GitProvider">
+    <eLiterals name="GITHUB" value="0"/>
+    <eLiterals name="GITEA" value="1"/>
+    <eLiterals name="GITLAB" value="2"/>
+  </eClassifiers>
+
+  <!-- ============================================ -->
+  <!-- GIT BRANCH & COMMIT                          -->
+  <!-- ============================================ -->
+  <eClassifiers xsi:type="ecore:EClass" name="Branch">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sha"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="isDefault"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="commits" upperBound="-1"
+        eType="#//Commit" containment="true"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="Commit">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sha" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="message"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="author"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="date"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDate"/>
+  </eClassifiers>
+
+  <!-- ============================================ -->
+  <!-- MODEL ATLAS REPOSITORY                       -->
+  <!-- ============================================ -->
+  <eClassifiers xsi:type="ecore:EClass" name="AtlasRepository" eSuperTypes="#//Repository">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Remote repository backed by a Model Atlas server"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="atlasBaseUrl" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Base URL of the Model Atlas REST API (e.g. http://localhost:8185/rest)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scopeName" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name of the Atlas scope to connect to"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="atlasToken"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" transient="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Authentication token (not persisted)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================ -->
+  <!-- FILE SYSTEM ENTRIES                          -->
+  <!-- ============================================ -->
+  <eClassifiers xsi:type="ecore:EClass" name="FileSystemEntry" abstract="true">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Abstract base for files and folders"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="path" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="parent"
+        eType="#//Folder" eOpposite="#//Folder/children"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="Folder" eSuperTypes="#//FileSystemEntry">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="children" upperBound="-1"
+        eType="#//FileSystemEntry" containment="true" eOpposite="#//FileSystemEntry/parent"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="repository"
+        eType="#//Repository" eOpposite="#//Repository/root"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="File" eSuperTypes="#//FileSystemEntry">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="state"
+        eType="#//FileState" defaultValueLiteral="UNLOADED"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="hash"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Content hash for change detection"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="mimeType"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="size"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="content" transient="true"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="File content (loaded on demand, not persisted in model)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="FileState">
+    <eLiterals name="NEW" value="0"/>
+    <eLiterals name="UNLOADED" value="1"/>
+    <eLiterals name="LOADED" value="2"/>
+    <eLiterals name="MODIFIED" value="3"/>
+    <eLiterals name="DELETED" value="4"/>
+  </eClassifiers>
+
+</ecore:EPackage>

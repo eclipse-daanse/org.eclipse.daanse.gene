@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suni:University xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:suni="http://example.org/simpleuni"
+    name="TU Berlin" location="Berlin, Germany">
+  <departments name="Computer Science">
+    <courses name="Software Engineering" credits="6"/>
+    <courses name="Databases" credits="6"/>
+  </departments>
+  <departments name="Mathematics">
+    <courses name="Linear Algebra" credits="6"/>
+  </departments>
+  <students name="Max Mustermann" studentId="123456" semester="3"/>
+  <students name="Anna Schmidt" studentId="234567" semester="5"/>
+</suni:University>

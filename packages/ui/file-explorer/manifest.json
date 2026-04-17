@@ -1,0 +1,18 @@
+{
+  "id": "ui-file-explorer",
+  "name": "File Explorer",
+  "version": "0.0.1",
+  "description": "Local file system browser using File System Access API",
+  "entry": "src/index.ts",
+  "provides": [
+    {
+      "id": "ui.file-explorer.components",
+      "description": "File explorer UI components"
+    },
+    {
+      "id": "ui.file-explorer.composables",
+      "description": "File system access composables"
+    }
+  ],
+  "dependencies": ["gene-app", "ui-layout", "ui-perspectives"]
+}

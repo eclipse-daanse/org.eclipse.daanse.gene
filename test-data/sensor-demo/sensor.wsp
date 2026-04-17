@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fennecui:EditorConfig xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:fennecui="https://eclipse.org/fennec/ts/generic/ui" name="sensor" configFileExtensions="" enabled="true" activeViewId="">
+  <modelSources name="sensor" location="sensor-demo/sensor.ecore" resolution="0" registerPackages="true" enabled="true"/>
+  <modelSources name="features" location="qvt-demo/ogc-features.ecore" resolution="0" registerPackages="true" enabled="true"/>
+  <layoutConfig primarySidebarWidth="426" secondarySidebarWidth="500" panelAreaHeight="400" primarySidebarVisible="true" secondarySidebarVisible="true" panelAreaVisible="false" activityBarVisible="true" statusBarVisible="true" activeActivityId="instance-tree">
+    <panelPositions panelId="model-browser" location="1" order="0"/>
+    <panelPositions panelId="instance-tree" location="0" order="1"/>
+  </layoutConfig>
+</fennecui:EditorConfig>

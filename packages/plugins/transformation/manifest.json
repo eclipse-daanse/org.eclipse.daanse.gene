@@ -1,0 +1,17 @@
+{
+  "id": "transformation",
+  "name": "Model Transformation",
+  "version": "0.1.0",
+  "description": "Visual model-to-model transformation mapping editor",
+  "entry": "src/index.ts",
+  "dependencies": [
+    "gene-app",
+    "ui-layout"
+  ],
+  "provides": [
+    {
+      "id": "ui.transformation.components",
+      "description": "Transformation Editor UI components"
+    }
+  ]
+}

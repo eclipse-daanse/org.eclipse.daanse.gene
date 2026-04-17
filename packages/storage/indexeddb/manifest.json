@@ -1,0 +1,27 @@
+{
+  "id": "storage-indexeddb",
+  "name": "IndexedDB Storage Adapter",
+  "version": "1.0.0",
+  "description": "Browser-local storage using IndexedDB",
+  "entry": "src/index.ts",
+  "exports": {
+    "./adapter": {
+      "type": "adapter",
+      "description": "IndexedDB storage adapter",
+      "serviceId": "storage.adapter.indexeddb"
+    }
+  },
+  "provides": [
+    {
+      "id": "storage.adapter.indexeddb",
+      "description": "IndexedDB storage adapter instance"
+    }
+  ],
+  "requiresService": [
+    {
+      "id": "storage.registry",
+      "optional": false
+    }
+  ],
+  "dependencies": ["storage-core"]
+}

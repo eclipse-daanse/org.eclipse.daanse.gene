@@ -1,0 +1,23 @@
+{
+  "id": "ui-model-view",
+  "name": "Model View",
+  "version": "0.1.0",
+  "description": "Unified Model View system with configurable depth and filters",
+  "entry": "src/index.ts",
+  "provides": [
+    {
+      "id": "ui.model-view.components",
+      "description": "Model View Vue components (ViewToolbar, ModelTree, ModelEditorPerspective)"
+    },
+    {
+      "id": "ui.model-view.composables",
+      "description": "Model View state composables (useModelView, useSharedModelView)"
+    }
+  ],
+  "dependencies": [
+    "gene-app",
+    "ui-layout",
+    "ui-perspectives",
+    "instance-builder"
+  ]
+}

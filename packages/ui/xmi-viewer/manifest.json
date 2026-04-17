@@ -1,0 +1,14 @@
+{
+  "id": "ui-xmi-viewer",
+  "name": "XMI Viewer",
+  "version": "0.1.0",
+  "description": "XMI/XML file viewer component",
+  "entry": "src/index.ts",
+  "provides": [
+    {
+      "id": "ui.xmi-viewer",
+      "description": "XMI viewer component and registry"
+    }
+  ],
+  "dependencies": ["gene-app"]
+}

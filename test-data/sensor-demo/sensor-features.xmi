@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:sensor="http://www.gme.org/sensor/1.0"
+    xmlns:features="http://www.ogc.org/features/1.0">
+
+  <!-- ===== Fachmodell-Instanzen (sensor.ecore) ===== -->
+  <sensor:SensorNetzwerk name="Umweltsensoren Musterstadt" betreiber="Stadtwerke Musterstadt">
+
+    <sensoren id="SEN-2025-0001" name="Feinstaubsensor Hauptstrasse" typ="FEINSTAUB" messgrund="IMMISSIONSSCHUTZ"
+        internerHinweis="Wartung Q2/2026 geplant"
+        geom_sensor_ort_lon="8.6812" geom_sensor_ort_lat="49.4121"
+        geom_mess_ort_lon="8.6815" geom_mess_ort_lat="49.4120"
+        geom_ref_flaeche_wkt="POLYGON((8.6790 49.4115, 8.6835 49.4115, 8.6835 49.4128, 8.6790 49.4128, 8.6790 49.4115))"/>
+
+    <sensoren id="SEN-2025-0002" name="Temperatursensor Stadtpark" typ="TEMPERATUR" messgrund="KLIMAFORSCHUNG"
+        internerHinweis="Kalibrierung am 01.03.2026"
+        geom_sensor_ort_lon="8.6855" geom_sensor_ort_lat="49.4158"
+        geom_mess_ort_lon="8.6855" geom_mess_ort_lat="49.4158"
+        geom_ref_flaeche_wkt="POLYGON((8.6830 49.4140, 8.6880 49.4140, 8.6880 49.4175, 8.6830 49.4175, 8.6830 49.4140))"/>
+
+    <sensoren id="SEN-2025-0003" name="Laermsensor Bahnhofsvorplatz" typ="LAERM" messgrund="LAERMSCHUTZ"
+        geom_sensor_ort_lon="8.6920" geom_sensor_ort_lat="49.4095"
+        geom_mess_ort_lon="8.6925" geom_mess_ort_lat="49.4092"
+        geom_ref_flaeche_wkt="POLYGON((8.6900 49.4080, 8.6945 49.4080, 8.6945 49.4110, 8.6900 49.4110, 8.6900 49.4080))"/>
+
+    <sensoren id="SEN-2025-0004" name="Niederschlagssensor Schulzentrum" typ="NIEDERSCHLAG" messgrund="UMWELTMONITORING"
+        internerHinweis="Neues Modell seit 12/2025"
+        geom_sensor_ort_lon="8.6780" geom_sensor_ort_lat="49.4185"
+        geom_mess_ort_lon="8.6782" geom_mess_ort_lat="49.4187"
+        geom_ref_flaeche_wkt="POLYGON((8.6760 49.4175, 8.6800 49.4175, 8.6800 49.4198, 8.6760 49.4198, 8.6760 49.4175))"/>
+
+    <sensoren id="SEN-2025-0005" name="Luftfeuchtesensor Gewerbegebiet" typ="LUFTFEUCHTIGKEIT" messgrund="IMMISSIONSSCHUTZ"
+        geom_sensor_ort_lon="8.6950" geom_sensor_ort_lat="49.4210"
+        geom_mess_ort_lon="8.6948" geom_mess_ort_lat="49.4212"
+        geom_ref_flaeche_wkt="POLYGON((8.6930 49.4195, 8.6975 49.4195, 8.6975 49.4225, 8.6930 49.4225, 8.6930 49.4195))"/>
+
+    <sensoren id="SEN-2025-0006" name="Bodenfeuchtesensor Gruenanlage" typ="BODENFEUCHTIGKEIT" messgrund="GEWAESSERMONITORING"
+        internerHinweis="Erdreich-Sonde in 30cm Tiefe"
+        geom_sensor_ort_lon="8.6830" geom_sensor_ort_lat="49.4170"
+        geom_mess_ort_lon="8.6832" geom_mess_ort_lat="49.4171"
+        geom_ref_flaeche_wkt="POLYGON((8.6815 49.4160, 8.6850 49.4160, 8.6850 49.4182, 8.6815 49.4182, 8.6815 49.4160))"/>
+
+  </sensor:SensorNetzwerk>
+
+  <!-- ===== OGC Features Layer (orthogonale Sicht) ===== -->
+  <features:FeatureCatalog name="Sensornetzwerk Musterstadt" description="OGC Features Layer - orthogonale Darstellung des Sensor-Fachmodells" version="1.0">
+
+    <coordinateReferenceSystems code="EPSG:4326" name="WGS 84" type="WGS84"/>
+
+    <!-- Layer 1: Sensoren (Punkt-Geometrie: geom_sensor_ort) -->
+    <featureTypes name="Sensor" title="Sensoren" description="Sensorstandorte - Punkt-Layer basierend auf geom_sensor_ort der Klasse Sensor" geometryType="POINT" abstract="false">
+      <eAnnotations source="http://www.gme.org/gene/mapping">
+        <details key="sourceClass" value="sensor.Sensor"/>
+        <details key="geometryAttribute" value="geom_sensor_ort"/>
+      </eAnnotations>
+      <properties name="titel" type="STRING" description="Name des Sensors (sensor.Sensor.name)" required="true"/>
+      <properties name="sensortyp" type="STRING" description="Typ des Sensors (sensor.Sensor.typ)" required="true"/>
+    </featureTypes>
+
+    <!-- Layer 2: Referenzflaechen (Polygon-Geometrie: geom_ref_flaeche) -->
+    <featureTypes name="Referenzflaeche" title="Referenzflaechen" description="Referenzflaechen der Sensoren - Polygon-Layer basierend auf geom_ref_flaeche der Klasse Sensor" geometryType="POLYGON" abstract="false">
+      <eAnnotations source="http://www.gme.org/gene/mapping">
+        <details key="sourceClass" value="sensor.Sensor"/>
+        <details key="geometryAttribute" value="geom_ref_flaeche"/>
+      </eAnnotations>
+      <properties name="grund" type="STRING" description="Messgrund (sensor.Sensor.messgrund)" required="true"/>
+    </featureTypes>
+
+    <!-- ===== Collection: Sensoren (Layer 1) ===== -->
+    <collections id="sensoren" title="Sensoren" description="Standorte aller Sensoren im Netzwerk" featureType="/1/@featureTypes.0">
+      <extent minX="8.6700" minY="49.4050" maxX="8.7000" maxY="49.4250"/>
+      <crs href="EPSG:4326"/>
+
+      <features id="SEN-2025-0001">
+        <geometry xsi:type="features:Point" type="POINT" longitude="8.6812" latitude="49.4121"/>
+        <properties name="titel" value="Feinstaubsensor Hauptstrasse"/>
+        <properties name="sensortyp" value="FEINSTAUB"/>
+      </features>
+
+      <features id="SEN-2025-0002">
+        <geometry xsi:type="features:Point" type="POINT" longitude="8.6855" latitude="49.4158"/>
+        <properties name="titel" value="Temperatursensor Stadtpark"/>
+        <properties name="sensortyp" value="TEMPERATUR"/>
+      </features>
+
+      <features id="SEN-2025-0003">
+        <geometry xsi:type="features:Point" type="POINT" longitude="8.6920" latitude="49.4095"/>
+        <properties name="titel" value="Laermsensor Bahnhofsvorplatz"/>
+        <properties name="sensortyp" value="LAERM"/>
+      </features>
+
+      <features id="SEN-2025-0004">
+        <geometry xsi:type="features:Point" type="POINT" longitude="8.6780" latitude="49.4185"/>
+        <properties name="titel" value="Niederschlagssensor Schulzentrum"/>
+        <properties name="sensortyp" value="NIEDERSCHLAG"/>
+      </features>
+
+      <features id="SEN-2025-0005">
+        <geometry xsi:type="features:Point" type="POINT" longitude="8.6950" latitude="49.4210"/>
+        <properties name="titel" value="Luftfeuchtesensor Gewerbegebiet"/>
+        <properties name="sensortyp" value="LUFTFEUCHTIGKEIT"/>
+      </features>
+
+      <features id="SEN-2025-0006">
+        <geometry xsi:type="features:Point" type="POINT" longitude="8.6830" latitude="49.4170"/>
+        <properties name="titel" value="Bodenfeuchtesensor Gruenanlage"/>
+        <properties name="sensortyp" value="BODENFEUCHTIGKEIT"/>
+      </features>
+    </collections>
+
+    <!-- ===== Collection: Referenzflaechen (Layer 2) ===== -->
+    <collections id="referenzflaechen" title="Referenzflaechen" description="Referenzflaechen der Sensoren - raeumlicher Bezug der Messungen" featureType="/1/@featureTypes.1">
+      <extent minX="8.6700" minY="49.4050" maxX="8.7000" maxY="49.4250"/>
+
+      <!-- Referenzflaeche von Sensor 1: Strassenabschnitt -->
+      <features id="REF-SEN-2025-0001">
+        <geometry xsi:type="features:Polygon" type="POLYGON">
+          <exteriorRing>
+            <coordinates x="8.6790" y="49.4115"/>
+            <coordinates x="8.6835" y="49.4115"/>
+            <coordinates x="8.6835" y="49.4128"/>
+            <coordinates x="8.6790" y="49.4128"/>
+            <coordinates x="8.6790" y="49.4115"/>
+          </exteriorRing>
+        </geometry>
+        <properties name="grund" value="IMMISSIONSSCHUTZ"/>
+      </features>
+
+      <!-- Referenzflaeche von Sensor 2: Parkanlage -->
+      <features id="REF-SEN-2025-0002">
+        <geometry xsi:type="features:Polygon" type="POLYGON">
+          <exteriorRing>
+            <coordinates x="8.6830" y="49.4140"/>
+            <coordinates x="8.6880" y="49.4140"/>
+            <coordinates x="8.6880" y="49.4175"/>
+            <coordinates x="8.6830" y="49.4175"/>
+            <coordinates x="8.6830" y="49.4140"/>
+          </exteriorRing>
+        </geometry>
+        <properties name="grund" value="KLIMAFORSCHUNG"/>
+      </features>
+
+      <!-- Referenzflaeche von Sensor 3: Bahnhofsumfeld -->
+      <features id="REF-SEN-2025-0003">
+        <geometry xsi:type="features:Polygon" type="POLYGON">
+          <exteriorRing>
+            <coordinates x="8.6900" y="49.4080"/>
+            <coordinates x="8.6945" y="49.4080"/>
+            <coordinates x="8.6945" y="49.4110"/>
+            <coordinates x="8.6900" y="49.4110"/>
+            <coordinates x="8.6900" y="49.4080"/>
+          </exteriorRing>
+        </geometry>
+        <properties name="grund" value="LAERMSCHUTZ"/>
+      </features>
+
+      <!-- Referenzflaeche von Sensor 4: Schulgelaende -->
+      <features id="REF-SEN-2025-0004">
+        <geometry xsi:type="features:Polygon" type="POLYGON">
+          <exteriorRing>
+            <coordinates x="8.6760" y="49.4175"/>
+            <coordinates x="8.6800" y="49.4175"/>
+            <coordinates x="8.6800" y="49.4198"/>
+            <coordinates x="8.6760" y="49.4198"/>
+            <coordinates x="8.6760" y="49.4175"/>
+          </exteriorRing>
+        </geometry>
+        <properties name="grund" value="UMWELTMONITORING"/>
+      </features>
+
+      <!-- Referenzflaeche von Sensor 5: Gewerbegebiet -->
+      <features id="REF-SEN-2025-0005">
+        <geometry xsi:type="features:Polygon" type="POLYGON">
+          <exteriorRing>
+            <coordinates x="8.6930" y="49.4195"/>
+            <coordinates x="8.6975" y="49.4195"/>
+            <coordinates x="8.6975" y="49.4225"/>
+            <coordinates x="8.6930" y="49.4225"/>
+            <coordinates x="8.6930" y="49.4195"/>
+          </exteriorRing>
+        </geometry>
+        <properties name="grund" value="IMMISSIONSSCHUTZ"/>
+      </features>
+
+      <!-- Referenzflaeche von Sensor 6: Gruenanlage -->
+      <features id="REF-SEN-2025-0006">
+        <geometry xsi:type="features:Polygon" type="POLYGON">
+          <exteriorRing>
+            <coordinates x="8.6815" y="49.4160"/>
+            <coordinates x="8.6850" y="49.4160"/>
+            <coordinates x="8.6850" y="49.4182"/>
+            <coordinates x="8.6815" y="49.4182"/>
+            <coordinates x="8.6815" y="49.4160"/>
+          </exteriorRing>
+        </geometry>
+        <properties name="grund" value="GEWAESSERMONITORING"/>
+      </features>
+    </collections>
+
+  </features:FeatureCatalog>
+
+</xmi:XMI>

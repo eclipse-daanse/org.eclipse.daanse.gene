@@ -1,0 +1,23 @@
+{
+  "id": "storage-core",
+  "name": "Storage Core",
+  "version": "1.0.0",
+  "description": "Core storage abstractions and registry",
+  "entry": "src/index.ts",
+  "exports": {
+    "./registry": {
+      "type": "service",
+      "description": "Storage adapter registry",
+      "serviceId": "storage.registry"
+    }
+  },
+  "provides": [
+    {
+      "id": "storage.registry",
+      "description": "StorageAdapterRegistry singleton",
+      "scope": "singleton"
+    }
+  ],
+  "requiresService": [],
+  "dependencies": []
+}

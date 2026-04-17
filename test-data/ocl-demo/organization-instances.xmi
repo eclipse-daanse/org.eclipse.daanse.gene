@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<org:Organization xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:org="http://www.gme.org/organization/1.0"
+    name="ACME Corp">
+
+  <departments name="Engineering" status="ACTIVE" maxCapacity="20"/>
+  <departments name="Sales" status="ACTIVE" maxCapacity="15"/>
+  <departments name="Legacy Support" status="INACTIVE" maxCapacity="5"/>
+
+  <employees firstName="Anna" lastName="Schmidt" email="anna.schmidt@acme.com"
+      status="ACTIVE" level="4"/>
+  <employees firstName="Max" lastName="Mueller" email="max.mueller@acme.com"
+      status="ACTIVE" level="3"/>
+  <employees firstName="Lisa" lastName="Weber" email="lisa.weber@acme.com"
+      status="ACTIVE" level="2"/>
+  <employees firstName="Tom" lastName="Bauer" email="tom.bauer@acme.com"
+      status="ACTIVE" level="1"/>
+  <employees firstName="Eva" lastName="Fischer" email="eva.fischer@acme.com"
+      status="INACTIVE" level="3"/>
+  <employees firstName="Paul" lastName="Koch" email="paul.koch@acme.com"
+      status="ARCHIVED" level="2"/>
+
+</org:Organization>

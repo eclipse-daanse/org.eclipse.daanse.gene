@@ -1,0 +1,34 @@
+{
+  "id": "ui-workspace",
+  "name": "Workspace UI",
+  "version": "0.0.1",
+  "description": "UI components for workspace management",
+  "entry": "src/index.ts",
+  "exports": {
+    "./components": {
+      "type": "component",
+      "description": "Workspace UI components"
+    },
+    "./composables": {
+      "type": "service",
+      "description": "Workspace composables"
+    }
+  },
+  "provides": [
+    {
+      "id": "ui.workspace.components",
+      "description": "Workspace UI components (WorkspaceExplorer)"
+    },
+    {
+      "id": "ui.workspace.composables",
+      "description": "Workspace composables (useWorkspace, useFileTree)"
+    }
+  ],
+  "requiresService": [
+    {
+      "id": "storage.registry",
+      "optional": false
+    }
+  ],
+  "dependencies": ["gene-app", "storage-core"]
+}

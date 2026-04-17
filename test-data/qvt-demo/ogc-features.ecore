@@ -1,0 +1,428 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" nsURI="http://www.ogc.org/features/1.0" nsPrefix="ogc" name="features">
+  <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+    <details key="documentation" value="OGC API Features Metamodell. Modelliert geographische Features mit Geometrien, Eigenschaften und Koordinatenreferenzsystemen nach dem OGC-Standard."/>
+  </eAnnotations>
+
+  <!-- Enums -->
+  <eClassifiers xsi:type="ecore:EEnum" name="GeometryType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Unterstuetzte Geometrietypen nach GeoJSON/OGC Simple Features."/>
+    </eAnnotations>
+    <eLiterals name="POINT"/>
+    <eLiterals value="1" name="LINE_STRING"/>
+    <eLiterals value="2" name="POLYGON"/>
+    <eLiterals value="3" name="MULTI_POINT"/>
+    <eLiterals value="4" name="MULTI_LINE_STRING"/>
+    <eLiterals value="5" name="MULTI_POLYGON"/>
+    <eLiterals value="6" name="GEOMETRY_COLLECTION"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="PropertyType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Datentypen fuer Feature-Eigenschaften."/>
+    </eAnnotations>
+    <eLiterals name="STRING"/>
+    <eLiterals value="1" name="INTEGER"/>
+    <eLiterals value="2" name="DOUBLE"/>
+    <eLiterals value="3" name="BOOLEAN"/>
+    <eLiterals value="4" name="DATE"/>
+    <eLiterals value="5" name="DATETIME"/>
+    <eLiterals value="6" name="URI"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="CRSType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Gaengige Koordinatenreferenzsysteme."/>
+    </eAnnotations>
+    <eLiterals name="WGS84">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="EPSG:4326 - World Geodetic System 1984 (Laengen-/Breitengrad)."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals value="1" name="WEB_MERCATOR">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="EPSG:3857 - Web Mercator Projektion (z.B. Google Maps, OpenStreetMap)."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals value="2" name="UTM">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Universal Transverse Mercator - zonenbasiertes Projektionssystem."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals value="3" name="ETRS89">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="EPSG:4258 - European Terrestrial Reference System 1989."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <!-- Root: FeatureCatalog -->
+  <eClassifiers xsi:type="ecore:EClass" name="FeatureCatalog">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Wurzelelement. Enthaelt Feature-Typen-Definitionen und Feature-Collections."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="name">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name des Feature-Katalogs."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="description"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="version"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="http://www.ogc.org/features/1.0#//FeatureType" name="featureTypes">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Definitionen der Feature-Typen (Schema)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="http://www.ogc.org/features/1.0#//FeatureCollection" name="collections">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Feature-Collections mit konkreten Instanzen."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="http://www.ogc.org/features/1.0#//CoordinateReferenceSystem" name="coordinateReferenceSystems">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Verfuegbare Koordinatenreferenzsysteme."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- FeatureType (Schema-Definition) -->
+  <eClassifiers xsi:type="ecore:EClass" name="FeatureType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Definiert den Typ eines geographischen Features (Schema). Beschreibt welche Eigenschaften und Geometrien ein Feature dieses Typs hat."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" iD="true" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="name">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Eindeutiger Name des Feature-Typs (z.B. 'Building', 'Road', 'River')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="title">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Lesbarer Titel fuer Anzeige."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="description"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" name="geometryType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Erlaubter Geometrietyp fuer Features dieses Typs."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="http://www.ogc.org/features/1.0#//PropertyDefinition" name="properties">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Eigenschafts-Definitionen dieses Feature-Typs."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" eType="http://www.ogc.org/features/1.0#//FeatureType" name="superType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optionaler Basis-Feature-Typ (Vererbung)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" defaultValueLiteral="false" eType="http://www.eclipse.org/emf/2002/Ecore#//EBoolean" name="abstract">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Wenn true, kann dieser Typ nicht direkt instanziiert werden."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- PropertyDefinition (Schema fuer Feature-Eigenschaften) -->
+  <eClassifiers xsi:type="ecore:EClass" name="PropertyDefinition">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Definiert eine Eigenschaft eines Feature-Typs (Name, Typ, Kardinalitaet)."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" iD="true" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="name">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name der Eigenschaft (z.B. 'height', 'streetName', 'population')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" name="type">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Datentyp der Eigenschaft."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="description"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" defaultValueLiteral="false" eType="http://www.eclipse.org/emf/2002/Ecore#//EBoolean" name="required">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Ob diese Eigenschaft zwingend angegeben werden muss."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" defaultValueLiteral="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EInt" name="maxOccurs">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Maximale Anzahl von Werten (-1 fuer unbegrenzt)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="defaultValue">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optionaler Standardwert als String."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- FeatureCollection -->
+  <eClassifiers xsi:type="ecore:EClass" name="FeatureCollection">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Eine Sammlung von geographischen Features gleichen Typs. Entspricht einer OGC API Features Collection."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" iD="true" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="id">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Eindeutige ID der Collection."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="title">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Lesbarer Titel der Collection."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="description"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" lowerBound="1" eType="http://www.ogc.org/features/1.0#//FeatureType" name="featureType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Der Feature-Typ dieser Collection (Schema-Referenz)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="http://www.ogc.org/features/1.0#//Feature" name="features">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Die enthaltenen Features."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" eType="http://www.ogc.org/features/1.0#//BoundingBox" name="extent">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Raeumliche Ausdehnung (Bounding Box) aller Features."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" eType="http://www.ogc.org/features/1.0#//CoordinateReferenceSystem" name="crs">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Koordinatenreferenzsystem dieser Collection."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- Feature -->
+  <eClassifiers xsi:type="ecore:EClass" name="Feature">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Ein einzelnes geographisches Feature mit Geometrie und Eigenschaften. Entspricht einem GeoJSON Feature."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" iD="true" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="id">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Eindeutige Feature-ID."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" lowerBound="1" eType="http://www.ogc.org/features/1.0#//Geometry" name="geometry">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Die Geometrie dieses Features."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="http://www.ogc.org/features/1.0#//PropertyValue" name="properties">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Eigenschaftswerte dieses Features."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" eType="http://www.ogc.org/features/1.0#//BoundingBox" name="bbox">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optionale Bounding Box dieses Features."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" upperBound="-1" eType="http://www.ogc.org/features/1.0#//Link" name="links">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Verknuepfungen zu anderen Features oder Ressourcen."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- Geometry (abstract) -->
+  <eClassifiers xsi:type="ecore:EClass" abstract="true" name="Geometry">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Abstrakte Basisklasse fuer alle Geometrietypen."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" name="type">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Der Geometrietyp."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="srsName">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name des Spatial Reference Systems (z.B. EPSG:4326)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- Point -->
+  <eClassifiers xsi:type="ecore:EClass" name="Point">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Punkt-Geometrie mit einer einzelnen Koordinate."/>
+    </eAnnotations>
+    <eSuperTypes href="http://www.ogc.org/features/1.0#//Geometry"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="longitude">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Laengengrad (X-Koordinate)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="latitude">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Breitengrad (Y-Koordinate)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="elevation">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optionale Hoehe (Z-Koordinate) in Metern."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- LineString -->
+  <eClassifiers xsi:type="ecore:EClass" name="LineString">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Linien-Geometrie aus einer geordneten Folge von Koordinaten."/>
+    </eAnnotations>
+    <eSuperTypes href="http://www.ogc.org/features/1.0#//Geometry"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" lowerBound="2" upperBound="-1" eType="http://www.ogc.org/features/1.0#//Coordinate" name="coordinates">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Geordnete Liste der Stuetzpunkte (mind. 2)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- Polygon -->
+  <eClassifiers xsi:type="ecore:EClass" name="Polygon">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Polygon-Geometrie mit einer aeusseren Begrenzung und optionalen Loechern."/>
+    </eAnnotations>
+    <eSuperTypes href="http://www.ogc.org/features/1.0#//Geometry"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" lowerBound="1" eType="http://www.ogc.org/features/1.0#//LinearRing" name="exteriorRing">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Aeusserer Ring des Polygons."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="http://www.ogc.org/features/1.0#//LinearRing" name="interiorRings">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optionale innere Ringe (Loecher im Polygon)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- LinearRing (geschlossene Koordinatenliste) -->
+  <eClassifiers xsi:type="ecore:EClass" name="LinearRing">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Geschlossener Ring aus Koordinaten. Erster und letzter Punkt muessen identisch sein."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" lowerBound="4" upperBound="-1" eType="http://www.ogc.org/features/1.0#//Coordinate" name="coordinates">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Geordnete Koordinaten des Rings (mind. 4, erster = letzter)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- Coordinate -->
+  <eClassifiers xsi:type="ecore:EClass" name="Coordinate">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Eine einzelne Koordinate im Raum."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="x">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="X-Koordinate (Laengengrad bei WGS84)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="y">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Y-Koordinate (Breitengrad bei WGS84)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="z">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optionale Z-Koordinate (Hoehe)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- BoundingBox -->
+  <eClassifiers xsi:type="ecore:EClass" name="BoundingBox">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Achsenparalleles Begrenzungsrechteck (Bounding Box / Extent)."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="minX">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Minimaler X-Wert (westlicher Laengengrad)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="minY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Minimaler Y-Wert (suedlicher Breitengrad)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="maxX">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Maximaler X-Wert (oestlicher Laengengrad)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="maxY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Maximaler Y-Wert (noerdlicher Breitengrad)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- PropertyValue -->
+  <eClassifiers xsi:type="ecore:EClass" name="PropertyValue">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Konkreter Eigenschaftswert eines Features. Referenziert die PropertyDefinition und haelt den Wert als String."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="name">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name der Eigenschaft (muss einer PropertyDefinition des FeatureType entsprechen)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="value">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Der Wert als String-Repraesentation."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- CoordinateReferenceSystem -->
+  <eClassifiers xsi:type="ecore:EClass" name="CoordinateReferenceSystem">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Koordinatenreferenzsystem (CRS). Definiert wie Koordinaten zu interpretieren sind."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" iD="true" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="code">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="EPSG-Code oder URI des CRS (z.B. 'EPSG:4326', 'http://www.opengis.net/def/crs/OGC/1.3/CRS84')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="name">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Lesbarer Name des CRS (z.B. 'WGS 84')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" name="type">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Art des CRS."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- Link (HATEOAS-Style) -->
+  <eClassifiers xsi:type="ecore:EClass" name="Link">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Hyperlink zu einer verwandten Ressource (HATEOAS-Muster der OGC API)."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="href">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="URL der verlinkten Ressource."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="rel">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Beziehungstyp (z.B. 'self', 'alternate', 'collection')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="type">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Media-Type der Zielressource (z.B. 'application/geo+json')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="title">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Lesbarer Titel des Links."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+</ecore:EPackage>

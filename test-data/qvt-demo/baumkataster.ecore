@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" nsURI="http://www.musterstadt.de/baumkataster/1.0" nsPrefix="bk" name="baumkataster">
+  <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+    <details key="documentation" value="Fachmodell Baumkataster. Domaenenspezifisches Modell zur Verwaltung von Stadtbaeumen."/>
+  </eAnnotations>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="Zustand">
+    <eLiterals name="GUT"/>
+    <eLiterals value="1" name="MAESSIG"/>
+    <eLiterals value="2" name="SCHLECHT"/>
+    <eLiterals value="3" name="TOT"/>
+    <eLiterals value="4" name="GEFAELLT"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="Baumkategorie">
+    <eLiterals name="LAUBBAUM"/>
+    <eLiterals value="1" name="NADELBAUM"/>
+    <eLiterals value="2" name="OBSTBAUM"/>
+    <eLiterals value="3" name="ZIERGEHOELZ"/>
+  </eClassifiers>
+
+  <!-- Wurzel: Baumbestand -->
+  <eClassifiers xsi:type="ecore:EClass" name="Baumbestand">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Wurzelelement. Enthaelt alle Bezirke und deren Baeume."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="name"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="gemeinde"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="erfassungsjahr"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="http://www.musterstadt.de/baumkataster/1.0#//Bezirk" name="bezirke"/>
+  </eClassifiers>
+
+  <!-- Bezirk -->
+  <eClassifiers xsi:type="ecore:EClass" name="Bezirk">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Raeumlicher Bezirk (Stadtteil, Park, Strasse) mit zugehoerigen Baeumen."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" iD="true" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="name"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="beschreibung"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="http://www.musterstadt.de/baumkataster/1.0#//Baum" name="baeume"/>
+  </eClassifiers>
+
+  <!-- Baum -->
+  <eClassifiers xsi:type="ecore:EClass" name="Baum">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Einzelner erfasster Baum mit Standort, Art und Zustandsinformationen."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" iD="true" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="baumNr">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Eindeutige Baumnummer (z.B. BK-2024-0042)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="baumart">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Deutscher und/oder botanischer Name."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" name="kategorie"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" name="zustand"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="laengengrad"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="breitengrad"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="hoehe">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Baumhoehe in Metern."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EInt" name="stammumfang">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Stammumfang in cm bei 1m Hoehe."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="kronendurchmesser"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EInt" name="pflanzjahr"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" defaultValueLiteral="false" eType="http://www.eclipse.org/emf/2002/Ecore#//EBoolean" name="geschuetzt">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Naturdenkmal / unter Schutz gestellt."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="letzteBegutachtung"/>
+  </eClassifiers>
+
+</ecore:EPackage>

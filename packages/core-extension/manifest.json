@@ -1,0 +1,27 @@
+{
+  "id": "core-extension",
+  "name": "Core Extension",
+  "version": "1.0.0",
+  "description": "Extends the remote core module with additional features",
+  "entry": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    "./enhanced": {
+      "type": "service",
+      "description": "Enhanced core service"
+    }
+  },
+  "provides": [
+    {
+      "id": "core.enhanced",
+      "description": "EnhancedCoreService instance"
+    }
+  ],
+  "requiresService": [
+    {
+      "id": "core.service",
+      "optional": false
+    }
+  ],
+  "dependencies": ["core"]
+}

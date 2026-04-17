@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" nsURI="http://www.gme.org/organization/1.0" nsPrefix="org" name="organization">
+  <eClassifiers xsi:type="ecore:EEnum" name="Status">
+    <eLiterals name="ACTIVE">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Element ist aktiv und kann referenziert werden."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals value="1" name="INACTIVE">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Element ist inaktiv und sollte nicht mehr referenziert werden."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals value="2" name="ARCHIVED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Element ist archiviert und darf nicht mehr referenziert werden."/>
+      </eAnnotations>
+    </eLiterals>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Aktivitaetsstatus eines Elements."/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Organization">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="name">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name der Organisation."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="http://www.gme.org/organization/1.0#//Department" name="departments">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Alle Abteilungen dieser Organisation."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="http://www.gme.org/organization/1.0#//Employee" name="employees">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Alle Mitarbeiter dieser Organisation."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Wurzelelement einer Organisation. Enthaelt Abteilungen und Mitarbeiter."/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Department">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" iD="true" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="name">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name der Abteilung."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" defaultValueLiteral="ACTIVE" lowerBound="1" name="status">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Aktivitaetsstatus der Abteilung."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" defaultValueLiteral="10" eType="http://www.eclipse.org/emf/2002/Ecore#//EInt" name="maxCapacity">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Maximale Anzahl von Mitarbeitern in dieser Abteilung."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" eType="http://www.gme.org/organization/1.0#//Employee" name="manager">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Der Manager dieser Abteilung. Muss ein aktiver Mitarbeiter mit Manager-Level sein."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/OCL">
+        <details key="referenceFilter" value="target.level &gt;= 3"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" upperBound="-1" eType="http://www.gme.org/organization/1.0#//Employee" name="members">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Mitarbeiter dieser Abteilung. Nur aktive Mitarbeiter koennen hinzugefuegt werden."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/OCL">
+        <details key="referenceFilter" value="target.level &gt;= 2"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Eine Abteilung innerhalb der Organisation."/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Employee">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="firstName">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Vorname des Mitarbeiters."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" iD="true" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="lastName">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Nachname des Mitarbeiters."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" iD="true" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="email">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="E-Mail-Adresse des Mitarbeiters."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" defaultValueLiteral="ACTIVE" lowerBound="1" name="status">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Aktivitaetsstatus des Mitarbeiters."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" defaultValueLiteral="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EInt" name="level">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Hierarchie-Level des Mitarbeiters. 1=Junior, 2=Senior, 3=Lead, 4=Manager, 5=Director."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" eType="http://www.gme.org/organization/1.0#//Employee" name="supervisor">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Vorgesetzter dieses Mitarbeiters. Muss aktiv sein."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/OCL">
+        <details key="referenceFilter" value="target.level &gt;= 2"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" changeable="false" volatile="true" transient="true" derived="true" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="fullName">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Vollstaendiger Name des Mitarbeiters."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/OCL">
+        <details key="derivation" value="self.firstName.concat(&apos; &apos;).concat(self.lastName)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Ein Mitarbeiter der Organisation."/>
+    </eAnnotations>
+  </eClassifiers>
+  <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+    <details key="documentation" value="Beispiel-Modell zur Demonstration von OCL-basierten Referenz-Filtern bei der Auswahl von Zielobjekten."/>
+  </eAnnotations>
+</ecore:EPackage>

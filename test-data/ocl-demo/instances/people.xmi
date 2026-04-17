@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dge:Person xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dge="https://dg.de/1.0" firstName="Markus" lastName="Hochstein" email="markus.hochstein@gmx.de" phone="abcddd" address="instances/people.xmi#/1" company="instances/people.xmi#/2"/>
+<dge:Address xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dge="https://dg.de/1.0" street="Am Berg 1a" city="Dittmannsdorf" zipCode="09573" country="Deutschland"/>
+<dge:Company xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:dge="https://dg.de/1.0" name="Data In Motion" industry="Software IKT"/>

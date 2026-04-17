@@ -1,0 +1,18 @@
+{
+  "id": "cocl-editor",
+  "name": "C-OCL Constraint Editor",
+  "version": "0.1.0",
+  "description": "Form-based editor for C-OCL constraint files (.c-ocl)",
+  "entry": "src/index.ts",
+  "dependencies": [
+    "gene-app",
+    "ui-layout",
+    "transformation"
+  ],
+  "provides": [
+    {
+      "id": "ui.cocl-editor.components",
+      "description": "C-OCL Constraint Editor UI components"
+    }
+  ]
+}

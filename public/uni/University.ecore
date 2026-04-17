@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="university" nsURI="http://example.org/university" nsPrefix="uni">
+
+  <!-- University extends EducationalInstitution from HigherEducation -->
+  <eClassifiers xsi:type="ecore:EClass" name="University"
+      eSuperTypes="http://example.org/highereducation#//EducationalInstitution">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="location" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="departments" upperBound="-1" eType="#//Department" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="students" upperBound="-1" eType="#//Student" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="professors" upperBound="-1" eType="#//Professor" containment="true"/>
+  </eClassifiers>
+
+  <!-- Department extends AcademicUnit -->
+  <eClassifiers xsi:type="ecore:EClass" name="Department"
+      eSuperTypes="http://example.org/highereducation#//AcademicUnit">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="courses" upperBound="-1" eType="#//Course" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="head" eType="#//Professor"/>
+  </eClassifiers>
+
+  <!-- Student extends Learner -->
+  <eClassifiers xsi:type="ecore:EClass" name="Student"
+      eSuperTypes="http://example.org/highereducation#//Learner">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="studentId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="semester" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="enrolledIn" upperBound="-1" eType="#//Course"/>
+  </eClassifiers>
+
+  <!-- Professor extends Instructor -->
+  <eClassifiers xsi:type="ecore:EClass" name="Professor"
+      eSuperTypes="http://example.org/highereducation#//Instructor">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="title" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="teachsCourses" upperBound="-1" eType="#//Course" eOpposite="#//Course/taughtBy"/>
+  </eClassifiers>
+
+  <!-- Course extends AcademicOffering -->
+  <eClassifiers xsi:type="ecore:EClass" name="Course"
+      eSuperTypes="http://example.org/highereducation#//AcademicOffering">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="credits" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="taughtBy" eType="#//Professor" eOpposite="#//Professor/teachsCourses"/>
+  </eClassifiers>
+
+</ecore:EPackage>

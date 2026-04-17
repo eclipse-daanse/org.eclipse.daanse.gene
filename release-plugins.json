@@ -1,0 +1,26 @@
+{
+  "description": "Plugins die im Release-Build enthalten sein sollen",
+  "plugins": [
+    "gene-app",
+    "core",
+    "storage-core",
+    "storage-model",
+    "storage-indexeddb",
+    "storage-git",
+    "ui-actions",
+    "ui-file-explorer",
+    "instance-builder",
+    "ui-instance-tree",
+    "ui-layout",
+    "ui-model-browser",
+    "ui-model-view",
+    "ui-perspectives",
+    "ui-problems-panel",
+    "ui-properties-panel",
+    "ui-search",
+    "ui-workspace",
+    "ui-xmi-viewer",
+    "icons-material",
+    "metamodeler"
+  ]
+}

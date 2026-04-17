@@ -1,0 +1,35 @@
+{
+  "format": "gene-qvtr",
+  "version": 1,
+  "transformationName": "NewTransformation",
+  "sourcePackageURI": "http://www.gme.org/company/1.0",
+  "targetPackageURI": "http://www.gme.org/organization/1.0",
+  "relations": [
+    {
+      "name": "Person2Employee",
+      "isTop": true,
+      "sourceClass": "Person",
+      "targetClass": "Employee",
+      "mappings": [
+        {
+          "sourceFeature": "firstName",
+          "targetFeature": "firstName"
+        },
+        {
+          "sourceFeature": "lastName",
+          "targetFeature": "lastName"
+        },
+        {
+          "sourceFeature": "email",
+          "targetFeature": "email"
+        },
+        {
+          "sourceFeature": "fullName",
+          "targetFeature": "fullName"
+        }
+      ]
+    }
+  ],
+  "variables": [],
+  "qvtrCode": "transformation NewTransformation(in source: company, out target: organization) {\n\n  top relation Person2Employee {\n    checkonly domain source p: Person { firstName = firstName, lastName = lastName, email = email, fullName = fullName };\n    enforce domain target e: Employee { firstName = firstName, lastName = lastName, email = email, fullName = fullName };\n  }\n}\n"
+}

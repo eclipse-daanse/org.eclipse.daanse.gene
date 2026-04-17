@@ -1,0 +1,22 @@
+{
+  "id": "ui-model-browser",
+  "name": "Model Browser",
+  "version": "0.0.1",
+  "description": "EPackage/EClass browser for the Model Perspective left sidebar",
+  "entry": "src/index.ts",
+  "provides": [
+    {
+      "id": "ui.model-browser.components",
+      "description": "Model browser Vue components"
+    },
+    {
+      "id": "ui.model-browser.composables",
+      "description": "Model registry composable"
+    }
+  ],
+  "dependencies": [
+    "gene-app",
+    "ui-layout",
+    "ui-perspectives"
+  ]
+}
