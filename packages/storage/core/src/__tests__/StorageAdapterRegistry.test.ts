@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   StorageAdapterRegistry,
-  getStorageAdapterRegistry,
   type StorageAdapter,
   type RegistryObserver
 } from '../index';
@@ -35,25 +34,7 @@ describe('StorageAdapterRegistry', () => {
   let registry: StorageAdapterRegistry;
 
   beforeEach(() => {
-    // Get fresh instance and clear it
-    registry = getStorageAdapterRegistry();
-    // Clear all adapters
-    for (const type of registry.getRegisteredTypes()) {
-      registry.unregister(type);
-    }
-  });
-
-  describe('singleton', () => {
-    it('should return the same instance', () => {
-      const instance1 = StorageAdapterRegistry.getInstance();
-      const instance2 = StorageAdapterRegistry.getInstance();
-      expect(instance1).toBe(instance2);
-    });
-
-    it('getStorageAdapterRegistry should return singleton', () => {
-      const instance = getStorageAdapterRegistry();
-      expect(instance).toBe(StorageAdapterRegistry.getInstance());
-    });
+    registry = new StorageAdapterRegistry();
   });
 
   describe('register', () => {
