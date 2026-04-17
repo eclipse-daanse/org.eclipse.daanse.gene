@@ -1,6 +1,3 @@
-# AUTO-GENERATED — Nicht manuell bearbeiten!
-# Generiert durch: node scripts/sync-release-workflow.js
-
 name: Release Build
 
 on:
@@ -9,128 +6,12 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      plugins:
+        description: 'Komma-separierte Plugin-IDs (leer = release-plugins.json)'
+        required: false
+        type: string
       create_release:
         description: 'GitHub Release erstellen'
-        type: boolean
-        default: false
-
-      # --- Core ---
-      plugin_gene-app:
-        description: 'gene-app'
-        type: boolean
-        default: true
-      plugin_core:
-        description: 'core'
-        type: boolean
-        default: true
-
-      # --- Storage ---
-      plugin_storage-core:
-        description: 'storage-core'
-        type: boolean
-        default: true
-      plugin_storage-git:
-        description: 'storage-git'
-        type: boolean
-        default: true
-      plugin_storage-indexeddb:
-        description: 'storage-indexeddb'
-        type: boolean
-        default: true
-      plugin_storage-model:
-        description: 'storage-model'
-        type: boolean
-        default: true
-      plugin_storage-model-atlas:
-        description: 'storage-model-atlas'
-        type: boolean
-        default: false
-
-      # --- UI ---
-      plugin_ui-actions:
-        description: 'ui-actions'
-        type: boolean
-        default: true
-      plugin_ui-file-explorer:
-        description: 'ui-file-explorer'
-        type: boolean
-        default: true
-      plugin_instance-builder:
-        description: 'instance-builder'
-        type: boolean
-        default: true
-      plugin_ui-instance-tree:
-        description: 'ui-instance-tree'
-        type: boolean
-        default: true
-      plugin_ui-layout:
-        description: 'ui-layout'
-        type: boolean
-        default: true
-      plugin_ui-model-browser:
-        description: 'ui-model-browser'
-        type: boolean
-        default: true
-      plugin_ui-model-view:
-        description: 'ui-model-view'
-        type: boolean
-        default: true
-      plugin_ui-perspectives:
-        description: 'ui-perspectives'
-        type: boolean
-        default: true
-      plugin_ui-problems-panel:
-        description: 'ui-problems-panel'
-        type: boolean
-        default: true
-      plugin_ui-properties-panel:
-        description: 'ui-properties-panel'
-        type: boolean
-        default: true
-      plugin_ui-search:
-        description: 'ui-search'
-        type: boolean
-        default: true
-      plugin_ui-workspace:
-        description: 'ui-workspace'
-        type: boolean
-        default: true
-      plugin_ui-xmi-viewer:
-        description: 'ui-xmi-viewer'
-        type: boolean
-        default: true
-
-      # --- Feature ---
-      plugin_tsm-devtools:
-        description: 'tsm-devtools'
-        type: boolean
-        default: false
-      plugin_atlas-browser:
-        description: 'atlas-browser'
-        type: boolean
-        default: false
-      plugin_cocl-editor:
-        description: 'cocl-editor'
-        type: boolean
-        default: false
-      plugin_data-generator:
-        description: 'data-generator'
-        type: boolean
-        default: false
-      plugin_dmn-editor:
-        description: 'dmn-editor'
-        type: boolean
-        default: false
-      plugin_icons-material:
-        description: 'icons-material'
-        type: boolean
-        default: true
-      plugin_metamodeler:
-        description: 'metamodeler'
-        type: boolean
-        default: true
-      plugin_transformation:
-        description: 'transformation'
         type: boolean
         default: false
 
@@ -158,47 +39,14 @@ jobs:
       - name: Resolve plugin list
         id: plugins
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            PLUGINS=""
-            add_if() { [ "$1" = "true" ] && PLUGINS="$PLUGINS,$2"; }
-
-            add_if "${{ inputs.plugin_gene-app }}" "gene-app"
-            add_if "${{ inputs.plugin_core }}" "core"
-            add_if "${{ inputs.plugin_storage-core }}" "storage-core"
-            add_if "${{ inputs.plugin_storage-git }}" "storage-git"
-            add_if "${{ inputs.plugin_storage-indexeddb }}" "storage-indexeddb"
-            add_if "${{ inputs.plugin_storage-model }}" "storage-model"
-            add_if "${{ inputs.plugin_storage-model-atlas }}" "storage-model-atlas"
-            add_if "${{ inputs.plugin_ui-actions }}" "ui-actions"
-            add_if "${{ inputs.plugin_ui-file-explorer }}" "ui-file-explorer"
-            add_if "${{ inputs.plugin_instance-builder }}" "instance-builder"
-            add_if "${{ inputs.plugin_ui-instance-tree }}" "ui-instance-tree"
-            add_if "${{ inputs.plugin_ui-layout }}" "ui-layout"
-            add_if "${{ inputs.plugin_ui-model-browser }}" "ui-model-browser"
-            add_if "${{ inputs.plugin_ui-model-view }}" "ui-model-view"
-            add_if "${{ inputs.plugin_ui-perspectives }}" "ui-perspectives"
-            add_if "${{ inputs.plugin_ui-problems-panel }}" "ui-problems-panel"
-            add_if "${{ inputs.plugin_ui-properties-panel }}" "ui-properties-panel"
-            add_if "${{ inputs.plugin_ui-search }}" "ui-search"
-            add_if "${{ inputs.plugin_ui-workspace }}" "ui-workspace"
-            add_if "${{ inputs.plugin_ui-xmi-viewer }}" "ui-xmi-viewer"
-            add_if "${{ inputs.plugin_tsm-devtools }}" "tsm-devtools"
-            add_if "${{ inputs.plugin_atlas-browser }}" "atlas-browser"
-            add_if "${{ inputs.plugin_cocl-editor }}" "cocl-editor"
-            add_if "${{ inputs.plugin_data-generator }}" "data-generator"
-            add_if "${{ inputs.plugin_dmn-editor }}" "dmn-editor"
-            add_if "${{ inputs.plugin_icons-material }}" "icons-material"
-            add_if "${{ inputs.plugin_metamodeler }}" "metamodeler"
-            add_if "${{ inputs.plugin_transformation }}" "transformation"
-
-            PLUGINS="${PLUGINS#,}"
+          if [ -n "${{ inputs.plugins }}" ]; then
+            PLUGINS="${{ inputs.plugins }}"
           else
             PLUGINS=$(node -e "
               const cfg = JSON.parse(require('fs').readFileSync('release-plugins.json','utf-8'));
               console.log(cfg.plugins.join(','));
             ")
           fi
-
           echo "plugin_list=$PLUGINS" >> "$GITHUB_OUTPUT"
           echo "Plugins für Release: $PLUGINS"
 
@@ -259,8 +107,8 @@ jobs:
 
           gh release create "$TAG" gene-release.zip \
             --title "GenE $TAG" \
-            --notes "$(cat <<NOTES
-          ## GenE Release $TAG
+            --notes "$(cat <<'NOTES'
+          ## GenE Release
 
           ### Enthaltene Plugins
           $PLUGINS

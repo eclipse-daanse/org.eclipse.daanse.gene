@@ -29,8 +29,7 @@
     "plugins:watch:indexeddb": "npm run watch:tsm --workspace=storage-indexeddb",
     "plugins:watch:git": "npm run watch:tsm --workspace=storage-git",
     "generate": "emfts-codegen generate -m learn/fennec-generic-ui.ecore -c learn/fennec-generic-ui.genconfig -o src/generated/fennecui",
-    "generate:storage": "npm run generate --workspace=storage-model",
-    "sync:workflow": "node scripts/sync-release-workflow.js"
+    "generate:storage": "npm run generate --workspace=storage-model"
   },
   "dependencies": {
     "@eclipse-daanse/org.eclipse.daanse.feel.langium": "^0.0.1-next.1",
