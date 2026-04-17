@@ -13,7 +13,6 @@ import {
   type ModuleManifest,
   type PluginRepository,
   type DiscoveredModule,
-  type ModuleContext,
   type ServiceRegistry,
   type ModuleLogger
 } from '@eclipse-daanse/tsm'

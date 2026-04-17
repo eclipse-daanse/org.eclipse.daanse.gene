@@ -1939,7 +1939,7 @@ watch(currentPerspective, (perspectiveId, oldPerspectiveId) => {
 // Poll for services and update refs
 onMounted(() => {
   let initialSetupDone = false
-  let metamodelContextRegistered = false
+  const metamodelContextRegistered = false
 
   // Register global keyboard shortcut for search (Ctrl+Shift+F)
   const handleKeydown = (e: KeyboardEvent) => {

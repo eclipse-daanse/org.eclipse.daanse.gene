@@ -28,7 +28,7 @@ const sharedModules: ImportMapEntry[] = [
 export function importMapPlugin(): Plugin {
   let config: ResolvedConfig
   let isDev = true
-  let generatedFiles: Map<string, string> = new Map()
+  const generatedFiles: Map<string, string> = new Map()
 
   return {
     name: 'import-map-generator',

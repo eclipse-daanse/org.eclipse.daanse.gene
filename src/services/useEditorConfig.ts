@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * EditorConfig Service
  *
@@ -23,16 +24,12 @@ import {
   ResolutionStrategy,
   type EditorConfig,
   type IconMapping,
-  type LibraryIcon,
   type ModelSource,
   type InstanceSource,
   type LayoutConfig,
-  type PanelPosition,
   type TreeView,
-  type TreeFilter,
   type PackageResolverChain,
-  type PackageResolver,
-  PackageResolverKind
+  type PackageResolver
 } from '../generated/fennecui'
 
 // Panel position type for layout state sync
@@ -1185,7 +1182,7 @@ export function useEditorConfig() {
    */
   function updatePanelPositions(rawLayout: any, positions: PanelPositionData[]): void {
     // Get or create panelPositions list
-    let positionsList = getFeatureValue(rawLayout, 'panelPositions')
+    const positionsList = getFeatureValue(rawLayout, 'panelPositions')
 
     // Clear existing positions
     if (positionsList && typeof positionsList.clear === 'function') {
@@ -1566,7 +1563,7 @@ export function useEditorConfig() {
       }
 
       // Get filters
-      let filtersList = getFeatureValue(rawView, 'filters')
+      const filtersList = getFeatureValue(rawView, 'filters')
       if (filtersList) {
         const filters = typeof filtersList.toArray === 'function' ? filtersList.toArray() : filtersList
         for (const filter of filters) {
