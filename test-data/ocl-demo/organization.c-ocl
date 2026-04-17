@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cocl:OclConstraintSet xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:cocl="http://www.gme.org/cocl/1.0"
+    name="OrganizationConstraints"
+    version="1.0"
+    description="OCL Constraints fuer das Organization Modell">
+
+  <targetModelNsURIs>http://www.gme.org/organization/1.0</targetModelNsURIs>
+
+  <!-- Validierung: Employee muss Namen haben -->
+  <constraints name="EmployeeMustHaveName"
+      description="Jeder Mitarbeiter muss einen Vor- und Nachnamen haben."
+      expression="not self.firstName.oclIsUndefined() and not self.lastName.oclIsUndefined() and self.firstName.size() > 0 and self.lastName.size() > 0"
+      severity="ERROR"
+      role="VALIDATION"
+      contextClass="organization.Employee"
+      active="true"/>
+
+  <!-- Validierung: Level im gueltigen Bereich -->
+  <constraints name="LevelInValidRange"
+      description="Das Level eines Mitarbeiters muss zwischen 1 und 5 liegen."
+      expression="self.level >= 1 and self.level &lt;= 5"
+      severity="ERROR"
+      role="VALIDATION"
+      contextClass="organization.Employee"
+      active="true"/>
+
+  <!-- Validierung: Department muss Namen haben -->
+  <constraints name="DepartmentMustHaveName"
+      description="Jede Abteilung muss einen Namen haben."
+      expression="not self.name.oclIsUndefined() and self.name.size() > 0"
+      severity="ERROR"
+      role="VALIDATION"
+      contextClass="organization.Department"
+      active="true"/>
+
+  <!-- Validierung: maxCapacity positiv -->
+  <constraints name="MaxCapacityPositive"
+      description="Die maximale Kapazitaet einer Abteilung muss positiv sein."
+      expression="self.maxCapacity > 0"
+      severity="WARN"
+      role="VALIDATION"
+      contextClass="organization.Department"
+      active="true"/>
+
+  <!-- Referenz-Filter: Manager muss Level >= 3 haben -->
+  <constraints name="ManagerLevelFilter"
+      description="Manager muessen mindestens Level 3 haben."
+      expression="target.level >= 3"
+      severity="INFO"
+      role="REFERENCE_FILTER"
+      contextClass="organization.Department"
+      featureName="manager"
+      active="true"/>
+
+  <!-- Referenz-Filter: Members muessen Level >= 2 haben -->
+  <constraints name="MembersLevelFilter"
+      description="Abteilungsmitglieder muessen mindestens Level 2 haben."
+      expression="target.level >= 2"
+      severity="INFO"
+      role="REFERENCE_FILTER"
+      contextClass="organization.Department"
+      featureName="members"
+      active="true"/>
+
+  <!-- Referenz-Filter: Supervisor muss hoeheres Level haben -->
+  <constraints name="SupervisorLevelFilter"
+      description="Vorgesetzte muessen mindestens Level 2 haben."
+      expression="target.level >= 2"
+      severity="INFO"
+      role="REFERENCE_FILTER"
+      contextClass="organization.Employee"
+      featureName="supervisor"
+      active="true"/>
+
+</cocl:OclConstraintSet>

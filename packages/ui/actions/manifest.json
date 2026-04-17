@@ -1,0 +1,20 @@
+{
+  "id": "ui-actions",
+  "name": "Action System",
+  "version": "0.0.1",
+  "description": "Configurable action framework with internal handlers and remote REST execution",
+  "entry": "src/index.ts",
+  "dependencies": ["ui-layout"],
+  "services": {
+    "provides": [
+      { "id": "gene.action.registry" },
+      { "id": "gene.action.manager" },
+      { "id": "gene.action.executor.internal" },
+      { "id": "gene.action.executor.remote" },
+      { "id": "gene.action.events" }
+    ],
+    "requires": [
+      { "id": "gene.eventbus" }
+    ]
+  }
+}

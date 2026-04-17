@@ -1,0 +1,27 @@
+{
+  "id": "storage-git",
+  "name": "Git Storage Adapter",
+  "version": "1.0.0",
+  "description": "Git storage adapter for GitHub, Gitea, etc.",
+  "entry": "src/index.ts",
+  "exports": {
+    "./adapter": {
+      "type": "adapter",
+      "description": "Git storage adapter",
+      "serviceId": "storage.adapter.git"
+    }
+  },
+  "provides": [
+    {
+      "id": "storage.adapter.git",
+      "description": "Git storage adapter instance"
+    }
+  ],
+  "requiresService": [
+    {
+      "id": "storage.registry",
+      "optional": false
+    }
+  ],
+  "dependencies": ["storage-core"]
+}

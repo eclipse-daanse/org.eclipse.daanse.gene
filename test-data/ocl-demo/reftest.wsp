@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fennecui:EditorConfig xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:fennecui="https://eclipse.org/fennec/ts/generic/ui" name="reftest" configFileExtensions="" enabled="true" activeViewId="">
+  <modelSources name="organization" location="organization.ecore" resolution="0" registerPackages="true" enabled="true"/>
+  <modelSources name="company" location="company.ecore" resolution="0" registerPackages="true" enabled="true"/>
+  <instanceSources name="organization-instances.xmi" location="organization-instances.xmi" resolution="0" enabled="true"/>
+  <instanceSources name="family.xmi" location="family.xmi" resolution="0" enabled="true"/>
+  <layoutConfig primarySidebarWidth="349" secondarySidebarWidth="500" panelAreaHeight="400" primarySidebarVisible="true" secondarySidebarVisible="true" panelAreaVisible="true" activityBarVisible="true" statusBarVisible="true" activeActivityId="file-explorer">
+    <panelPositions panelId="model-browser" location="1" order="0"/>
+    <panelPositions panelId="instance-tree" location="0" order="1"/>
+  </layoutConfig>
+</fennecui:EditorConfig>

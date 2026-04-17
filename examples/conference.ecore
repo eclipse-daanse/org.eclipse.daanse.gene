@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="conference" nsURI="http://example.org/conference" nsPrefix="conf">
+
+  <!-- Conference: Root element containing everything -->
+  <eClassifiers xsi:type="ecore:EClass" name="Conference">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="location" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="startDate" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="endDate" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Containment: Conference owns Rooms -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="rooms" upperBound="-1" eType="#//Room" containment="true"/>
+    <!-- Containment: Conference owns Sessions -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="sessions" upperBound="-1" eType="#//Session" containment="true"/>
+    <!-- Containment: Conference owns Participants -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="participants" upperBound="-1" eType="#//Person" containment="true"/>
+  </eClassifiers>
+
+  <!-- Room: A location where sessions take place -->
+  <eClassifiers xsi:type="ecore:EClass" name="Room">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="capacity" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="hasProjector" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+  </eClassifiers>
+
+  <!-- Person: Abstract base class for all people -->
+  <eClassifiers xsi:type="ecore:EClass" name="Person" abstract="true">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="firstName" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lastName" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="email" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- Speaker: A person who presents sessions (inherits from Person) -->
+  <eClassifiers xsi:type="ecore:EClass" name="Speaker" eSuperTypes="#//Person">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="bio" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="organization" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- Attendee: A person who attends sessions (inherits from Person) -->
+  <eClassifiers xsi:type="ecore:EClass" name="Attendee" eSuperTypes="#//Person">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="ticketType" eType="#//TicketType"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="company" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Cross-reference: Sessions this attendee is registered for -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="registeredSessions" upperBound="-1" eType="#//Session"/>
+  </eClassifiers>
+
+  <!-- Session: Abstract base for all session types -->
+  <eClassifiers xsi:type="ecore:EClass" name="Session" abstract="true">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="title" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="startTime" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="duration" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    <!-- Cross-reference: Room where session takes place -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="room" eType="#//Room"/>
+    <!-- Cross-reference: Speakers presenting this session -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="speakers" upperBound="-1" eType="#//Speaker"/>
+  </eClassifiers>
+
+  <!-- Talk: A presentation by one or more speakers (inherits from Session) -->
+  <eClassifiers xsi:type="ecore:EClass" name="Talk" eSuperTypes="#//Session">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="level" eType="#//TalkLevel"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="slidesUrl" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- Workshop: A hands-on session (inherits from Session) -->
+  <eClassifiers xsi:type="ecore:EClass" name="Workshop" eSuperTypes="#//Session">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="maxParticipants" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="prerequisites" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="materialsUrl" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- Keynote: A special highlighted session (inherits from Session) -->
+  <eClassifiers xsi:type="ecore:EClass" name="Keynote" eSuperTypes="#//Session">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="isOpening" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+  </eClassifiers>
+
+  <!-- TicketType: Enum for different ticket types -->
+  <eClassifiers xsi:type="ecore:EEnum" name="TicketType">
+    <eLiterals name="STANDARD"/>
+    <eLiterals name="VIP" value="1"/>
+    <eLiterals name="STUDENT" value="2"/>
+    <eLiterals name="SPEAKER" value="3"/>
+  </eClassifiers>
+
+  <!-- TalkLevel: Enum for talk difficulty levels -->
+  <eClassifiers xsi:type="ecore:EEnum" name="TalkLevel">
+    <eLiterals name="BEGINNER"/>
+    <eLiterals name="INTERMEDIATE" value="1"/>
+    <eLiterals name="ADVANCED" value="2"/>
+  </eClassifiers>
+
+</ecore:EPackage>

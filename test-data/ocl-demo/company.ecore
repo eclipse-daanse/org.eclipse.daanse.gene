@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" nsURI="http://www.gme.org/company/1.0" nsPrefix="company" name="company">
+  <eClassifiers xsi:type="ecore:EEnum" name="Gender">
+    <eLiterals name="MALE"/>
+    <eLiterals value="1" name="FEMALE"/>
+    <eLiterals value="2" name="DIVERSE"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Person">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" iD="true" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="firstName"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="lastName"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="title"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EDate" name="birthDate"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="email"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="gender"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" changeable="false" volatile="true" transient="true" derived="true" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="fullName">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Vollständiger Name der Person. Berechnet aus Titel, Vorname und Nachname."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/OCL">
+        <details key="derivation" value="if self.title.oclIsUndefined() or self.title = &apos;&apos; then self.firstName.concat(&apos; &apos;).concat(self.lastName) else self.title.concat(&apos; &apos;).concat(self.firstName).concat(&apos; &apos;).concat(self.lastName) endif"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" changeable="false" volatile="true" transient="true" derived="true" eType="http://www.eclipse.org/emf/2002/Ecore#//EBoolean" name="isAdult">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Gibt an, ob die Person volljährig ist."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/OCL">
+        <details key="derivation" value="not self.title.oclIsUndefined() and self.title &lt;&gt; &apos;&apos;"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="http://www.gme.org/company/1.0#//Person" name="children"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" changeable="false" volatile="true" transient="true" derived="true" upperBound="-1" eType="http://www.gme.org/company/1.0#//Person" name="adultChildren">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Alle volljährigen Kinder dieser Person."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/OCL">
+        <details key="derivation" value="self.children-&gt;select(c | not c.title.oclIsUndefined() and c.title &lt;&gt; &apos;&apos;)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eOperations eType="http://www.eclipse.org/emf/2002/Ecore#//EInt" name="getChildCount">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Gibt die Anzahl der Kinder zurück."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/OCL">
+        <details key="body" value="self.children-&gt;size()"/>
+      </eAnnotations>
+    </eOperations>
+    <eOperations eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="getInitials">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Gibt die Initialen der Person zurück."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/OCL">
+        <details key="body" value="self.firstName.substring(0, 1).concat(&apos;.&apos;).concat(self.lastName.substring(0, 1)).concat(&apos;.&apos;)"/>
+      </eAnnotations>
+    </eOperations>
+    <eOperations eType="http://www.eclipse.org/emf/2002/Ecore#//EBoolean" name="hasChildNamed">
+      <eParameters lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="searchName">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Der zu suchende Vorname."/>
+        </eAnnotations>
+      </eParameters>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Prüft, ob ein Kind mit diesem Namen existiert."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/OCL">
+        <details key="body" value="self.children-&gt;exists(c | c.firstName = searchName)"/>
+      </eAnnotations>
+    </eOperations>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Repräsentiert eine Person mit persönlichen Daten, Familienbeziehungen und berechneten Feldern."/>
+    </eAnnotations>
+  </eClassifiers>
+  <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+    <details key="documentation" value="Beispiel-Modell zur Demonstration von Derived Attributes, Derived References und Operations mit OCL."/>
+  </eAnnotations>
+</ecore:EPackage>

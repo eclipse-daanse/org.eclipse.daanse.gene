@@ -1,0 +1,22 @@
+{
+  "id": "atlas-browser",
+  "name": "Model Atlas Browser",
+  "version": "0.1.0",
+  "description": "Browse and import models from Model Atlas servers",
+  "entry": "src/index.ts",
+  "dependencies": [
+    "gene-app",
+    "ui-layout",
+    "storage-model-atlas"
+  ],
+  "provides": [
+    {
+      "id": "ui.atlas-browser.components",
+      "description": "Atlas Browser UI components"
+    },
+    {
+      "id": "ui.atlas-browser.composables",
+      "description": "Atlas Browser composables"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "storage-model-atlas",
+  "name": "Model Atlas Storage Adapter",
+  "version": "1.0.0",
+  "description": "Storage adapter for Model Atlas server (remote EMF model management)",
+  "entry": "src/index.ts",
+  "exports": {
+    "./adapter": {
+      "type": "adapter",
+      "description": "Model Atlas storage adapter",
+      "serviceId": "storage.adapter.model-atlas"
+    }
+  },
+  "provides": [
+    {
+      "id": "storage.adapter.model-atlas",
+      "description": "Model Atlas storage adapter instance"
+    }
+  ],
+  "requiresService": [
+    {
+      "id": "storage.registry",
+      "optional": false
+    }
+  ],
+  "dependencies": ["storage-core"]
+}

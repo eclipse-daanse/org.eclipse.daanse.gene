@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fennecui:EditorConfig xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:fennecui="https://eclipse.org/fennec/ts/generic/ui" name="uni" configFileExtensions="" enabled="true" activeViewId="">
+  <modelSources name="university" location="university.ecore" resolution="RELATIVE_TO_CONFIG" registerPackages="true" enabled="true"/>
+  <instanceSources name="Instances" location="instances/uni.xmi" resolution="0" enabled="true"/>
+</fennecui:EditorConfig>

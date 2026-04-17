@@ -1,0 +1,14 @@
+{
+  "id": "ui-problems-panel",
+  "name": "Problems Panel",
+  "version": "0.1.0",
+  "description": "Problems panel for displaying validation issues",
+  "entry": "src/index.ts",
+  "provides": [
+    {
+      "id": "ui.problems-panel",
+      "description": "Problems panel service and components"
+    }
+  ],
+  "dependencies": ["gene-app"]
+}

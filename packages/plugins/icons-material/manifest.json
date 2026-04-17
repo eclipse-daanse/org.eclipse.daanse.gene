@@ -1,0 +1,16 @@
+{
+  "id": "icons-material",
+  "name": "Material Symbols Icons",
+  "version": "0.1.0",
+  "description": "Material Symbols icon provider for GenE",
+  "entry": "src/index.ts",
+  "dependencies": [
+    "ui-instance-tree"
+  ],
+  "provides": [
+    {
+      "id": "icons.material-symbols",
+      "description": "Material Symbols icon provider"
+    }
+  ]
+}

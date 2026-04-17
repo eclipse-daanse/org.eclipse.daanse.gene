@@ -1,0 +1,14 @@
+{
+  "id": "ui-search",
+  "name": "Search",
+  "version": "0.1.0",
+  "description": "Search dialog for Gene",
+  "entry": "src/index.ts",
+  "provides": [
+    {
+      "id": "ui.search",
+      "description": "Search service and components"
+    }
+  ],
+  "dependencies": ["gene-app"]
+}

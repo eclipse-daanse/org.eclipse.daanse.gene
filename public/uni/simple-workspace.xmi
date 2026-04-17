@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config:EditorConfig xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:config="http://gene.io/editor-config">
+  <!-- Load SimpleUniversity.ecore (no inheritance) -->
+  <modelSources location="SimpleUniversity.ecore" enabled="true"/>
+  <!-- Load instances -->
+  <instanceSources location="simple-students.xmi" enabled="true"/>
+</config:EditorConfig>

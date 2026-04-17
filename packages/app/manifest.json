@@ -1,0 +1,49 @@
+{
+  "id": "gene-app",
+  "name": "GenE Application",
+  "version": "0.0.1",
+  "description": "GenE Vue application shell",
+  "entry": "src/index.ts",
+  "libraries": {
+    "vue": {
+      "package": "vue",
+      "version": "^3.5.26",
+      "description": "Vue.js reactivity and composition API"
+    },
+    "router": {
+      "package": "vue-router",
+      "version": "^4.6.4",
+      "description": "Vue Router for navigation"
+    },
+    "primevue": {
+      "package": "primevue",
+      "version": "^4.3.3",
+      "description": "PrimeVue UI components"
+    }
+  },
+  "provides": [
+    {
+      "id": "app.instance",
+      "description": "Vue application instance"
+    }
+  ],
+  "requiresService": [
+    {
+      "id": "ui.layout.components",
+      "optional": true
+    },
+    {
+      "id": "ui.layout.state",
+      "optional": true
+    },
+    {
+      "id": "ui.workspace.components",
+      "optional": true
+    },
+    {
+      "id": "ui.workspace.composables",
+      "optional": true
+    }
+  ],
+  "priority": 1000
+}

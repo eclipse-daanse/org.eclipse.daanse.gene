@@ -1,0 +1,19 @@
+{
+  "id": "dmn-editor",
+  "name": "DMN Editor",
+  "version": "0.1.0",
+  "description": "DMN Decision Table Editor with FEEL expression support",
+  "entry": "src/index.ts",
+  "dependencies": [
+    "gene-app",
+    "ui-layout",
+    "ui-perspectives",
+    "ui-model-browser"
+  ],
+  "provides": [
+    {
+      "id": "ui.dmn-editor.components",
+      "description": "DMN Editor UI components"
+    }
+  ]
+}

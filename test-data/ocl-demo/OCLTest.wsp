@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fennecui:EditorConfig xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:fennecui="https://eclipse.org/fennec/ts/generic/ui" name="OCLTest" configFileExtensions="" enabled="true" activeViewId="">
+  <modelSources name="company" location="company.ecore" resolution="0" registerPackages="true" enabled="true"/>
+  <modelSources name="organization" location="organization.ecore" resolution="0" registerPackages="true" enabled="true"/>
+  <instanceSources name="family.xmi" location="family.xmi" resolution="0" enabled="true"/>
+  <iconMappings targetTypeUri="http://www.gme.org/company/1.0#Person" scope="TYPE_AND_SUBTYPES" priority="20">
+    <icon xsi:type="fennecui:LibraryIcon" library="CUSTOM" name="pi pi-user"/>
+  </iconMappings>
+  <layoutConfig primarySidebarWidth="426" secondarySidebarWidth="480" panelAreaHeight="568.0084762573242" primarySidebarVisible="true" secondarySidebarVisible="true" panelAreaVisible="false" activityBarVisible="true" statusBarVisible="true" activeActivityId="instance-tree"/>
+</fennecui:EditorConfig>

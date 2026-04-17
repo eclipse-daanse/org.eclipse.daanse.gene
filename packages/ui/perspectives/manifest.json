@@ -1,0 +1,14 @@
+{
+  "id": "ui-perspectives",
+  "name": "Perspectives",
+  "version": "0.0.1",
+  "description": "Perspective management for switching between File Explorer and Model Editor views",
+  "entry": "src/index.ts",
+  "provides": [
+    {
+      "id": "ui.perspectives",
+      "description": "Perspective state and management"
+    }
+  ],
+  "dependencies": ["gene-app", "ui-layout"]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "data-generator",
+  "name": "Data Generator",
+  "version": "0.1.0",
+  "description": "Automatic test data generation for EMF metamodels using FakerJS",
+  "entry": "src/index.ts",
+  "dependencies": [
+    "gene-app",
+    "ui-layout",
+    "ui-perspectives"
+  ],
+  "provides": [
+    {
+      "id": "ui.data-generator.components",
+      "description": "Data Generator UI components"
+    }
+  ]
+}

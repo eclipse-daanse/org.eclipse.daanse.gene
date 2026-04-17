@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<conf:Conference xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:conf="http://example.org/conference"
+    name="DevCon 2024"
+    location="Berlin, Germany"
+    startDate="2024-09-15"
+    endDate="2024-09-17">
+
+  <!-- Rooms -->
+  <rooms name="Main Hall" capacity="500" hasProjector="true"/>
+  <rooms name="Room A" capacity="100" hasProjector="true"/>
+  <rooms name="Room B" capacity="50" hasProjector="true"/>
+  <rooms name="Workshop Lab" capacity="30" hasProjector="false"/>
+
+  <!-- Speakers -->
+  <participants xsi:type="conf:Speaker"
+      firstName="Alice"
+      lastName="Johnson"
+      email="alice@example.com"
+      bio="Senior Software Architect with 15 years experience"
+      organization="TechCorp"/>
+
+  <participants xsi:type="conf:Speaker"
+      firstName="Bob"
+      lastName="Smith"
+      email="bob@example.com"
+      bio="Open Source Contributor and Author"
+      organization="OpenDev Foundation"/>
+
+  <participants xsi:type="conf:Speaker"
+      firstName="Carol"
+      lastName="Williams"
+      email="carol@example.com"
+      bio="Cloud Native Expert"
+      organization="CloudScale Inc"/>
+
+  <!-- Attendees -->
+  <participants xsi:type="conf:Attendee"
+      firstName="David"
+      lastName="Brown"
+      email="david@company.com"
+      ticketType="STANDARD"
+      company="Acme Corp"/>
+
+  <participants xsi:type="conf:Attendee"
+      firstName="Eve"
+      lastName="Davis"
+      email="eve@university.edu"
+      ticketType="STUDENT"
+      company="State University"/>
+
+  <!-- Sessions -->
+  <sessions xsi:type="conf:Keynote"
+      title="The Future of Software Development"
+      description="Opening keynote about emerging trends in software development"
+      startTime="09:00"
+      duration="60"
+      isOpening="true"
+      room="//@rooms.0"
+      speakers="//@participants.0"/>
+
+  <sessions xsi:type="conf:Talk"
+      title="Modern TypeScript Patterns"
+      description="Deep dive into advanced TypeScript patterns and best practices"
+      startTime="10:30"
+      duration="45"
+      level="INTERMEDIATE"
+      slidesUrl="https://slides.example.com/ts-patterns"
+      room="//@rooms.1"
+      speakers="//@participants.1"/>
+
+  <sessions xsi:type="conf:Talk"
+      title="Cloud Native Architecture"
+      description="Building scalable applications with Kubernetes and microservices"
+      startTime="10:30"
+      duration="45"
+      level="ADVANCED"
+      room="//@rooms.2"
+      speakers="//@participants.2"/>
+
+  <sessions xsi:type="conf:Workshop"
+      title="Hands-on EMF Modeling"
+      description="Learn to create domain models with EMF"
+      startTime="14:00"
+      duration="180"
+      maxParticipants="25"
+      prerequisites="Basic Java/TypeScript knowledge"
+      materialsUrl="https://github.com/example/emf-workshop"
+      room="//@rooms.3"
+      speakers="//@participants.0 //@participants.1"/>
+
+</conf:Conference>

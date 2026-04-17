@@ -1,0 +1,2522 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="fennecui"
+    nsURI="https://eclipse.org/fennec/ts/generic/ui"
+    nsPrefix="fennecui">
+
+  <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+    <details key="documentation" value="Orthogonal configuration model for generic EMF editors. This model describes how a generic editor should discover resources, load metamodels, visualize objects (icons, labels, styles), handle reference selection with filtering, define storage locations for objects, and provide quick actions. It is independent of the actual domain model being edited."/>
+  </eAnnotations>
+
+  <!-- ============================================================
+       ENUMERATIONS
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EEnum" name="PatternKind">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Kind of file pattern used for resource discovery."/>
+    </eAnnotations>
+    <eLiterals name="GLOB" value="0" literal="GLOB">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Glob pattern (e.g., **/*.xmi, *.ecore)."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="REGEX" value="1" literal="REGEX">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Regular expression pattern."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="SUFFIX" value="2" literal="SUFFIX">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="File suffix/extension (e.g., .xmi, .ecore)."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="PREFIX" value="3" literal="PREFIX">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="File name prefix."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="IconLibrary">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Known icon libraries for UI rendering."/>
+    </eAnnotations>
+    <eLiterals name="MATERIAL_SYMBOLS" value="0" literal="MATERIAL_SYMBOLS">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Google Material Symbols icon library."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="FONT_AWESOME" value="1" literal="FONT_AWESOME">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Font Awesome icon library."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="LUCIDE" value="2" literal="LUCIDE">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Lucide icon library."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="CUSTOM" value="3" literal="CUSTOM">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Custom icon library defined by the implementation."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="LabelMode">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Strategy for computing object labels in the UI."/>
+    </eAnnotations>
+    <eLiterals name="ID" value="0" literal="ID">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Use the object's ID attribute as label."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="NAME" value="1" literal="NAME">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Use the object's name attribute as label."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="TEMPLATE" value="2" literal="TEMPLATE">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Use a template pattern with placeholders for attributes."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="OCL" value="3" literal="OCL">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Compute label using an OCL expression returning a String."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="MappingScope">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Scope for type-based rules: exact type or including subtypes."/>
+    </eAnnotations>
+    <eLiterals name="TYPE_ONLY" value="0" literal="TYPE_ONLY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Rule applies only to the exact specified type."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="TYPE_AND_SUBTYPES" value="1" literal="TYPE_AND_SUBTYPES">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Rule applies to the type and all its subtypes."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="FilterType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Type of tree view filter."/>
+    </eAnnotations>
+    <eLiterals name="ECLASS_TYPE" value="0" literal="ECLASS_TYPE">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Filter based on EClass type (hides all instances of a type)."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="ELEMENT" value="1" literal="ELEMENT">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Filter based on specific element URI."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="FontWeight">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Font weight for text styling."/>
+    </eAnnotations>
+    <eLiterals name="NORMAL" value="0" literal="NORMAL"/>
+    <eLiterals name="BOLD" value="1" literal="BOLD"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="SortDirection">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Direction for sorting operations."/>
+    </eAnnotations>
+    <eLiterals name="ASC" value="0" literal="ASC">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Ascending order (A-Z, 0-9)."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="DESC" value="1" literal="DESC">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Descending order (Z-A, 9-0)."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="Visibility">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Visibility state for inspector features."/>
+    </eAnnotations>
+    <eLiterals name="DEFAULT" value="0" literal="DEFAULT">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Use default visibility determined by the editor."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="VISIBLE" value="1" literal="VISIBLE">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Force feature to be visible."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="HIDDEN" value="2" literal="HIDDEN">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Force feature to be hidden."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="ActionScope">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Context where a quick action is available."/>
+    </eAnnotations>
+    <eLiterals name="OBJECT" value="0" literal="OBJECT">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Action appears in object context menu."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="EDITOR" value="1" literal="EDITOR">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Action appears in editor-level menu."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="BOTH" value="2" literal="BOTH">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Action appears in both object and editor contexts."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="ActionType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Classification of action purpose."/>
+    </eAnnotations>
+    <eLiterals name="QUERY" value="0" literal="QUERY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Query or retrieve data."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="VALIDATION" value="1" literal="VALIDATION">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Validate data and return messages."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="DOCUMENTATION" value="2" literal="DOCUMENTATION">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Generate documentation."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="TRANSFORMATION" value="3" literal="TRANSFORMATION">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Transform model data."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="CUSTOM" value="4" literal="CUSTOM">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Custom user-defined action."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="HttpMethod">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="HTTP method for remote action endpoints."/>
+    </eAnnotations>
+    <eLiterals name="GET" value="0" literal="GET"/>
+    <eLiterals name="POST" value="1" literal="POST"/>
+    <eLiterals name="PUT" value="2" literal="PUT"/>
+    <eLiterals name="PATCH" value="3" literal="PATCH"/>
+    <eLiterals name="DELETE" value="4" literal="DELETE"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="SerializationType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="How action input data is serialized for remote transport."/>
+    </eAnnotations>
+    <eLiterals name="QUERY_PARAMS" value="0" literal="QUERY_PARAMS">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Encode parameters in URL query string."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="JSON_BODY" value="1" literal="JSON_BODY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="JSON.stringify with content-type application/json."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="XMI_BODY" value="2" literal="XMI_BODY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Serialize EMF objects as XMI XML."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="MULTIPART" value="3" literal="MULTIPART">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="FormData with files and JSON parts."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="AuthType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Authentication method for remote action endpoints."/>
+    </eAnnotations>
+    <eLiterals name="NONE" value="0" literal="NONE"/>
+    <eLiterals name="BASIC" value="1" literal="BASIC"/>
+    <eLiterals name="BEARER" value="2" literal="BEARER"/>
+    <eLiterals name="API_KEY" value="3" literal="API_KEY"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="ExecutionMode">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Whether a remote action is executed synchronously or asynchronously."/>
+    </eAnnotations>
+    <eLiterals name="SYNC" value="0" literal="SYNC"/>
+    <eLiterals name="ASYNC" value="1" literal="ASYNC"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="ParameterType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Data type of an action parameter."/>
+    </eAnnotations>
+    <eLiterals name="STRING" value="0" literal="STRING"/>
+    <eLiterals name="NUMBER" value="1" literal="NUMBER"/>
+    <eLiterals name="BOOLEAN" value="2" literal="BOOLEAN"/>
+    <eLiterals name="DATE" value="3" literal="DATE"/>
+    <eLiterals name="ENUM" value="4" literal="ENUM"/>
+    <eLiterals name="FILE" value="5" literal="FILE"/>
+    <eLiterals name="ECLASS_REF" value="6" literal="ECLASS_REF"/>
+    <eLiterals name="EOBJECT_REF" value="7" literal="EOBJECT_REF"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="ReturnType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Type of artifact returned by an action."/>
+    </eAnnotations>
+    <eLiterals name="FILE" value="0" literal="FILE"/>
+    <eLiterals name="VALIDATION_MESSAGES" value="1" literal="VALIDATION_MESSAGES"/>
+    <eLiterals name="MARKDOWN" value="2" literal="MARKDOWN"/>
+    <eLiterals name="XMI" value="3" literal="XMI"/>
+    <eLiterals name="JSON" value="4" literal="JSON"/>
+    <eLiterals name="HTML" value="5" literal="HTML"/>
+    <eLiterals name="IMAGE" value="6" literal="IMAGE"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="FileHandling">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="How a file artifact should be handled after action execution."/>
+    </eAnnotations>
+    <eLiterals name="DOWNLOAD" value="0" literal="DOWNLOAD"/>
+    <eLiterals name="WORKSPACE_SAVE" value="1" literal="WORKSPACE_SAVE"/>
+    <eLiterals name="OPEN" value="2" literal="OPEN"/>
+    <eLiterals name="AUTO" value="3" literal="AUTO"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="XmiImportMode">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="How XMI result artifacts are imported into the working resource set."/>
+    </eAnnotations>
+    <eLiterals name="NEW_RESOURCE" value="0" literal="NEW_RESOURCE"/>
+    <eLiterals name="REPLACE_RESOURCE" value="1" literal="REPLACE_RESOURCE"/>
+    <eLiterals name="MERGE_INTO_EXISTING" value="2" literal="MERGE_INTO_EXISTING"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="ExecutionEnvironment">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Execution environment for internal action handlers."/>
+    </eAnnotations>
+    <eLiterals name="MAIN_THREAD" value="0" literal="MAIN_THREAD"/>
+    <eLiterals name="WEB_WORKER" value="1" literal="WEB_WORKER"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="LifecycleEventType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Application lifecycle events that can trigger actions."/>
+    </eAnnotations>
+    <eLiterals name="WORKSPACE_OPENED" value="0" literal="WORKSPACE_OPENED"/>
+    <eLiterals name="WORKSPACE_CLOSED" value="1" literal="WORKSPACE_CLOSED"/>
+    <eLiterals name="PERSPECTIVE_CHANGED" value="2" literal="PERSPECTIVE_CHANGED"/>
+    <eLiterals name="FILE_SAVED" value="3" literal="FILE_SAVED"/>
+    <eLiterals name="FILE_OPENED" value="4" literal="FILE_OPENED"/>
+    <eLiterals name="MODEL_LOADED" value="5" literal="MODEL_LOADED"/>
+    <eLiterals name="MODEL_UNLOADED" value="6" literal="MODEL_UNLOADED"/>
+    <eLiterals name="VALIDATION_COMPLETED" value="7" literal="VALIDATION_COMPLETED"/>
+    <eLiterals name="EDITOR_ACTIVATED" value="8" literal="EDITOR_ACTIVATED"/>
+    <eLiterals name="EDITOR_DEACTIVATED" value="9" literal="EDITOR_DEACTIVATED"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="DomainChangeType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Type of domain model change that can trigger actions."/>
+    </eAnnotations>
+    <eLiterals name="CREATE" value="0" literal="CREATE"/>
+    <eLiterals name="DELETE" value="1" literal="DELETE"/>
+    <eLiterals name="SET" value="2" literal="SET"/>
+    <eLiterals name="ADD" value="3" literal="ADD"/>
+    <eLiterals name="REMOVE" value="4" literal="REMOVE"/>
+    <eLiterals name="MOVE" value="5" literal="MOVE"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="ExecuteMode">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="How multiple actions in an event mapping are executed."/>
+    </eAnnotations>
+    <eLiterals name="ALL" value="0" literal="ALL">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Execute all mapped actions (parallel where possible)."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="FIRST_MATCH" value="1" literal="FIRST_MATCH">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Execute only the first action whose condition is true."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="SEQUENTIAL" value="2" literal="SEQUENTIAL">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Execute actions sequentially, abort on failure."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="ModelSourceKind">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Kind of model source for bootstrapping the editor's internal model factory."/>
+    </eAnnotations>
+    <eLiterals name="ECORE" value="0" literal="ECORE">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Ecore metamodel file (.ecore)."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="GENMODEL" value="1" literal="GENMODEL">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="EMF Generator model file (.genmodel)."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="XMI" value="2" literal="XMI">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="XMI model instance file."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="EMF_PACKAGE_CLASS" value="3" literal="EMF_PACKAGE_CLASS">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Java EPackage class to register programmatically."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="CUSTOM" value="4" literal="CUSTOM">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Custom model source type handled by the implementation."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="ResolutionStrategy">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Strategy for resolving relative paths and URIs."/>
+    </eAnnotations>
+    <eLiterals name="RELATIVE_TO_CONFIG" value="0" literal="RELATIVE_TO_CONFIG">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Resolve relative to the configuration file location."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="RELATIVE_TO_WORKSPACE" value="1" literal="RELATIVE_TO_WORKSPACE">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Resolve relative to the workspace root."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="ABSOLUTE_OR_URI" value="2" literal="ABSOLUTE_OR_URI">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Use as absolute path or full URI."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="SelectionMode">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Mode for candidate selection when setting references."/>
+    </eAnnotations>
+    <eLiterals name="DEFAULT_ALL" value="0" literal="DEFAULT_ALL">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Show all candidates by default unless filter applies."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="FILTERED_ONLY" value="1" literal="FILTERED_ONLY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Only show candidates that pass the filter expression."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <!-- ============================================================
+       ROOT CONFIGURATION
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="EditorConfig">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Root configuration element for a generic EMF editor. Contains all rules and settings for resource discovery, visualization, and editor behavior."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional unique identifier for this configuration."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable name of this configuration."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Description of this configuration's purpose."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="configFileExtensions" upperBound="-1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="File extensions that identify configuration files for this editor (e.g., 'fennecui', 'gecfg.xmi')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this configuration is active."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <!-- Model Bootstrap -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="modelSources" upperBound="-1" eType="#//ModelSource" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Model sources to load for bootstrapping the internal model factory and registry."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="modelRepositories" upperBound="-1" eType="#//ModelRepository" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Model repositories to scan and index for cross-resource resolution."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <!-- Instance Sources -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="instanceSources" upperBound="-1" eType="#//InstanceSource" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Instance data sources (XMI files) to load when opening the workspace."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <!-- Resource Loading -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="importRules" upperBound="-1" eType="#//ImportRule" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Rules for discovering and loading resources into the working ResourceSet."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="loadProfiles" upperBound="-1" eType="#//LoadProfile" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Reusable resource loading profiles with options."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <!-- Visualization -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="iconMappings" upperBound="-1" eType="#//IconMapping" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Mappings from type URIs to icons."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="labelRules" upperBound="-1" eType="#//LabelRule" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Rules for computing object labels."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="highlightRules" upperBound="-1" eType="#//HighlightRule" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Rules for highlighting objects with styles."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="decoratorRules" upperBound="-1" eType="#//DecoratorRule" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Rules for displaying decorators/badges (dirty, read-only, errors, etc.)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <!-- Behavior -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="sortRules" upperBound="-1" eType="#//SortRule" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Rules for sorting child elements in tree views."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="featureRules" upperBound="-1" eType="#//FeatureRule" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Rules controlling feature visibility and editability in inspectors."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="quickActions" upperBound="-1" eType="#//QuickAction" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="DEPRECATED: Use 'actions' instead. Kept for backwards compatibility with existing .fennecui files."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <!-- Actions & Events -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="actions" upperBound="-1" eType="#//AbstractAction" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Configurable actions (internal handlers and remote REST calls). Registered in the ActionRegistry when the workspace is loaded. Plugins can contribute additional actions programmatically."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="eventMappings" upperBound="-1" eType="#//EventActionMapping" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Event-action mappings that define automated reactions to lifecycle, domain, or custom events. Enables event-driven workflows without code."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="referenceSelectionRules" upperBound="-1" eType="#//ReferenceSelectionRule" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Rules for filtering and presenting candidates when setting references."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="storageLocationRules" upperBound="-1" eType="#//StorageLocationRule" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Rules defining where objects of specific types should be stored (folders/subfolders)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <!-- Support -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="namespaceMappings" upperBound="-1" eType="#//NamespaceMapping" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Namespace to package registration hints for resource loading."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="uiDefaults" eType="#//UiDefaults" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Default UI settings and fallbacks."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <!-- Layout Configuration -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="layoutConfig" eType="#//LayoutConfig" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Layout configuration for panel sizes and visibility."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <!-- Tree Views (saved filters) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="treeViews" upperBound="-1" eType="#//TreeView" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Saved tree views with filters for hiding elements."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="activeViewId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="ID of the currently active tree view."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <!-- Package Resolver Chain -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="packageResolverChain" eType="#//PackageResolverChain" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional chain of package resolvers for cascaded EPackage resolution (local registry + Model Atlas)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       MODEL BOOTSTRAP
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="ModelSource">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="A model source required to bootstrap the editor's internal model factory. Loads metamodels and registers packages before other resources can be loaded."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Technical identifier for this model source."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable name."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind" eType="#//ModelSourceKind">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Type of model source."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="location" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Path or URI to the model source."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="resolution" eType="#//ResolutionStrategy" defaultValueLiteral="RELATIVE_TO_CONFIG">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="How to resolve relative paths."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="registerPackages" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether to register EPackages from this source into the package registry."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this source is active."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       INSTANCE SOURCE
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="InstanceSource">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="An instance data source (XMI file) to load when opening the workspace. Contains model instances created by the user."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Technical identifier for this instance source."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable name for this instance source."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="location" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Path or URI to the XMI instance file."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="resolution" eType="#//ResolutionStrategy" defaultValueLiteral="RELATIVE_TO_CONFIG">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="How to resolve relative paths."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this instance source is active."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="ModelRepository">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="A repository of model files to be scanned and loaded into the internal model repository for cross-resource navigation and resolution."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Technical identifier for this repository."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable name."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="baseLocation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Base folder or URI for the repository."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="resolution" eType="#//ResolutionStrategy" defaultValueLiteral="RELATIVE_TO_CONFIG">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="How to resolve relative paths."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="recursive" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether to scan subdirectories recursively."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this repository is active."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="patterns" upperBound="-1" eType="#//FilePattern" containment="true" lowerBound="1">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="File patterns for including/excluding files in this repository."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="loadProfile" eType="#//LoadProfile">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional reference to a load profile for this repository."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       RESOURCE LOADING
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="ImportRule">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Rule for discovering and importing resources into the working ResourceSet during editing sessions."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Technical identifier for this import rule."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable name."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="baseFolder" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Base folder for resource discovery."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="recursive" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether to scan subdirectories recursively."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="order" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Processing order (lower values first)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this rule is active."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="patterns" upperBound="-1" eType="#//FilePattern" containment="true" lowerBound="1">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="File patterns for including/excluding files."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="loadProfile" eType="#//LoadProfile">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional reference to a load profile."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="FilePattern">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="A pattern for matching files during resource discovery."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind" eType="#//PatternKind" defaultValueLiteral="GLOB">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Type of pattern matching."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="expression" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="The pattern expression (e.g., '**/*.xmi' for GLOB, '.ecore' for SUFFIX)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="exclude" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="If true, this is an exclusion pattern."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="LoadProfile">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Reusable profile with resource loading options for a ResourceSet."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Technical identifier for this profile."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable name."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="resolveProxies" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether to resolve proxy references."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="demandLoad" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether to demand-load referenced resources."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="encoding" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" defaultValueLiteral="UTF-8">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Default text encoding for resources."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="options" upperBound="-1" eType="#//KeyValue" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Additional load options as key-value pairs."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="KeyValue">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Simple key-value pair for configuration options."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="key" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Option key/name."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Option value as string."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       ICONS
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="IconMapping">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Maps a type URI to an icon for visualization."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetTypeUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="URI of the target EClass (e.g., 'nsURI#//ClassName')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scope" eType="#//MappingScope" defaultValueLiteral="TYPE_ONLY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether mapping applies to subtypes."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Priority for conflict resolution (higher wins)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="icon" eType="#//IconSpec" containment="true" lowerBound="1">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="The icon specification."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="IconSpec" abstract="true">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Abstract base class for icon specifications."/>
+    </eAnnotations>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="Utf8Icon" eSuperTypes="#//IconSpec">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Icon defined as a UTF-8 glyph or emoji character."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="glyph" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="UTF-8 character(s) to use as icon (e.g., emoji)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="LibraryIcon" eSuperTypes="#//IconSpec">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Icon from an icon library (e.g., Material Symbols, Font Awesome)."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="library" eType="#//IconLibrary">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Which icon library to use."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Icon name in the library (e.g., 'account_tree' for Material Symbols)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="variant" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional variant (e.g., 'outlined', 'rounded', 'sharp')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       LABELS
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="LabelRule">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Rule for computing object labels in tree views and editors."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetTypeUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="URI of the target EClass."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scope" eType="#//MappingScope" defaultValueLiteral="TYPE_ONLY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether rule applies to subtypes."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="mode" eType="#//LabelMode" defaultValueLiteral="NAME">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Label computation strategy."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Priority for conflict resolution (higher wins)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="fallbackMode" eType="#//LabelMode" defaultValueLiteral="NAME">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Fallback mode if primary computation fails."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="template" eType="#//LabelTemplate" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Template definition when mode is TEMPLATE."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="oclExpression" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="OCL expression returning a String when mode is OCL."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="LabelTemplate">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Template-based label definition using placeholders."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="pattern" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Template pattern with ${placeholder} syntax (e.g., '${name} (${id})')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="bindings" upperBound="-1" eType="#//AttributeBinding" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Bindings from placeholders to feature names."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="AttributeBinding">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Binds a template placeholder to an object feature."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="placeholder" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Placeholder name without ${} (e.g., 'name')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="featureName" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name of the EStructuralFeature to read."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="format" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional format hint (e.g., 'upper', 'date:yyyy-MM-dd')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       HIGHLIGHTING AND STYLING
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="HighlightRule">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Rule for highlighting objects with custom styles based on conditions."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetTypeUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="URI of the target EClass."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scope" eType="#//MappingScope" defaultValueLiteral="TYPE_ONLY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether rule applies to subtypes."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="condition" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional condition expression (OCL) for when the style applies."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Priority for conflict resolution (higher wins)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="style" eType="#//Style" containment="true" lowerBound="1">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Style to apply."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="Style">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Visual style definition for text and decorations."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="fontWeight" eType="#//FontWeight" defaultValueLiteral="NORMAL">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Font weight."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="italic" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether text is italic."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="underline" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether text is underlined."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="foreground" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Foreground/text color (e.g., '#ff0000' or CSS variable)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="background" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Background color."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="badgeText" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional badge text to display."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="badgeIcon" eType="#//IconSpec" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional badge icon."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="DecoratorRule">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Rule for displaying decorators/badges indicating object state (dirty, read-only, errors, generated, etc.)."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Identifier for this decorator (e.g., 'dirty', 'readonly', 'error')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable name."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetTypeUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional target type restriction."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scope" eType="#//MappingScope" defaultValueLiteral="TYPE_AND_SUBTYPES">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether rule applies to subtypes."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="condition" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Condition expression (OCL) for when the decorator is shown."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Priority for conflict resolution (higher wins)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this decorator rule is active."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="badgeText" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Badge text to display."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="badgeIcon" eType="#//IconSpec" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Badge icon to display."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="overlayStyle" eType="#//Style" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional style overlay to apply."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       SORTING
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="SortRule">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Rule for sorting children in tree views."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="ownerTypeUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="URI of the parent/owner type whose children are sorted."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scope" eType="#//MappingScope" defaultValueLiteral="TYPE_ONLY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether rule applies to owner subtypes."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="containmentFeature" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional specific containment feature to sort. If empty, applies to all containments."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Priority for conflict resolution (higher wins)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="keys" upperBound="-1" eType="#//SortKey" containment="true" lowerBound="1">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Sort keys defining the sort order."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="SortKey">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="A single sort key specifying attribute and direction."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="featureName" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name of the feature to sort by."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="direction" eType="#//SortDirection" defaultValueLiteral="ASC">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Sort direction."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="caseInsensitive" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether string comparison is case-insensitive."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="nullsLast" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether null values sort last."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       FEATURE VISIBILITY
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="FeatureRule">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Rule controlling feature visibility and editability in property inspectors."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetTypeUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="URI of the target EClass."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scope" eType="#//MappingScope" defaultValueLiteral="TYPE_ONLY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether rule applies to subtypes."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="featureName" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name of the feature this rule applies to. Empty means default for type."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="visibility" eType="#//Visibility" defaultValueLiteral="DEFAULT">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Visibility setting."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="readOnly" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether feature is read-only in the inspector."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="group" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional grouping category in the inspector."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="order" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Display order in the inspector."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="condition" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional condition expression for dynamic visibility."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Priority for conflict resolution (higher wins)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       ACTIONS
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="AbstractAction" abstract="true">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Base class for all configurable actions. Actions can appear in context menus, toolbars, or be triggered by events. Subclasses define whether the action is executed locally (InternalAction) or via HTTP (RemoteAction)."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="actionId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Unique action identifier. Used for registry lookup and event mapping references."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="label" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Display label in menus and toolbar."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable description shown as tooltip."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="icon" eType="#//IconSpec" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional icon for the action."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="actionType" eType="#//ActionType" defaultValueLiteral="CUSTOM">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Classification of action purpose (QUERY, VALIDATION, DOCUMENTATION, TRANSFORMATION, CUSTOM)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="actionScope" eType="#//ActionScope" defaultValueLiteral="OBJECT">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Context where this action appears (OBJECT context menu, EDITOR menu, or BOTH)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetTypeUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional EClass URI restriction. If set, action is only available for objects of this type. Format: nsURI#//ClassName."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetScope" eType="#//MappingScope" defaultValueLiteral="TYPE_AND_SUBTYPES">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether type restriction includes subtypes."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="perspectiveIds" upperBound="-1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Perspective IDs where this action is available. Empty list means all perspectives."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="availableWhen" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="OCL expression evaluated against the selected object. Action is visible only if expression returns true."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabledWhen" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="OCL expression for enablement. Action is shown but greyed out if expression returns false."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="order" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Display order in the menu (lower = higher)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Global on/off toggle for this action."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="inputSpec" eType="#//InputSpecification" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Specification of how input data is collected for this action."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="parameters" upperBound="-1" eType="#//ActionParameter" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Configurable parameters shown in a dialog before execution."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="returnTypes" upperBound="-1" eType="#//ReturnType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Expected return artifact types. Determines which result handlers are used."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- QuickAction kept for backwards compatibility — maps to InternalAction semantics -->
+  <eClassifiers xsi:type="ecore:EClass" name="QuickAction" eSuperTypes="#//AbstractAction">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Simplified action for backwards compatibility. Use InternalAction or RemoteAction for new configurations."/>
+    </eAnnotations>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="InternalAction" eSuperTypes="#//AbstractAction">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Action executed by a local TypeScript handler. The handler is identified by handlerId and registered by a TSM plugin module."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="handlerId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Reference to a registered handler in the InternalExecutor's HandlerRegistry."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="executionEnvironment" eType="#//ExecutionEnvironment" defaultValueLiteral="MAIN_THREAD">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether the handler runs on the main thread or in a Web Worker sandbox."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="timeoutMs" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="30000">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Maximum execution time in milliseconds."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="RemoteAction" eSuperTypes="#//AbstractAction">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Action executed via HTTP request to a remote service endpoint. Supports sync and async execution modes, configurable serialization, authentication, and retry logic."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="endpointUrl" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Target URL. Supports template variables: {objectId}, {className}, {nsUri}, {perspectiveId}."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="httpMethod" eType="#//HttpMethod" defaultValueLiteral="POST">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="HTTP method for the request."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="serialization" eType="#//SerializationType" defaultValueLiteral="JSON_BODY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="How input data is serialized for transport."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="contentType" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" defaultValueLiteral="application/json">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Content-Type header for the request."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="authConfig" eType="#//AuthConfiguration" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Authentication configuration. Credentials are never stored here — only references."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="connectionTimeoutMs" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="10000">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Connection timeout in milliseconds."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="readTimeoutMs" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="30000">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Read timeout in milliseconds."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="retryConfig" eType="#//RetryConfiguration" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Retry configuration for failed requests."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="executionMode" eType="#//ExecutionMode" defaultValueLiteral="SYNC">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether the action is synchronous (wait for response) or asynchronous (poll for result)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="asyncConfig" eType="#//AsyncConfiguration" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Configuration for async execution. Only used when executionMode=ASYNC."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="responseMapping" eType="#//ResponseMapping" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="How the HTTP response is mapped to ActionResult artifacts."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       ACTION SUPPORT CLASSES
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="ActionParameter">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Definition of a user-configurable action parameter. Rendered as a form field in the parameter dialog before action execution."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Parameter name (used as key in the parameters map)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="displayName" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable label for the form field."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Help text shown below the form field."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="type" eType="#//ParameterType" defaultValueLiteral="STRING">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Data type determining the UI widget (InputText, InputNumber, Checkbox, Dropdown, etc.)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="required" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this parameter must be provided before execution."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="defaultValue" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Default value (as string, converted according to type)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enumValues" upperBound="-1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Allowed values when type=ENUM. Rendered as dropdown."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="validationExpression" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="OCL expression for parameter validation. Evaluated with the parameter value as context."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="InputSpecification">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Specifies how input data is collected for action execution. Controls which objects and schema information are passed to the executor."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="includeSelection" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether the currently selected object is included as primary input."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="includeSchema" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether the EPackage/metamodel is included in the input."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="schemaScope" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" defaultValueLiteral="REFERENCED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Scope of schema inclusion: FULL (entire EPackage) or REFERENCED (only referenced classes)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="oclFilters" upperBound="-1" eType="#//OclFilter" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="OCL expressions to select additional objects as input."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="OclFilter">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="OCL expression used to select additional objects for action input collection."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="expression" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="OCL expression to evaluate. Returns a collection of EObjects."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scope" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" defaultValueLiteral="RESOURCE">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Evaluation scope: RESOURCE (single resource), RESOURCE_SET (all resources), PACKAGE (EPackage)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="alias" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional alias name for referencing the selected objects in the action context."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="AuthConfiguration">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Authentication configuration for remote actions. Credentials are never stored directly — only references to a credential store."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="authType" eType="#//AuthType" defaultValueLiteral="NONE">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Authentication method."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="credentialRef" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Reference to credentials in the workspace credential store."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="tokenEndpoint" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Token exchange endpoint (for OAuth2)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="apiKeyHeader" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" defaultValueLiteral="X-API-Key">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Custom header name for API key authentication."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="RetryConfiguration">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Retry configuration for failed remote action requests."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="maxRetries" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="3"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="retryDelayMs" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="1000"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="backoffMultiplier" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble" defaultValueLiteral="2.0"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="retryOnStatus" upperBound="-1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="HTTP status codes that trigger a retry (e.g., 502, 503, 504)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="AsyncConfiguration">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Configuration for asynchronous remote action execution. Defines how to poll for status and retrieve results."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="statusEndpoint" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="URL to poll for job status. Supports {jobId} template variable."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="resultEndpoint" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="URL to retrieve results after job completion."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="cancelEndpoint" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="URL to cancel a running job."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="pollIntervalMs" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="2000"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="maxPollAttempts" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="150"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="timeoutMs" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="300000"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="ResponseMapping">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Mapping rules for extracting action results from HTTP responses. Uses JSONPath expressions."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="statusPath" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="JSONPath to the status field in the response."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dataPath" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="JSONPath to the data field in the response."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="errorPath" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="JSONPath to the error field in the response."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="artifactMappings" upperBound="-1" eType="#//ArtifactMapping" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Mapping of response data to result artifacts."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="ArtifactMapping">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Maps a part of the HTTP response to an action result artifact."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="returnType" eType="#//ReturnType"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sourcePath" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="JSONPath or header name to extract the artifact data from."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="fileHandling" eType="#//FileHandling" defaultValueLiteral="AUTO"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="xmiImportMode" eType="#//XmiImportMode" defaultValueLiteral="NEW_RESOURCE"/>
+  </eClassifiers>
+
+  <!-- ============================================================
+       EVENTS & EVENT-ACTION MAPPINGS
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="EventActionMapping">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Declarative mapping from an event to one or more actions. When the specified event occurs and the condition is met, the referenced actions are executed. Enables event-driven automation without code."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable name for this mapping."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Description of what this mapping does."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this mapping is active."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="order" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Evaluation order when multiple mappings match the same event."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="event" eType="#//EventSpec" containment="true" lowerBound="1">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="The event that triggers this mapping."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="condition" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="OCL expression evaluated against the event context. Mapping fires only if expression returns true."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="actionRefs" upperBound="-1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Action IDs to execute when the event fires. Looked up in the ActionRegistry."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="parameterOverrides" upperBound="-1" eType="#//ParameterOverride" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Parameter value overrides passed to the action. Allows event context data to flow into action parameters."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="debounceMs" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Debounce time in milliseconds. If the same event fires again within this window, the previous execution is cancelled."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="executeMode" eType="#//ExecuteMode" defaultValueLiteral="ALL">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="How multiple actions are executed: ALL (parallel), FIRST_MATCH (first with true condition), SEQUENTIAL (in order, abort on failure)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="ParameterOverride">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Overrides an action parameter value in the context of an event-action mapping. The value can be a literal or an OCL expression evaluated against the event context."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="parameterName" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name of the action parameter to override."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="valueExpression" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Value expression. Can be a literal string or an OCL expression (prefixed with 'ocl:') evaluated against the event context object."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- Event Specification Hierarchy -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="EventSpec" abstract="true">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Abstract base for event specifications. Subclasses define the type of event (lifecycle, domain change, or custom plugin event)."/>
+    </eAnnotations>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="LifecycleEvent" eSuperTypes="#//EventSpec">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Application lifecycle event (workspace opened, perspective changed, file saved, etc.)."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="eventType" eType="#//LifecycleEventType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="The specific lifecycle event."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="DomainEvent" eSuperTypes="#//EventSpec">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Domain model change event based on EMF notifications. Fires when objects are created, modified, or deleted."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="changeType" eType="#//DomainChangeType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="The type of model change (CREATE, DELETE, SET, ADD, REMOVE, MOVE)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="featureName" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional feature name filter. If set, only changes to this specific feature trigger the event. If empty, any change on the target type triggers."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetTypeUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional type restriction. If set, only changes on objects of this EClass trigger the event."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetScope" eType="#//MappingScope" defaultValueLiteral="TYPE_AND_SUBTYPES">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether the type restriction includes subtypes."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="CustomEvent" eSuperTypes="#//EventSpec">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Custom event emitted by a plugin module via the EventBus. Allows plugins to define their own event types."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="eventId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Custom event identifier (e.g., 'atlas.schema.published', 'cocl.validation.done')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sourceModuleId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional filter: only match events from this TSM module."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       REFERENCE SELECTION
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="ReferenceSelectionRule">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Rule for filtering and presenting candidates when setting a reference. Allows constraining available options based on context (e.g., only show columns from the selected table)."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="ownerTypeUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="URI of the owner type containing the reference being set."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="ownerScope" eType="#//MappingScope" defaultValueLiteral="TYPE_ONLY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether owner type match includes subtypes."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="referenceFeature" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name of the EReference feature for which candidates are filtered."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="mode" eType="#//SelectionMode" defaultValueLiteral="DEFAULT_ALL">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Selection mode: show all or only filtered candidates."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="condition" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Condition expression for when this rule applies (evaluated on owner object)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Priority for conflict resolution (higher wins)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this rule is active."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="filter" eType="#//CandidateFilter" containment="true" lowerBound="1">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Filter definition for candidates."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="presentation" eType="#//CandidatePresentation" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional presentation overrides for the candidate picker."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="CandidateFilter">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Filter for reference selection candidates. Filter expression is evaluated for each candidate object."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="filterExpression" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Expression (OCL) returning Boolean. Context is candidate object. Use 'owner' variable for the edited object."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="language" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" defaultValueLiteral="OCL">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Expression language identifier."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="explanation" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="User-visible explanation of why candidates are filtered."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="CandidatePresentation">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Presentation options for candidates in reference selection picker."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="labelExpression" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Expression for computing candidate labels in the picker."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="language" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" defaultValueLiteral="OCL">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Expression language identifier."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="sortKeys" upperBound="-1" eType="#//SortKey" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional sort keys for ordering candidates in the picker."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       STORAGE LOCATION RULES (NEW)
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="StorageLocationRule">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Rule defining where objects of a specific type should be stored (folder/subfolder structure). This enables automatic organization of model files by type."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetTypeUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="URI of the EClass for which this storage rule applies."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scope" eType="#//MappingScope" defaultValueLiteral="TYPE_ONLY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether rule applies to subtypes."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="folderPath" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Relative folder path where objects of this type should be stored (e.g., 'entities', 'schemas/tables'). May contain ${placeholder} patterns."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="fileNamePattern" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Pattern for generating file names (e.g., '${name}.entity.xmi'). May contain ${placeholder} patterns."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="createFolder" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether to automatically create the folder if it does not exist."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="separateFile" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether each object should be stored in a separate file (fragment storage)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="condition" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional condition expression for when this rule applies."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="priority" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Priority for conflict resolution (higher wins)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this rule is active."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="pathBindings" upperBound="-1" eType="#//AttributeBinding" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Bindings for placeholders in folderPath and fileNamePattern."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       NAMESPACE MAPPING
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="NamespaceMapping">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Mapping from namespace URI to package registration information."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="nsUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Namespace URI to map."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="packageClass" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Fully qualified Java class name of the EPackage."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="genModelUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional GenModel URI for the package."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       LAYOUT CONFIGURATION
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="LayoutConfig">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Layout configuration for the editor workspace. Stores panel sizes and visibility settings."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="primarySidebarWidth" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="260">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Width of the primary (left) sidebar in pixels."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="secondarySidebarWidth" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="300">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Width of the secondary (right) sidebar in pixels."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="panelAreaHeight" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="200">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Height of the bottom panel area in pixels."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="primarySidebarVisible" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether the primary sidebar is visible."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="secondarySidebarVisible" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether the secondary sidebar is visible."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="panelAreaVisible" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether the bottom panel area is visible."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="activityBarVisible" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether the activity bar is visible."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="statusBarVisible" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether the status bar is visible."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="activeActivityId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="ID of the currently active activity in the activity bar."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="panelPositions" upperBound="-1" eType="#//PanelPosition" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Custom panel positions that override default locations."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- Panel Position - maps panel ID to location -->
+  <eClassifiers xsi:type="ecore:EClass" name="PanelPosition">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Defines the position of a panel in the layout."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="panelId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Unique identifier of the panel."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="location" eType="#//PanelLocation" defaultValueLiteral="PRIMARY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Location where the panel should be displayed."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="order" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Display order within the location (lower values appear first)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- Panel Location Enum -->
+  <eClassifiers xsi:type="ecore:EEnum" name="PanelLocation">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Available locations for panels in the layout."/>
+    </eAnnotations>
+    <eLiterals name="PRIMARY" value="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Primary (left) sidebar."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="SECONDARY" value="1">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Secondary (right) sidebar."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="BOTTOM" value="2">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Bottom panel area."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <!-- ============================================================
+       UI DEFAULTS
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="UiDefaults">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Default UI settings and fallback values."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="defaultLabelMode" eType="#//LabelMode" defaultValueLiteral="NAME">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Default label mode when no rule matches."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="showQualifiedNames" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether to prefer qualified names in displays."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="unknownTypeLabel" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" defaultValueLiteral="&lt;unnamed&gt;">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Fallback label for objects without a computable label."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="unknownTypeIcon" eType="#//Utf8Icon" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Fallback icon for types without an icon mapping."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       TREE VIEWS (FILTERS)
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="TreeView">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="A named collection of filters for hiding elements in the tree views."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Unique identifier for this view."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable name of the view."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional description of what this view shows."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this view is active."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="filters" upperBound="-1" eType="#//TreeFilter" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Filters that define what to hide in this view."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <!-- Perspective Configuration -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="showInActivityBar" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this view should appear as a perspective in the Activity Bar."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="perspectiveIcon" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Icon class for the Activity Bar (e.g., 'pi pi-filter')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="perspectiveOrder" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="100">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Order position in the Activity Bar (lower values appear first)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="TreeFilter">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="A single filter rule for hiding elements in tree views."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="filterType" eType="#//FilterType">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Type of filter: by EClass type or by specific element."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetTypeUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="For ECLASS_TYPE filters: the nsURI#//ClassName of the type to hide."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scope" eType="#//MappingScope" defaultValueLiteral="TYPE_ONLY">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="For ECLASS_TYPE filters: whether to include subtypes."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="elementUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="For ELEMENT filters: the URI fragment of the specific element to hide."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="hidden" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this filter is active (elements matching are hidden)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       PACKAGE RESOLVER
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EEnum" name="PackageResolverKind">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Kind of package resolver for cascaded EPackage resolution."/>
+    </eAnnotations>
+    <eLiterals name="LOCAL" value="0" literal="LOCAL">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Resolve from local EPackageRegistry."/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="MODEL_ATLAS" value="1" literal="MODEL_ATLAS">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Resolve from Model Atlas server."/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="PackageResolverChain">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Ordered chain of package resolvers for cascaded EPackage resolution. Resolvers are tried in order until a package is found."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="autoResolveReferences" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether to automatically resolve cross-package proxy references after loading."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="maxResolutionDepth" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="-1">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Maximum depth for transitive dependency resolution. -1 means unlimited."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="resolvers" upperBound="-1" eType="#//PackageResolver" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Ordered list of package resolvers. Tried in order until a package is found."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="PackageResolver">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="A single package resolver in the resolution chain. Can resolve packages from local registry or Model Atlas server."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable name for this resolver."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind" eType="#//PackageResolverKind">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Type of resolver (LOCAL or MODEL_ATLAS)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this resolver is active."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="baseUrl" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Base URL of the Model Atlas REST API (for MODEL_ATLAS kind)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scopeName" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Scope name in Model Atlas (for MODEL_ATLAS kind)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="stage" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" defaultValueLiteral="release">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Stage in Model Atlas (for MODEL_ATLAS kind). Defaults to 'release'."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="token" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional authentication token for Model Atlas."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+</ecore:EPackage>

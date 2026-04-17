@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<company:Person xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:company="http://www.gme.org/company/1.0"
+    firstName="Max"
+    lastName="Mustermann"
+    title="Dr."
+    email="max.mustermann@example.com"
+    gender="MALE">
+
+  <children firstName="Anna" lastName="Mustermann" title="Dr." gender="FEMALE" email="anna@example.com"/>
+  <children firstName="Tom" lastName="Mustermann" gender="MALE" email="tom@example.com"/>
+  <children firstName="Lisa" lastName="Mustermann" gender="FEMALE" email="lisa@example.com"/>
+
+</company:Person>

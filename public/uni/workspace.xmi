@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config:EditorConfig xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:config="http://gene.io/editor-config">
+  <!-- Load HigherEducation.ecore first (meta-metamodel) -->
+  <modelSources location="HigherEducation.ecore" enabled="true"/>
+  <!-- Then load University.ecore (depends on HigherEducation) -->
+  <modelSources location="University.ecore" enabled="true"/>
+  <!-- Finally load instances -->
+  <instanceSources location="students.xmi" enabled="true"/>
+</config:EditorConfig>

@@ -1,0 +1,19 @@
+{
+  "name": "tsm-devtools",
+  "version": "1.0.0",
+  "description": "TSM DevTools - Browser console tools for module management",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build:tsm": "vite build --config vite.tsm.config.ts",
+    "build:tsm:watch": "vite build --config vite.tsm.config.ts --watch"
+  },
+  "dependencies": {
+    "@eclipse-daanse/tsm": "^0.0.1-next.1"
+  },
+  "devDependencies": {
+    "vite": "^6.2.2",
+    "typescript": "^5.7.2"
+  }
+}

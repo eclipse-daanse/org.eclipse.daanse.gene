@@ -1,0 +1,28 @@
+{
+  "id": "ui-layout",
+  "name": "Layout System",
+  "version": "0.0.1",
+  "description": "VS Code-like layout system with dockable panels",
+  "entry": "src/index.ts",
+  "exports": {
+    "./components": {
+      "type": "component",
+      "description": "Layout components (GeneLayout, ActivityBar, etc.)"
+    },
+    "./composables": {
+      "type": "service",
+      "description": "Layout state management"
+    }
+  },
+  "provides": [
+    {
+      "id": "ui.layout.components",
+      "description": "Layout UI components"
+    },
+    {
+      "id": "ui.layout.state",
+      "description": "Layout state management"
+    }
+  ],
+  "dependencies": ["gene-app"]
+}

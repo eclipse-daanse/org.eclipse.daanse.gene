@@ -1,0 +1,7 @@
+{
+  "id": "storage-model",
+  "name": "Storage Model",
+  "version": "1.0.0",
+  "description": "EMF-based storage model types",
+  "entry": "src/generated/storage/index.ts"
+}

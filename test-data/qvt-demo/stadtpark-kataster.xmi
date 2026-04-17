@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<features:FeatureCatalog xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:features="http://www.ogc.org/features/1.0" name="Stadtpark Baumkataster" description="Baumkataster und Gruenflaechen des Stadtparks Musterstadt" version="1.0">
+
+  <!-- Koordinatenreferenzsystem -->
+  <coordinateReferenceSystems code="EPSG:4326" name="WGS 84" type="WGS84"/>
+
+  <!-- ===== Feature-Typ Definitionen (Schema) ===== -->
+
+  <!-- Baum (Punkt) -->
+  <featureTypes name="Baum" title="Stadtbaum" description="Einzelner Baum im Stadtgebiet" geometryType="POINT" abstract="false">
+    <properties name="baumart" type="STRING" description="Botanischer/deutscher Name der Baumart" required="true"/>
+    <properties name="stammumfang" type="INTEGER" description="Stammumfang in cm (gemessen in 1m Hoehe)" required="false"/>
+    <properties name="hoehe" type="DOUBLE" description="Baumhoehe in Metern" required="false"/>
+    <properties name="kronendurchmesser" type="DOUBLE" description="Kronendurchmesser in Metern" required="false"/>
+    <properties name="pflanzjahr" type="INTEGER" description="Jahr der Pflanzung" required="false"/>
+    <properties name="zustand" type="STRING" description="Zustandsbewertung: gut, maessig, schlecht, tot" required="true" defaultValue="gut"/>
+    <properties name="schutzstatus" type="BOOLEAN" description="Ob der Baum unter Naturschutz steht" required="false" defaultValue="false"/>
+    <properties name="letzteBegutachtung" type="DATE" description="Datum der letzten Begutachtung" required="false"/>
+  </featureTypes>
+
+  <!-- Gruenflaeche (Polygon) -->
+  <featureTypes name="Gruenflaeche" title="Gruen- und Parkflaeche" description="Abgegrenzte Gruenflaeche oder Parkanlage" geometryType="POLYGON" abstract="false">
+    <properties name="bezeichnung" type="STRING" description="Name oder Bezeichnung der Flaeche" required="true"/>
+    <properties name="flaecheQm" type="DOUBLE" description="Flaeche in Quadratmetern" required="false"/>
+    <properties name="nutzungsart" type="STRING" description="Art der Nutzung: Park, Spielplatz, Wiese, Wald, Garten" required="true"/>
+    <properties name="pflegestufe" type="INTEGER" description="Pflegestufe 1 (extensiv) bis 4 (intensiv)" required="false" defaultValue="2"/>
+    <properties name="oeffentlich" type="BOOLEAN" description="Oeffentlich zugaenglich" required="false" defaultValue="true"/>
+  </featureTypes>
+
+  <!-- Weg (Linie) -->
+  <featureTypes name="Weg" title="Parkweg" description="Fuss- oder Radweg im Parkgebiet" geometryType="LINE_STRING" abstract="false">
+    <properties name="wegname" type="STRING" description="Name des Weges" required="false"/>
+    <properties name="belag" type="STRING" description="Belagsart: Asphalt, Kies, Naturweg, Pflaster" required="true"/>
+    <properties name="breite" type="DOUBLE" description="Wegbreite in Metern" required="false"/>
+    <properties name="beleuchtet" type="BOOLEAN" description="Ob der Weg beleuchtet ist" required="false" defaultValue="false"/>
+    <properties name="barrierefrei" type="BOOLEAN" description="Rollstuhlgerecht" required="false" defaultValue="false"/>
+  </featureTypes>
+
+  <!-- ===== Collection: Baeume ===== -->
+  <collections id="baeume" title="Baeume im Stadtpark" description="Erfasste Einzelbaeume" featureType="//@featureTypes.0">
+    <extent minX="8.6800" minY="49.4100" maxX="8.6900" maxY="49.4180"/>
+    <crs href="EPSG:4326"/>
+
+    <!-- Baum 1: Alte Eiche -->
+    <features id="baum-001">
+      <geometry xsi:type="features:Point" type="POINT" longitude="8.6835" latitude="49.4142" elevation="112.5"/>
+      <properties name="baumart" value="Stieleiche (Quercus robur)"/>
+      <properties name="stammumfang" value="385"/>
+      <properties name="hoehe" value="28.5"/>
+      <properties name="kronendurchmesser" value="18.0"/>
+      <properties name="pflanzjahr" value="1892"/>
+      <properties name="zustand" value="gut"/>
+      <properties name="schutzstatus" value="true"/>
+      <properties name="letzteBegutachtung" value="2025-09-15"/>
+    </features>
+
+    <!-- Baum 2: Blutbuche -->
+    <features id="baum-002">
+      <geometry xsi:type="features:Point" type="POINT" longitude="8.6841" latitude="49.4138"/>
+      <properties name="baumart" value="Blutbuche (Fagus sylvatica f. purpurea)"/>
+      <properties name="stammumfang" value="220"/>
+      <properties name="hoehe" value="22.0"/>
+      <properties name="kronendurchmesser" value="14.5"/>
+      <properties name="pflanzjahr" value="1935"/>
+      <properties name="zustand" value="gut"/>
+      <properties name="schutzstatus" value="true"/>
+      <properties name="letzteBegutachtung" value="2025-09-15"/>
+    </features>
+
+    <!-- Baum 3: Linde am Teich -->
+    <features id="baum-003">
+      <geometry xsi:type="features:Point" type="POINT" longitude="8.6858" latitude="49.4155" elevation="108.2"/>
+      <properties name="baumart" value="Winterlinde (Tilia cordata)"/>
+      <properties name="stammumfang" value="195"/>
+      <properties name="hoehe" value="20.0"/>
+      <properties name="kronendurchmesser" value="12.0"/>
+      <properties name="pflanzjahr" value="1960"/>
+      <properties name="zustand" value="maessig"/>
+      <properties name="schutzstatus" value="false"/>
+      <properties name="letzteBegutachtung" value="2025-03-20"/>
+    </features>
+
+    <!-- Baum 4: Junge Platane -->
+    <features id="baum-004">
+      <geometry xsi:type="features:Point" type="POINT" longitude="8.6872" latitude="49.4148"/>
+      <properties name="baumart" value="Ahornblaettrige Platane (Platanus x hispanica)"/>
+      <properties name="stammumfang" value="65"/>
+      <properties name="hoehe" value="8.5"/>
+      <properties name="kronendurchmesser" value="4.0"/>
+      <properties name="pflanzjahr" value="2018"/>
+      <properties name="zustand" value="gut"/>
+      <properties name="schutzstatus" value="false"/>
+      <properties name="letzteBegutachtung" value="2025-06-10"/>
+    </features>
+
+    <!-- Baum 5: Kastanie (geschaedigt) -->
+    <features id="baum-005">
+      <geometry xsi:type="features:Point" type="POINT" longitude="8.6825" latitude="49.4160" elevation="110.8"/>
+      <properties name="baumart" value="Rosskastanie (Aesculus hippocastanum)"/>
+      <properties name="stammumfang" value="280"/>
+      <properties name="hoehe" value="18.0"/>
+      <properties name="kronendurchmesser" value="11.0"/>
+      <properties name="pflanzjahr" value="1948"/>
+      <properties name="zustand" value="schlecht"/>
+      <properties name="schutzstatus" value="false"/>
+      <properties name="letzteBegutachtung" value="2025-11-02"/>
+    </features>
+
+    <!-- Baum 6: Birke -->
+    <features id="baum-006">
+      <geometry xsi:type="features:Point" type="POINT" longitude="8.6850" latitude="49.4165"/>
+      <properties name="baumart" value="Haengebirke (Betula pendula)"/>
+      <properties name="stammumfang" value="120"/>
+      <properties name="hoehe" value="16.0"/>
+      <properties name="kronendurchmesser" value="7.5"/>
+      <properties name="pflanzjahr" value="1985"/>
+      <properties name="zustand" value="gut"/>
+      <properties name="schutzstatus" value="false"/>
+      <properties name="letzteBegutachtung" value="2025-09-15"/>
+    </features>
+
+    <!-- Baum 7: Mammutbaum -->
+    <features id="baum-007">
+      <geometry xsi:type="features:Point" type="POINT" longitude="8.6880" latitude="49.4135" elevation="114.0"/>
+      <properties name="baumart" value="Riesenmammutbaum (Sequoiadendron giganteum)"/>
+      <properties name="stammumfang" value="450"/>
+      <properties name="hoehe" value="35.0"/>
+      <properties name="kronendurchmesser" value="10.0"/>
+      <properties name="pflanzjahr" value="1880"/>
+      <properties name="zustand" value="gut"/>
+      <properties name="schutzstatus" value="true"/>
+      <properties name="letzteBegutachtung" value="2025-04-28"/>
+    </features>
+  </collections>
+
+  <!-- ===== Collection: Gruenflaechen ===== -->
+  <collections id="gruenflaechen" title="Gruenflaechen im Stadtpark" description="Park- und Gruenanlagen" featureType="//@featureTypes.1">
+    <extent minX="8.6790" minY="49.4090" maxX="8.6920" maxY="49.4190"/>
+
+    <!-- Hauptpark -->
+    <features id="flaeche-001">
+      <geometry xsi:type="features:Polygon" type="POLYGON">
+        <exteriorRing>
+          <coordinates x="8.6800" y="49.4100"/>
+          <coordinates x="8.6900" y="49.4100"/>
+          <coordinates x="8.6900" y="49.4180"/>
+          <coordinates x="8.6800" y="49.4180"/>
+          <coordinates x="8.6800" y="49.4100"/>
+        </exteriorRing>
+      </geometry>
+      <properties name="bezeichnung" value="Stadtpark Musterstadt"/>
+      <properties name="flaecheQm" value="72000"/>
+      <properties name="nutzungsart" value="Park"/>
+      <properties name="pflegestufe" value="3"/>
+      <properties name="oeffentlich" value="true"/>
+    </features>
+
+    <!-- Spielplatz -->
+    <features id="flaeche-002">
+      <geometry xsi:type="features:Polygon" type="POLYGON">
+        <exteriorRing>
+          <coordinates x="8.6860" y="49.4110"/>
+          <coordinates x="8.6885" y="49.4110"/>
+          <coordinates x="8.6885" y="49.4125"/>
+          <coordinates x="8.6860" y="49.4125"/>
+          <coordinates x="8.6860" y="49.4110"/>
+        </exteriorRing>
+      </geometry>
+      <properties name="bezeichnung" value="Abenteuerspielplatz"/>
+      <properties name="flaecheQm" value="3750"/>
+      <properties name="nutzungsart" value="Spielplatz"/>
+      <properties name="pflegestufe" value="4"/>
+      <properties name="oeffentlich" value="true"/>
+    </features>
+
+    <!-- Rosengarten -->
+    <features id="flaeche-003">
+      <geometry xsi:type="features:Polygon" type="POLYGON">
+        <exteriorRing>
+          <coordinates x="8.6830" y="49.4130"/>
+          <coordinates x="8.6855" y="49.4130"/>
+          <coordinates x="8.6855" y="49.4145"/>
+          <coordinates x="8.6830" y="49.4145"/>
+          <coordinates x="8.6830" y="49.4130"/>
+        </exteriorRing>
+      </geometry>
+      <properties name="bezeichnung" value="Rosengarten"/>
+      <properties name="flaecheQm" value="3750"/>
+      <properties name="nutzungsart" value="Garten"/>
+      <properties name="pflegestufe" value="4"/>
+      <properties name="oeffentlich" value="true"/>
+    </features>
+
+    <!-- Streuobstwiese -->
+    <features id="flaeche-004">
+      <geometry xsi:type="features:Polygon" type="POLYGON">
+        <exteriorRing>
+          <coordinates x="8.6810" y="49.4155"/>
+          <coordinates x="8.6845" y="49.4155"/>
+          <coordinates x="8.6845" y="49.4175"/>
+          <coordinates x="8.6810" y="49.4175"/>
+          <coordinates x="8.6810" y="49.4155"/>
+        </exteriorRing>
+      </geometry>
+      <properties name="bezeichnung" value="Streuobstwiese Nord"/>
+      <properties name="flaecheQm" value="7000"/>
+      <properties name="nutzungsart" value="Wiese"/>
+      <properties name="pflegestufe" value="1"/>
+      <properties name="oeffentlich" value="true"/>
+    </features>
+  </collections>
+
+  <!-- ===== Collection: Wege ===== -->
+  <collections id="wege" title="Wege im Stadtpark" description="Fuss- und Radwege" featureType="//@featureTypes.2">
+    <extent minX="8.6800" minY="49.4100" maxX="8.6900" maxY="49.4180"/>
+
+    <!-- Hauptallee -->
+    <features id="weg-001">
+      <geometry xsi:type="features:LineString" type="LINE_STRING">
+        <coordinates x="8.6800" y="49.4140"/>
+        <coordinates x="8.6830" y="49.4140"/>
+        <coordinates x="8.6855" y="49.4142"/>
+        <coordinates x="8.6880" y="49.4140"/>
+        <coordinates x="8.6900" y="49.4140"/>
+      </geometry>
+      <properties name="wegname" value="Lindenallee"/>
+      <properties name="belag" value="Asphalt"/>
+      <properties name="breite" value="3.5"/>
+      <properties name="beleuchtet" value="true"/>
+      <properties name="barrierefrei" value="true"/>
+    </features>
+
+    <!-- Rundweg -->
+    <features id="weg-002">
+      <geometry xsi:type="features:LineString" type="LINE_STRING">
+        <coordinates x="8.6810" y="49.4110"/>
+        <coordinates x="8.6890" y="49.4110"/>
+        <coordinates x="8.6890" y="49.4170"/>
+        <coordinates x="8.6810" y="49.4170"/>
+        <coordinates x="8.6810" y="49.4110"/>
+      </geometry>
+      <properties name="wegname" value="Parkrundweg"/>
+      <properties name="belag" value="Kies"/>
+      <properties name="breite" value="2.5"/>
+      <properties name="beleuchtet" value="true"/>
+      <properties name="barrierefrei" value="true"/>
+    </features>
+
+    <!-- Waldpfad -->
+    <features id="weg-003">
+      <geometry xsi:type="features:LineString" type="LINE_STRING">
+        <coordinates x="8.6820" y="49.4155"/>
+        <coordinates x="8.6825" y="49.4160"/>
+        <coordinates x="8.6835" y="49.4165"/>
+        <coordinates x="8.6840" y="49.4172"/>
+      </geometry>
+      <properties name="wegname" value="Waldpfad"/>
+      <properties name="belag" value="Naturweg"/>
+      <properties name="breite" value="1.2"/>
+      <properties name="beleuchtet" value="false"/>
+      <properties name="barrierefrei" value="false"/>
+    </features>
+
+    <!-- Zuweg Spielplatz -->
+    <features id="weg-004">
+      <geometry xsi:type="features:LineString" type="LINE_STRING">
+        <coordinates x="8.6855" y="49.4140"/>
+        <coordinates x="8.6860" y="49.4130"/>
+        <coordinates x="8.6870" y="49.4118"/>
+      </geometry>
+      <properties name="wegname" value="Spielplatzweg"/>
+      <properties name="belag" value="Pflaster"/>
+      <properties name="breite" value="2.0"/>
+      <properties name="beleuchtet" value="true"/>
+      <properties name="barrierefrei" value="true"/>
+    </features>
+  </collections>
+
+</features:FeatureCatalog>

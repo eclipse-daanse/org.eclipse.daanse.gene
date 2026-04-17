@@ -1,0 +1,14 @@
+{
+  "id": "test-plugin",
+  "name": "Test Plugin",
+  "version": "0.0.1",
+  "description": "Test plugin that uses Vue from gene-app",
+  "entry": "src/index.ts",
+  "dependencies": ["gene-app"],
+  "provides": [
+    {
+      "id": "test.counter",
+      "description": "A reactive counter service"
+    }
+  ]
+}

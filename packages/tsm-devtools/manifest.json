@@ -1,0 +1,28 @@
+{
+  "id": "tsm-devtools",
+  "name": "TSM DevTools",
+  "version": "1.0.0",
+  "description": "Browser console tools for TSM module management",
+  "entry": "src/index.ts",
+  "exports": {
+    "./devtools": {
+      "type": "service",
+      "description": "TSM DevTools console interface",
+      "serviceId": "tsm.devtools"
+    }
+  },
+  "provides": [
+    {
+      "id": "tsm.devtools",
+      "description": "TSM DevTools console interface"
+    }
+  ],
+  "requiresService": [
+    {
+      "id": "tsm.system",
+      "optional": false
+    }
+  ],
+  "dependencies": [],
+  "priority": 100
+}

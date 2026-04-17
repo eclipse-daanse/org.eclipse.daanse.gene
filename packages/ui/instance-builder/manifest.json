@@ -1,0 +1,32 @@
+{
+  "id": "instance-builder",
+  "name": "Instance Builder",
+  "version": "0.0.1",
+  "description": "EMF instance editor for creating and editing model instances",
+  "entry": "src/index.ts",
+  "exports": {
+    "./components": {
+      "type": "component",
+      "description": "Instance editor components (InstanceEditor, PropertyField, etc.)"
+    },
+    "./composables": {
+      "type": "service",
+      "description": "Instance editor state management"
+    }
+  },
+  "provides": [
+    {
+      "id": "ui.instance.components",
+      "description": "Instance editor UI components"
+    },
+    {
+      "id": "ui.instance.editor",
+      "description": "Instance editor service for opening editors"
+    },
+    {
+      "id": "ui.component.registry",
+      "description": "Component registry for custom property editors"
+    }
+  ],
+  "dependencies": ["gene-app", "ui-layout"]
+}

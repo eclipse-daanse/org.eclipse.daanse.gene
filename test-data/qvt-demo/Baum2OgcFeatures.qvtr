@@ -1,0 +1,157 @@
+{
+  "format": "gene-qvtr",
+  "version": 1,
+  "transformationName": "Baum2OgcFeatures",
+  "sourcePackageURI": "http://www.musterstadt.de/baumkataster/1.0",
+  "targetPackageURI": "http://www.ogc.org/features/1.0",
+  "relations": [
+    {
+      "name": "Baumbestand2FeatureCatalog",
+      "isTop": true,
+      "sourceClass": "Baumbestand",
+      "targetClass": "FeatureCatalog",
+      "mappings": [
+        {
+          "sourceFeature": "name",
+          "targetFeature": "name"
+        },
+        {
+          "sourceFeature": "gemeinde",
+          "targetFeature": "description"
+        },
+        {
+          "sourceFeature": "erfassungsjahr",
+          "targetFeature": "version"
+        }
+      ]
+    },
+    {
+      "name": "Bezirk2FeatureCollection",
+      "isTop": true,
+      "sourceClass": "Bezirk",
+      "targetClass": "FeatureCollection",
+      "mappings": [
+        {
+          "sourceFeature": "name",
+          "targetFeature": "id"
+        },
+        {
+          "sourceFeature": "name",
+          "targetFeature": "title"
+        },
+        {
+          "sourceFeature": "beschreibung",
+          "targetFeature": "description"
+        }
+      ]
+    },
+    {
+      "name": "Baum2Feature",
+      "isTop": false,
+      "sourceClass": "Baum",
+      "targetClass": "Feature",
+      "mappings": [
+        {
+          "sourceFeature": "baumNr",
+          "targetFeature": "id"
+        }
+      ]
+    },
+    {
+      "name": "BaumStandort2Point",
+      "isTop": false,
+      "sourceClass": "Baum",
+      "targetClass": "Point",
+      "mappings": [
+        {
+          "sourceFeature": "laengengrad",
+          "targetFeature": "longitude"
+        },
+        {
+          "sourceFeature": "breitengrad",
+          "targetFeature": "latitude"
+        }
+      ]
+    },
+    {
+      "name": "BaumArt2Property",
+      "isTop": false,
+      "sourceClass": "Baum",
+      "targetClass": "PropertyValue",
+      "mappings": [
+        {
+          "sourceFeature": "baumart",
+          "targetFeature": "value",
+          "targetConstant": { "name": "baumart" }
+        }
+      ]
+    },
+    {
+      "name": "BaumHoehe2Property",
+      "isTop": false,
+      "sourceClass": "Baum",
+      "targetClass": "PropertyValue",
+      "mappings": [
+        {
+          "sourceFeature": "hoehe",
+          "targetFeature": "value",
+          "targetConstant": { "name": "hoehe" }
+        }
+      ]
+    },
+    {
+      "name": "BaumStammumfang2Property",
+      "isTop": false,
+      "sourceClass": "Baum",
+      "targetClass": "PropertyValue",
+      "mappings": [
+        {
+          "sourceFeature": "stammumfang",
+          "targetFeature": "value",
+          "targetConstant": { "name": "stammumfang" }
+        }
+      ]
+    },
+    {
+      "name": "BaumZustand2Property",
+      "isTop": false,
+      "sourceClass": "Baum",
+      "targetClass": "PropertyValue",
+      "mappings": [
+        {
+          "sourceFeature": "zustand",
+          "targetFeature": "value",
+          "targetConstant": { "name": "zustand" }
+        }
+      ]
+    },
+    {
+      "name": "BaumSchutz2Property",
+      "isTop": false,
+      "sourceClass": "Baum",
+      "targetClass": "PropertyValue",
+      "mappings": [
+        {
+          "sourceFeature": "geschuetzt",
+          "targetFeature": "value",
+          "targetConstant": { "name": "schutzstatus" }
+        }
+      ]
+    },
+    {
+      "name": "BaumPflanzjahr2Property",
+      "isTop": false,
+      "sourceClass": "Baum",
+      "targetClass": "PropertyValue",
+      "mappings": [
+        {
+          "sourceFeature": "pflanzjahr",
+          "targetFeature": "value",
+          "targetConstant": { "name": "pflanzjahr" }
+        }
+      ]
+    }
+  ],
+  "variables": [],
+  "qvtrCode": "transformation Baum2OgcFeatures(in source: baumkataster, out target: features) {\n\n  -- Wurzel: Baumbestand -> FeatureCatalog\n  top relation Baumbestand2FeatureCatalog {\n    n: String;\n    g: String;\n    j: String;\n    checkonly domain source b: Baumbestand {\n      name = n,\n      gemeinde = g,\n      erfassungsjahr = j\n    };\n    enforce domain target fc: FeatureCatalog {\n      name = n,\n      description = g,\n      version = j\n    };\n  }\n\n  -- Bezirk -> FeatureCollection (ein Layer pro Bezirk)\n  top relation Bezirk2FeatureCollection {\n    n: String;\n    d: String;\n    checkonly domain source bz: Bezirk {\n      name = n,\n      beschreibung = d\n    };\n    enforce domain target col: FeatureCollection {\n      id = n,\n      title = n,\n      description = d\n    };\n  }\n\n  -- Baum -> Feature (mit Point-Geometrie und Properties)\n  relation Baum2Feature {\n    nr: String;\n    checkonly domain source b: Baum {\n      baumNr = nr\n    };\n    enforce domain target f: Feature {\n      id = nr\n    };\n  }\n\n  -- Baum-Standort -> Point-Geometrie\n  relation BaumStandort2Point {\n    lon: Real;\n    lat: Real;\n    checkonly domain source b: Baum {\n      laengengrad = lon,\n      breitengrad = lat\n    };\n    enforce domain target p: Point {\n      longitude = lon,\n      latitude = lat\n    };\n  }\n\n  -- Baumart -> PropertyValue\n  relation BaumArt2Property {\n    v: String;\n    checkonly domain source b: Baum {\n      baumart = v\n    };\n    enforce domain target pv: PropertyValue {\n      name = 'baumart',\n      value = v\n    };\n  }\n\n  -- Hoehe -> PropertyValue\n  relation BaumHoehe2Property {\n    v: Real;\n    checkonly domain source b: Baum {\n      hoehe = v\n    };\n    enforce domain target pv: PropertyValue {\n      name = 'hoehe',\n      value = v.toString()\n    };\n  }\n\n  -- Stammumfang -> PropertyValue\n  relation BaumStammumfang2Property {\n    v: Integer;\n    checkonly domain source b: Baum {\n      stammumfang = v\n    };\n    enforce domain target pv: PropertyValue {\n      name = 'stammumfang',\n      value = v.toString()\n    };\n  }\n\n  -- Zustand -> PropertyValue\n  relation BaumZustand2Property {\n    v: String;\n    checkonly domain source b: Baum {\n      zustand = v\n    };\n    enforce domain target pv: PropertyValue {\n      name = 'zustand',\n      value = v\n    };\n  }\n\n  -- Schutzstatus -> PropertyValue\n  relation BaumSchutz2Property {\n    v: Boolean;\n    checkonly domain source b: Baum {\n      geschuetzt = v\n    };\n    enforce domain target pv: PropertyValue {\n      name = 'schutzstatus',\n      value = v.toString()\n    };\n  }\n\n  -- Pflanzjahr -> PropertyValue\n  relation BaumPflanzjahr2Property {\n    v: Integer;\n    checkonly domain source b: Baum {\n      pflanzjahr = v\n    };\n    enforce domain target pv: PropertyValue {\n      name = 'pflanzjahr',\n      value = v.toString()\n    };\n  }\n}\n"
+}

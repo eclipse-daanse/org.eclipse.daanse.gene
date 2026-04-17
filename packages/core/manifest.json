@@ -1,0 +1,7 @@
+{
+  "id": "core",
+  "name": "Gene Core",
+  "version": "1.0.0",
+  "description": "Core services and utilities",
+  "entry": "src/index.ts"
+}

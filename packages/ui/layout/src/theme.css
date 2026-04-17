@@ -1,0 +1,1010 @@
+/**
+ * Gene Layout Theme
+ *
+ * CSS variables for dark and light themes.
+ * Applied via .dark-theme / .light-theme classes on :root
+ */
+
+:root {
+  /* Default to dark theme */
+  --surface-ground: #121212;
+  --surface-section: #1e1e1e;
+  --surface-card: #252525;
+  --surface-overlay: #2a2a2a;
+  --surface-border: #3f3f3f;
+  --surface-hover: rgba(255, 255, 255, 0.08);
+
+  --text-color: #e0e0e0;
+  --text-color-secondary: #a0a0a0;
+  --text-color-muted: #6b6b6b;
+
+  --primary-color: #3B82F6;
+  --primary-color-hover: #2563EB;
+  --primary-color-text: #ffffff;
+
+  /* Scrollbar */
+  --scrollbar-thumb: #4a4a4a;
+  --scrollbar-track: transparent;
+}
+
+/* Dark Theme - use :root.dark-theme for higher specificity over PrimeVue */
+:root.dark-theme,
+html.dark-theme {
+  --surface-ground: #121212 !important;
+  --surface-section: #1e1e1e !important;
+  --surface-card: #252525 !important;
+  --surface-overlay: #2a2a2a !important;
+  --surface-border: #3f3f3f !important;
+  --surface-hover: rgba(255, 255, 255, 0.08) !important;
+
+  --text-color: #e0e0e0 !important;
+  --text-color-secondary: #a0a0a0 !important;
+  --text-color-muted: #6b6b6b !important;
+
+  --scrollbar-thumb: #4a4a4a;
+  --scrollbar-track: transparent;
+
+  /* Form elements */
+  --input-bg: #2a2a2a;
+  --input-border: #3f3f3f;
+  --input-text: #e0e0e0;
+  --input-placeholder: #6b6b6b;
+
+  /* PrimeVue overrides */
+  --p-form-field-background: #2a2a2a;
+  --p-form-field-border-color: #3f3f3f;
+  --p-form-field-color: #e0e0e0;
+  --p-form-field-placeholder-color: #6b6b6b;
+  --p-form-field-hover-border-color: #5f5f5f;
+  --p-form-field-focus-border-color: var(--primary-color);
+
+  --p-inputtext-background: #2a2a2a;
+  --p-inputtext-border-color: #3f3f3f;
+  --p-inputtext-color: #e0e0e0;
+  --p-inputtext-hover-border-color: #5f5f5f;
+  --p-inputtext-focus-border-color: var(--primary-color);
+
+  --p-select-background: #2a2a2a;
+  --p-select-border-color: #3f3f3f;
+  --p-select-color: #e0e0e0;
+  --p-select-option-selected-background: var(--primary-color);
+  --p-select-option-selected-color: #ffffff;
+  --p-select-dropdown-background: #2a2a2a;
+  --p-select-option-color: #e0e0e0;
+  --p-select-option-focus-background: rgba(255, 255, 255, 0.08);
+
+  --p-textarea-background: #2a2a2a;
+  --p-textarea-border-color: #3f3f3f;
+  --p-textarea-color: #e0e0e0;
+
+  --p-checkbox-background: #2a2a2a;
+  --p-checkbox-border-color: #3f3f3f;
+  --p-checkbox-checked-background: var(--primary-color);
+  --p-checkbox-checked-border-color: var(--primary-color);
+
+  --p-button-secondary-background: #3f3f3f;
+  --p-button-secondary-border-color: #3f3f3f;
+  --p-button-secondary-color: #e0e0e0;
+  --p-button-secondary-hover-background: #4f4f4f;
+  --p-button-secondary-hover-border-color: #4f4f4f;
+
+  --p-button-outlined-secondary-color: #e0e0e0;
+  --p-button-outlined-secondary-border-color: #3f3f3f;
+  --p-button-outlined-secondary-hover-background: rgba(255, 255, 255, 0.08);
+
+  --p-panel-background: #252525;
+  --p-panel-border-color: #3f3f3f;
+  --p-panel-color: #e0e0e0;
+
+  --p-dialog-background: #252525;
+  --p-dialog-border-color: #3f3f3f;
+  --p-dialog-color: #e0e0e0;
+
+  --p-overlay-modal-background: rgba(0, 0, 0, 0.6);
+
+  color-scheme: dark;
+}
+
+/* Light Theme - use :root.light-theme for higher specificity over PrimeVue */
+:root.light-theme,
+html.light-theme {
+  --surface-ground: #f5f5f5 !important;
+  --surface-section: #ffffff !important;
+  --surface-card: #ffffff !important;
+  --surface-overlay: #ffffff !important;
+  --surface-border: #e0e0e0 !important;
+  --surface-hover: rgba(0, 0, 0, 0.04) !important;
+
+  --text-color: #1a1a1a !important;
+  --text-color-secondary: #4a4a4a !important;
+  --text-color-muted: #707070 !important;
+
+  --scrollbar-thumb: #c0c0c0;
+  --scrollbar-track: transparent;
+
+  /* Form elements */
+  --input-bg: #ffffff;
+  --input-border: #d0d0d0;
+  --input-text: #1f1f1f;
+  --input-placeholder: #9e9e9e;
+
+  /* PrimeVue overrides */
+  --p-form-field-background: #ffffff;
+  --p-form-field-border-color: #d0d0d0;
+  --p-form-field-color: #1f1f1f;
+  --p-form-field-placeholder-color: #9e9e9e;
+  --p-form-field-hover-border-color: #b0b0b0;
+  --p-form-field-focus-border-color: var(--primary-color);
+
+  --p-inputtext-background: #ffffff;
+  --p-inputtext-border-color: #d0d0d0;
+  --p-inputtext-color: #1f1f1f;
+  --p-inputtext-hover-border-color: #b0b0b0;
+  --p-inputtext-focus-border-color: var(--primary-color);
+
+  --p-select-background: #ffffff;
+  --p-select-border-color: #d0d0d0;
+  --p-select-color: #1f1f1f;
+  --p-select-option-selected-background: var(--primary-color);
+  --p-select-option-selected-color: #ffffff;
+  --p-select-dropdown-background: #ffffff;
+  --p-select-option-color: #1f1f1f;
+  --p-select-option-focus-background: rgba(0, 0, 0, 0.04);
+
+  --p-textarea-background: #ffffff;
+  --p-textarea-border-color: #d0d0d0;
+  --p-textarea-color: #1f1f1f;
+
+  --p-checkbox-background: #ffffff;
+  --p-checkbox-border-color: #d0d0d0;
+  --p-checkbox-checked-background: var(--primary-color);
+  --p-checkbox-checked-border-color: var(--primary-color);
+
+  --p-button-secondary-background: #e8e8e8;
+  --p-button-secondary-border-color: #d0d0d0;
+  --p-button-secondary-color: #1f1f1f;
+  --p-button-secondary-hover-background: #d8d8d8;
+  --p-button-secondary-hover-border-color: #c0c0c0;
+
+  --p-button-outlined-secondary-color: #1f1f1f;
+  --p-button-outlined-secondary-border-color: #d0d0d0;
+  --p-button-outlined-secondary-hover-background: rgba(0, 0, 0, 0.04);
+
+  --p-panel-background: #ffffff;
+  --p-panel-border-color: #e0e0e0;
+  --p-panel-color: #1f1f1f;
+
+  --p-dialog-background: #ffffff;
+  --p-dialog-border-color: #e0e0e0;
+  --p-dialog-color: #1f1f1f;
+
+  --p-overlay-modal-background: rgba(0, 0, 0, 0.4);
+
+  color-scheme: light;
+}
+
+/* Global styles */
+html {
+  background: var(--surface-ground);
+  color: var(--text-color);
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--surface-ground);
+  color: var(--text-color);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-color-secondary);
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* Direct input/button overrides for dark theme */
+.dark-theme input,
+.dark-theme textarea,
+.dark-theme select {
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--input-text) !important;
+}
+
+.dark-theme input::placeholder,
+.dark-theme textarea::placeholder {
+  color: var(--input-placeholder) !important;
+}
+
+.dark-theme input:focus,
+.dark-theme textarea:focus,
+.dark-theme select:focus {
+  border-color: var(--primary-color) !important;
+  outline: none;
+}
+
+/* ==========================================================================
+   PrimeVue 4 Base Styles Override
+
+   PrimeVue 4's CSS-in-JS might not always apply correctly.
+   These styles ensure consistent padding, margins, and borders.
+   ========================================================================== */
+
+/* Form Inputs */
+.p-inputtext,
+input.p-inputtext,
+.p-component.p-inputtext {
+  padding: 0.5rem 0.75rem !important;
+  border: 1px solid var(--surface-border, #3f3f3f) !important;
+  border-radius: var(--border-radius, 6px) !important;
+}
+
+.p-textarea,
+textarea.p-textarea {
+  padding: 0.5rem 0.75rem !important;
+  border: 1px solid var(--surface-border, #3f3f3f) !important;
+  border-radius: var(--border-radius, 6px) !important;
+}
+
+/* Select/Dropdown */
+.p-select,
+.p-dropdown,
+.p-component.p-select,
+.p-component.p-dropdown {
+  padding: 0.5rem 0.75rem !important;
+  border: 1px solid var(--surface-border, #3f3f3f) !important;
+  border-radius: var(--border-radius, 6px) !important;
+  min-height: 2.5rem !important;
+}
+
+.p-select-label,
+.p-dropdown-label {
+  padding: 0 !important;
+}
+
+/* Buttons */
+.p-button,
+button.p-button,
+.p-component.p-button {
+  padding: 0.5rem 1rem !important;
+  gap: 0.5rem !important;
+  border-radius: var(--border-radius, 6px) !important;
+}
+
+.p-button-icon-only,
+.p-button.p-button-icon-only {
+  padding: 0.5rem !important;
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+}
+
+/* Card */
+.p-card {
+  border: 1px solid var(--surface-border, #3f3f3f) !important;
+  border-radius: var(--border-radius, 6px) !important;
+}
+
+.p-card-body {
+  padding: 1rem !important;
+}
+
+.p-card-title {
+  margin-bottom: 0.5rem !important;
+}
+
+.p-card-content {
+  padding: 0.5rem 0 !important;
+}
+
+.p-card-footer {
+  padding-top: 0.75rem !important;
+  border-top: 1px solid var(--surface-border, #3f3f3f) !important;
+  margin-top: 0.5rem !important;
+}
+
+/* Dialog */
+.p-dialog {
+  border: 1px solid var(--surface-border, #3f3f3f) !important;
+  border-radius: var(--border-radius, 6px) !important;
+}
+
+.p-dialog-header {
+  padding: 1rem 1.5rem !important;
+  border-bottom: 1px solid var(--surface-border, #3f3f3f) !important;
+}
+
+.p-dialog-content {
+  padding: 1.5rem !important;
+}
+
+.p-dialog-footer {
+  padding: 1rem 1.5rem !important;
+  border-top: 1px solid var(--surface-border, #3f3f3f) !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 0.5rem !important;
+}
+
+/* Checkbox */
+.p-checkbox {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+}
+
+.p-checkbox-box {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  border: 1px solid var(--surface-border, #3f3f3f) !important;
+  border-radius: 4px !important;
+}
+
+/* InputNumber */
+.p-inputnumber-input {
+  padding: 0.5rem 0.75rem !important;
+}
+
+/* Message */
+.p-message {
+  margin: 0.5rem 0 !important;
+  padding: 0.75rem 1rem !important;
+  border-radius: var(--border-radius, 6px) !important;
+}
+
+.p-message-content {
+  padding: 0 !important;
+}
+
+.dark-theme .p-inputtext,
+.dark-theme .p-select,
+.dark-theme .p-textarea,
+.dark-theme .p-dropdown {
+  background: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--input-text) !important;
+}
+
+.dark-theme .p-button:not(.p-button-primary):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(.p-button-danger):not(.p-button-icon-only):not(.p-button-text) {
+  background: #3f3f3f !important;
+  border-color: #3f3f3f !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-button:not(.p-button-primary):not(.p-button-success):not(.p-button-info):not(.p-button-warning):not(.p-button-danger):not(.p-button-icon-only):not(.p-button-text):hover {
+  background: #4f4f4f !important;
+  border-color: #4f4f4f !important;
+}
+
+.dark-theme .p-button.p-button-secondary {
+  background: #3f3f3f !important;
+  border-color: #3f3f3f !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-button.p-button-secondary:hover {
+  background: #4f4f4f !important;
+  border-color: #4f4f4f !important;
+}
+
+.dark-theme .p-button.p-button-outlined {
+  background: transparent !important;
+  border-color: #5f5f5f !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-button.p-button-outlined:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark-theme .p-button.p-button-text {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #a0a0a0 !important;
+}
+
+.dark-theme .p-button.p-button-text:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e0e0e0 !important;
+}
+
+/* Icon-only buttons - high specificity */
+.dark-theme button.p-button.p-button-icon-only,
+.dark-theme .p-button.p-component.p-button-icon-only,
+.dark-theme .p-button.p-button-icon-only.p-button-text,
+.dark-theme .p-button.p-button-icon-only.p-button-rounded,
+.dark-theme .p-button.p-button-icon-only.p-button-rounded.p-button-text {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-color: transparent !important;
+  color: #a0a0a0 !important;
+  box-shadow: none !important;
+}
+
+.dark-theme button.p-button.p-button-icon-only:hover,
+.dark-theme .p-button.p-component.p-button-icon-only:hover,
+.dark-theme .p-button.p-button-icon-only.p-button-text:hover,
+.dark-theme .p-button.p-button-icon-only.p-button-rounded:hover,
+.dark-theme .p-button.p-button-icon-only.p-button-rounded.p-button-text:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-theme button.p-button.p-button-icon-only:focus,
+.dark-theme .p-button.p-component.p-button-icon-only:focus {
+  box-shadow: none !important;
+}
+
+.dark-theme .p-dropdown-panel,
+.dark-theme .p-select-overlay {
+  background: var(--surface-overlay) !important;
+  border-color: var(--surface-border) !important;
+  border: 1px solid var(--surface-border) !important;
+  border-radius: var(--border-radius, 6px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Ensure dropdown list container is visible */
+.p-select-list-container,
+.p-dropdown-items-wrapper {
+  max-height: 200px !important;
+  overflow-y: auto !important;
+}
+
+.p-select-list,
+.p-dropdown-items {
+  margin: 0 !important;
+  padding: 0.25rem 0 !important;
+  list-style: none !important;
+}
+
+.dark-theme .p-dropdown-item,
+.dark-theme .p-select-option {
+  color: var(--text-color) !important;
+  padding: 0.5rem 0.75rem !important;
+  cursor: pointer !important;
+}
+
+.dark-theme .p-dropdown-item:hover,
+.dark-theme .p-select-option:hover,
+.dark-theme .p-select-option.p-focus {
+  background: var(--surface-hover) !important;
+}
+
+/* PrimeVue Panel */
+.dark-theme .p-panel,
+.dark-theme .p-panel-header,
+.dark-theme .p-panel-content {
+  background: var(--surface-card) !important;
+  border-color: var(--surface-border) !important;
+  color: var(--text-color) !important;
+}
+
+.dark-theme .p-panel-title {
+  color: var(--text-color) !important;
+}
+
+.dark-theme .p-panel-icons button {
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-theme .p-panel-icons button:hover {
+  color: var(--text-color) !important;
+  background: var(--surface-hover) !important;
+}
+
+/* PrimeVue Accordion */
+.dark-theme .p-accordion-header,
+.dark-theme .p-accordion-content {
+  background: var(--surface-card) !important;
+  border-color: var(--surface-border) !important;
+  color: var(--text-color) !important;
+}
+
+.dark-theme .p-accordion-header-link {
+  background: var(--surface-section) !important;
+  color: var(--text-color) !important;
+}
+
+.dark-theme .p-accordion-header-link:hover {
+  background: var(--surface-hover) !important;
+}
+
+/* PrimeVue Fieldset */
+.dark-theme .p-fieldset {
+  background: var(--surface-card) !important;
+  border-color: var(--surface-border) !important;
+}
+
+.dark-theme .p-fieldset-legend {
+  background: var(--surface-section) !important;
+  border-color: var(--surface-border) !important;
+  color: var(--text-color) !important;
+}
+
+/* PrimeVue Card */
+.dark-theme .p-card {
+  background: var(--surface-card) !important;
+  color: var(--text-color) !important;
+}
+
+/* PrimeVue Dialog */
+.dark-theme .p-dialog {
+  background: var(--surface-overlay) !important;
+  color: var(--text-color) !important;
+}
+
+.dark-theme .p-dialog-header {
+  background: var(--surface-overlay) !important;
+}
+
+.dark-theme .p-dialog-content {
+  background: var(--surface-overlay) !important;
+}
+
+.dark-theme .p-dialog-footer {
+  background: var(--surface-overlay) !important;
+}
+
+/* PrimeVue TabView */
+.dark-theme .p-tabview-nav {
+  background: var(--surface-section) !important;
+  border-color: var(--surface-border) !important;
+}
+
+.dark-theme .p-tabview-nav-link {
+  background: transparent !important;
+  color: var(--text-color-secondary) !important;
+}
+
+.dark-theme .p-tabview-nav-link:hover {
+  color: var(--text-color) !important;
+}
+
+.dark-theme .p-tabview-ink-bar {
+  background: var(--primary-color) !important;
+}
+
+.dark-theme .p-tabview-panels {
+  background: var(--surface-card) !important;
+  color: var(--text-color) !important;
+}
+
+/* PrimeVue Divider */
+.dark-theme .p-divider {
+  border-color: var(--surface-border) !important;
+}
+
+.dark-theme .p-divider-content {
+  background: var(--surface-card) !important;
+  color: var(--text-color-secondary) !important;
+}
+
+/* PrimeVue Menu */
+.dark-theme .p-menu {
+  --p-menu-item-color: #aaaaaa;
+  --p-menu-item-focus-color: #e0e0e0;
+  --p-menu-item-focus-background: rgba(255, 255, 255, 0.08);
+  background: #252525 !important;
+  border-color: #3f3f3f !important;
+  color: #aaaaaa !important;
+}
+
+.dark-theme .p-menu .p-menuitem-content {
+  color: #aaaaaa !important;
+}
+
+.dark-theme .p-menu .p-menuitem-content:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-menu .p-menuitem-link {
+  color: #aaaaaa !important;
+}
+
+.dark-theme .p-menu .p-menuitem-link:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-menu .p-menuitem-link:focus {
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+}
+
+.dark-theme .p-menu .p-menuitem-icon {
+  color: #aaaaaa !important;
+}
+
+.dark-theme .p-menu .p-menuitem-text {
+  color: #aaaaaa !important;
+}
+
+.dark-theme .p-menu .p-menuitem-link:hover .p-menuitem-icon,
+.dark-theme .p-menu .p-menuitem-link:hover .p-menuitem-text {
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-menu .p-submenu-header {
+  background: #1e1e1e !important;
+  color: #a0a0a0 !important;
+}
+
+.dark-theme .p-menu .p-menuitem.p-highlight > .p-menuitem-link {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* PrimeVue ContextMenu */
+.dark-theme .p-contextmenu {
+  --p-contextmenu-background: #252525;
+  --p-contextmenu-color: #aaaaaa;
+  --p-contextmenu-border-color: #3f3f3f;
+  --p-contextmenu-item-color: #aaaaaa;
+  --p-contextmenu-item-focus-color: #e0e0e0;
+  --p-contextmenu-item-focus-background: rgba(255, 255, 255, 0.08);
+  --p-contextmenu-item-active-color: #e0e0e0;
+  --p-contextmenu-item-active-background: rgba(255, 255, 255, 0.08);
+  --p-menu-item-color: #aaaaaa;
+  --p-menu-item-focus-color: #e0e0e0;
+  --p-menu-item-focus-background: rgba(255, 255, 255, 0.08);
+  background: #252525 !important;
+  border: 1px solid #3f3f3f !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  color: #aaaaaa !important;
+  padding: 0.25rem 0 !important;
+  min-width: 180px !important;
+}
+
+/* Ensure context menu list is visible - PrimeVue 4 class names */
+.p-contextmenu-root-list,
+.p-contextmenu ul {
+  margin: 0 !important;
+  padding: 0.25rem 0 !important;
+  list-style: none !important;
+}
+
+/* PrimeVue 4 uses p-contextmenu-item instead of p-menuitem */
+.p-contextmenu .p-contextmenu-item,
+.p-contextmenu .p-menuitem {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* PrimeVue 4 content wrapper */
+.p-contextmenu .p-contextmenu-item-content,
+.p-contextmenu .p-menuitem-content {
+  padding: 0.5rem 0.75rem !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  cursor: pointer !important;
+  border-radius: 0 !important;
+}
+
+/* PrimeVue 4 link element */
+.p-contextmenu .p-contextmenu-item-link,
+.p-contextmenu .p-menuitem-link {
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  text-decoration: none !important;
+  color: inherit !important;
+  width: 100% !important;
+}
+
+/* Icons */
+.p-contextmenu .p-contextmenu-item-icon,
+.p-contextmenu .p-menuitem-icon {
+  font-size: 0.875rem !important;
+  width: 1rem !important;
+  flex-shrink: 0 !important;
+}
+
+/* Labels */
+.p-contextmenu .p-contextmenu-item-label,
+.p-contextmenu .p-menuitem-text {
+  font-size: 0.875rem !important;
+}
+
+/* Separators */
+.p-contextmenu .p-contextmenu-separator,
+.p-contextmenu .p-menuitem-separator {
+  border-top: 1px solid var(--surface-border, #3f3f3f) !important;
+  margin: 0.25rem 0 !important;
+  padding: 0 !important;
+}
+
+/* Dark theme context menu items - PrimeVue 4 class names */
+.dark-theme .p-contextmenu .p-contextmenu-item-content,
+.dark-theme .p-contextmenu .p-menuitem-content {
+  color: #aaaaaa !important;
+  background: transparent !important;
+}
+
+.dark-theme .p-contextmenu .p-contextmenu-item-content:hover,
+.dark-theme .p-contextmenu .p-menuitem-content:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-contextmenu .p-contextmenu-item-active > .p-contextmenu-item-content,
+.dark-theme .p-contextmenu .p-contextmenu-item[data-p-focused="true"] > .p-contextmenu-item-content {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-contextmenu .p-contextmenu-item-link,
+.dark-theme .p-contextmenu .p-menuitem-link {
+  color: #aaaaaa !important;
+}
+
+.dark-theme .p-contextmenu .p-contextmenu-item-link:hover,
+.dark-theme .p-contextmenu .p-menuitem-link:hover {
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-contextmenu .p-contextmenu-item-icon,
+.dark-theme .p-contextmenu .p-menuitem-icon {
+  color: #aaaaaa !important;
+}
+
+.dark-theme .p-contextmenu .p-contextmenu-item-label {
+  color: inherit !important;
+}
+
+/* PrimeVue TieredMenu */
+.dark-theme .p-tieredmenu {
+  --p-menu-item-color: #aaaaaa;
+  --p-menu-item-focus-color: #e0e0e0;
+  --p-menu-item-focus-background: rgba(255, 255, 255, 0.08);
+  background: #252525 !important;
+  border-color: #3f3f3f !important;
+  color: #aaaaaa !important;
+}
+
+.dark-theme .p-tieredmenu .p-menuitem-content {
+  color: #aaaaaa !important;
+}
+
+.dark-theme .p-tieredmenu .p-menuitem-content:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-tieredmenu .p-menuitem-link {
+  color: #aaaaaa !important;
+}
+
+.dark-theme .p-tieredmenu .p-menuitem-link:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e0e0e0 !important;
+}
+
+/* PrimeVue Menubar */
+.dark-theme .p-menubar {
+  background: #1e1e1e !important;
+  border-color: #3f3f3f !important;
+}
+
+.dark-theme .p-menubar .p-menuitem-link {
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-menubar .p-menuitem-link:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark-theme .p-menubar .p-submenu-list {
+  background: #252525 !important;
+  border-color: #3f3f3f !important;
+}
+
+/* PrimeVue Tree */
+.dark-theme .p-tree {
+  background: transparent !important;
+  border: none !important;
+  color: #aaaaaa !important;
+}
+
+.dark-theme .p-tree-node-content {
+  color: #aaaaaa !important;
+  background: transparent !important;
+}
+
+.dark-theme .p-tree-node-content:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-tree-node-content.p-tree-node-selectable:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-tree-node-content.p-tree-node-selected {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-tree-node-content.p-tree-node-selected:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.dark-theme .p-tree-node-icon {
+  color: #aaaaaa !important;
+}
+
+.dark-theme .p-tree-node-content:hover .p-tree-node-icon,
+.dark-theme .p-tree-node-content.p-tree-node-selected .p-tree-node-icon {
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-tree-node-label {
+  color: inherit !important;
+}
+
+.dark-theme .p-tree-toggler {
+  color: #aaaaaa !important;
+}
+
+.dark-theme .p-tree-toggler:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-theme .p-tree-node-children {
+  border-left-color: #3f3f3f !important;
+}
+
+/* Light Theme - Menu */
+.light-theme .p-menu {
+  background: #ffffff !important;
+  border-color: #e0e0e0 !important;
+  color: #3a3a3a !important;
+}
+
+.light-theme .p-menu .p-menuitem-link {
+  color: #3a3a3a !important;
+}
+
+.light-theme .p-menu .p-menuitem-link:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: #1a1a1a !important;
+}
+
+.light-theme .p-menu .p-menuitem-icon {
+  color: #4a4a4a !important;
+}
+
+.light-theme .p-menu .p-menuitem-text {
+  color: #3a3a3a !important;
+}
+
+.light-theme .p-menu .p-menuitem-link:hover .p-menuitem-icon,
+.light-theme .p-menu .p-menuitem-link:hover .p-menuitem-text {
+  color: #1a1a1a !important;
+}
+
+.light-theme .p-menu .p-submenu-header {
+  background: #f5f5f5 !important;
+  color: #4a4a4a !important;
+}
+
+/* Light Theme - ContextMenu */
+.light-theme .p-contextmenu {
+  background: #ffffff !important;
+  border-color: #e0e0e0 !important;
+  color: #3a3a3a !important;
+}
+
+/* Light theme context menu - PrimeVue 4 class names */
+.light-theme .p-contextmenu .p-contextmenu-item-link,
+.light-theme .p-contextmenu .p-contextmenu-item-content,
+.light-theme .p-contextmenu .p-menuitem-link,
+.light-theme .p-contextmenu .p-menuitem-content {
+  color: #3a3a3a !important;
+  background: transparent !important;
+}
+
+.light-theme .p-contextmenu .p-contextmenu-item-link:hover,
+.light-theme .p-contextmenu .p-contextmenu-item-content:hover,
+.light-theme .p-contextmenu .p-menuitem-link:hover,
+.light-theme .p-contextmenu .p-menuitem-content:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+}
+
+.light-theme .p-contextmenu .p-contextmenu-item-icon,
+.light-theme .p-contextmenu .p-menuitem-icon {
+  color: #4a4a4a !important;
+}
+
+.light-theme .p-contextmenu .p-contextmenu-item-label {
+  color: inherit !important;
+}
+
+/* Light Theme - Tree */
+.light-theme .p-tree {
+  background: transparent !important;
+  border: none !important;
+  color: #3a3a3a !important;
+}
+
+.light-theme .p-tree-node-content {
+  color: #3a3a3a !important;
+  background: transparent !important;
+}
+
+.light-theme .p-tree-node-content:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: #1a1a1a !important;
+}
+
+.light-theme .p-tree-node-content.p-tree-node-selected {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: #1a1a1a !important;
+}
+
+.light-theme .p-tree-node-content.p-tree-node-selected:hover {
+  background: rgba(0, 0, 0, 0.12) !important;
+}
+
+.light-theme .p-tree-node-icon {
+  color: #4a4a4a !important;
+}
+
+.light-theme .p-tree-node-content:hover .p-tree-node-icon,
+.light-theme .p-tree-node-content.p-tree-node-selected .p-tree-node-icon {
+  color: #1a1a1a !important;
+}
+
+.light-theme .p-tree-toggler {
+  color: #4a4a4a !important;
+}
+
+.light-theme .p-tree-toggler:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  color: #1a1a1a !important;
+}
+
+/* Light Theme - Dropdown/Select */
+.light-theme .p-dropdown-panel,
+.light-theme .p-select-overlay {
+  background: #ffffff !important;
+  border: 1px solid #e0e0e0 !important;
+  border-radius: var(--border-radius, 6px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.light-theme .p-dropdown-item,
+.light-theme .p-select-option {
+  color: #1f1f1f !important;
+  padding: 0.5rem 0.75rem !important;
+}
+
+.light-theme .p-dropdown-item:hover,
+.light-theme .p-select-option:hover,
+.light-theme .p-select-option.p-focus {
+  background: rgba(0, 0, 0, 0.06) !important;
+}

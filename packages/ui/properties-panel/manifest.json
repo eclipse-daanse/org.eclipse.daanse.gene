@@ -1,0 +1,19 @@
+{
+  "id": "ui-properties-panel",
+  "name": "Properties Panel",
+  "version": "0.0.1",
+  "description": "Properties panel for editing selected EMF instance attributes",
+  "entry": "src/index.ts",
+  "provides": [
+    {
+      "id": "ui.properties-panel.components",
+      "description": "Properties panel Vue components"
+    }
+  ],
+  "dependencies": [
+    "gene-app",
+    "ui-layout",
+    "ui-instance-tree",
+    "instance-builder"
+  ]
+}

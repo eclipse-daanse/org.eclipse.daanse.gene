@@ -1,0 +1,23 @@
+{
+  "id": "ui-instance-tree",
+  "name": "Instance Tree",
+  "version": "0.0.1",
+  "description": "EMF instance tree editor for the Model Perspective center area",
+  "entry": "src/index.ts",
+  "provides": [
+    {
+      "id": "ui.instance-tree.components",
+      "description": "Instance tree Vue components"
+    },
+    {
+      "id": "ui.instance-tree.composables",
+      "description": "Instance tree state composable"
+    }
+  ],
+  "dependencies": [
+    "gene-app",
+    "ui-layout",
+    "ui-perspectives",
+    "ui-model-browser"
+  ]
+}
