@@ -14,10 +14,25 @@ export default defineConfigWithVueTs(
     files: ['**/*.{vue,ts,mts,tsx}'],
   },
 
-  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**']),
+  globalIgnores(['**/dist/**', '**/dist-ssr/**', '**/coverage/**', '**/generated/**', 'scripts/**']),
 
   ...pluginVue.configs['flat/essential'],
   vueTsConfigs.recommended,
+
+  {
+    name: 'app/custom-rules',
+    rules: {
+      '@typescript-eslint/no-unused-vars': ['warn', {
+        argsIgnorePattern: '^(_|\\$props|\\$setup|\\$data|\\$options|__props)',
+        varsIgnorePattern: '^(_|\\$props|\\$setup|\\$data|\\$options|__props)'
+      }],
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-expressions': 'warn',
+      '@typescript-eslint/no-this-alias': 'warn',
+      '@typescript-eslint/no-unsafe-function-type': 'warn',
+      'vue/no-deprecated-filter': 'warn'
+    }
+  },
 
   {
     ...pluginVitest.configs.recommended,

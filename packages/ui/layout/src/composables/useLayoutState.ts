@@ -98,7 +98,7 @@ function loadPersistedState(): Partial<LayoutState> & { panelPositionOverrides?:
       const parsed = JSON.parse(stored)
 
       // Convert panelPositionOverrides from array back to Map
-      let overrides = new Map<string, PanelPositionOverride>()
+      const overrides = new Map<string, PanelPositionOverride>()
       if (parsed.panelPositionOverrides && Array.isArray(parsed.panelPositionOverrides)) {
         for (const override of parsed.panelPositionOverrides) {
           overrides.set(override.panelId, override)
