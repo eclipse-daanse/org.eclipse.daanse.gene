@@ -19,22 +19,23 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
-      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: yarn --network-timeout 100000
+        run: npm ci
 
       - name: Build
-        run: yarn run build
+        run: npm run build-only
 
       - name: Run Tests
-        run: yarn run test
+        run: npm run test:unit -- --run
 
       - name: Cache Build Output
-        uses: actions/cache/save@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v5.0.2
+        uses: actions/cache/save@v4
         with:
           path: ./dist
           key: build-cache-${{ github.sha }}
