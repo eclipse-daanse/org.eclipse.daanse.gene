@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GenE Release Builder</title>
+  <style>
+    :root {
+      --bg: #0d1117; --surface: #161b22; --border: #30363d;
+      --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff;
+      --green: #3fb950; --red: #f85149; --orange: #d29922;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .subtitle { color: var(--muted); margin-bottom: 2rem; }
+    .auth { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1rem; margin-bottom: 1.5rem; display: flex; gap: 0.75rem; align-items: center; }
+    .auth input { flex: 1; padding: 0.5rem 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.875rem; }
+    .auth input::placeholder { color: var(--muted); }
+    .status { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.8rem; padding: 0.25rem 0.5rem; border-radius: 4px; }
+    .status.ok { background: #0d2818; color: var(--green); }
+    .status.err { background: #2d1117; color: var(--red); }
+    .status.pending { background: #1c1604; color: var(--orange); }
+    .category { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 1rem; overflow: hidden; }
+    .category-header { padding: 0.75rem 1rem; font-weight: 600; font-size: 0.9rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .category-header button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 0.8rem; }
+    .plugin-list { padding: 0.5rem 0; }
+    .plugin { display: flex; align-items: center; gap: 0.75rem; padding: 0.4rem 1rem; }
+    .plugin:hover { background: rgba(255,255,255,0.03); }
+    .plugin input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+    .plugin label { cursor: pointer; flex: 1; font-size: 0.875rem; }
+    .plugin .tag { font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 3px; background: var(--border); color: var(--muted); }
+    .actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; align-items: center; }
+    .actions label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; color: var(--muted); cursor: pointer; }
+    .btn { padding: 0.6rem 1.25rem; border: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-primary:hover { background: #2ea043; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+    .result { margin-top: 1rem; padding: 1rem; border-radius: 6px; font-size: 0.875rem; display: none; }
+    .result.success { display: block; background: #0d2818; border: 1px solid #196c2e; color: var(--green); }
+    .result.error { display: block; background: #2d1117; border: 1px solid #f8514966; color: var(--red); }
+    .branch-select { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem; }
+    .branch-select select { padding: 0.4rem 0.6rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.875rem; }
+    .branch-select label { color: var(--muted); font-size: 0.875rem; }
+    .count { color: var(--muted); font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GenE Release Builder</h1>
+    <p class="subtitle">Plugins auswählen und Release-Build starten</p>
+
+    <div class="auth">
+      <input type="password" id="token" placeholder="GitHub Personal Access Token (repo scope)">
+      <span id="auth-status" class="status pending">nicht verbunden</span>
+    </div>
+
+    <div class="branch-select">
+      <label for="branch">Branch:</label>
+      <select id="branch"><option>main</option></select>
+      <label style="margin-left: auto;">
+        <input type="checkbox" id="create-release"> GitHub Release erstellen
+      </label>
+    </div>
+
+    <div id="categories"></div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="dispatch" disabled>Release Build starten</button>
+      <button class="btn btn-secondary" id="select-defaults">Defaults laden</button>
+      <span class="count" id="count"></span>
+    </div>
+
+    <div id="result" class="result"></div>
+  </div>
+
+  <script>
+    const REPO = 'eclipse-daanse/org.eclipse.daanse.gene'
+    const WORKFLOW = 'release.yml'
+
+    const tokenInput = document.getElementById('token')
+    const authStatus = document.getElementById('auth-status')
+    const categoriesEl = document.getElementById('categories')
+    const dispatchBtn = document.getElementById('dispatch')
+    const resultEl = document.getElementById('result')
+    const branchSelect = document.getElementById('branch')
+    const countEl = document.getElementById('count')
+    const createReleaseEl = document.getElementById('create-release')
+    const selectDefaultsBtn = document.getElementById('select-defaults')
+
+    let allPlugins = []
+    let defaultPlugins = new Set()
+
+    // --- Kategorien ---
+    function categorize(id) {
+      if (['gene-app', 'core'].includes(id)) return 'Core'
+      if (id.startsWith('storage-')) return 'Storage'
+      if (id.startsWith('ui-') || id === 'instance-builder') return 'UI'
+      return 'Feature'
+    }
+
+    // --- GitHub API ---
+    async function api(path, opts = {}) {
+      const token = tokenInput.value.trim()
+      const res = await fetch(`https://api.github.com/${path}`, {
+        ...opts,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          ...(opts.headers || {})
+        }
+      })
+      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
+      if (res.status === 204) return null
+      return res.json()
+    }
+
+    // --- Token validieren + Daten laden ---
+    async function connect() {
+      const token = tokenInput.value.trim()
+      if (!token) return
+
+      authStatus.className = 'status pending'
+      authStatus.textContent = 'verbinde...'
+
+      try {
+        await api(`repos/${REPO}`)
+        authStatus.className = 'status ok'
+        authStatus.textContent = 'verbunden'
+        dispatchBtn.disabled = false
+        localStorage.setItem('gene-release-token', token)
+        await loadData()
+      } catch (e) {
+        authStatus.className = 'status err'
+        authStatus.textContent = 'Fehler: ' + e.message
+        dispatchBtn.disabled = true
+      }
+    }
+
+    // --- Plugin-Liste + Defaults aus Repo laden ---
+    async function loadData() {
+      try {
+        // Branches laden
+        const branches = await api(`repos/${REPO}/branches`)
+        branchSelect.innerHTML = branches.map(b =>
+          `<option ${b.name === 'main' ? 'selected' : ''}>${b.name}</option>`
+        ).join('')
+
+        // release-plugins.json laden (Defaults)
+        try {
+          const configFile = await api(`repos/${REPO}/contents/release-plugins.json?ref=${branchSelect.value}`)
+          const config = JSON.parse(atob(configFile.content))
+          defaultPlugins = new Set(config.plugins)
+        } catch { defaultPlugins = new Set() }
+
+        // Alle manifest.json finden
+        const tree = await api(`repos/${REPO}/git/trees/${branchSelect.value}?recursive=1`)
+        const manifests = tree.tree.filter(f =>
+          f.path.match(/^packages\/.*manifest\.json$/) && !f.path.includes('node_modules')
+        )
+
+        allPlugins = []
+        for (const m of manifests) {
+          try {
+            const blob = await api(`repos/${REPO}/git/blobs/${m.sha}`)
+            const manifest = JSON.parse(atob(blob.content))
+            if (manifest.id) {
+              allPlugins.push({ id: manifest.id, path: m.path, version: manifest.version || '' })
+            }
+          } catch {}
+        }
+
+        allPlugins.sort((a, b) => a.id.localeCompare(b.id))
+        renderPlugins()
+      } catch (e) {
+        console.error('Fehler beim Laden:', e)
+      }
+    }
+
+    // --- Plugins rendern ---
+    function renderPlugins() {
+      const groups = new Map()
+      for (const p of allPlugins) {
+        const cat = categorize(p.id)
+        if (!groups.has(cat)) groups.set(cat, [])
+        groups.get(cat).push(p)
+      }
+
+      categoriesEl.innerHTML = ''
+      for (const [cat, plugins] of groups) {
+        const section = document.createElement('div')
+        section.className = 'category'
+        section.innerHTML = `
+          <div class="category-header">
+            <span>${cat} <span class="tag">${plugins.length}</span></span>
+            <button data-cat="${cat}" onclick="toggleCategory('${cat}')">alle an/aus</button>
+          </div>
+          <div class="plugin-list">
+            ${plugins.map(p => `
+              <div class="plugin">
+                <input type="checkbox" id="p-${p.id}" value="${p.id}" ${defaultPlugins.has(p.id) ? 'checked' : ''} onchange="updateCount()">
+                <label for="p-${p.id}">${p.id}</label>
+                ${p.version ? `<span class="tag">${p.version}</span>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        `
+        categoriesEl.appendChild(section)
+      }
+      updateCount()
+    }
+
+    window.toggleCategory = function(cat) {
+      const plugins = allPlugins.filter(p => categorize(p.id) === cat)
+      const checkboxes = plugins.map(p => document.getElementById(`p-${p.id}`))
+      const allChecked = checkboxes.every(cb => cb.checked)
+      checkboxes.forEach(cb => cb.checked = !allChecked)
+      updateCount()
+    }
+
+    function updateCount() {
+      const checked = document.querySelectorAll('#categories input:checked').length
+      const total = allPlugins.length
+      countEl.textContent = `${checked}/${total} Plugins ausgewählt`
+    }
+
+    selectDefaultsBtn.addEventListener('click', () => {
+      for (const p of allPlugins) {
+        const cb = document.getElementById(`p-${p.id}`)
+        if (cb) cb.checked = defaultPlugins.has(p.id)
+      }
+      updateCount()
+    })
+
+    // --- Workflow dispatchen ---
+    dispatchBtn.addEventListener('click', async () => {
+      const selected = Array.from(document.querySelectorAll('#categories input:checked'))
+        .map(cb => cb.value)
+
+      if (selected.length === 0) {
+        resultEl.className = 'result error'
+        resultEl.textContent = 'Keine Plugins ausgewählt!'
+        return
+      }
+
+      dispatchBtn.disabled = true
+      dispatchBtn.textContent = 'Wird gestartet...'
+      resultEl.className = 'result'
+      resultEl.style.display = 'none'
+
+      try {
+        await api(`repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`, {
+          method: 'POST',
+          body: JSON.stringify({
+            ref: branchSelect.value,
+            inputs: {
+              plugins: selected.join(','),
+              create_release: String(createReleaseEl.checked)
+            }
+          })
+        })
+
+        resultEl.className = 'result success'
+        resultEl.innerHTML = `Release Build gestartet auf <strong>${branchSelect.value}</strong> mit ${selected.length} Plugins.<br>
+          <a href="https://github.com/${REPO}/actions/workflows/${WORKFLOW}" target="_blank" style="color: var(--accent);">→ Zum Workflow</a>`
+      } catch (e) {
+        resultEl.className = 'result error'
+        resultEl.textContent = 'Fehler: ' + e.message
+      } finally {
+        dispatchBtn.disabled = false
+        dispatchBtn.textContent = 'Release Build starten'
+      }
+    })
+
+    // --- Init ---
+    const saved = localStorage.getItem('gene-release-token')
+    if (saved) { tokenInput.value = saved; connect() }
+    tokenInput.addEventListener('change', connect)
+    branchSelect.addEventListener('change', loadData)
+  </script>
+</body>
+</html>
