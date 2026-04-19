@@ -6,12 +6,13 @@
  * a full-screen editor for .c-ocl constraint files.
  */
 
-import { ref, computed, onMounted, reactive, inject } from 'tsm:vue'
+import { ref, computed, onMounted, reactive, inject, watch } from 'tsm:vue'
 import { InputText, Button, Dialog, Tree } from 'tsm:primevue'
 import type { CoclConstraint, CoclConstraintSet } from 'ui-problems-panel'
 import { loadCoclFromString } from 'ui-problems-panel'
 import { useSharedModelRegistry } from 'ui-model-browser'
 import { SearchDialog } from 'ui-search'
+import { getSharedOclClient } from 'transformation'
 import { serializeCoclToXml } from '../composables/useCoclSerializer'
 import ConstraintList from './ConstraintList.vue'
 import ConstraintForm from './ConstraintForm.vue'
@@ -327,7 +328,45 @@ onMounted(async () => {
   } catch (e) {
     console.error('[CoclEditor] Failed to parse C-OCL:', e)
   }
+
+  // Register all loaded metamodel packages with the OCL LSP for autocompletion
+  registerPackagesWithOcl()
 })
+
+// Register metamodel packages with OCL LSP for autocompletion
+function registerPackagesWithOcl() {
+  try {
+    const oclClient = getSharedOclClient()
+    for (const pkgInfo of modelRegistry.allPackages.value) {
+      oclClient.registerPackage(pkgInfo.ePackage)
+    }
+    console.log('[CoclEditor] Registered', modelRegistry.allPackages.value.length, 'packages with OCL LSP')
+  } catch (e) {
+    console.warn('[CoclEditor] Failed to register packages with OCL LSP:', e)
+  }
+}
+
+// Re-register when new packages are loaded
+watch(() => modelRegistry.allPackages.value.length, () => {
+  registerPackagesWithOcl()
+})
+
+// Create new empty constraint set
+function handleNew() {
+  constraintSet.value = {
+    name: 'NewConstraints',
+    version: '1.0',
+    description: '',
+    targetModelNsURIs: [],
+    constraints: []
+  }
+  selectedConstraintName.value = null
+  fileEntry = null
+  filePath = ''
+  isDirty.value = true
+  saveStatus.value = 'dirty'
+  registerPackagesWithOcl()
+}
 
 // Handlers
 function handleSelect(name: string) {
@@ -419,6 +458,11 @@ function handleSetFieldUpdate(field: string, value: string) {
 async function handleSave() {
   if (!constraintSet.value) return
 
+  // No file yet — redirect to Save As
+  if (!fileEntry) {
+    return handleSaveAs()
+  }
+
   saveStatus.value = 'saving'
 
   try {
@@ -465,10 +509,6 @@ async function handleSaveAs() {
     try {
       const handle = await (window as any).showSaveFilePicker({
         suggestedName: defaultName,
-        types: [{
-          description: 'C-OCL Constraint File',
-          accept: { 'application/xml': ['.c-ocl'] }
-        }]
       })
       const writable = await handle.createWritable()
       await writable.write(xml)
@@ -555,6 +595,14 @@ function handleDiscard() {
         </div>
       </div>
       <div class="header-actions">
+        <Button
+          icon="pi pi-file"
+          severity="secondary"
+          size="small"
+          @click="handleNew"
+          title="New constraint file"
+          text
+        />
         <span v-if="isDirty" class="unsaved-badge">Unsaved</span>
         <Button
           icon="pi pi-save"
@@ -663,7 +711,15 @@ function handleDiscard() {
   <div v-if="!constraintSet" class="cocl-editor-empty">
     <i class="pi pi-check-square" style="font-size: 2rem; opacity: 0.3"></i>
     <span>No C-OCL file loaded</span>
-    <span class="hint">Double-click a .c-ocl file in the Explorer to open it here.</span>
+    <span class="hint">Open a .c-ocl file from the Explorer or create a new one.</span>
+    <Button
+      label="New Constraint File"
+      icon="pi pi-plus"
+      severity="secondary"
+      size="small"
+      @click="handleNew"
+      style="margin-top: 8px"
+    />
   </div>
 </template>
 

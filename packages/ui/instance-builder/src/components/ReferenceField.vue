@@ -155,22 +155,90 @@ async function evaluateOclFilter() {
 
   isEvaluatingOcl.value = true
   const results = new Map<EObject, { disabled: boolean; reason?: string }>()
-  const transformedExpr = transformOclExpression(props.oclFilter)
 
-  for (let i = 0; i < props.availableObjects.length; i++) {
-    const obj = props.availableObjects[i]
+  const sourceObj = props.sourceObject
+  if (!sourceObj) {
+    oclFilteredOptions.value = new Map()
+    isEvaluatingOcl.value = false
+    return
+  }
 
-    try {
-      const result = await props.problemsService.query(obj, transformedExpr)
+  // The REFERENCE_FILTER expression uses 'self' for the owner (e.g. Student)
+  // and 'target' for the candidate (e.g. Kurs).
+  // We evaluate the expression on the sourceObject (self=Student).
+  // To handle 'target', we replace it with a navigation path that identifies
+  // each candidate uniquely. For objects with a 'name' attribute, we use:
+  //   target  →  oclContainer().kurse->any(x | x.name = 'Informatik')
+  // But this is fragile. Instead, we use the simpler approach:
+  // evaluate the expression on sourceObject and check each candidate.
 
-      if (result !== true) {
-        results.set(obj, { disabled: true, reason: `OCL: ${props.oclFilter}` })
-      } else {
-        results.set(obj, { disabled: false })
+  // Collect the valid set by evaluating a modified expression on sourceObject.
+  // Transform: "...->exists(uk | uk = target)" → "...->asSet()"
+  // to get the valid collection, then check membership.
+  //
+  // For the common pattern "GUARD implies COLLECTION->exists(v | v = target)":
+  // Extract COLLECTION and evaluate it on sourceObject to get the valid set.
+
+  try {
+    // Try to extract the valid collection from the expression.
+    // Common pattern: "condition implies collection->exists(v | v = target)"
+    // We transform to: "if condition then collection else Set{} endif"
+    const expr = props.oclFilter
+    const existsMatch = expr.match(/^(.+?)\s*implies\s+(.+?)->exists\s*\(\s*\w+\s*\|\s*\w+\s*=\s*target\s*\)$/)
+    const simpleExistsMatch = expr.match(/^(.+?)->exists\s*\(\s*\w+\s*\|\s*\w+\s*=\s*target\s*\)$/)
+
+    let validSet: Set<EObject> | null = null
+
+    if (existsMatch) {
+      // Pattern: "guard implies collection->exists(v | v = target)"
+      const guard = existsMatch[1]
+      const collection = existsMatch[2]
+      const setExpr = `if ${guard} then ${collection} else Set{} endif`
+      const result = await props.problemsService.query(sourceObj, setExpr)
+
+      if (result && Symbol.iterator in Object(result)) {
+        const validArray = Array.from(result as Iterable<EObject>)
+
+        // Use name-based matching since object identity may differ
+        const validNames = new Set(validArray.map(o => getObjectDisplayName(o)))
+        for (const candidate of props.availableObjects) {
+          const candidateName = getObjectDisplayName(candidate)
+          const pass = validNames.has(candidateName)
+          results.set(candidate, { disabled: !pass, reason: pass ? undefined : `OCL: ${props.oclFilter}` })
+        }
+        oclFilteredOptions.value = results
+        isEvaluatingOcl.value = false
+        return
       }
-    } catch (e: any) {
-      console.error('[ReferenceField] OCL evaluation error for', getObjectDisplayName(obj), ':', e?.message || e)
-      results.set(obj, { disabled: false, reason: `OCL Error: ${e?.message || String(e)}` })
+    } else if (simpleExistsMatch) {
+      // Pattern: "collection->exists(v | v = target)"
+      const collection = simpleExistsMatch[1]
+      const setExpr = collection
+      const result = await props.problemsService.query(sourceObj, setExpr)
+      if (result && Symbol.iterator in Object(result)) {
+        const validArray = Array.from(result as Iterable<EObject>)
+        const validNames = new Set(validArray.map(o => getObjectDisplayName(o)))
+        for (const candidate of props.availableObjects) {
+          const pass = validNames.has(getObjectDisplayName(candidate))
+          results.set(candidate, { disabled: !pass, reason: pass ? undefined : `OCL: ${props.oclFilter}` })
+        }
+        oclFilteredOptions.value = results
+        isEvaluatingOcl.value = false
+        return
+      }
+    }
+
+    if (results.size === 0) {
+      // Fallback: can't parse expression, allow all
+      console.warn('[ReferenceField] Could not parse OCL referenceFilter, allowing all:', props.oclFilter)
+      for (const candidate of props.availableObjects) {
+        results.set(candidate, { disabled: false })
+      }
+    }
+  } catch (e: any) {
+    console.error('[ReferenceField] OCL filter evaluation error:', e?.message || e)
+    for (const candidate of props.availableObjects) {
+      results.set(candidate, { disabled: false })
     }
   }
 
@@ -178,31 +246,72 @@ async function evaluateOclFilter() {
   isEvaluatingOcl.value = false
 }
 
-// Evaluate OCL filter when props change
+// Evaluate OCL filter when props change or any feature on the source object changes
 watch(
-  () => [props.availableObjects, props.oclFilter, props.problemsService],
+  () => {
+    // Track all feature values on the sourceObject to detect any change
+    const deps: unknown[] = [props.availableObjects, props.oclFilter, props.problemsService]
+    if (props.sourceObject && props.oclFilter) {
+      const eClass = props.sourceObject.eClass()
+      const features = eClass?.getEAllStructuralFeatures?.() ?? []
+      for (const f of features) {
+        try { deps.push(props.sourceObject.eGet(f)) } catch { /* skip */ }
+      }
+    }
+    return deps
+  },
   () => evaluateOclFilter(),
   { immediate: true }
 )
 
+// Stable key for an EObject (index in availableObjects)
+function getObjectKey(obj: EObject): string {
+  const idx = props.availableObjects?.indexOf(obj) ?? -1
+  if (idx >= 0) return String(idx)
+  return getObjectDisplayName(obj)
+}
+
+// Selected key for the current value
+const selectedKey = computed(() => {
+  if (!props.value || !props.availableObjects) return null
+  // Find the matching object in availableObjects
+  for (let i = 0; i < props.availableObjects.length; i++) {
+    if (props.availableObjects[i] === props.value) return String(i)
+    // Fallback: match by display name
+    if (getObjectDisplayName(props.availableObjects[i]) === getObjectDisplayName(props.value)) return String(i)
+  }
+  return null
+})
+
+// Handle select by key
+function handleSelectByKey(key: string | null) {
+  if (key === null || !props.availableObjects) {
+    handleSelect(null as any)
+    return
+  }
+  const idx = parseInt(key, 10)
+  if (idx >= 0 && idx < props.availableObjects.length) {
+    handleSelect(props.availableObjects[idx])
+  }
+}
+
 // Options for dropdown (non-containment single references)
-const dropdownOptions = computed<ReferenceOption[]>(() => {
+const dropdownOptions = computed<(ReferenceOption & { key: string })[]>(() => {
   if (!props.availableObjects) return []
 
-  const options = props.availableObjects.map(obj => {
+  return props.availableObjects.map((obj, idx) => {
     const name = getObjectDisplayName(obj)
     const eClass = obj.eClass()
     const filterStatus = oclFilteredOptions.value.get(obj)
 
     return {
+      key: String(idx),
       label: `${name} (${eClass.getName()})`,
       value: obj,
       disabled: filterStatus?.disabled ?? false,
       oclReason: filterStatus?.reason
     }
   })
-
-  return options
 })
 
 // Menu ref for subclass selection
@@ -368,11 +477,11 @@ const selectedAddOption = computed({
     <!-- Single non-containment reference with available objects -->
     <div v-if="!isManyValued && !isContainment && availableObjects" class="single-reference">
       <Dropdown
-        :modelValue="value"
-        @update:modelValue="handleSelect"
+        :modelValue="selectedKey"
+        @update:modelValue="handleSelectByKey"
         :options="dropdownOptions"
         optionLabel="label"
-        optionValue="value"
+        optionValue="key"
         optionDisabled="disabled"
         :disabled="readonly"
         :invalid="!!error"

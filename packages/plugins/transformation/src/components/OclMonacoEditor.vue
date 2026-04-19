@@ -66,11 +66,9 @@ let disposeDiagnostics: (() => void) | null = null
 
 // --- Register OCL language (once) ---
 
-let oclLanguageRegistered = false
-
 function registerOclLanguage() {
-  if (oclLanguageRegistered) return
-  oclLanguageRegistered = true
+  // Check if already registered via Monaco's language registry
+  if (monaco.languages.getLanguages().some(l => l.id === 'ocl')) return
 
   monaco.languages.register({ id: 'ocl', extensions: ['.ocl'] })
 
@@ -364,14 +362,17 @@ function buildDocumentText(expression: string): string {
   if (props.contextClass) {
     // Wrap as valid OCL: ClassifierContext with an invariant constraint
     // Grammar: 'context' type=QualifiedName 'inv' (name=ID)? ':' expression=Expression
-    return `context ${props.contextClass} inv _: ${expression}`
+    // OCL uses '::' as package separator, but contextClass uses '.'
+    const oclQualifiedName = props.contextClass.replaceAll('.', '::')
+    return `context ${oclQualifiedName} inv _: ${expression}`
   }
   return expression
 }
 
 function extractExpression(text: string): string {
   if (props.contextClass) {
-    const prefix = `context ${props.contextClass} inv _: `
+    const oclQualifiedName = props.contextClass.replaceAll('.', '::')
+    const prefix = `context ${oclQualifiedName} inv _: `
     if (text.startsWith(prefix)) {
       return text.slice(prefix.length)
     }
