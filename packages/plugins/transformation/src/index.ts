@@ -10,6 +10,7 @@ import { markRaw } from 'tsm:vue'
 
 // Re-export components
 export { TransformationEditor, OclMonacoEditor } from './components'
+export { getSharedOclClient } from './composables/useOclLanguageClient'
 
 // Import for service registration
 import { TransformationEditor } from './components'

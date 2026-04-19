@@ -39,7 +39,7 @@
     "@emfts/core": "^0.1.1-next.2",
     "@emfts/ocl.engine": "^0.0.1-next.1",
     "@emfts/ocl.langium": "^0.0.1-next.1",
-    "@emfts/ocl.lsp.worker": "^0.0.1-next.1",
+    "@emfts/ocl.lsp.worker": "^0.0.1-next.2",
     "@emfts/ocl.model": "^0.0.1-next.1",
     "@emfts/vue-registry": "^0.0.1-next.1",
     "@faker-js/faker": "^9.9.0",

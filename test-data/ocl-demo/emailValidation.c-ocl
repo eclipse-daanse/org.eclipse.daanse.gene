@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cocl:OclConstraintSet xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:cocl="http://www.gme.org/cocl/1.0"
+    name="emailValidation"
+    version="1.0">
+  <constraints name="email"
+      expression="self.email.size &gt; 0 implies self.email.indexOf(&apos;@&apos;) &gt; 0"
+      severity="ERROR"
+      role="VALIDATION"
+      contextClass="Person"
+      active="true"/>
+
+</cocl:OclConstraintSet>

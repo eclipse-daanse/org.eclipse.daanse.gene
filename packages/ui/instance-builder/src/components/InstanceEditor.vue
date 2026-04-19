@@ -60,9 +60,90 @@ const availableClasses = ref<EClass[]>([])
 // Problems service for OCL evaluation
 const problemsService = ref<any>(null)
 
+// C-OCL loader for reference filters
+let coclLoader: any = null
+
 onMounted(async () => {
   problemsService.value = await loadProblemsService()
+  // Load C-OCL loader for reference filter lookups
+  try {
+    const mod = await import('ui-problems-panel')
+    coclLoader = mod
+  } catch { /* optional */ }
 })
+
+/**
+ * Get available objects for a non-containment reference from the loaded resource.
+ */
+function getAvailableObjects(feature: EStructuralFeature): EObject[] {
+  const ref = feature as any
+  if (ref.isContainment?.()) return []
+
+  const refType = ref.getEReferenceType?.() ?? ref.getEType?.()
+  if (!refType) return []
+
+  // Collect all objects of this type from the resource
+  const resource = props.eObject?.eResource?.()
+  if (!resource) return []
+
+  const result: EObject[] = []
+  const contents = resource.getContents()
+  for (let i = 0; i < contents.size(); i++) {
+    collectObjectsOfType(contents.get(i), refType, result)
+  }
+  return result
+}
+
+function collectObjectsOfType(obj: EObject, targetType: EClass, result: EObject[]) {
+  if (obj.eClass()?.getName() === targetType.getName() || isSubtypeOf(obj.eClass(), targetType)) {
+    result.push(obj)
+  }
+  // Recurse into containment references
+  const eClass = obj.eClass()
+  if (!eClass) return
+  const refs = eClass.getEAllReferences?.() ?? []
+  for (const ref of refs) {
+    if (!ref.isContainment?.()) continue
+    const val = obj.eGet(ref)
+    if (!val) continue
+    if (ref.isMany?.()) {
+      for (const child of val) {
+        collectObjectsOfType(child, targetType, result)
+      }
+    } else {
+      collectObjectsOfType(val, targetType, result)
+    }
+  }
+}
+
+function isSubtypeOf(eClass: EClass | null, superType: EClass): boolean {
+  if (!eClass) return false
+  const supers = eClass.getEAllSuperTypes?.() ?? []
+  for (const sup of supers) {
+    if (sup.getName() === superType.getName()) return true
+  }
+  return false
+}
+
+/**
+ * Get OCL reference filter expression for a feature from loaded C-OCL constraints.
+ */
+function getReferenceFilter(feature: EStructuralFeature): string | undefined {
+  if (!coclLoader?.getReferenceFilterConstraint || !props.eObject) return undefined
+
+  const featureName = feature.getName()
+  const eClass = props.eObject.eClass()
+  const className = eClass?.getName?.() ?? ''
+  const pkg = eClass?.getEPackage?.()
+  const pkgName = pkg?.getName?.() ?? ''
+  const fullClassName = pkgName ? `${pkgName}.${className}` : className
+
+  let constraint = coclLoader.getReferenceFilterConstraint(fullClassName, featureName)
+  if (!constraint) {
+    constraint = coclLoader.getReferenceFilterConstraint(className, featureName)
+  }
+  return constraint?.expression
+}
 
 // Use the instance editor composable
 const editor = computed(() => {
@@ -389,6 +470,9 @@ watch(selectedClass, (newClass) => {
             @create="handleCreateReference"
             @navigate="handleNavigate"
             :error="getFeatureError(feature)"
+            :availableObjects="getAvailableObjects(feature)"
+            :oclFilter="getReferenceFilter(feature)"
+            :problemsService="problemsService"
           />
         </div>
       </Fieldset>

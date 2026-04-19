@@ -4,112 +4,18 @@
  * Communicates with the ocl-lsp-worker via JSON-RPC 2.0 over postMessage.
  * Provides initialize, document sync, completion, hover, and diagnostics.
  */
-import type { EPackage, EClass, EClassifier } from '@emfts/core'
-
-// --- Serializable EPackage data (can be cloned via postMessage) ---
-
-export interface SerializedFeature {
-  name: string
-  typeName: string
-  isMany: boolean
-  kind: 'attribute' | 'reference'
-  isContainment?: boolean
-  referenceTypeName?: string
-}
-
-export interface SerializedOperation {
-  name: string
-}
-
-export interface SerializedClass {
-  name: string
-  isAbstract: boolean
-  isInterface: boolean
-  features: SerializedFeature[]
-  operations: SerializedOperation[]
-  superTypeNames: string[]
-}
-
-export interface SerializedPackage {
-  nsURI: string
-  name: string
-  nsPrefix: string
-  classes: SerializedClass[]
-}
-
-function getObjName(obj: any): string {
-  if (!obj) return 'unknown'
-  if (typeof obj.getName === 'function') return obj.getName() ?? 'unknown'
-  return 'unknown'
-}
+import type { EPackage } from '@emfts/core'
 
 /**
- * Serialize an EPackage into a plain cloneable object for postMessage.
+ * Serialize an EPackage to XMI string for transfer to the worker.
+ * Uses the EPackage's existing Resource to avoid breaking containment.
  */
-export function serializeEPackage(pkg: EPackage): SerializedPackage {
-  const classes: SerializedClass[] = []
-
-  const classifiers = pkg.getEClassifiers?.() ?? []
-  for (const classifier of classifiers) {
-    if (!classifier || typeof (classifier as any).getEStructuralFeatures !== 'function') continue
-
-    const eClass = classifier as EClass
-    const features: SerializedFeature[] = []
-
-    try {
-      for (const attr of eClass.getEAllAttributes?.() ?? []) {
-        features.push({
-          name: getObjName(attr),
-          typeName: getObjName(attr.getEType?.()),
-          isMany: typeof attr.isMany === 'function' ? attr.isMany() : false,
-          kind: 'attribute'
-        })
-      }
-    } catch { /* skip */ }
-
-    try {
-      for (const ref of eClass.getEAllReferences?.() ?? []) {
-        features.push({
-          name: getObjName(ref),
-          typeName: getObjName(ref.getEReferenceType?.()),
-          isMany: typeof ref.isMany === 'function' ? ref.isMany() : false,
-          kind: 'reference',
-          isContainment: typeof ref.isContainment === 'function' ? ref.isContainment() : false,
-          referenceTypeName: getObjName(ref.getEReferenceType?.())
-        })
-      }
-    } catch { /* skip */ }
-
-    const operations: SerializedOperation[] = []
-    try {
-      for (const op of eClass.getEAllOperations?.() ?? []) {
-        operations.push({ name: getObjName(op) })
-      }
-    } catch { /* skip */ }
-
-    const superTypeNames: string[] = []
-    try {
-      for (const sup of eClass.getEAllSuperTypes?.() ?? []) {
-        superTypeNames.push(getObjName(sup))
-      }
-    } catch { /* skip */ }
-
-    classes.push({
-      name: getObjName(eClass),
-      isAbstract: typeof eClass.isAbstract === 'function' ? eClass.isAbstract() : false,
-      isInterface: typeof eClass.isInterface === 'function' ? eClass.isInterface() : false,
-      features,
-      operations,
-      superTypeNames
-    })
+function serializeEPackageToXMI(ePackage: EPackage): string {
+  const resource = ePackage.eResource?.()
+  if (resource && typeof (resource as any).saveToString === 'function') {
+    return (resource as any).saveToString() as string
   }
-
-  return {
-    nsURI: pkg.getNsURI?.() ?? '',
-    name: getObjName(pkg),
-    nsPrefix: pkg.getNsPrefix?.() ?? '',
-    classes
-  }
+  throw new Error(`EPackage '${ePackage.getName?.()}' has no Resource for XMI serialization`)
 }
 
 // --- JSON-RPC Types ---
@@ -247,8 +153,8 @@ export class OclLanguageClient {
   // --- Custom worker messages ---
 
   registerPackage(ePackage: EPackage) {
-    const serialized = serializeEPackage(ePackage)
-    this.worker.postMessage({ type: 'registerPackage', data: serialized })
+    const xmi = serializeEPackageToXMI(ePackage)
+    this.worker.postMessage({ type: 'registerPackage', data: xmi })
   }
 
   // --- LSP Lifecycle ---
