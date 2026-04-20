@@ -16,6 +16,7 @@ export * from './types'
 
 // Re-export composables
 export { useRemoteDataGen, setSharedAtlasBrowser } from './composables/useRemoteDataGen'
+export { useDataGenAtlas, setAtlasBaseUrl } from './composables/useDataGenAtlas'
 
 // Re-export components
 export { DataGenPerspective } from './components'

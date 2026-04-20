@@ -14,6 +14,7 @@ import { registerFakerProviders, setFakerLocale, setFakerSeed } from '../composa
 import { registerDatafakerProviders } from '../composables/useDatafakerProviders'
 import { generateInstances } from '../composables/useInstanceGenerator'
 import { useRemoteDataGen } from '../composables/useRemoteDataGen'
+import { useDataGenAtlas } from '../composables/useDataGenAtlas'
 import { useSharedModelRegistry } from 'ui-model-browser'
 import DataGenTree from './DataGenTree.vue'
 import DataGenEditor from './DataGenEditor.vue'
@@ -23,6 +24,7 @@ const dg = useDataGenerator()
 const tsm = inject<any>('tsm')
 const registry = useGeneratorRegistry()
 const remoteGen = useRemoteDataGen()
+const atlas = useDataGenAtlas()
 
 // Generate dropdown menu
 const generateMenu = ref<InstanceType<typeof Menu> | null>(null)
@@ -42,14 +44,14 @@ const generateMenuItems = computed(() => {
         command: () => handleGenerateRemote(conn.id)
       })
     }
-  } else {
-    items.push({
-      label: 'Auf Server generieren',
-      icon: 'pi pi-server',
-      disabled: true,
-      command: () => {}
-    })
   }
+  // Always show "Generate on Server" via Atlas DataGen endpoint
+  items.push({
+    label: 'Auf Server generieren (Atlas)',
+    icon: 'pi pi-cloud',
+    disabled: !dg.config.value?.name,
+    command: () => handleGenerateOnServer()
+  })
   return items
 })
 
@@ -282,6 +284,61 @@ async function handleSaveAs() {
     a.download = defaultName
     a.click()
     URL.revokeObjectURL(url)
+  }
+}
+
+// --- Atlas Server Integration ---
+
+const showServerListDialog = ref(false)
+const serverConfigs = ref<any[]>([])
+
+async function handleUploadToServer() {
+  if (!dg.config.value) return
+
+  const xml = serializeDatagenToXml(dg.config.value)
+  const name = dg.config.value.name || 'Unnamed'
+  const version = dg.config.value.version || '1.0'
+
+  const result = await atlas.uploadConfig(xml, name, version)
+  if (result.success) {
+    console.log(`[DataGenerator] Uploaded to server: ${name} v${version}`)
+  } else {
+    console.error('[DataGenerator] Upload failed:', atlas.error.value)
+  }
+}
+
+async function handleLoadFromServer() {
+  showServerListDialog.value = true
+  serverConfigs.value = await atlas.listConfigs()
+}
+
+async function handleSelectServerConfig(config: any) {
+  showServerListDialog.value = false
+  const xmi = await atlas.loadConfig(config.objectId, config.stage)
+  if (xmi) {
+    parseDatagenFromXml(xmi)
+    console.log(`[DataGenerator] Loaded from server: ${config.name}`)
+  }
+}
+
+async function handleGenerateOnServer() {
+  if (!dg.config.value) return
+
+  const name = dg.config.value.name
+  const version = dg.config.value.version
+  const result = await atlas.generateOnServer(name, version)
+
+  if (result.success) {
+    genResult.value = {
+      success: true,
+      instanceCount: (result.xmiContent.match(/xsi:type=/g) || []).length,
+      xmiContent: result.xmiContent,
+      errors: [],
+      log: ['Generated on server: ' + name]
+    }
+    showGenDialog.value = true
+  } else {
+    console.error('[DataGenerator] Server generation failed:', result.error)
   }
 }
 
@@ -606,6 +663,10 @@ function parseDatagenXml(xml: string): DataGenConfig | null {
           :disabled="!dg.config.value || !dg.isDirty.value" />
         <Button icon="pi pi-file-export" label="Save As" size="small" severity="secondary" text @click="handleSaveAs"
           :disabled="!dg.config.value" />
+        <span class="toolbar-sep"></span>
+        <Button icon="pi pi-cloud-upload" label="Upload to Server" size="small" severity="secondary" text @click="handleUploadToServer"
+          :disabled="!dg.config.value" :loading="atlas.loading.value" />
+        <Button icon="pi pi-cloud-download" label="Load from Server" size="small" severity="secondary" text @click="handleLoadFromServer" />
         <span v-if="dg.isDirty.value" class="dirty-badge">Unsaved</span>
       </div>
       <div class="toolbar-center">
@@ -740,6 +801,39 @@ function parseDatagenXml(xml: string): DataGenConfig | null {
       @save-workspace="handleSaveToWorkspace"
       @cancel="genRunning = false"
     />
+
+    <!-- Server Config List Dialog -->
+    <Dialog
+      v-model:visible="showServerListDialog"
+      header="DataGen Configs auf Server"
+      :modal="true"
+      :style="{ width: '500px' }"
+    >
+      <div v-if="atlas.loading.value" style="text-align: center; padding: 20px;">
+        <i class="pi pi-spinner pi-spin" style="font-size: 1.5rem"></i>
+        <p>Lade Konfigurationen...</p>
+      </div>
+      <div v-else-if="serverConfigs.length === 0" style="text-align: center; padding: 20px; color: var(--text-color-secondary);">
+        Keine Konfigurationen auf dem Server gefunden.
+      </div>
+      <div v-else class="server-config-list">
+        <div
+          v-for="cfg in serverConfigs"
+          :key="cfg.objectId"
+          class="server-config-item"
+          @click="handleSelectServerConfig(cfg)"
+        >
+          <div class="config-item-info">
+            <span class="config-item-name">{{ cfg.name }}</span>
+            <span class="config-item-version">v{{ cfg.version }}</span>
+          </div>
+          <span class="config-item-id">{{ cfg.objectId }}</span>
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Schliessen" severity="secondary" size="small" @click="showServerListDialog = false" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -848,6 +942,58 @@ function parseDatagenXml(xml: string): DataGenConfig | null {
 }
 
 .w-full { width: 100%; }
+
+.toolbar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--surface-border);
+  margin: 0 4px;
+}
+
+/* Server Config List */
+.server-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.server-config-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--surface-border);
+}
+
+.server-config-item:hover {
+  background: var(--surface-hover);
+}
+
+.config-item-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.config-item-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.config-item-version {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+}
+
+.config-item-id {
+  font-size: 0.6875rem;
+  font-family: monospace;
+  color: var(--text-color-secondary);
+}
 
 /* Class Picker */
 .class-picker-content {
