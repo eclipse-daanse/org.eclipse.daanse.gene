@@ -383,17 +383,42 @@ function handleSaveXmi() {
   }
 }
 
-function handleLoadWorkspace() {
-  // Trigger workspace load via global event
-  if (genResult.value?.xmiContent) {
-    const event = new CustomEvent('gene:load-generated-instances', {
-      detail: {
-        content: genResult.value.xmiContent,
-        name: `${dg.config.value?.name || 'generated'}.xmi`
+async function handleSaveToWorkspace() {
+  if (!genResult.value?.xmiContent) return
+
+  const geneFS = tsm?.getService('gene.filesystem')
+  if (!geneFS) {
+    console.warn('[DataGenerator] No file system available')
+    return
+  }
+
+  const fileName = `${dg.config.value?.name || 'generated'}.xmi`
+
+  // Use File System Access API to let user pick location
+  if ('showSaveFilePicker' in window) {
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: fileName,
+      })
+      const writable = await handle.createWritable()
+      await writable.write(genResult.value.xmiContent)
+      await writable.close()
+      console.log('[DataGenerator] Saved to workspace:', fileName)
+      showGenDialog.value = false
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        console.error('[DataGenerator] Save failed:', e)
       }
-    })
-    window.dispatchEvent(event)
-    showGenDialog.value = false
+    }
+  } else {
+    // Fallback: download
+    const blob = new Blob([genResult.value.xmiContent], { type: 'application/xml' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    a.click()
+    URL.revokeObjectURL(url)
   }
 }
 
@@ -701,7 +726,7 @@ function parseDatagenXml(xml: string): DataGenConfig | null {
       :progress="genProgress"
       :progressMessage="genProgressMsg"
       @save-xmi="handleSaveXmi"
-      @load-workspace="handleLoadWorkspace"
+      @save-workspace="handleSaveToWorkspace"
       @cancel="genRunning = false"
     />
   </div>
