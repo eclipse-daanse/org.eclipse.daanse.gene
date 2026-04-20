@@ -758,11 +758,29 @@ export function useProblemsService(options: OclServiceOptions = {}) {
   }
 
   /**
+   * Find derived expression by walking the class hierarchy (own class + all supertypes)
+   */
+  function findDerivedExpression(eClass: EClass, attributeName: string): string | undefined {
+    // Check own class first
+    const ownKey = `${eClass.getName()}.${attributeName}`
+    const own = derivedExpressions.get(ownKey)
+    if (own) return own
+
+    // Walk supertypes
+    const supers = eClass.getEAllSuperTypes?.() ?? []
+    for (const sup of supers) {
+      const key = `${sup.getName()}.${attributeName}`
+      const expr = derivedExpressions.get(key)
+      if (expr) return expr
+    }
+    return undefined
+  }
+
+  /**
    * Evaluate a derived attribute
    */
   async function evaluateDerived(obj: EObject, attributeName: string): Promise<unknown> {
-    const key = `${obj.eClass().getName()}.${attributeName}`
-    const expression = derivedExpressions.get(key)
+    const expression = findDerivedExpression(obj.eClass(), attributeName)
     if (!expression) return undefined
     return query(obj, expression)
   }
@@ -771,8 +789,7 @@ export function useProblemsService(options: OclServiceOptions = {}) {
    * Check if an attribute is derived with OCL expression
    */
   async function hasDerivedExpression(eClass: EClass, attributeName: string): Promise<boolean> {
-    const key = `${eClass.getName()}.${attributeName}`
-    return derivedExpressions.has(key)
+    return findDerivedExpression(eClass, attributeName) !== undefined
   }
 
   /**
@@ -959,8 +976,8 @@ export function useProblemsService(options: OclServiceOptions = {}) {
     const eClass = obj.eClass()
     const className = eClass.getName() || ''
 
-    // 1. Try new format: __op_<name> in derivedExpressions
-    let oclBody: string | null = derivedExpressions.get(`${className}.__op_${operationName}`) ?? null
+    // 1. Try new format: __op_<name> in derivedExpressions (walks class hierarchy)
+    let oclBody: string | null = findDerivedExpression(eClass, `__op_${operationName}`) ?? null
 
     // 2. Fallback: legacy annotation on EOperation
     if (!oclBody) {
@@ -1025,8 +1042,8 @@ export function useProblemsService(options: OclServiceOptions = {}) {
   async function hasOperationExpression(eClass: EClass, operationName: string): Promise<boolean> {
     try {
       const className = eClass.getName() || ''
-      // Check new format first
-      if (derivedExpressions.has(`${className}.__op_${operationName}`)) return true
+      // Check new format first (walks class hierarchy)
+      if (findDerivedExpression(eClass, `__op_${operationName}`)) return true
 
       // Fallback: legacy annotation
       const operations = _getAllOperations(eClass)
