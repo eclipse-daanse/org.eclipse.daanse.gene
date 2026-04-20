@@ -59,18 +59,10 @@ function updateEnabled(val: boolean) {
   emit('update', props.classIndex, { enabled: val })
 }
 
-const containmentRefs = computed(() => {
-  if (!props.classConfig) return []
-  return props.classConfig.referenceGens
-    .map((rg, i) => ({ rg, originalIndex: i }))
-    .filter(({ rg }) => rg.isContainment)
-})
-
 const crossRefs = computed(() => {
   if (!props.classConfig) return []
   return props.classConfig.referenceGens
     .map((rg, i) => ({ rg, originalIndex: i }))
-    .filter(({ rg }) => !rg.isContainment)
 })
 </script>
 
@@ -161,53 +153,6 @@ const crossRefs = computed(() => {
       </div>
     </div>
 
-    <!-- Containment References section -->
-    <div class="editor-section" v-if="containmentRefs.length > 0">
-      <div class="section-header">
-        <span class="section-title"><i class="pi pi-sitemap section-icon"></i> Containment</span>
-      </div>
-
-      <div class="ref-table">
-        <div class="ref-row ref-header-row">
-          <span class="ref-cell name-cell">Reference</span>
-          <span class="ref-cell count-cell">Children</span>
-          <span class="ref-cell count-cell">Depth</span>
-          <span class="ref-cell action-cell"></span>
-        </div>
-        <div v-for="{ rg, originalIndex } in containmentRefs" :key="rg.featureName" class="ref-row containment-row">
-          <span class="ref-cell name-cell mono">{{ rg.featureName }}</span>
-          <div class="ref-cell count-cell">
-            <InputNumber
-              :modelValue="rg.childCount"
-              @update:modelValue="emit('update-ref', classIndex, originalIndex, { childCount: $event || 1 })"
-              size="small"
-              :min="0"
-              :max="100"
-              class="count-input"
-            />
-          </div>
-          <div class="ref-cell count-cell">
-            <InputNumber
-              :modelValue="rg.maxDepth"
-              @update:modelValue="emit('update-ref', classIndex, originalIndex, { maxDepth: $event || 1 })"
-              size="small"
-              :min="1"
-              :max="10"
-              class="count-input"
-            />
-          </div>
-          <div class="ref-cell action-cell">
-            <Button
-              icon="pi pi-trash"
-              text rounded size="small"
-              severity="danger"
-              @click="emit('remove-ref', classIndex, originalIndex)"
-              class="row-btn"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Cross-References section -->
     <div class="editor-section">

@@ -204,8 +204,7 @@ export function useDataGenerator() {
       if (!name) continue
       if (cc.referenceGens.some(r => r.featureName === name)) continue
 
-      const containment = !!ref.isContainment?.()
-      cc.referenceGens.push(createDefaultReferenceGen(name, containment))
+      cc.referenceGens.push(createDefaultReferenceGen(name))
     }
 
     isDirty.value = true

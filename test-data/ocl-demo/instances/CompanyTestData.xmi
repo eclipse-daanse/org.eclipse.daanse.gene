@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:dge="https://dg.de/1.0">
+  <dge:Company xmi:id="_Company_0" name="Kimberly Moen" industry="sed" url="https://mixed-exasperation.com/">
+    <address xsi:type="dge:Address" xmi:id="_Address_1" street="Windmill Close" city="Alexborough" zipCode="00360-6265" country="Saint Vincent and the Grenadines"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_2" name="Hannah Walter V" industry="arbitro" url="https://faint-devil.net">
+    <address xsi:type="dge:Address" xmi:id="_Address_3" street="Jamal Drive" city="North Elianeport" zipCode="78360" country="Fiji"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_4" name="Tina Dickinson" industry="admoneo" url="https://thrifty-fedora.info/">
+    <address xsi:type="dge:Address" xmi:id="_Address_5" street="Rectory Lane" city="Turnerfurt" zipCode="21529" country="Guernsey"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_6" name="Tara Lindgren" industry="terreo" url="https://knowledgeable-ceramics.org/">
+    <address xsi:type="dge:Address" xmi:id="_Address_7" street="Freda Plain" city="Fishershire" zipCode="93593-6545" country="United Kingdom"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_8" name="Everett Leffler" industry="cursim" url="https://sociable-mantua.info/">
+    <address xsi:type="dge:Address" xmi:id="_Address_9" street="Salisbury Road" city="Port Anastasiaport" zipCode="81019-7974" country="Poland"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_10" name="Opal Waters" industry="tonsor" url="https://superb-presume.org/">
+    <address xsi:type="dge:Address" xmi:id="_Address_11" street="Anderson Camp" city="Hutchinson" zipCode="91632" country="Guernsey"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_12" name="Ann Keeling" industry="quos" url="https://crafty-vanadyl.org/">
+    <address xsi:type="dge:Address" xmi:id="_Address_13" street="State Street" city="Heidenreichboro" zipCode="71845-1309" country="Colombia"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_14" name="Jessica Mitchell" industry="temporibus" url="https://burdensome-slide.com">
+    <address xsi:type="dge:Address" xmi:id="_Address_15" street="E Jefferson Street" city="Pico Rivera" zipCode="27639" country="Ukraine"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_16" name="Miss Olive Homenick" industry="suspendo" url="https://wobbly-goodwill.org">
+    <address xsi:type="dge:Address" xmi:id="_Address_17" street="Lilliana Mill" city="East Cristinaburgh" zipCode="91578" country="Guernsey"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_18" name="Angelo Lakin" industry="deleniti" url="https://happy-go-lucky-amendment.biz">
+    <address xsi:type="dge:Address" xmi:id="_Address_19" street="Gerlach Neck" city="Irvine" zipCode="90925" country="Falkland Islands (Malvinas)"/>
+  </dge:Company>
+  <dge:Address xmi:id="_Address_20" street="Nightingale Close" city="Shaunport" zipCode="15459" country="Albania"/>
+  <dge:Address xmi:id="_Address_21" street="Greenwood Road" city="Fort Ryleyland" zipCode="20551-9875" country="Cape Verde"/>
+  <dge:Address xmi:id="_Address_22" street="Ferne Underpass" city="Cleveland Heights" zipCode="16605" country="Lao People&apos;s Democratic Republic"/>
+  <dge:Address xmi:id="_Address_23" street="Lenore Road" city="Geraldineborough" zipCode="86294-7315" country="Afghanistan"/>
+  <dge:Address xmi:id="_Address_24" street="Nyasia Summit" city="Lucyfort" zipCode="15395-0310" country="Martinique"/>
+  <dge:Address xmi:id="_Address_25" street="Hand Expressway" city="Lake Ladarius" zipCode="46265" country="Republic of Korea"/>
+  <dge:Address xmi:id="_Address_26" street="Highfield Road" city="Hackettbury" zipCode="81761-3884" country="Venezuela"/>
+  <dge:Address xmi:id="_Address_27" street="Ash Close" city="Vonfield" zipCode="34047-3444" country="Mauritania"/>
+  <dge:Address xmi:id="_Address_28" street="S Division Street" city="South Branson" zipCode="10947" country="Saint Lucia"/>
+  <dge:Address xmi:id="_Address_29" street="W Broadway Street" city="New Camron" zipCode="05573-6127" country="Aland Islands"/>
+  <dge:Person xmi:id="_Person_30" firstName="Waylon" lastName="Ernser" email="Berneice.Baumbach-Block@yahoo.com" phone="1-449-966-6503 x066" jobTitle="Human Marketing Producer">
+    <address href="#_Address_1"/>
+    <company href="#_Company_0"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_31" firstName="Breana" lastName="Beahan" email="Lillie.Dietrich@gmail.com" phone="586-565-8552 x162" jobTitle="Senior Metrics Specialist">
+    <address href="#_Address_3"/>
+    <company href="#_Company_2"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_32" firstName="Price" lastName="Haag" email="Santa.Hammes@gmail.com" phone="203.392.4677 x6856" jobTitle="Lead Applications Assistant">
+    <address href="#_Address_5"/>
+    <company href="#_Company_4"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_33" firstName="Seamus" lastName="Lakin" email="Vada_Hand@yahoo.com" phone="998-941-1686 x413" jobTitle="Legacy Accountability Designer">
+    <address href="#_Address_7"/>
+    <company href="#_Company_6"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_34" firstName="Verona" lastName="Ratke" email="Gladyce20@yahoo.com" phone="602.719.9317 x55279" jobTitle="Dynamic Brand Liaison">
+    <address href="#_Address_9"/>
+    <company href="#_Company_8"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_35" firstName="Oleta" lastName="Waters" email="Jack99@yahoo.com" phone="(243) 413-8684 x890" jobTitle="Senior Markets Analyst">
+    <address href="#_Address_11"/>
+    <company href="#_Company_10"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_36" firstName="Anika" lastName="Deckow" email="Neil.Littel15@yahoo.com" phone="(995) 452-7309" jobTitle="Direct Assurance Director">
+    <address href="#_Address_13"/>
+    <company href="#_Company_12"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_37" firstName="Laron" lastName="Reilly" email="Lupe_Stiedemann79@gmail.com" phone="1-786-645-6321 x69161" jobTitle="Internal Accountability Analyst">
+    <address href="#_Address_15"/>
+    <company href="#_Company_14"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_38" firstName="Brenda" lastName="Berge" email="Fermin94@gmail.com" phone="689.481.8383" jobTitle="Product Usability Technician">
+    <address href="#_Address_17"/>
+    <company href="#_Company_16"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_39" firstName="Austyn" lastName="Gibson" email="Duncan.Baumbach@hotmail.com" phone="274.693.2649 x7965" jobTitle="Investor Response Officer">
+    <address href="#_Address_19"/>
+    <company href="#_Company_18"/>
+  </dge:Person>
+</xmi:XMI>

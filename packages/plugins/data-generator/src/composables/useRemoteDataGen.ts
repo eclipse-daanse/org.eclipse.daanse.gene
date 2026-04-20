@@ -110,12 +110,15 @@ function serializeConfigToXmi(config: DataGenConfig, pkgMap?: PackageNsURIMap): 
 }
 
 /**
- * Resolve a qualified contextClass (e.g. "dge.Person") to a fully qualified
- * EMF URI (e.g. "http://example.org/dge#//Person") using the package-nsURI map.
+ * Resolve contextClass to a fully qualified EMF URI.
+ * If already in URI format (nsURI#//ClassName), return as-is.
+ * Otherwise resolve from legacy dot-format using the package-nsURI map.
  */
 function resolveContextClass(contextClass: string, pkgMap?: PackageNsURIMap): string {
+  // Already URI format
+  if (contextClass.includes('#//')) return contextClass
+
   if (!pkgMap || pkgMap.size === 0) {
-    // Fallback: return simple class name
     const lastDot = contextClass.lastIndexOf('.')
     return lastDot >= 0 ? contextClass.substring(lastDot + 1) : contextClass
   }

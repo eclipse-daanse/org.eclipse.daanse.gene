@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:dge="https://dg.de/1.0">
+  <dge:Company xmi:id="_Company_0" name="Mr. Fredrick Roberts" industry="pauci" url="https://purple-final.com">
+    <address xsi:type="dge:Address" xmi:id="_Address_1" street="Dion Circles" city="Danielview" zipCode="41671" country="Lithuania"/>
+    <address xsi:type="dge:Address" xmi:id="_Address_2" street="Karelle Corners" city="Barnstable Town" zipCode="35567" country="Nauru"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_3" name="Katherine Reynolds" industry="ago" url="https://thorny-saloon.org">
+    <address xsi:type="dge:Address" xmi:id="_Address_4" street="Cedar Grove" city="Coral Gables" zipCode="88179-5553" country="Oman"/>
+    <address xsi:type="dge:Address" xmi:id="_Address_5" street="N Center Street" city="Ogden" zipCode="68460-1194" country="Afghanistan"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_6" name="Lester Conn" industry="comptus" url="https://bruised-meatloaf.net">
+    <address xsi:type="dge:Address" xmi:id="_Address_7" street="Donna Fords" city="Dickinsonstad" zipCode="38223" country="Netherlands"/>
+    <address xsi:type="dge:Address" xmi:id="_Address_8" street="Dallin Turnpike" city="Brekkefield" zipCode="16194-6794" country="Reunion"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_9" name="Josh Koss" industry="ipsa" url="https://cumbersome-address.info/">
+    <address xsi:type="dge:Address" xmi:id="_Address_10" street="Vivien Court" city="South Ricktown" zipCode="80145" country="Niue"/>
+    <address xsi:type="dge:Address" xmi:id="_Address_11" street="S West Street" city="South Santina" zipCode="95865-2655" country="Bolivia"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_12" name="Wilfred Schneider" industry="administratio" url="https://flustered-stay.biz/">
+    <address xsi:type="dge:Address" xmi:id="_Address_13" street="Darion Course" city="Queenboro" zipCode="90610-6666" country="Mexico"/>
+    <address xsi:type="dge:Address" xmi:id="_Address_14" street="Schmidt Radial" city="Fairfield" zipCode="30688" country="Iran"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_15" name="Bryant Beer-O&apos;Connell II" industry="cras" url="https://ill-fated-retention.com">
+    <address xsi:type="dge:Address" xmi:id="_Address_16" street="Belmont Road" city="Russelberg" zipCode="58826" country="Burundi"/>
+    <address xsi:type="dge:Address" xmi:id="_Address_17" street="Marta Orchard" city="North Mohammad" zipCode="80127-1334" country="Palau"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_18" name="Eileen Huel" industry="carus" url="https://needy-transparency.info">
+    <address xsi:type="dge:Address" xmi:id="_Address_19" street="Armando Glens" city="East Collinburgh" zipCode="40759" country="Uzbekistan"/>
+    <address xsi:type="dge:Address" xmi:id="_Address_20" street="Vesta Fork" city="Irvine" zipCode="42369-0624" country="Liechtenstein"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_21" name="Sally Mertz Jr." industry="basium" url="https://outgoing-account.com/">
+    <address xsi:type="dge:Address" xmi:id="_Address_22" street="Henri Mews" city="Deltona" zipCode="04584" country="Mayotte"/>
+    <address xsi:type="dge:Address" xmi:id="_Address_23" street="Leuschke Spur" city="Shieldston" zipCode="64196-4693" country="Italy"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_24" name="Walter Witting" industry="toties" url="https://silent-tabletop.org">
+    <address xsi:type="dge:Address" xmi:id="_Address_25" street="Kiehn Port" city="Orrinberg" zipCode="89572" country="Seychelles"/>
+    <address xsi:type="dge:Address" xmi:id="_Address_26" street="Howard Lock" city="Myrabury" zipCode="02017" country="Falkland Islands (Malvinas)"/>
+  </dge:Company>
+  <dge:Company xmi:id="_Company_27" name="Alfonso Morar" industry="video" url="https://political-heartache.com/">
+    <address xsi:type="dge:Address" xmi:id="_Address_28" street="Edward Street" city="East Javonburgh" zipCode="83505-8574" country="British Indian Ocean Territory (Chagos Archipelago)"/>
+    <address xsi:type="dge:Address" xmi:id="_Address_29" street="Rath Springs" city="New Tyrese" zipCode="73342" country="Congo"/>
+  </dge:Company>
+  <dge:Person xmi:id="_Person_30" firstName="Elian" lastName="Bogisich" email="Holly_Jerde91@gmail.com" phone="820-984-1393 x558" jobTitle="Regional Optimization Representative">
+    <company href="#_Company_0"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_31" firstName="Adolfo" lastName="Hermiston" email="Xavier_Hane@hotmail.com" phone="937-474-8704 x77325" jobTitle="Chief Factors Orchestrator">
+    <company href="#_Company_3"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_32" firstName="Marques" lastName="Smith" email="Rocio58@hotmail.com" phone="(460) 859-0820 x588" jobTitle="Direct Applications Analyst">
+    <company href="#_Company_6"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_33" firstName="Eldridge" lastName="Dickinson" email="Joana.Williamson@yahoo.com" phone="866.252.2863" jobTitle="Forward Research Producer">
+    <company href="#_Company_9"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_34" firstName="Jamie" lastName="Marquardt" email="Hassie16@gmail.com" phone="1-685-819-7018 x55387" jobTitle="Human Usability Agent">
+    <company href="#_Company_12"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_35" firstName="Amely" lastName="Kshlerin" email="Brooke_Hodkiewicz87@yahoo.com" phone="926-727-4394 x4155" jobTitle="Internal Marketing Liaison">
+    <address href="#_Address_1"/>
+    <company href="#_Company_15"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_36" firstName="Vincenzo" lastName="Parisian" email="Boyd_Abshire@yahoo.com" phone="(642) 313-5691 x7202" jobTitle="International Usability Producer">
+    <address href="#_Address_7"/>
+    <company href="#_Company_18"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_37" firstName="Halie" lastName="Parisian" email="Jasmin_Cassin@hotmail.com" phone="1-687-463-2533 x835" jobTitle="Dynamic Brand Representative">
+    <address href="#_Address_11"/>
+    <company href="#_Company_21"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_38" firstName="Adrienne" lastName="Hand" email="Junior.Collier91@gmail.com" phone="519-593-6277 x77755" jobTitle="Future Optimization Strategist">
+    <company href="#_Company_24"/>
+  </dge:Person>
+  <dge:Person xmi:id="_Person_39" firstName="Tomasa" lastName="Maggio-Hamill" email="Kaleigh_Conroy@gmail.com" phone="(241) 304-2107 x217" jobTitle="National Assurance Planner">
+    <address href="#_Address_1"/>
+    <company href="#_Company_27"/>
+  </dge:Person>
+</xmi:XMI>

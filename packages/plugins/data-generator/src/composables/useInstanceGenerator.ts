@@ -17,6 +17,14 @@ import type {
 import { useGeneratorRegistry } from './useGeneratorRegistry'
 import { setFakerLocale, setFakerSeed } from './useFakerProviders'
 
+/** Extract simple class name from URI (nsURI#//Name) or dot-format (pkg.Name) */
+function extractClassName(contextClass: string): string {
+  if (contextClass.includes('#//')) {
+    return contextClass.split('#//').pop() || contextClass
+  }
+  return contextClass.split('.').pop() || contextClass
+}
+
 /** Escape XML special characters */
 function escapeXml(str: string): string {
   return String(str)
@@ -46,33 +54,42 @@ function nextXmiId(className: string): string {
 }
 
 /**
- * Find an EClass by qualified context class name (e.g. "pkg.ClassName")
+ * Find an EClass by URI (nsURI#//ClassName) or legacy dot-format (pkg.ClassName)
  */
 function findEClassByName(contextClass: string, modelRegistry: any): any | null {
   const allPkgs = modelRegistry.allPackages?.value || []
+
+  // URI format: nsURI#//ClassName
+  if (contextClass.includes('#//')) {
+    const [nsURI, fragment] = contextClass.split('#//')
+    const className = fragment || ''
+    for (const pkgInfo of allPkgs) {
+      if (pkgInfo.nsURI === nsURI || pkgInfo.ePackage.getNsURI?.() === nsURI) {
+        const found = findClassInPackage(pkgInfo.ePackage, className)
+        if (found) return found
+      }
+    }
+    return null
+  }
+
+  // Legacy dot-format fallback
   const lastDot = contextClass.lastIndexOf('.')
   const className = lastDot >= 0 ? contextClass.substring(lastDot + 1) : contextClass
-
   for (const pkgInfo of allPkgs) {
-    const found = searchClassInPackage(pkgInfo.ePackage, '', contextClass, className)
+    const found = findClassInPackage(pkgInfo.ePackage, className)
     if (found) return found
   }
   return null
 }
 
-function searchClassInPackage(pkg: any, prefix: string, target: string, className: string): any | null {
-  const pkgName = pkg.getName?.() || ''
-  const fullPrefix = prefix ? `${prefix}.${pkgName}` : pkgName
-
+function findClassInPackage(pkg: any, className: string): any | null {
   const classifiers = pkg.getEClassifiers?.() || []
   for (const cls of Array.from(classifiers) as any[]) {
-    const n = (cls as any).getName?.()
-    if (n === className && `${fullPrefix}.${n}` === target) return cls
+    if ((cls as any).getName?.() === className) return cls
   }
-
   const subs = pkg.getESubpackages?.() || []
   for (const sub of Array.from(subs)) {
-    const found = searchClassInPackage(sub, fullPrefix, target, className)
+    const found = findClassInPackage(sub, className)
     if (found) return found
   }
   return null
@@ -172,7 +189,7 @@ export function generateInstances(
     const instances: GeneratedInstance[] = []
 
     for (let i = 0; i < cc.instanceCount; i++) {
-      const className = cc.contextClass.split('.').pop() || cc.contextClass
+      const className = extractClassName(cc.contextClass)
       const inst = generateSingleInstance(cc, eClass, i, className, registry, modelRegistry, errors, log, 0)
       instances.push(inst)
       collectAllInstances(inst, allInstances)
@@ -197,7 +214,7 @@ export function generateInstances(
   for (const cc of activeConfigs) {
     const instances = rootInstances.get(cc.contextClass) || []
     for (const rg of cc.referenceGens) {
-      if (rg.isContainment) continue // containment already handled in Phase 1
+      // Skip containment references — only cross-references are assigned
 
       const targetClass = rg.targetClassFilter || guessTargetClass(rg.featureName, activeConfigs)
       const targetPool = targetClass ? pool.get(targetClass) : null
@@ -270,42 +287,6 @@ function generateSingleInstance(
     xmiId: nextXmiId(className)
   }
 
-  // Recursively generate containment children
-  for (const rg of classConfig.referenceGens) {
-    if (!rg.isContainment) continue
-    if (rg.childCount <= 0) continue
-    if (currentDepth >= rg.maxDepth) continue
-
-    // Find the EReference on the EClass to get the target type
-    const targetEClass = findContainmentTargetEClass(eClass, rg.featureName)
-    if (!targetEClass) {
-      log.push(`Could not resolve containment target for ${classConfig.contextClass}.${rg.featureName}`)
-      continue
-    }
-
-    const targetClassName = targetEClass.getName?.() || rg.featureName
-    const childInstances: GeneratedInstance[] = []
-
-    // Build a temporary ClassGenConfig for the child type
-    const childClassConfig = buildChildClassConfig(targetEClass, rg, classConfig.contextClass)
-
-    for (let ci = 0; ci < rg.childCount; ci++) {
-      const child = generateSingleInstance(
-        childClassConfig,
-        targetEClass,
-        ci,
-        targetClassName,
-        registry,
-        modelRegistry,
-        errors,
-        log,
-        currentDepth + 1
-      )
-      childInstances.push(child)
-    }
-
-    inst.children[rg.featureName] = childInstances
-  }
 
   return inst
 }
@@ -326,60 +307,6 @@ function findContainmentTargetEClass(eClass: any, featureName: string): any | nu
   return null
 }
 
-/**
- * Build a ClassGenConfig for a child EClass based on its attributes
- */
-function buildChildClassConfig(targetEClass: any, parentRefConfig: ReferenceGenConfig, parentContextClass: string): ClassGenConfig {
-  const targetName = targetEClass.getName?.() || 'Child'
-  const attributeGens: AttributeGenConfig[] = []
-  const referenceGens: ReferenceGenConfig[] = []
-
-  // Auto-detect attributes from the target EClass
-  const attrs = targetEClass.getEAllAttributes?.() || targetEClass.getEAttributes?.() || []
-  for (const attr of Array.from(attrs) as any[]) {
-    const name = attr.getName?.()
-    if (!name) continue
-
-    const typeName = attr.getEType?.()?.getName?.() || 'EString'
-    const generatorKey = guessGenerator(name, typeName)
-
-    attributeGens.push({
-      featureName: name,
-      generatorKey,
-      generatorArgs: '',
-      unique: false,
-      staticValue: '',
-      template: ''
-    })
-  }
-
-  // Auto-detect containment references for recursive generation
-  const refs = targetEClass.getEAllReferences?.() || targetEClass.getEReferences?.() || []
-  for (const ref of Array.from(refs) as any[]) {
-    const name = ref.getName?.()
-    if (!name) continue
-    if (!ref.isContainment?.()) continue
-
-    referenceGens.push({
-      featureName: name,
-      strategy: 'NONE',
-      targetClassFilter: '',
-      minCount: 0,
-      maxCount: 0,
-      isContainment: true,
-      childCount: parentRefConfig.childCount,
-      maxDepth: parentRefConfig.maxDepth
-    })
-  }
-
-  return {
-    contextClass: `${parentContextClass.split('.')[0]}.${targetName}`,
-    instanceCount: 0, // not used for children
-    enabled: true,
-    attributeGens,
-    referenceGens
-  }
-}
 
 /**
  * Collect all instances (root + nested children) into a flat list
@@ -479,7 +406,7 @@ function resolveReferences(
 function guessTargetClass(refName: string, configs: ClassGenConfig[]): string | null {
   const lower = refName.toLowerCase()
   for (const cc of configs) {
-    const className = cc.contextClass.split('.').pop()?.toLowerCase() || ''
+    const className = extractClassName(cc.contextClass).toLowerCase()
     if (lower.includes(className) || className.includes(lower)) {
       return cc.contextClass
     }
@@ -547,7 +474,7 @@ function serializeToXmi(
   // Emit root instances
   for (const cc of configs) {
     const instances = rootInstances.get(cc.contextClass) || []
-    const className = cc.contextClass.split('.').pop() || cc.contextClass
+    const className = extractClassName(cc.contextClass)
 
     for (const inst of instances) {
       serializeInstance(inst, `${nsPrefix}:${className}`, nsPrefix, pool, lines, '  ')
@@ -588,7 +515,7 @@ function serializeInstance(
     for (const [refName, children] of Object.entries(inst.children)) {
       for (const child of children) {
         // Get the child's EClass name for xsi:type
-        const childClassName = child.eClass?.getName?.() || child.classConfig.contextClass.split('.').pop() || 'Unknown'
+        const childClassName = child.eClass?.getName?.() || extractClassName(child.classConfig.contextClass)
         // Resolve child nsPrefix from its own EPackage (may differ from parent)
         const childNsInfo = child.eClass ? resolveNsInfo(child.eClass) : null
         const childNsPrefix = childNsInfo?.nsPrefix || nsPrefix
@@ -643,7 +570,7 @@ function serializeInstanceWithType(
     // Emit containment children as nested elements with xsi:type
     for (const [refName, children] of Object.entries(inst.children)) {
       for (const child of children) {
-        const childClassName = child.eClass?.getName?.() || child.classConfig.contextClass.split('.').pop() || 'Unknown'
+        const childClassName = child.eClass?.getName?.() || extractClassName(child.classConfig.contextClass)
         const childNsInfo = child.eClass ? resolveNsInfo(child.eClass) : null
         const childNsPrefix = childNsInfo?.nsPrefix || nsPrefix
         const childTypeAttr = `xsi:type="${childNsPrefix}:${childClassName}"`
