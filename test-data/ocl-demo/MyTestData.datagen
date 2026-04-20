@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<datagen:DataGenConfig xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:datagen="http://www.gme.org/datagen/1.0"
+    name="MyTestData"
+    version="1.0"
+    locale="de">
+  <classConfigs contextClass="dge.Company" instanceCount="10" enabled="true">
+    <attributeGens featureName="name" generatorKey="faker.person.fullName"/>
+    <attributeGens featureName="industry" generatorKey="faker.lorem.word"/>
+    <attributeGens featureName="url" generatorKey="faker.internet.url"/>
+    <referenceGens featureName="address" strategy="NONE" minCount="0" maxCount="0" isContainment="true" childCount="2" maxDepth="3"/>
+    <referenceGens featureName="employees" strategy="RANDOM" minCount="0" maxCount="1"/>
+  </classConfigs>
+
+</datagen:DataGenConfig>

@@ -18,7 +18,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:visible': [val: boolean]
   'save-xmi': []
-  'load-workspace': []
+  'save-workspace': []
   'cancel': []
 }>()
 
@@ -93,12 +93,12 @@ function handleClose() {
             @click="emit('save-xmi')"
           />
           <Button
-            label="Load in Workspace"
-            icon="pi pi-upload"
+            label="Save to Workspace"
+            icon="pi pi-save"
             size="small"
             severity="success"
             :disabled="!result.success && result.instanceCount === 0"
-            @click="emit('load-workspace')"
+            @click="emit('save-workspace')"
           />
         </template>
       </div>
