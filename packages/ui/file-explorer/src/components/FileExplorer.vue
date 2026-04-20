@@ -174,6 +174,16 @@ const contextMenuItems = computed(() => {
         disabled: !getActions()?.isWorkspaceOpen?.value,
         command: () => handleLoadDatagen()
       })
+      items.push({
+        label: 'Send to Server',
+        icon: 'pi pi-cloud-upload',
+        command: () => handleDatagenSendToServer()
+      })
+      items.push({
+        label: 'Generate on Server',
+        icon: 'pi pi-cloud',
+        command: () => handleDatagenGenerateOnServer()
+      })
       items.push({ separator: true })
     }
     if (isDmnFile(entry)) {
@@ -619,12 +629,88 @@ async function handleLoadDatagen() {
   try {
     const content = await fileSystem.readTextFile(entry)
     if (content) {
-      console.log('[FileExplorer] Loading datagen:', entry.name, 'content length:', content.length)
-      // TODO: datagen files are not yet handled via WorkspaceActionService
-      console.warn('[FileExplorer] Datagen file loading not yet implemented via service')
+      getActions()?.loadDatagenFile?.(entry, content)
     }
   } catch (e: any) {
     console.error('[FileExplorer] Failed to read .datagen file:', e)
+  }
+}
+
+// Send .datagen file to Atlas server
+async function handleDatagenSendToServer() {
+  if (!contextMenuNode.value || contextMenuNode.value.type !== 'file') return
+
+  const entry = contextMenuNode.value.data as FileEntry
+  if (!isDatagenFile(entry)) return
+
+  try {
+    const content = await fileSystem.readTextFile(entry)
+    if (!content) return
+
+    // Extract name from file
+    const nameMatch = content.match(/name="([^"]+)"/)
+    const versionMatch = content.match(/version="([^"]+)"/)
+    const name = nameMatch?.[1] || entry.name.replace('.datagen', '')
+    const version = versionMatch?.[1] || '1.0'
+
+    // Use DataGen Atlas API
+    const baseUrl = `${window.location.origin}/rest`
+    const id = name.toLowerCase().replace(/\s+/g, '-')
+    const params = new URLSearchParams({ name, version, override: 'true' })
+    const res = await fetch(`${baseUrl}/jena/registries/DataGen/stages/draft/${encodeURIComponent(id)}?${params}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/xmi', 'Accept': 'application/json' },
+      body: content
+    })
+
+    if (res.ok) {
+      console.log(`[FileExplorer] DataGen config uploaded: ${name} v${version}`)
+    } else {
+      console.error(`[FileExplorer] Upload failed: ${res.status}`)
+    }
+  } catch (e: any) {
+    console.error('[FileExplorer] Failed to send datagen to server:', e)
+  }
+}
+
+// Generate on server from .datagen file
+async function handleDatagenGenerateOnServer() {
+  if (!contextMenuNode.value || contextMenuNode.value.type !== 'file') return
+
+  const entry = contextMenuNode.value.data as FileEntry
+  if (!isDatagenFile(entry)) return
+
+  try {
+    const content = await fileSystem.readTextFile(entry)
+    if (!content) return
+
+    const baseUrl = `${window.location.origin}/rest`
+    const res = await fetch(`${baseUrl}/datagen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/xmi', 'Accept': 'application/xmi' },
+      body: content
+    })
+
+    if (res.ok) {
+      const resultXmi = await res.text()
+      console.log(`[FileExplorer] Server generation result: ${resultXmi.length} chars`)
+
+      // Offer save via File System Access API
+      if ('showSaveFilePicker' in window) {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: entry.name.replace('.datagen', '.xmi'),
+        })
+        const writable = await handle.createWritable()
+        await writable.write(resultXmi)
+        await writable.close()
+      }
+    } else {
+      console.error(`[FileExplorer] Server generation failed: ${res.status}`)
+    }
+  } catch (e: any) {
+    if (e.name !== 'AbortError') {
+      console.error('[FileExplorer] Failed to generate on server:', e)
+    }
   }
 }
 
