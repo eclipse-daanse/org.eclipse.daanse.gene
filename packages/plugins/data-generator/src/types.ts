@@ -1,69 +1,27 @@
 /**
- * Data Generator Plugin - TypeScript Types
+ * Data Generator Plugin - Types
  *
- * Mirrors the datagen.ecore metamodel.
+ * Re-exports generated EMF types from datagen.ecore
+ * and adds runtime-only types not in the metamodel.
  */
 
-/** Strategy for assigning reference targets */
-export type ReferenceStrategy = 'RANDOM' | 'ROUND_ROBIN' | 'FIRST' | 'NONE'
+// Re-export generated EMF types
+export type {
+  DataGenConfig,
+  ClassGenConfig,
+  AttributeGenConfig,
+  ReferenceGenConfig,
+  CustomGeneratorDef,
+  DataGenResult
+} from './generated/datagen'
 
-/** Root container for a data generation configuration (.datagen file) */
-export interface DataGenConfig {
-  name: string
-  version: string
-  description: string
-  seed: number
-  locale: string
-  targetModelNsURIs: string[]
-  classConfigs: ClassGenConfig[]
-  customGenerators: CustomGeneratorDef[]
-}
+export {
+  ReferenceStrategy,
+  DatagenFactory,
+  DatagenPackage
+} from './generated/datagen'
 
-/** Configuration for generating instances of a specific EClass */
-export interface ClassGenConfig {
-  contextClass: string
-  instanceCount: number
-  enabled: boolean
-  attributeGens: AttributeGenConfig[]
-  referenceGens: ReferenceGenConfig[]
-}
-
-/** Configuration for generating a single attribute value */
-export interface AttributeGenConfig {
-  featureName: string
-  generatorKey: string
-  generatorArgs: string
-  unique: boolean
-  staticValue: string
-  template: string
-}
-
-/** Configuration for generating reference assignments */
-export interface ReferenceGenConfig {
-  featureName: string
-  strategy: ReferenceStrategy
-  targetClassFilter: string
-  minCount: number
-  maxCount: number
-  isContainment: boolean
-  childCount: number
-  maxDepth: number
-}
-
-/** User-defined generator definition */
-export interface CustomGeneratorDef {
-  key: string
-  label: string
-  expression: string
-  category: string
-}
-
-/** Result wrapper from remote DataGen (matches DataGenResult in datagen.ecore) */
-export interface DataGenResult {
-  results: any[] // EObject instances
-}
-
-/** Generator registry entry */
+/** Generator registry entry (runtime only, not in ecore) */
 export interface GeneratorInfo {
   key: string
   label: string
@@ -73,7 +31,7 @@ export interface GeneratorInfo {
   generate: (args?: any, index?: number) => any
 }
 
-/** Generation result */
+/** Generation result (runtime only, not in ecore) */
 export interface GenerationResult {
   success: boolean
   instanceCount: number
@@ -82,33 +40,33 @@ export interface GenerationResult {
   log: string[]
 }
 
-/** Create a default DataGenConfig */
-export function createDefaultConfig(name: string): DataGenConfig {
+/** Create a default DataGenConfig (plain object, not EMF instance) */
+export function createDefaultConfig(name: string) {
   return {
     name,
     version: '1.0',
     description: '',
     seed: 0,
     locale: 'de',
-    targetModelNsURIs: [],
-    classConfigs: [],
-    customGenerators: []
+    targetModelNsURIs: [] as string[],
+    classConfigs: [] as any[],
+    customGenerators: [] as any[]
   }
 }
 
 /** Create a default ClassGenConfig */
-export function createDefaultClassConfig(contextClass: string): ClassGenConfig {
+export function createDefaultClassConfig(contextClass: string) {
   return {
     contextClass,
     instanceCount: 10,
     enabled: true,
-    attributeGens: [],
-    referenceGens: []
+    attributeGens: [] as any[],
+    referenceGens: [] as any[]
   }
 }
 
 /** Create a default AttributeGenConfig */
-export function createDefaultAttributeGen(featureName: string, generatorKey: string = ''): AttributeGenConfig {
+export function createDefaultAttributeGen(featureName: string, generatorKey: string = '') {
   return {
     featureName,
     generatorKey,
@@ -120,15 +78,12 @@ export function createDefaultAttributeGen(featureName: string, generatorKey: str
 }
 
 /** Create a default ReferenceGenConfig */
-export function createDefaultReferenceGen(featureName: string, isContainment: boolean = false): ReferenceGenConfig {
+export function createDefaultReferenceGen(featureName: string) {
   return {
     featureName,
-    strategy: isContainment ? 'NONE' : 'RANDOM',
+    strategy: 'RANDOM' as const,
     targetClassFilter: '',
-    minCount: isContainment ? 0 : 0,
-    maxCount: isContainment ? 0 : 1,
-    isContainment,
-    childCount: isContainment ? 2 : 0,
-    maxDepth: isContainment ? 3 : 0
+    minCount: 0,
+    maxCount: 1
   }
 }

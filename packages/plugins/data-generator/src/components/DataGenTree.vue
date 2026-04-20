@@ -24,7 +24,7 @@ const treeNodes = computed(() => {
   if (!props.config) return []
 
   return props.config.classConfigs.map((cc, idx) => {
-    const className = cc.contextClass.split('.').pop() || cc.contextClass
+    const className = cc.contextClass.includes('#//') ? cc.contextClass.split('#//').pop() || cc.contextClass : cc.contextClass.split('.').pop() || cc.contextClass
     const children: any[] = []
 
     // Attribute children

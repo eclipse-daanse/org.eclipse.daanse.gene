@@ -11,6 +11,7 @@ import { createDefaultConfig } from '../types'
 import { useDataGenerator } from '../composables/useDataGenerator'
 import { useGeneratorRegistry } from '../composables/useGeneratorRegistry'
 import { registerFakerProviders, setFakerLocale, setFakerSeed } from '../composables/useFakerProviders'
+import { registerDatafakerProviders } from '../composables/useDatafakerProviders'
 import { generateInstances } from '../composables/useInstanceGenerator'
 import { useRemoteDataGen } from '../composables/useRemoteDataGen'
 import { useSharedModelRegistry } from 'ui-model-browser'
@@ -75,6 +76,8 @@ onMounted(() => {
     const count = registerFakerProviders()
     console.log(`[DataGenerator] Registered ${count} faker providers`)
     providersRegistered = true
+    // Async load Datafaker-sourced providers (weather, computer, medical, etc.)
+    registerDatafakerProviders()
   }
 
   // Load from TSM service if available (set by App.vue on .datagen file open)
@@ -103,6 +106,7 @@ const classTreeNodes = computed(() => {
 function buildClassNodes(pkg: any, prefix: string): any[] {
   const nodes: any[] = []
   const pkgName = pkg.getName?.() || ''
+  const nsURI = pkg.getNsURI?.() || ''
   const fullPrefix = prefix ? `${prefix}.${pkgName}` : pkgName
 
   const classifiers = pkg.getEClassifiers?.() || []
@@ -111,13 +115,15 @@ function buildClassNodes(pkg: any, prefix: string): any[] {
       const name = cls.getName?.() || ''
       if (!name) continue
       const isAbstract = cls.isAbstract?.() || false
+      // Use full EClass URI: nsURI#//ClassName
+      const classURI = nsURI ? `${nsURI}#//${name}` : `${fullPrefix}.${name}`
       nodes.push({
-        key: `${fullPrefix}.${name}`,
+        key: classURI,
         label: name,
         icon: isAbstract ? 'pi pi-circle' : 'pi pi-box',
         type: 'class',
         leaf: true,
-        data: { qualifiedName: `${fullPrefix}.${name}`, eClass: cls, isAbstract }
+        data: { qualifiedName: classURI, eClass: cls, isAbstract }
       })
     }
   }
@@ -188,31 +194,43 @@ function handleAutoConfigureClass(index: number) {
   }
 }
 
+/**
+ * Find EClass by URI (nsURI#//ClassName) or legacy dot-format (pkg.ClassName)
+ */
 function findEClass(contextClass: string): any | null {
   const allPkgs = modelRegistry.allPackages?.value || []
+
+  // URI format: nsURI#//ClassName
+  if (contextClass.includes('#//')) {
+    const [nsURI, fragment] = contextClass.split('#//')
+    const className = fragment || ''
+    for (const pkgInfo of allPkgs) {
+      if (pkgInfo.nsURI === nsURI || pkgInfo.ePackage.getNsURI?.() === nsURI) {
+        const found = findClassInPkg(pkgInfo.ePackage, className)
+        if (found) return found
+      }
+    }
+    return null
+  }
+
+  // Legacy dot-format fallback: pkg.ClassName
   const lastDot = contextClass.lastIndexOf('.')
   const className = lastDot >= 0 ? contextClass.substring(lastDot + 1) : contextClass
-
   for (const pkgInfo of allPkgs) {
-    const found = searchClass(pkgInfo.ePackage, '', contextClass, className)
+    const found = findClassInPkg(pkgInfo.ePackage, className)
     if (found) return found
   }
   return null
 }
 
-function searchClass(pkg: any, prefix: string, target: string, className: string): any | null {
-  const pkgName = pkg.getName?.() || ''
-  const fullPrefix = prefix ? `${prefix}.${pkgName}` : pkgName
-
+function findClassInPkg(pkg: any, className: string): any | null {
   const classifiers = pkg.getEClassifiers?.() || []
   for (const cls of Array.from(classifiers) as any[]) {
-    const n = (cls as any).getName?.()
-    if (n === className && `${fullPrefix}.${n}` === target) return cls
+    if ((cls as any).getName?.() === className) return cls
   }
-
   const subs = pkg.getESubpackages?.() || []
   for (const sub of Array.from(subs)) {
-    const found = searchClass(sub, fullPrefix, target, className)
+    const found = findClassInPkg(sub, className)
     if (found) return found
   }
   return null
@@ -482,9 +500,6 @@ function serializeDatagenToXml(cfg: DataGenConfig): string {
           `maxCount="${rg.maxCount}"`
         ]
         if (rg.targetClassFilter) rgAttrs.push(`targetClassFilter="${escapeXml(rg.targetClassFilter)}"`)
-        if (rg.isContainment) rgAttrs.push(`isContainment="true"`)
-        if (rg.childCount) rgAttrs.push(`childCount="${rg.childCount}"`)
-        if (rg.maxDepth) rgAttrs.push(`maxDepth="${rg.maxDepth}"`)
         lines.push(`    <referenceGens ${rgAttrs.join(' ')}/>`)
       }
       lines.push('  </classConfigs>')
@@ -551,16 +566,12 @@ function parseDatagenXml(xml: string): DataGenConfig | null {
       }
 
       for (const rgEl of Array.from(ccEl.querySelectorAll('referenceGens'))) {
-        const isContainment = rgEl.getAttribute('isContainment') === 'true'
         cc.referenceGens.push({
           featureName: rgEl.getAttribute('featureName') || '',
-          strategy: (rgEl.getAttribute('strategy') as any) || (isContainment ? 'NONE' : 'RANDOM'),
+          strategy: (rgEl.getAttribute('strategy') as any) || 'RANDOM',
           targetClassFilter: rgEl.getAttribute('targetClassFilter') || '',
           minCount: parseInt(rgEl.getAttribute('minCount') || '0', 10),
-          maxCount: parseInt(rgEl.getAttribute('maxCount') || '1', 10),
-          isContainment,
-          childCount: parseInt(rgEl.getAttribute('childCount') || (isContainment ? '2' : '0'), 10),
-          maxDepth: parseInt(rgEl.getAttribute('maxDepth') || (isContainment ? '3' : '0'), 10)
+          maxCount: parseInt(rgEl.getAttribute('maxCount') || '1', 10)
         })
       }
 

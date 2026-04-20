@@ -4,9 +4,17 @@
   "type": "module",
   "main": "src/index.ts",
   "types": "src/index.ts",
+  "scripts": {
+    "generate": "emfts-codegen generate -m src/model/datagen.ecore -c src/model/datagen.genconfig -o src/generated"
+  },
   "dependencies": {
+    "@emfts/core": "^0.1.1-next.2",
     "@faker-js/faker": "^9.3.0",
     "vue": "^3.5.26"
+  },
+  "devDependencies": {
+    "@emfts/codegen": "^0.0.1-next.1",
+    "tsx": "^4.21.0"
   },
   "peerDependencies": {
     "vue": "^3.5.0",
