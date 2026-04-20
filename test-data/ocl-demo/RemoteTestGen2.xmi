@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="ASCII"?>
+<datagen:DataGenResult xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:datagen="http://www.gme.org/datagen/1.0" xmlns:dge="https://dg.de/1.0">
+  <results xsi:type="dge:Person" firstName="Lily" lastName="Schwuchow" email="naemi.oeser@yahoo.com" phone="032 2316082" jobTitle="Future Government Orchestrator"/>
+  <results xsi:type="dge:Person" firstName="Pierre" lastName="Zimmermann" email="giuliana.guldemeister@gmx.de" phone="0491 690" jobTitle="Government Architect"/>
+  <results xsi:type="dge:Person" firstName="Theodor" lastName="Neuendorf" email="simeon.reifenrath@gmx.de" phone="032 2782539" jobTitle="Hospitality Planner"/>
+  <results xsi:type="dge:Person" firstName="Stina" lastName="Lausecker" email="philine.jurgens@web.de" phone="032 24786939166" jobTitle="Investor Accounting Orchestrator"/>
+  <results xsi:type="dge:Person" firstName="Bianka" lastName="Rosenthal" email="dina.rucker@hotmail.com" phone="040 865366639454" jobTitle="National Administrator"/>
+  <results xsi:type="dge:Person" firstName="Elijah" lastName="Kreb" email="theo.uhlig@gmail.com" phone="05082 9666831064" jobTitle="Consulting Assistant"/>
+  <results xsi:type="dge:Person" firstName="Meike" lastName="Spiegelburg" email="anthony.jakubczyk@gmail.com" phone="06427 658670579" jobTitle="Mining Associate"/>
+  <results xsi:type="dge:Person" firstName="Uwe" lastName="Voigt" email="yannic.schnelting@gmail.com" phone="04920 51" jobTitle="Global Representative"/>
+  <results xsi:type="dge:Person" firstName="Linnea" lastName="Schwarzkopf" email="jasmina.malucha@mail.de" phone="04974 721025" jobTitle="Retail Executive"/>
+  <results xsi:type="dge:Person" firstName="Felix" lastName="Bogenrieder" email="jasmine.goy@hotmail.com" phone="032 2505636" jobTitle="Direct Government Designer"/>
+</datagen:DataGenResult>

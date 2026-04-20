@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="ASCII"?>
+<datagen:DataGenResult xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:datagen="http://www.gme.org/datagen/1.0" xmlns:dge="https://dg.de/1.0">
+  <results xsi:type="dge:Person" firstName="Hugo" lastName="Gehrig" email="olivia.dietrich@mail.de" phone="037660 496620" jobTitle="Future Marketing Assistant"/>
+  <results xsi:type="dge:Person" firstName="Malina" lastName="Osei" email="friederike.hensel@gmx.de" phone="032 33677720971" jobTitle="Lead Engineer"/>
+  <results xsi:type="dge:Person" firstName="Frederike" lastName="Siegling" email="helin.faller@mail.de" phone="032 808195556" jobTitle="Forward IT Designer"/>
+  <results xsi:type="dge:Person" firstName="Carina" lastName="Sujew" email="ida.verzi@gmx.de" phone="04944 05129" jobTitle="Principal Education Architect"/>
+  <results xsi:type="dge:Person" firstName="Joeline" lastName="Schaffarzik" email="julie.hohne@web.de" phone="030 622555" jobTitle="International Director"/>
+  <results xsi:type="dge:Person" firstName="Davide" lastName="Stoll" email="theodor.huls@yahoo.com" phone="032 2256882" jobTitle="Real-Estate Designer"/>
+  <results xsi:type="dge:Person" firstName="Maik" lastName="Rodowski" email="patrizia.schmitt@yahoo.com" phone="069 24345656181" jobTitle="Retail Representative"/>
+  <results xsi:type="dge:Person" firstName="Mariam" lastName="Glatting" email="jimmy.reimann@freenet.de" phone="032 2714591" jobTitle="Principal Retail Strategist"/>
+  <results xsi:type="dge:Person" firstName="Antonio" lastName="Vogt" email="alessandro.kuter@hotmail.com" phone="032 6907383299" jobTitle="Global Supervisor"/>
+  <results xsi:type="dge:Person" firstName="Emelie" lastName="Zeidler" email="alica.sladek@mail.de" phone="032 2422644" jobTitle="Global Community-Services Agent"/>
+</datagen:DataGenResult>

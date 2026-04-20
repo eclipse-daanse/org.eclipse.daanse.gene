@@ -7,7 +7,9 @@
  */
 
 import type { ModuleContext } from '@eclipse-daanse/tsm'
+import { EPackageRegistry } from '@emfts/core'
 import { markRaw } from 'tsm:vue'
+import { DatagenPackage } from './generated/datagen'
 
 // Re-export types
 export * from './types'
@@ -30,6 +32,14 @@ import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-per
  */
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Data Generator plugin...')
+
+  // Register DatagenPackage so XMI parser can resolve datagen:DataGenResult
+  const pkg = DatagenPackage.eINSTANCE
+  const nsURI = pkg.getNsURI()
+  if (nsURI) {
+    EPackageRegistry.INSTANCE.set(nsURI, pkg)
+    context.log.info(`Registered DatagenPackage: ${nsURI}`)
+  }
 
   // Register components as service
   context.services.register('ui.data-generator.components', {
