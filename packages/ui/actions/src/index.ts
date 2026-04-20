@@ -17,7 +17,7 @@ import { InternalExecutorImpl } from './InternalExecutor'
 import { RemoteExecutorImpl } from './RemoteExecutor'
 import { EventDispatcherImpl } from './EventDispatcher'
 import { exportXmiHandler, copyUriHandler, copyJsonHandler } from './builtinHandlers'
-import { EventMappingEditor } from './components'
+import { EventMappingEditor, ActionEditor } from './components'
 
 // Re-export types
 export * from './types'
@@ -111,7 +111,10 @@ export async function activate(context: ModuleContext): Promise<void> {
   })
 
   // Register UI components
-  context.services.register('gene.action.components', { EventMappingEditor: markRaw(EventMappingEditor) })
+  context.services.register('gene.action.components', {
+    EventMappingEditor: markRaw(EventMappingEditor),
+    ActionEditor: markRaw(ActionEditor)
+  })
 
   context.log.info('Action System module activated with built-in handlers')
 }

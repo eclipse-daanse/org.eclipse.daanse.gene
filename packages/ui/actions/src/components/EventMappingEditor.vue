@@ -18,6 +18,10 @@ import type { RegisteredAction } from '../types'
 const tsm = inject<any>('tsm')
 const editorConfig = inject<any>('gene.editor.config')
 
+const emit = defineEmits<{
+  'dirty': []
+}>()
+
 // -------------------------------------------------------------------
 // Local types mirroring EMF EventActionMapping structure
 // -------------------------------------------------------------------
@@ -128,7 +132,7 @@ const availableActions = computed<{ label: string; value: string }[]>(() => {
 // -------------------------------------------------------------------
 
 function loadMappings() {
-  const config = editorConfig?.config?.value
+  const config = editorConfig?.editorConfig?.value
   if (!config) {
     mappings.value = []
     return
@@ -160,14 +164,14 @@ function loadMappings() {
 
 onMounted(() => loadMappings())
 
-watch(() => editorConfig?.config?.value, () => loadMappings(), { deep: true })
+watch(() => editorConfig?.editorConfig?.value, () => loadMappings(), { deep: true })
 
 // -------------------------------------------------------------------
 // Persist mappings back to EditorConfig
 // -------------------------------------------------------------------
 
 function persistMappings() {
-  const config = editorConfig?.config?.value
+  const config = editorConfig?.editorConfig?.value
   if (!config) return
 
   config.eventMappings = mappings.value.map((m) => ({
@@ -191,6 +195,9 @@ function persistMappings() {
       valueExpression: po.valueExpression
     }))
   }))
+
+  if (editorConfig?.markDirty) editorConfig.markDirty()
+  emit('dirty')
 }
 
 // -------------------------------------------------------------------
@@ -340,66 +347,32 @@ function onRowDblClick(event: any) {
 </script>
 
 <template>
-  <div class="event-mapping-editor">
-    <!-- Toolbar -->
-    <div class="mapping-toolbar">
-      <span class="toolbar-title">Event-Action Mappings</span>
-      <div class="toolbar-actions">
-        <Button
-          icon="pi pi-plus"
-          label="Add Mapping"
-          severity="success"
-          size="small"
-          @click="onAddMapping"
-        />
-        <Button
-          icon="pi pi-trash"
-          label="Delete"
-          severity="danger"
-          size="small"
-          :disabled="!selectedMapping"
-          @click="onDeleteSelected"
-        />
+  <div class="mapping-list">
+    <!-- Existing mappings -->
+    <div v-for="(mapping, idx) in mappings" :key="mapping.name || idx" class="mapping-item">
+      <div class="mapping-info">
+        <div class="mapping-header">
+          <Checkbox :modelValue="mapping.enabled" :binary="true" @update:modelValue="() => onToggleEnabled(mapping)" />
+          <span class="mapping-label">{{ mapping.name || '(unnamed)' }}</span>
+          <span class="mapping-badge" :class="'badge-' + mapping.eventType.toLowerCase()">{{ mapping.eventType }}</span>
+        </div>
+        <div class="mapping-detail">
+          <span class="mapping-event">{{ eventSummary(mapping) }}</span>
+          <span class="mapping-actions">{{ mapping.actionRefs.join(', ') || '(none)' }}</span>
+        </div>
+      </div>
+      <div class="mapping-buttons">
+        <button class="icon-btn" @click="onEditMapping(mapping)" title="Edit"><i class="pi pi-pencil"></i></button>
+        <button class="icon-btn danger" @click="selectedMapping = mapping; onDeleteSelected()" title="Delete"><i class="pi pi-trash"></i></button>
       </div>
     </div>
 
-    <!-- Mapping list table -->
-    <DataTable
-      :value="mappings"
-      selectionMode="single"
-      :selection="selectedMapping"
-      dataKey="name"
-      scrollable
-      scrollHeight="flex"
-      class="mapping-table"
-      @row-select="onRowSelect"
-      @row-dblclick="onRowDblClick"
-    >
-      <Column header="Enabled" style="width: 5rem">
-        <template #body="{ data }">
-          <Checkbox
-            :modelValue="data.enabled"
-            :binary="true"
-            @update:modelValue="() => onToggleEnabled(data)"
-          />
-        </template>
-      </Column>
-      <Column field="name" header="Name" sortable />
-      <Column header="Event" sortable>
-        <template #body="{ data }">
-          <span class="event-badge" :class="'event-' + data.eventType.toLowerCase()">
-            {{ data.eventType }}
-          </span>
-          {{ eventSummary(data) }}
-        </template>
-      </Column>
-      <Column header="Actions">
-        <template #body="{ data }">
-          {{ data.actionRefs.join(', ') || '(none)' }}
-        </template>
-      </Column>
-      <Column field="executeMode" header="Mode" style="width: 8rem" />
-    </DataTable>
+    <div v-if="mappings.length === 0" class="empty-hint">No event mappings configured.</div>
+
+    <button class="add-btn" @click="onAddMapping">
+      <i class="pi pi-plus"></i>
+      <span>Add Mapping</span>
+    </button>
 
     <!-- Edit / Create dialog -->
     <Dialog
@@ -580,61 +553,106 @@ function onRowDblClick(event: any) {
 </template>
 
 <style scoped>
-.event-mapping-editor {
+.mapping-list {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  background: var(--surface-ground);
-  color: var(--text-color);
+  gap: 6px;
 }
 
-.mapping-toolbar {
+.mapping-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0.75rem;
-  background: var(--surface-card);
-  border-bottom: 1px solid var(--surface-border);
+  padding: 8px 12px;
+  background: var(--surface-ground);
+  border-radius: 8px;
+  border: 1px solid var(--surface-border);
 }
 
-.toolbar-title {
-  font-weight: 600;
-  font-size: 0.9rem;
-}
+.mapping-info { flex: 1; min-width: 0; }
 
-.toolbar-actions {
+.mapping-header {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 8px;
 }
 
-.mapping-table {
-  flex: 1;
-  overflow: auto;
-}
-
-.event-badge {
-  display: inline-block;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
+.mapping-label {
+  font-size: 0.8125rem;
   font-weight: 600;
-  margin-right: 0.4rem;
+  color: var(--text-color);
+}
+
+.mapping-badge {
+  font-size: 0.625rem;
+  padding: 1px 6px;
+  border-radius: 4px;
   text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.3px;
 }
 
-.event-lifecycle {
-  background: var(--blue-400);
-  color: var(--blue-50);
+.badge-lifecycle { background: color-mix(in srgb, var(--primary-color) 15%, transparent); color: var(--primary-color); }
+.badge-domain { background: color-mix(in srgb, var(--green-500) 15%, transparent); color: var(--green-500); }
+.badge-custom { background: color-mix(in srgb, var(--orange-500) 15%, transparent); color: var(--orange-500); }
+
+.mapping-detail {
+  display: flex;
+  gap: 12px;
+  margin-top: 2px;
+  padding-left: 28px;
 }
 
-.event-domain {
-  background: var(--green-400);
-  color: var(--green-50);
+.mapping-event, .mapping-actions {
+  font-size: 0.6875rem;
+  font-family: monospace;
+  color: var(--text-color-secondary);
 }
 
-.event-custom {
-  background: var(--orange-400);
-  color: var(--orange-50);
+.mapping-buttons { display: flex; gap: 2px; flex-shrink: 0; }
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 0.75rem;
+}
+
+.icon-btn:hover { background: var(--surface-hover); color: var(--text-color); }
+.icon-btn.danger:hover { color: var(--red-500); }
+
+.empty-hint {
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.add-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px dashed var(--surface-border);
+  background: transparent;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  transition: all 0.15s ease;
+}
+
+.add-btn:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 5%, transparent);
 }
 
 /* Dialog form styles */
