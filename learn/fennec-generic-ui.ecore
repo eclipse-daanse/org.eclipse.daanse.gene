@@ -628,6 +628,13 @@
         <details key="documentation" value="Optional chain of package resolvers for cascaded EPackage resolution (local registry + Model Atlas)."/>
       </eAnnotations>
     </eStructuralFeatures>
+
+    <!-- Atlas Connections -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="atlasConnections" upperBound="-1" eType="#//AtlasConnection" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Model Atlas server connections. Connections with autoConnect=true are established when the workspace is opened."/>
+      </eAnnotations>
+    </eStructuralFeatures>
   </eClassifiers>
 
   <!-- ============================================================
@@ -2515,6 +2522,52 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="token" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
       <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
         <details key="documentation" value="Optional authentication token for Model Atlas."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- ============================================================
+       ATLAS CONNECTION
+       ============================================================ -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="AtlasConnection">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Configuration for a Model Atlas server connection. Stored in the workspace to auto-connect on open."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Display name for this connection."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="baseUrl" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Base URL of the Model Atlas REST API (e.g. http://localhost:8086/atlas/rest)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scopeName" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name of the scope to connect to (e.g. jena)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="token" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optional authentication token."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="autoConnect" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether to automatically connect when the workspace is opened."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this connection is active."/>
       </eAnnotations>
     </eStructuralFeatures>
   </eClassifiers>

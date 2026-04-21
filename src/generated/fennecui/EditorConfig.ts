@@ -5,7 +5,7 @@
  * @generated
  */
 
-import type { EObject } from '@emfts/core';
+import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
 import type { ModelSource } from './ModelSource';
 import type { ModelRepository } from './ModelRepository';
 import type { InstanceSource } from './InstanceSource';
@@ -27,6 +27,7 @@ import type { UiDefaults } from './UiDefaults';
 import type { LayoutConfig } from './LayoutConfig';
 import type { TreeView } from './TreeView';
 import type { PackageResolverChain } from './PackageResolverChain';
+import type { AtlasConnection } from './AtlasConnection';
 
 /**
  * EditorConfig
@@ -60,5 +61,6 @@ export interface EditorConfig extends EObject {
   treeViews: TreeView[];
   activeViewId?: string;
   packageResolverChain?: PackageResolverChain;
+  atlasConnections: AtlasConnection[];
 
 }

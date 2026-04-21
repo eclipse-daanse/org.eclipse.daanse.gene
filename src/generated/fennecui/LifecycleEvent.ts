@@ -5,7 +5,7 @@
  * @generated
  */
 
-import type { EObject } from '@emfts/core';
+import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
 import type { EventSpec } from './EventSpec';
 import type { LifecycleEventType } from './LifecycleEventType';
 

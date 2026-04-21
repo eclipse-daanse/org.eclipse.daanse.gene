@@ -28,6 +28,7 @@ import type { UiDefaults } from './UiDefaults';
 import type { LayoutConfig } from './LayoutConfig';
 import type { TreeView } from './TreeView';
 import type { PackageResolverChain } from './PackageResolverChain';
+import type { AtlasConnection } from './AtlasConnection';
 import type { EditorConfig } from './EditorConfig';
 import { FennecuiPackage } from './FennecuiPackage';
 
@@ -64,6 +65,7 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
   static readonly TREE_VIEWS: number = 24;
   static readonly ACTIVE_VIEW_ID: number = 25;
   static readonly PACKAGE_RESOLVER_CHAIN: number = 26;
+  static readonly ATLAS_CONNECTIONS: number = 27;
 
   // Private fields
   private _id?: string;
@@ -93,6 +95,7 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
   private _treeViews: TreeView[] = [];
   private _activeViewId?: string;
   private _packageResolverChain?: PackageResolverChain;
+  private _atlasConnections: AtlasConnection[] = [];
 
   /**
    * Returns the EClass of this object
@@ -750,6 +753,30 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
     }
   }
 
+  get atlasConnections(): AtlasConnection[] {
+    return this._atlasConnections;
+  }
+
+  set atlasConnections(value: AtlasConnection[]) {
+    const oldValue = this._atlasConnections;
+    this._atlasConnections = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(EditorConfigImpl.ATLAS_CONNECTIONS),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => EditorConfigImpl.ATLAS_CONNECTIONS,
+        merge: () => false
+      });
+    }
+  }
+
   // Reflective API
 
   /**
@@ -812,6 +839,8 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         return this.activeViewId;
       case EditorConfigImpl.PACKAGE_RESOLVER_CHAIN:
         return this.packageResolverChain;
+      case EditorConfigImpl.ATLAS_CONNECTIONS:
+        return this.atlasConnections;
       default:
         return super.eGet(feature);
     }
@@ -931,6 +960,10 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         this.packageResolverChain = newValue as PackageResolverChain;
         super.eSet(feature, newValue);
         break;
+      case EditorConfigImpl.ATLAS_CONNECTIONS:
+        this.atlasConnections = newValue as AtlasConnection[];
+        super.eSet(feature, newValue);
+        break;
       default:
         super.eSet(feature, newValue);
     }
@@ -996,6 +1029,8 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         return this._activeViewId !== undefined;
       case EditorConfigImpl.PACKAGE_RESOLVER_CHAIN:
         return this._packageResolverChain !== undefined;
+      case EditorConfigImpl.ATLAS_CONNECTIONS:
+        return this._atlasConnections !== undefined && this._atlasConnections.length > 0;
       default:
         return super.eIsSet(feature);
     }
@@ -1087,6 +1122,9 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         return;
       case EditorConfigImpl.PACKAGE_RESOLVER_CHAIN:
         this._packageResolverChain = undefined;
+        return;
+      case EditorConfigImpl.ATLAS_CONNECTIONS:
+        this._atlasConnections = [];
         return;
       default:
         super.eUnset(feature);

@@ -60,6 +60,7 @@ export class FennecuiPackage extends BasicEPackage {
     EDITOR_CONFIG__TREE_VIEWS: null as unknown as EAttribute | EReference,
     EDITOR_CONFIG__ACTIVE_VIEW_ID: null as unknown as EAttribute | EReference,
     EDITOR_CONFIG__PACKAGE_RESOLVER_CHAIN: null as unknown as EAttribute | EReference,
+    EDITOR_CONFIG__ATLAS_CONNECTIONS: null as unknown as EAttribute | EReference,
     MODEL_SOURCE: null as unknown as EClass,
     MODEL_SOURCE__ID: null as unknown as EAttribute | EReference,
     MODEL_SOURCE__NAME: null as unknown as EAttribute | EReference,
@@ -363,6 +364,13 @@ export class FennecuiPackage extends BasicEPackage {
     PACKAGE_RESOLVER__SCOPE_NAME: null as unknown as EAttribute | EReference,
     PACKAGE_RESOLVER__STAGE: null as unknown as EAttribute | EReference,
     PACKAGE_RESOLVER__TOKEN: null as unknown as EAttribute | EReference,
+    ATLAS_CONNECTION: null as unknown as EClass,
+    ATLAS_CONNECTION__NAME: null as unknown as EAttribute | EReference,
+    ATLAS_CONNECTION__BASE_URL: null as unknown as EAttribute | EReference,
+    ATLAS_CONNECTION__SCOPE_NAME: null as unknown as EAttribute | EReference,
+    ATLAS_CONNECTION__TOKEN: null as unknown as EAttribute | EReference,
+    ATLAS_CONNECTION__AUTO_CONNECT: null as unknown as EAttribute | EReference,
+    ATLAS_CONNECTION__ENABLED: null as unknown as EAttribute | EReference,
   };
 
   private constructor() {
@@ -621,6 +629,15 @@ export class FennecuiPackage extends BasicEPackage {
     editorConfig_packageResolverChain.setUpperBound(1);
     editorConfigClass.getEStructuralFeatures().push(editorConfig_packageResolverChain);
     FennecuiPackage.Literals.EDITOR_CONFIG__PACKAGE_RESOLVER_CHAIN = editorConfig_packageResolverChain;
+
+    // Create atlasConnections feature
+    const editorConfig_atlasConnections = new BasicEReference();
+    editorConfig_atlasConnections.setContainment(true);
+    editorConfig_atlasConnections.setName('atlasConnections');
+    editorConfig_atlasConnections.setLowerBound(0);
+    editorConfig_atlasConnections.setUpperBound(-1);
+    editorConfigClass.getEStructuralFeatures().push(editorConfig_atlasConnections);
+    FennecuiPackage.Literals.EDITOR_CONFIG__ATLAS_CONNECTIONS = editorConfig_atlasConnections;
 
     // Create ModelSource class
     const modelSourceClass = new BasicEClass();
@@ -3128,6 +3145,63 @@ export class FennecuiPackage extends BasicEPackage {
     packageResolverClass.getEStructuralFeatures().push(packageResolver_token);
     FennecuiPackage.Literals.PACKAGE_RESOLVER__TOKEN = packageResolver_token;
 
+    // Create AtlasConnection class
+    const atlasConnectionClass = new BasicEClass();
+    atlasConnectionClass.setName('AtlasConnection');
+    atlasConnectionClass.setAbstract(false);
+    atlasConnectionClass.setInterface(false);
+    this.getEClassifiers().push(atlasConnectionClass);
+    atlasConnectionClass.setEPackage(this);
+    FennecuiPackage.Literals.ATLAS_CONNECTION = atlasConnectionClass;
+
+    // Create name feature
+    const atlasConnection_name = new BasicEAttribute();
+    atlasConnection_name.setName('name');
+    atlasConnection_name.setLowerBound(0);
+    atlasConnection_name.setUpperBound(1);
+    atlasConnectionClass.getEStructuralFeatures().push(atlasConnection_name);
+    FennecuiPackage.Literals.ATLAS_CONNECTION__NAME = atlasConnection_name;
+
+    // Create baseUrl feature
+    const atlasConnection_baseUrl = new BasicEAttribute();
+    atlasConnection_baseUrl.setName('baseUrl');
+    atlasConnection_baseUrl.setLowerBound(1);
+    atlasConnection_baseUrl.setUpperBound(1);
+    atlasConnectionClass.getEStructuralFeatures().push(atlasConnection_baseUrl);
+    FennecuiPackage.Literals.ATLAS_CONNECTION__BASE_URL = atlasConnection_baseUrl;
+
+    // Create scopeName feature
+    const atlasConnection_scopeName = new BasicEAttribute();
+    atlasConnection_scopeName.setName('scopeName');
+    atlasConnection_scopeName.setLowerBound(1);
+    atlasConnection_scopeName.setUpperBound(1);
+    atlasConnectionClass.getEStructuralFeatures().push(atlasConnection_scopeName);
+    FennecuiPackage.Literals.ATLAS_CONNECTION__SCOPE_NAME = atlasConnection_scopeName;
+
+    // Create token feature
+    const atlasConnection_token = new BasicEAttribute();
+    atlasConnection_token.setName('token');
+    atlasConnection_token.setLowerBound(0);
+    atlasConnection_token.setUpperBound(1);
+    atlasConnectionClass.getEStructuralFeatures().push(atlasConnection_token);
+    FennecuiPackage.Literals.ATLAS_CONNECTION__TOKEN = atlasConnection_token;
+
+    // Create autoConnect feature
+    const atlasConnection_autoConnect = new BasicEAttribute();
+    atlasConnection_autoConnect.setName('autoConnect');
+    atlasConnection_autoConnect.setLowerBound(0);
+    atlasConnection_autoConnect.setUpperBound(1);
+    atlasConnectionClass.getEStructuralFeatures().push(atlasConnection_autoConnect);
+    FennecuiPackage.Literals.ATLAS_CONNECTION__AUTO_CONNECT = atlasConnection_autoConnect;
+
+    // Create enabled feature
+    const atlasConnection_enabled = new BasicEAttribute();
+    atlasConnection_enabled.setName('enabled');
+    atlasConnection_enabled.setLowerBound(0);
+    atlasConnection_enabled.setUpperBound(1);
+    atlasConnectionClass.getEStructuralFeatures().push(atlasConnection_enabled);
+    FennecuiPackage.Literals.ATLAS_CONNECTION__ENABLED = atlasConnection_enabled;
+
 
     // ============================================
     // Set ESuperTypes (must be done after all classes are created)
@@ -3165,6 +3239,7 @@ export class FennecuiPackage extends BasicEPackage {
     (FennecuiPackage.Literals.EDITOR_CONFIG__LAYOUT_CONFIG as BasicEReference).setEType(FennecuiPackage.Literals.LAYOUT_CONFIG);
     (FennecuiPackage.Literals.EDITOR_CONFIG__TREE_VIEWS as BasicEReference).setEType(FennecuiPackage.Literals.TREE_VIEW);
     (FennecuiPackage.Literals.EDITOR_CONFIG__PACKAGE_RESOLVER_CHAIN as BasicEReference).setEType(FennecuiPackage.Literals.PACKAGE_RESOLVER_CHAIN);
+    (FennecuiPackage.Literals.EDITOR_CONFIG__ATLAS_CONNECTIONS as BasicEReference).setEType(FennecuiPackage.Literals.ATLAS_CONNECTION);
     (FennecuiPackage.Literals.MODEL_REPOSITORY__PATTERNS as BasicEReference).setEType(FennecuiPackage.Literals.FILE_PATTERN);
     (FennecuiPackage.Literals.MODEL_REPOSITORY__LOAD_PROFILE as BasicEReference).setEType(FennecuiPackage.Literals.LOAD_PROFILE);
     (FennecuiPackage.Literals.IMPORT_RULE__PATTERNS as BasicEReference).setEType(FennecuiPackage.Literals.FILE_PATTERN);

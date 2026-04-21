@@ -6,7 +6,7 @@
  * Supports connect dialog, lazy-loading of stages, and context menu actions.
  */
 
-import { ref, computed, inject } from 'tsm:vue'
+import { ref, computed, inject, onMounted } from 'tsm:vue'
 import { Tree, Button, Dialog, InputText, ContextMenu, ProgressSpinner } from 'tsm:primevue'
 import { useSharedAtlasBrowser } from '../composables/useAtlasBrowser'
 import type { AtlasTreeNodeData, ConnectFormData } from '../types'
@@ -90,6 +90,109 @@ async function handleConnect() {
     connecting.value = false
   }
 }
+
+const saveFeedback = ref<'saving' | 'saved' | 'error' | null>(null)
+
+// Save current connection to workspace EditorConfig
+function handleSaveToWorkspace() {
+  const editorConfig = tsm?.getService('gene.editor.config')
+  console.log('[AtlasBrowser] Save to workspace, editorConfig:', !!editorConfig, 'value:', !!editorConfig?.editorConfig?.value)
+  if (!editorConfig?.editorConfig?.value) {
+    console.warn('[AtlasBrowser] No EditorConfig available')
+    return
+  }
+
+  const config = editorConfig.editorConfig.value
+  const eClass = config.eClass?.()
+  const atlasFeature = eClass?.getEStructuralFeature?.('atlasConnections')
+  if (!atlasFeature) {
+    console.warn('[AtlasBrowser] EditorConfig has no atlasConnections feature')
+    return
+  }
+
+  // Get or create the factory
+  const pkg = eClass.getEPackage?.()
+  const factory = pkg?.getEFactoryInstance?.()
+  if (!factory) return
+
+  // Clear existing and re-add all current connections
+  const connections: any[] = []
+  for (const conn of browser.connections.value) {
+    if (conn.status !== 'connected') continue
+    const atlasConn = factory.create(eClass.getEPackage().getEClassifier('AtlasConnection'))
+    const acClass = atlasConn.eClass()
+    const set = (name: string, value: any) => {
+      const f = acClass.getEStructuralFeature(name)
+      if (f && value !== undefined && value !== null) atlasConn.eSet(f, value)
+    }
+    set('name', conn.label || `${conn.scopeName}@${conn.baseUrl}`)
+    set('baseUrl', conn.baseUrl)
+    set('scopeName', conn.scopeName)
+    set('token', conn.token || '')
+    set('autoConnect', true)
+    set('enabled', true)
+    connections.push(atlasConn)
+  }
+
+  config.atlasConnections = connections
+
+  // Save directly to file
+  const geneFS = tsm?.getService('gene.filesystem')
+  if (editorConfig.saveToFileSystem && geneFS?.writeTextFile) {
+    saveFeedback.value = 'saving'
+    editorConfig.saveToFileSystem(geneFS.writeTextFile).then(() => {
+      saveFeedback.value = 'saved'
+      setTimeout(() => { saveFeedback.value = null }, 2000)
+    }).catch((e: any) => {
+      saveFeedback.value = 'error'
+      console.error('[AtlasBrowser] Failed to save workspace:', e)
+      setTimeout(() => { saveFeedback.value = null }, 3000)
+    })
+  }
+}
+
+// Check if workspace is open
+const isWorkspaceOpen = computed(() => {
+  const editorConfig = tsm?.getService('gene.editor.config')
+  return !!editorConfig?.editorConfig?.value
+})
+
+// Auto-connect from workspace EditorConfig on mount
+onMounted(async () => {
+  const editorConfig = tsm?.getService('gene.editor.config')
+  const config = editorConfig?.editorConfig?.value
+  if (!config) return
+
+  const eClass = config.eClass?.()
+  const atlasFeature = eClass?.getEStructuralFeature?.('atlasConnections')
+  if (!atlasFeature) return
+
+  const atlasConnections = config.eGet(atlasFeature) || []
+  for (const conn of atlasConnections) {
+    const acClass = conn.eClass()
+    const get = (name: string) => {
+      const f = acClass.getEStructuralFeature(name)
+      return f ? conn.eGet(f) : undefined
+    }
+
+    const enabled = get('enabled')
+    const autoConnect = get('autoConnect')
+    if (enabled === false || autoConnect === false) continue
+
+    const baseUrl = get('baseUrl')
+    const scopeName = get('scopeName')
+    const token = get('token')
+
+    if (baseUrl && scopeName) {
+      try {
+        console.log(`[AtlasBrowser] Auto-connecting: ${scopeName}@${baseUrl}`)
+        await browser.connect({ baseUrl, scopeName, token: token || '' })
+      } catch (e: any) {
+        console.warn(`[AtlasBrowser] Auto-connect failed for ${scopeName}:`, e.message)
+      }
+    }
+  }
+})
 
 // Handle node expand (lazy loading for stage nodes)
 async function handleNodeExpand(node: TreeNode) {
@@ -373,6 +476,19 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
         tooltip="Refresh all stages"
         @click="handleRefreshAll"
       />
+      <Button
+        v-if="isWorkspaceOpen && !isEmpty"
+        icon="pi pi-save"
+        severity="secondary"
+        text
+        rounded
+        size="small"
+        :loading="saveFeedback === 'saving'"
+        tooltip="Save connections to workspace"
+        @click="handleSaveToWorkspace"
+      />
+      <span v-if="saveFeedback === 'saved'" class="save-feedback saved"><i class="pi pi-check"></i> Saved</span>
+      <span v-if="saveFeedback === 'error'" class="save-feedback error"><i class="pi pi-times"></i> Error</span>
     </div>
 
     <!-- Loading indicator -->
@@ -496,6 +612,26 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
   gap: 4px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--p-content-border-color);
+}
+
+.save-feedback {
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.save-feedback.saved {
+  color: var(--green-500);
+  background: color-mix(in srgb, var(--green-500) 12%, transparent);
+}
+
+.save-feedback.error {
+  color: var(--red-500);
+  background: color-mix(in srgb, var(--red-500) 12%, transparent);
 }
 
 .atlas-loading {

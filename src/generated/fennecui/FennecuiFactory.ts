@@ -104,6 +104,8 @@ import type { PackageResolverChain } from './PackageResolverChain';
 import { PackageResolverChainImpl } from './PackageResolverChainImpl';
 import type { PackageResolver } from './PackageResolver';
 import { PackageResolverImpl } from './PackageResolverImpl';
+import type { AtlasConnection } from './AtlasConnection';
+import { AtlasConnectionImpl } from './AtlasConnectionImpl';
 
 /**
  * Factory for creating Fennecui model objects
@@ -455,6 +457,13 @@ export class FennecuiFactory extends BasicEFactory {
   }
 
   /**
+   * Create a new AtlasConnection instance
+   */
+  createAtlasConnection(): AtlasConnection {
+    return new AtlasConnectionImpl();
+  }
+
+  /**
    * Create an instance of the given class
    */
   override create(eClass: EClass): EObject {
@@ -555,6 +564,8 @@ export class FennecuiFactory extends BasicEFactory {
         return this.createPackageResolverChain();
       case 'PackageResolver':
         return this.createPackageResolver();
+      case 'AtlasConnection':
+        return this.createAtlasConnection();
       default:
         throw new Error(`Unknown class: ${eClass.getName()}`);
     }

@@ -61,6 +61,7 @@ export type { TreeView } from './TreeView';
 export type { TreeFilter } from './TreeFilter';
 export type { PackageResolverChain } from './PackageResolverChain';
 export type { PackageResolver } from './PackageResolver';
+export type { AtlasConnection } from './AtlasConnection';
 
 // Implementations
 export { EditorConfigImpl } from './EditorConfigImpl';
@@ -111,6 +112,7 @@ export { TreeViewImpl } from './TreeViewImpl';
 export { TreeFilterImpl } from './TreeFilterImpl';
 export { PackageResolverChainImpl } from './PackageResolverChainImpl';
 export { PackageResolverImpl } from './PackageResolverImpl';
+export { AtlasConnectionImpl } from './AtlasConnectionImpl';
 
 // Enums
 export { PatternKind, getPatternKind, getPatternKindByLiteral } from './PatternKind';

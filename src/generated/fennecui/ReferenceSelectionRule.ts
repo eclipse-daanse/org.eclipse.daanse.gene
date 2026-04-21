@@ -5,7 +5,7 @@
  * @generated
  */
 
-import type { EObject } from '@emfts/core';
+import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
 import type { MappingScope } from './MappingScope';
 import type { SelectionMode } from './SelectionMode';
 import type { CandidateFilter } from './CandidateFilter';
