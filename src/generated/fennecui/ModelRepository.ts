@@ -5,7 +5,7 @@
  * @generated
  */
 
-import type { EObject } from '@emfts/core';
+import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
 import type { ResolutionStrategy } from './ResolutionStrategy';
 import type { FilePattern } from './FilePattern';
 import type { LoadProfile } from './LoadProfile';

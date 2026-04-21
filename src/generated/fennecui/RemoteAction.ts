@@ -5,7 +5,7 @@
  * @generated
  */
 
-import type { EObject } from '@emfts/core';
+import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
 import type { AbstractAction } from './AbstractAction';
 import type { HttpMethod } from './HttpMethod';
 import type { SerializationType } from './SerializationType';

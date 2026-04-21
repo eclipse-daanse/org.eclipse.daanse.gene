@@ -5,7 +5,7 @@
  * @generated
  */
 
-import type { EObject } from '@emfts/core';
+import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
 import type { ReturnType } from './ReturnType';
 import type { FileHandling } from './FileHandling';
 import type { XmiImportMode } from './XmiImportMode';

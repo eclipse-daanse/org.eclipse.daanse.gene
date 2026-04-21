@@ -5,7 +5,7 @@
  * @generated
  */
 
-import type { EObject } from '@emfts/core';
+import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
 import type { IconSpec } from './IconSpec';
 import type { ActionType } from './ActionType';
 import type { ActionScope } from './ActionScope';

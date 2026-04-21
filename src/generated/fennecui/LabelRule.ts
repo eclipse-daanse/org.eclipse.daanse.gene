@@ -5,7 +5,7 @@
  * @generated
  */
 
-import type { EObject } from '@emfts/core';
+import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
 import type { MappingScope } from './MappingScope';
 import type { LabelMode } from './LabelMode';
 import type { LabelTemplate } from './LabelTemplate';

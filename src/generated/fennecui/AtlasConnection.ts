@@ -8,11 +8,15 @@
 import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
 
 /**
- * ParameterOverride
+ * AtlasConnection
  * @generated
  */
-export interface ParameterOverride extends EObject {
-  parameterName?: string;
-  valueExpression?: string;
+export interface AtlasConnection extends EObject {
+  name?: string;
+  baseUrl: string;
+  scopeName: string;
+  token?: string;
+  autoConnect?: boolean;
+  enabled?: boolean;
 
 }

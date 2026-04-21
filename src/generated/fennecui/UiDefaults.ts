@@ -5,7 +5,7 @@
  * @generated
  */
 
-import type { EObject } from '@emfts/core';
+import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
 import type { LabelMode } from './LabelMode';
 import type { Utf8Icon } from './Utf8Icon';
 
