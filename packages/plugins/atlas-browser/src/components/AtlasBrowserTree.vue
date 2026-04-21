@@ -184,6 +184,12 @@ onMounted(async () => {
     const token = get('token')
 
     if (baseUrl && scopeName) {
+      // Skip if already connected to this scope+url
+      const alreadyConnected = browser.connections.value.some(
+        (c: any) => c.baseUrl === baseUrl && c.scopeName === scopeName && c.status === 'connected'
+      )
+      if (alreadyConnected) continue
+
       try {
         console.log(`[AtlasBrowser] Auto-connecting: ${scopeName}@${baseUrl}`)
         await browser.connect({ baseUrl, scopeName, token: token || '' })
