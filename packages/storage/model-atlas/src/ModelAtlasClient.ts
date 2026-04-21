@@ -64,6 +64,32 @@ export class ModelAtlasClient {
     return ''
   }
 
+  /**
+   * List all schemas across all stages
+   */
+  async listAllSchemas(scopeName: string): Promise<string> {
+    const resp = await this.get(`/${enc(scopeName)}/schema/all`)
+    if (resp.status === 200) return await resp.text()
+    return ''
+  }
+
+  /**
+   * Search schemas using Lucene-based full-text search
+   */
+  async searchSchemas(scopeName: string, params: {
+    nsUri?: string; nsUriExact?: string; name?: string; prefix?: string;
+    classifier?: string; featureName?: string; featureType?: string;
+    featureNameTypePair?: string; stage?: string; limit?: number; offset?: number;
+  }): Promise<string> {
+    const qs = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) qs.set(key, String(value))
+    }
+    const resp = await this.get(`/${enc(scopeName)}/schema/search?${qs.toString()}`)
+    if (resp.status === 200) return await resp.text()
+    return ''
+  }
+
   async listSchemas(scopeName: string, stage: string): Promise<string> {
     const resp = await this.get(`/${enc(scopeName)}/schema/stages/${enc(stage)}`)
     if (resp.status === 200) return await resp.text()
@@ -158,6 +184,17 @@ export class ModelAtlasClient {
   // ============================================
   // Object Registries
   // ============================================
+
+  /**
+   * List all objects across all stages
+   */
+  async listAllObjects(scopeName: string, registryName: string): Promise<string> {
+    const resp = await this.get(
+      `/${enc(scopeName)}/registries/${enc(registryName)}/all`
+    )
+    if (resp.status === 200) return await resp.text()
+    return ''
+  }
 
   async listReleasedObjects(scopeName: string, registryName: string): Promise<string> {
     const resp = await this.get(
@@ -277,6 +314,24 @@ export class ModelAtlasClient {
    * @param accept - Response format: 'application/xmi' (default) or 'application/json'
    * @returns Generated instances as XMI or JSON string
    */
+  /**
+   * Generate test data from a named config stored on the server.
+   *
+   * @param configName - Name of the DataGenConfig stored in the Atlas registry
+   * @param version - Optional version filter
+   * @returns Generated instances as XMI string
+   */
+  async generateDataByName(configName: string, version?: string): Promise<string> {
+    const versionParam = version ? `?version=${enc(version)}` : ''
+    const resp = await this.request('GET', `/datagen/${enc(configName)}${versionParam}`, undefined, {
+      accept: ATLAS_MEDIA_TYPES.XMI
+    })
+    if (resp.status === 200) return await resp.text()
+    if (resp.status === 204) throw new Error(`Config not found: ${configName}`)
+    const errorText = await resp.text()
+    throw new Error(`DataGen by name failed (${resp.status}): ${errorText}`)
+  }
+
   async generateData(configXmi: string, accept?: string): Promise<string> {
     const resp = await this.request('POST', '/datagen', configXmi, {
       contentType: ATLAS_MEDIA_TYPES.XMI,

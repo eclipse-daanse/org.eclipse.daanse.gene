@@ -109,6 +109,26 @@ function createAtlasBrowser() {
       // Build tree nodes from scope
       const scopeNode = buildScopeTree(id, form.scopeName, scope)
 
+      // Load parent scope if inherited
+      const parentScopeName = scope.parentScope
+      if (parentScopeName) {
+        try {
+          const parentXml = await client.getScope(parentScopeName)
+          if (parentXml) {
+            const parentScope = parseScopeXmi(parentXml)
+            if (parentScope) {
+              const parentNode = buildScopeTree(id, parentScopeName, parentScope)
+              parentNode.label = `[inherited] ${parentScopeName}`
+              parentNode.icon = 'pi pi-link'
+              // Insert parent as first child of scope node
+              scopeNode.children = [parentNode, ...(scopeNode.children || [])]
+            }
+          }
+        } catch (e) {
+          console.warn(`[AtlasBrowser] Failed to load parent scope '${parentScopeName}':`, e)
+        }
+      }
+
       // Update connection status
       updateConnection(id, { status: 'connected' })
 
@@ -160,10 +180,13 @@ function createAtlasBrowser() {
 
       const stageChildren: TreeNode[] = stages.map(stage => {
         const stageName = stage.name || 'unknown'
+        const isWritable = stage.writable !== false
+        const isFinal = !!stage.final
+        const stageLabel = !isWritable ? `${stageName} (read-only)` : stageName
         return {
           key: `${connectionId}/${scopeName}/${regName}/${stageName}`,
-          label: stageName,
-          icon: stage.final ? 'pi pi-lock' : 'pi pi-folder',
+          label: stageLabel,
+          icon: isFinal ? 'pi pi-lock' : !isWritable ? 'pi pi-eye' : 'pi pi-folder',
           leaf: false,
           data: {
             type: 'stage',

@@ -16,7 +16,7 @@ export * from './types'
 
 // Re-export composables
 export { useRemoteDataGen, setSharedAtlasBrowser } from './composables/useRemoteDataGen'
-export { useDataGenAtlas, setAtlasBaseUrl } from './composables/useDataGenAtlas'
+export { useDataGenAtlas } from './composables/useDataGenAtlas'
 
 // Re-export components
 export { DataGenPerspective } from './components'
@@ -24,6 +24,7 @@ export { DataGenPerspective } from './components'
 // Import for service registration
 import { DataGenPerspective } from './components'
 import { setSharedAtlasBrowser } from './composables/useRemoteDataGen'
+import { setAtlasBrowser } from './composables/useDataGenAtlas'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
@@ -103,7 +104,9 @@ export async function activate(context: ModuleContext): Promise<void> {
   try {
     const composables = context.services.get<any>('ui.atlas-browser.composables')
     if (composables?.useSharedAtlasBrowser) {
-      setSharedAtlasBrowser(composables.useSharedAtlasBrowser())
+      const browser = composables.useSharedAtlasBrowser()
+      setSharedAtlasBrowser(browser)
+      setAtlasBrowser(browser)
       context.log.info('Atlas Browser connected for remote data generation')
     }
   } catch {
