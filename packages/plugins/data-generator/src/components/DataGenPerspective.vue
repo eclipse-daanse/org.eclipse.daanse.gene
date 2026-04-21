@@ -14,7 +14,7 @@ import { registerFakerProviders, setFakerLocale, setFakerSeed } from '../composa
 import { registerDatafakerProviders } from '../composables/useDatafakerProviders'
 import { generateInstances } from '../composables/useInstanceGenerator'
 import { useRemoteDataGen } from '../composables/useRemoteDataGen'
-import { useDataGenAtlas } from '../composables/useDataGenAtlas'
+import { useDataGenAtlas, setAtlasBaseUrl } from '../composables/useDataGenAtlas'
 import { useSharedModelRegistry } from 'ui-model-browser'
 import DataGenTree from './DataGenTree.vue'
 import DataGenEditor from './DataGenEditor.vue'
@@ -291,9 +291,29 @@ async function handleSaveAs() {
 
 const showServerListDialog = ref(false)
 const serverConfigs = ref<any[]>([])
+const showUploadDialog = ref(false)
 
-async function handleUploadToServer() {
+function handleUploadToServer() {
   if (!dg.config.value) return
+  if (remoteGen.availableConnections.value.length === 1) {
+    // Only one connection — upload directly
+    doUpload(remoteGen.availableConnections.value[0].baseUrl)
+  } else if (remoteGen.availableConnections.value.length > 1) {
+    // Multiple — show selection dialog
+    showUploadDialog.value = true
+  } else {
+    // No connections — try default
+    doUpload('')
+  }
+}
+
+async function doUpload(baseUrl: string) {
+  if (!dg.config.value) return
+  showUploadDialog.value = false
+
+  if (baseUrl) {
+    setAtlasBaseUrl(baseUrl)
+  }
 
   const xml = serializeDatagenToXml(dg.config.value)
   const name = dg.config.value.name || 'Unnamed'
@@ -308,6 +328,11 @@ async function handleUploadToServer() {
 }
 
 async function handleLoadFromServer() {
+  // If multiple connections, pick the first connected one (or could show dialog)
+  const conn = remoteGen.availableConnections.value[0]
+  if (conn?.baseUrl) {
+    setAtlasBaseUrl(conn.baseUrl)
+  }
   showServerListDialog.value = true
   serverConfigs.value = await atlas.listConfigs()
 }
@@ -801,6 +826,32 @@ function parseDatagenXml(xml: string): DataGenConfig | null {
       @save-workspace="handleSaveToWorkspace"
       @cancel="genRunning = false"
     />
+
+    <!-- Upload Connection Selection Dialog -->
+    <Dialog
+      v-model:visible="showUploadDialog"
+      header="Model Atlas Server wählen"
+      :modal="true"
+      :style="{ width: '400px' }"
+    >
+      <div class="server-config-list">
+        <div
+          v-for="conn in remoteGen.availableConnections.value"
+          :key="conn.id"
+          class="server-config-item"
+          @click="doUpload(conn.baseUrl)"
+        >
+          <div class="config-item-info">
+            <span class="config-item-name">{{ conn.label }}</span>
+            <span class="config-item-version">{{ conn.scopeName }}</span>
+          </div>
+          <span class="config-item-id">{{ conn.baseUrl }}</span>
+        </div>
+      </div>
+      <div v-if="remoteGen.availableConnections.value.length === 0" style="text-align: center; padding: 16px; color: var(--text-color-secondary);">
+        Keine Atlas-Verbindungen verfügbar.
+      </div>
+    </Dialog>
 
     <!-- Server Config List Dialog -->
     <Dialog
