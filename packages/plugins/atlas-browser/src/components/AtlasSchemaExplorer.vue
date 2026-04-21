@@ -96,6 +96,28 @@ const properties = computed<PropertyEntry[]>(() => {
   } else if (kind === 'EDataType') {
     entries.push({ label: 'Name', value: el.getName?.() || '' })
     entries.push({ label: 'InstanceClassName', value: el.getInstanceClassName?.() || '-' })
+  } else if (kind === 'EObject') {
+    // Generic EObject — show all attribute values
+    const eClass = el.eClass?.()
+    if (eClass) {
+      entries.push({ label: 'Type', value: eClass.getName?.() || 'unknown' })
+      const features = eClass.getEAllStructuralFeatures?.() || []
+      for (const feature of features) {
+        const featureName = feature.getName?.() || ''
+        if (typeof feature.isContainment === 'function' && feature.isContainment()) continue
+        try {
+          const value = el.eGet(feature)
+          if (value === undefined || value === null) continue
+          if (typeof value === 'object' && value.eClass) {
+            // Reference — show name or class
+            const refName = value.eGet?.(value.eClass()?.getEStructuralFeature?.('name'))
+            entries.push({ label: featureName, value: refName || `[${value.eClass().getName()}]` })
+          } else {
+            entries.push({ label: featureName, value: String(value) })
+          }
+        } catch { /* skip */ }
+      }
+    }
   }
 
   return entries
@@ -144,18 +166,59 @@ function parseSchema(xmiContent: string) {
       return
     }
 
-    const ePackage = contents.get(0) as EPackage
-    if (!ePackage.getName || !ePackage.getEClassifiers) {
-      error.value = 'Root element is not an EPackage'
-      return
+    const root = contents.get(0) as EObject
+    if (root.eClass && typeof (root as any).getEClassifiers === 'function') {
+      // It's an EPackage
+      treeNodes.value = [buildPackageNode(root as EPackage, 'root')]
+    } else {
+      // Generic EObject — build tree from structural features
+      treeNodes.value = [buildEObjectNode(root, 'root')]
     }
-
-    treeNodes.value = [buildPackageNode(ePackage, 'root')]
   } catch (e: any) {
     console.error('[AtlasSchemaExplorer] Parse error:', e)
     error.value = e.message || 'Failed to parse schema'
   } finally {
     loading.value = false
+  }
+}
+
+function buildEObjectNode(obj: EObject, prefix: string): TreeNode {
+  const eClass = obj.eClass()
+  const className = eClass?.getName?.() || 'EObject'
+  const nameFeature = eClass?.getEStructuralFeature?.('name')
+  const name = nameFeature ? (obj.eGet(nameFeature) as string) || className : className
+  const key = `${prefix}:obj:${name}`
+
+  const raw = toRaw(obj)
+  ;(raw as any).__explorerKind = 'EObject'
+  elementMap.set(key, raw)
+
+  const children: TreeNode[] = []
+  const features = eClass?.getEAllStructuralFeatures?.() || []
+  for (const feature of features) {
+    const featureName = feature.getName?.() || ''
+    const value = obj.eGet(feature)
+    if (value === undefined || value === null) continue
+
+    // Containment references → child nodes
+    if (typeof feature.isContainment === 'function' && feature.isContainment()) {
+      const items = feature.isMany?.() ? Array.from(value as Iterable<EObject>) : [value as EObject]
+      for (let i = 0; i < items.length; i++) {
+        const child = items[i]
+        if (child && child.eClass) {
+          children.push(buildEObjectNode(child, `${key}:${featureName}[${i}]`))
+        }
+      }
+    }
+  }
+
+  return {
+    key,
+    label: `${name} [${className}]`,
+    icon: 'pi pi-file',
+    children: children.length > 0 ? children : undefined,
+    leaf: children.length === 0,
+    data: { key }
   }
 }
 
