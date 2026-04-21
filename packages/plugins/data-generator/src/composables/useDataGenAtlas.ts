@@ -38,14 +38,14 @@ export function setAtlasBrowser(browser: any) {
 function getAtlasClient(connectionId?: string): { client: any; scopeName: string } | null {
   if (!_sharedBrowser) return null
 
-  const connections = browser.connections?.value || []
+  const connections = _sharedBrowser.connections?.value || []
   const conn = connectionId
     ? connections.find((c: any) => c.id === connectionId)
     : connections.find((c: any) => c.status === 'connected')
 
   if (!conn) return null
 
-  const client = browser.getClient(conn.id)
+  const client = _sharedBrowser.getClient(conn.id)
   return client ? { client, scopeName: conn.scopeName || 'jena' } : null
 }
 
