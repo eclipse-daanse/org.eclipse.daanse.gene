@@ -364,23 +364,22 @@ function createAtlasBrowser() {
     try {
       let content: string | null = null
 
-      // objectId from metadata is Base64-encoded; decode for API calls
-      // (getSchemaContent internally re-encodes with b64url)
-      const decodedId = safeAtob(data.objectId)
+      // Only Base64-decode for schema registry (nsURI-based IDs)
+      const resolvedId = data.isSchemaRegistry ? safeAtob(data.objectId) : data.objectId
       if (data.isSchemaRegistry) {
-        console.log('[useAtlasBrowser] getSchemaContent:', data.scopeName, data.stageName, decodedId, '(raw:', data.objectId, ')')
+        console.log('[useAtlasBrowser] getSchemaContent:', data.scopeName, data.stageName, resolvedId, '(raw:', data.objectId, ')')
         content = await client.getSchemaContent(
           data.scopeName!,
           data.stageName!,
-          decodedId
+          resolvedId
         )
       } else {
-        console.log('[useAtlasBrowser] getObjectContent:', data.scopeName, data.registryName, data.stageName, decodedId)
+        console.log('[useAtlasBrowser] getObjectContent:', data.scopeName, data.registryName, data.stageName, resolvedId)
         content = await client.getObjectContent(
           data.scopeName!,
           data.registryName!,
           data.stageName!,
-          decodedId
+          resolvedId
         )
       }
 
@@ -410,22 +409,22 @@ function createAtlasBrowser() {
     try {
       let content: string | null = null
 
-      // objectId from metadata is Base64-encoded; decode for API calls
-      const decodedId = safeAtob(nodeData.objectId)
+      // Only Base64-decode for schema registry (nsURI-based IDs)
+      const resolvedId = nodeData.isSchemaRegistry ? safeAtob(nodeData.objectId) : nodeData.objectId
       if (nodeData.isSchemaRegistry) {
-        console.log('[useAtlasBrowser] getSchemaContent:', nodeData.scopeName, nodeData.stageName, decodedId, '(raw:', nodeData.objectId, ')')
+        console.log('[useAtlasBrowser] getSchemaContent:', nodeData.scopeName, nodeData.stageName, resolvedId, '(raw:', nodeData.objectId, ')')
         content = await client.getSchemaContent(
           nodeData.scopeName!,
           nodeData.stageName!,
-          decodedId
+          resolvedId
         )
       } else {
-        console.log('[useAtlasBrowser] getObjectContent:', nodeData.scopeName, nodeData.registryName, nodeData.stageName, decodedId)
+        console.log('[useAtlasBrowser] getObjectContent:', nodeData.scopeName, nodeData.registryName, nodeData.stageName, resolvedId)
         content = await client.getObjectContent(
           nodeData.scopeName!,
           nodeData.registryName!,
           nodeData.stageName!,
-          decodedId
+          resolvedId
         )
       }
 
@@ -597,13 +596,14 @@ function createAtlasBrowser() {
 
     try {
       const isSchema = registryName === 'schema'
-      const decodedId = safeAtob(objectId)
+      // Only Base64-decode for schema registry (nsURI-based IDs)
+      const resolvedId = isSchema ? safeAtob(objectId) : objectId
 
       let resultXml: string | null
       if (isSchema) {
-        resultXml = await client.transitionSchema(scopeName, fromStage, decodedId, targetStage)
+        resultXml = await client.transitionSchema(scopeName, fromStage, resolvedId, targetStage)
       } else {
-        resultXml = await client.transitionObject(scopeName, registryName, fromStage, decodedId, targetStage)
+        resultXml = await client.transitionObject(scopeName, registryName, fromStage, resolvedId, targetStage)
       }
 
       if (resultXml === null) {
