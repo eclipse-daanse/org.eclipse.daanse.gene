@@ -337,12 +337,62 @@ async function handleLoadFromServer() {
   serverConfigs.value = await atlas.listConfigs()
 }
 
-async function handleSelectServerConfig(config: any) {
+async function handleSelectServerConfig(cfg: any) {
   showServerListDialog.value = false
-  const xmi = await atlas.loadConfig(config.objectId, config.stage)
-  if (xmi) {
-    parseDatagenFromXml(xmi)
-    console.log(`[DataGenerator] Loaded from server: ${config.name}`)
+  const xmi = await atlas.loadConfig(cfg.objectId, cfg.stage)
+  if (!xmi) return
+
+  try {
+    // Parse XMI with emfts
+    const { XMIResource, URI, BasicResourceSet } = await import('@emfts/core')
+    const uri = URI.createURI('server-config.datagen')
+    const resource = new XMIResource(uri)
+    const resourceSet = new BasicResourceSet()
+    resourceSet.getResources().push(resource)
+    resource.setResourceSet(resourceSet)
+    resource.loadFromString(xmi)
+
+    const contents = resource.getContents()
+    if (contents.size() === 0) return
+
+    const emfConfig = contents.get(0) as any
+    const eClass = emfConfig.eClass()
+    const get = (name: string) => {
+      const f = eClass.getEStructuralFeature(name)
+      return f ? emfConfig.eGet(f) : undefined
+    }
+
+    // Extract classConfigs
+    const classConfigs: any[] = []
+    for (const cc of get('classConfigs') || []) {
+      const ccClass = cc.eClass()
+      const ccGet = (n: string) => { const f = ccClass.getEStructuralFeature(n); return f ? cc.eGet(f) : undefined }
+
+      const attributeGens = Array.from(ccGet('attributeGens') || []).map((ag: any) => {
+        const agClass = ag.eClass()
+        const agGet = (n: string) => { const f = agClass.getEStructuralFeature(n); return f ? ag.eGet(f) : undefined }
+        return { featureName: agGet('featureName') || '', generatorKey: agGet('generatorKey') || '', generatorArgs: agGet('generatorArgs') || '', unique: agGet('unique') || false, staticValue: agGet('staticValue') || '', template: agGet('template') || '' }
+      })
+
+      const referenceGens = Array.from(ccGet('referenceGens') || []).map((rg: any) => {
+        const rgClass = rg.eClass()
+        const rgGet = (n: string) => { const f = rgClass.getEStructuralFeature(n); return f ? rg.eGet(f) : undefined }
+        return { featureName: rgGet('featureName') || '', strategy: rgGet('strategy') || 'RANDOM', targetClassFilter: rgGet('targetClassFilter') || '', minCount: rgGet('minCount') || 0, maxCount: rgGet('maxCount') || 1 }
+      })
+
+      classConfigs.push({ contextClass: ccGet('contextClass') || '', instanceCount: ccGet('instanceCount') || 10, enabled: ccGet('enabled') !== false, attributeGens, referenceGens })
+    }
+
+    dg.loadConfig({
+      name: get('name') || cfg.name, version: get('version') || '1.0',
+      description: get('description') || '', seed: get('seed') || 0,
+      locale: get('locale') || 'de', targetModelNsURIs: Array.from(get('targetModelNsURIs') || []),
+      classConfigs, customGenerators: []
+    } as any)
+
+    console.log(`[DataGenerator] Loaded from server: ${cfg.name}`)
+  } catch (e: any) {
+    console.error('[DataGenerator] Failed to parse server config:', e)
   }
 }
 
