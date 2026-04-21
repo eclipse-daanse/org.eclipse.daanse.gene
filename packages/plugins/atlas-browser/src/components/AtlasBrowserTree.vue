@@ -415,9 +415,6 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
           <span v-if="node.data?.metadata?.version" class="atlas-version">
             v{{ node.data.metadata.version }}
           </span>
-          <span v-if="node.data?.metadata?.status" class="atlas-status" :class="'status-' + node.data.metadata.status?.toLowerCase()">
-            {{ node.data.metadata.status }}
-          </span>
         </span>
       </template>
     </Tree>
