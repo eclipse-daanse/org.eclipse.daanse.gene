@@ -170,12 +170,6 @@ async function handleOpenInModeler() {
               <td class="meta-label">Registry</td>
               <td class="meta-value">{{ detail!.registry }}</td>
             </tr>
-            <tr>
-              <td class="meta-label">Status</td>
-              <td class="meta-value">
-                <Tag :value="detail!.status || 'Unknown'" :severity="statusSeverity(detail!.status)" />
-              </td>
-            </tr>
             <tr v-if="detail!.version">
               <td class="meta-label">Version</td>
               <td class="meta-value">{{ detail!.version }}</td>
