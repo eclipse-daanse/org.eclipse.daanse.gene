@@ -7,6 +7,8 @@
  */
 
 import { ref, computed } from 'tsm:vue'
+import { XMIResource, URI, BasicResourceSet, EPackageRegistry } from '@emfts/core'
+import type { EObject } from '@emfts/core'
 
 export interface DataGenConfigMeta {
   objectId: string
@@ -21,6 +23,13 @@ const DRAFT_STAGE = 'draft'
 const RELEASE_STAGE = 'release'
 
 let _baseUrl = ''
+
+/** Read a feature value from an EObject by name */
+function getFeatureValue(obj: any, eClass: any, name: string): any {
+  const feature = eClass?.getEStructuralFeature?.(name)
+  if (feature) return obj.eGet(feature)
+  return undefined
+}
 
 /**
  * Set the Atlas base URL (called from plugin activation or Atlas Browser connection)
@@ -74,19 +83,43 @@ export function useDataGenAtlas() {
     loading.value = true
     error.value = null
     try {
-      const res = await atlasGet(`/${SCOPE}/registries/${REGISTRY}/stages/${stage}?name=*`, 'application/json')
+      const res = await atlasGet(`/${SCOPE}/registries/${REGISTRY}/stages/${stage}?name=*`, 'application/xmi')
       if (!res.ok) {
         error.value = `Failed to list configs: ${res.status}`
         return []
       }
-      const data = await res.json()
-      const items = Array.isArray(data) ? data : data.objects || data.items || []
-      configs.value = items.map((item: any) => ({
-        objectId: item.objectId || item.id || '',
-        name: item.name || '',
-        version: item.version || '',
-        stage: item.stage || stage
-      }))
+      const xmi = await res.text()
+
+      // Deserialize with emfts
+      const uri = URI.createURI('atlas-metadata.xmi')
+      const resource = new XMIResource(uri)
+      const resourceSet = new BasicResourceSet()
+      resourceSet.getResources().push(resource)
+      resource.setResourceSet(resourceSet)
+      resource.loadFromString(xmi)
+
+      const contents = resource.getContents()
+      const items: DataGenConfigMeta[] = []
+
+      for (let i = 0; i < contents.size(); i++) {
+        const root = contents.get(i)
+        // ObjectMetadataContainer has a 'metadata' containment reference
+        const metadataFeature = root.eClass()?.getEStructuralFeature('metadata')
+        if (metadataFeature) {
+          const metadataList = root.eGet(metadataFeature)
+          for (const meta of metadataList) {
+            const eClass = (meta as EObject).eClass()
+            items.push({
+              objectId: getFeatureValue(meta, eClass, 'objectId') || '',
+              name: getFeatureValue(meta, eClass, 'objectName') || '',
+              version: getFeatureValue(meta, eClass, 'version') || '',
+              stage: getFeatureValue(meta, eClass, 'stage') || stage
+            })
+          }
+        }
+      }
+
+      configs.value = items
       return configs.value
     } catch (e: any) {
       error.value = e.message
