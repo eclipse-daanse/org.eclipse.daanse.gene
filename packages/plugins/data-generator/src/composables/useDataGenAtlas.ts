@@ -1,13 +1,12 @@
 /**
  * DataGen Atlas API Client
  *
- * Communicates with the Model Atlas DataGen REST endpoints:
- * - Upload/download DataGenConfig to/from the DataGen registry
- * - Trigger server-side data generation
+ * Uses ModelAtlasClient (from storage-model-atlas) for all REST communication.
+ * Resolves the client from the Atlas Browser's active connections.
  */
 
-import { ref, computed } from 'tsm:vue'
-import { XMIResource, URI, BasicResourceSet, EPackageRegistry } from '@emfts/core'
+import { ref } from 'tsm:vue'
+import { XMIResource, URI, BasicResourceSet } from '@emfts/core'
 import type { EObject } from '@emfts/core'
 
 export interface DataGenConfigMeta {
@@ -18,11 +17,8 @@ export interface DataGenConfigMeta {
 }
 
 const REGISTRY = 'DataGen'
-const SCOPE = 'jena'
 const DRAFT_STAGE = 'draft'
 const RELEASE_STAGE = 'release'
-
-let _baseUrl = ''
 
 /** Read a feature value from an EObject by name */
 function getFeatureValue(obj: any, eClass: any, name: string): any {
@@ -31,41 +27,26 @@ function getFeatureValue(obj: any, eClass: any, name: string): any {
   return undefined
 }
 
-/**
- * Set the Atlas base URL (called from plugin activation or Atlas Browser connection)
- */
-export function setAtlasBaseUrl(url: string) {
-  _baseUrl = url.replace(/\/+$/, '')
+let _sharedBrowser: any = null
+
+/** Set the shared Atlas Browser (called from plugin activate) */
+export function setAtlasBrowser(browser: any) {
+  _sharedBrowser = browser
 }
 
-function getBaseUrl(): string {
-  if (_baseUrl) return _baseUrl
+/** Resolve a ModelAtlasClient from the Atlas Browser */
+function getAtlasClient(connectionId?: string): { client: any; scopeName: string } | null {
+  if (!_sharedBrowser) return null
 
-  // Try to detect from proxy config (dev mode: /rest proxied to Atlas)
-  if (typeof window !== 'undefined') {
-    return `${window.location.origin}/rest`
-  }
-  return 'http://localhost:8086/atlas/rest'
-}
+  const connections = browser.connections?.value || []
+  const conn = connectionId
+    ? connections.find((c: any) => c.id === connectionId)
+    : connections.find((c: any) => c.status === 'connected')
 
-async function atlasGet(path: string, accept = 'application/xmi'): Promise<Response> {
-  const url = `${getBaseUrl()}${path}`
-  return fetch(url, {
-    method: 'GET',
-    headers: { 'Accept': accept }
-  })
-}
+  if (!conn) return null
 
-async function atlasPost(path: string, body: string, contentType = 'application/xmi'): Promise<Response> {
-  const url = `${getBaseUrl()}${path}`
-  return fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': contentType,
-      'Accept': 'application/json'
-    },
-    body
-  })
+  const client = browser.getClient(conn.id)
+  return client ? { client, scopeName: conn.scopeName || 'jena' } : null
 }
 
 /**
@@ -79,16 +60,18 @@ export function useDataGenAtlas() {
   /**
    * List all DataGenConfig entries on the server
    */
-  async function listConfigs(stage = RELEASE_STAGE): Promise<DataGenConfigMeta[]> {
+  async function listConfigs(stage?: string, connectionId?: string): Promise<DataGenConfigMeta[]> {
     loading.value = true
     error.value = null
     try {
-      const res = await atlasGet(`/${SCOPE}/registries/${REGISTRY}/stages/${stage}?name=*`, 'application/xmi')
-      if (!res.ok) {
-        error.value = `Failed to list configs: ${res.status}`
-        return []
-      }
-      const xmi = await res.text()
+      const atlas = getAtlasClient(connectionId)
+      if (!atlas) { error.value = 'No Atlas connection'; return [] }
+
+      // Use /all endpoint to list across all stages, or specific stage if provided
+      const xmi = stage
+        ? await atlas.client.listObjects(atlas.scopeName, REGISTRY, stage)
+        : await atlas.client.listAllObjects(atlas.scopeName, REGISTRY)
+      if (!xmi) return []
 
       // Deserialize with emfts
       const uri = URI.createURI('atlas-metadata.xmi')
@@ -103,7 +86,6 @@ export function useDataGenAtlas() {
 
       for (let i = 0; i < contents.size(); i++) {
         const root = contents.get(i)
-        // ObjectMetadataContainer has a 'metadata' containment reference
         const metadataFeature = root.eClass()?.getEStructuralFeature('metadata')
         if (metadataFeature) {
           const metadataList = root.eGet(metadataFeature)
@@ -132,18 +114,14 @@ export function useDataGenAtlas() {
   /**
    * Load a DataGenConfig XMI from the server
    */
-  async function loadConfig(objectId: string, stage = RELEASE_STAGE): Promise<string | null> {
+  async function loadConfig(objectId: string, stage = RELEASE_STAGE, connectionId?: string): Promise<string | null> {
     loading.value = true
     error.value = null
     try {
-      const res = await atlasGet(
-        `/${SCOPE}/registries/${REGISTRY}/stages/${stage}/content?objectId=${encodeURIComponent(objectId)}`
-      )
-      if (!res.ok) {
-        error.value = `Failed to load config: ${res.status}`
-        return null
-      }
-      return await res.text()
+      const atlas = getAtlasClient(connectionId)
+      if (!atlas) { error.value = 'No Atlas connection'; return null }
+
+      return await atlas.client.getObjectContent(atlas.scopeName, REGISTRY, stage, objectId)
     } catch (e: any) {
       error.value = e.message
       return null
@@ -160,21 +138,17 @@ export function useDataGenAtlas() {
     name: string,
     version: string,
     objectId?: string,
-    stage = DRAFT_STAGE
+    stage = DRAFT_STAGE,
+    connectionId?: string
   ): Promise<{ success: boolean; objectId?: string }> {
     loading.value = true
     error.value = null
     try {
+      const atlas = getAtlasClient(connectionId)
+      if (!atlas) { error.value = 'No Atlas connection'; return { success: false } }
+
       const id = objectId || name.toLowerCase().replace(/\s+/g, '-')
-      const params = new URLSearchParams({ name, version, override: 'true' })
-      const res = await atlasPost(
-        `/${SCOPE}/registries/${REGISTRY}/stages/${stage}/${encodeURIComponent(id)}?${params}`,
-        xmiContent
-      )
-      if (!res.ok) {
-        error.value = `Failed to upload: ${res.status} ${await res.text()}`
-        return { success: false }
-      }
+      await atlas.client.uploadObject(atlas.scopeName, REGISTRY, stage, id, xmiContent, { name, version, override: true })
       return { success: true, objectId: id }
     } catch (e: any) {
       error.value = e.message
@@ -187,21 +161,14 @@ export function useDataGenAtlas() {
   /**
    * Trigger server-side data generation from a stored config
    */
-  async function generateOnServer(configName: string, version?: string): Promise<{ success: boolean; xmiContent: string; error?: string }> {
+  async function generateOnServer(configName: string, version?: string, connectionId?: string): Promise<{ success: boolean; xmiContent: string; error?: string }> {
     loading.value = true
     error.value = null
     try {
-      const versionParam = version ? `?version=${encodeURIComponent(version)}` : ''
-      const res = await atlasGet(`/datagen/${encodeURIComponent(configName)}${versionParam}`)
-      if (res.status === 204) {
-        error.value = `Config not found: ${configName}`
-        return { success: false, xmiContent: '', error: error.value }
-      }
-      if (!res.ok) {
-        error.value = `Generation failed: ${res.status}`
-        return { success: false, xmiContent: '', error: error.value }
-      }
-      const xmi = await res.text()
+      const atlas = getAtlasClient(connectionId)
+      if (!atlas) { error.value = 'No Atlas connection'; return { success: false, xmiContent: '', error: error.value! } }
+
+      const xmi = await atlas.client.generateDataByName(configName, version)
       return { success: true, xmiContent: xmi }
     } catch (e: any) {
       error.value = e.message
@@ -214,17 +181,14 @@ export function useDataGenAtlas() {
   /**
    * Generate from inline config (POST config XMI directly)
    */
-  async function generateFromConfig(configXmi: string): Promise<{ success: boolean; xmiContent: string; error?: string }> {
+  async function generateFromConfig(configXmi: string, connectionId?: string): Promise<{ success: boolean; xmiContent: string; error?: string }> {
     loading.value = true
     error.value = null
     try {
-      const res = await atlasPost('/datagen', configXmi)
-      if (!res.ok) {
-        const text = await res.text()
-        error.value = `Generation failed: ${res.status} ${text}`
-        return { success: false, xmiContent: '', error: error.value }
-      }
-      const xmi = await res.text()
+      const atlas = getAtlasClient(connectionId)
+      if (!atlas) { error.value = 'No Atlas connection'; return { success: false, xmiContent: '', error: error.value! } }
+
+      const xmi = await atlas.client.generateData(configXmi)
       return { success: true, xmiContent: xmi }
     } catch (e: any) {
       error.value = e.message
