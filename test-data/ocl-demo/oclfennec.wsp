@@ -2,4 +2,6 @@
 <fennecui:EditorConfig xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:fennecui="https://eclipse.org/fennec/ts/generic/ui" name="oclfennec" configFileExtensions="" enabled="true" activeViewId="">
   <modelSources name="dge" location="dge.ecore" resolution="RELATIVE_TO_CONFIG" registerPackages="true" enabled="true"/>
   <instanceSources name="Instances" location="instances/people.xmi" resolution="0" enabled="true"/>
+  <actions xsi:type="fennecui:InternalAction" actionId="Export Person" label="Export this person as XMI" actionType="CUSTOM" actionScope="OBJECT" targetTypeUri="https://dg.de/1.0#//Person" targetScope="TYPE_ONLY" perspectiveIds="" order="0" enabled="true" returnTypes="" handlerId="gene.handler.export-xmi" executionEnvironment="MAIN_THREAD" timeoutMs="30000"/>
+  <actions xsi:type="fennecui:InternalAction" actionId="y" label="y" description="y" actionType="CUSTOM" actionScope="OBJECT" targetTypeUri="https://dg.de/1.0#//Address" targetScope="TYPE_AND_SUBTYPES" perspectiveIds="" order="0" enabled="true" returnTypes="" handlerId="gene.handler.export-xmi" executionEnvironment="MAIN_THREAD" timeoutMs="30000"/>
 </fennecui:EditorConfig>

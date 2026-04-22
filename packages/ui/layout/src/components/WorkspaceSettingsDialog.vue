@@ -5,7 +5,7 @@
  * Master-Detail view with categories on the left and settings on the right.
  */
 
-import { computed, ref, shallowRef, watch, onMounted, inject } from 'tsm:vue'
+import { computed, ref, shallowRef, triggerRef, watch, onMounted, onUnmounted, inject } from 'tsm:vue'
 import { Dropdown } from 'tsm:primevue'
 import { DataTable } from 'tsm:primevue'
 import { Column } from 'tsm:primevue'
@@ -35,19 +35,22 @@ const editorConfigService = inject<any>('gene.editor.config', null)
 const workspaceSettings = computed(() => perspective.state.workspaceSettings)
 
 // === Master-Detail Navigation ===
-type SettingsCategory = 'icons' | 'storage' | 'resolvers' | 'events'
+type SettingsCategory = 'icons' | 'actions' | 'events' | 'storage' | 'resolvers'
 
 const categories: { id: SettingsCategory; label: string; icon: string }[] = [
   { id: 'icons', label: 'Icon Mappings', icon: 'pi pi-palette' },
+  { id: 'actions', label: 'Actions', icon: 'pi pi-play' },
   { id: 'events', label: 'Event Mappings', icon: 'pi pi-bolt' },
   { id: 'storage', label: 'Storage', icon: 'pi pi-database' },
   { id: 'resolvers', label: 'Package Resolvers', icon: 'pi pi-link' }
 ]
 
-// Event Mapping Editor component (loaded from TSM)
-const EventMappingEditor = computed(() => {
-  return tsm?.getService('gene.action.components')?.EventMappingEditor || null
+// Action components (loaded from TSM)
+const actionComponents = computed(() => {
+  return tsm?.getService('gene.action.components') || null
 })
+const EventMappingEditor = computed(() => actionComponents.value?.EventMappingEditor || null)
+const ActionEditor = computed(() => actionComponents.value?.ActionEditor || null)
 
 const selectedCategory = ref<SettingsCategory>('icons')
 
@@ -85,7 +88,8 @@ interface EditorConfigService {
 }
 
 function getEditorConfigService(): EditorConfigService | null {
-  return editorConfigService || null
+  // Try inject first, then TSM service (different plugin scopes may have different inject values)
+  return editorConfigService || tsm?.getService('gene.editor.config') || null
 }
 
 const editorConfig = shallowRef<EditorConfigService | null>(null)
@@ -131,13 +135,19 @@ function getFileSystem(): any {
 }
 
 async function handleSave() {
-  if (!editorConfig.value?.workspaceFileEntry?.value) return
+  if (!editorConfig.value?.workspaceFileEntry?.value) {
+    console.warn('[WorkspaceSettings] No workspace file entry, cannot save')
+    return
+  }
 
   saving.value = true
   try {
     const fileSystem = getFileSystem()
+    console.log('[WorkspaceSettings] fileSystem:', !!fileSystem, 'writeTextFile:', !!fileSystem?.writeTextFile)
     if (fileSystem?.writeTextFile) {
       await editorConfig.value.saveToFileSystem(fileSystem.writeTextFile)
+      isDirty.value = false
+      console.log('[WorkspaceSettings] Saved successfully')
     }
   } catch (e) {
     console.error('[WorkspaceSettings] Failed to save:', e)
@@ -309,6 +319,7 @@ function getIconClass(mapping: any): string {
 }
 
 const hasEditorConfig = computed(() => !!editorConfig.value?.initialized?.value)
+// Access dirty ref directly — editorConfigService.dirty is a Vue Ref
 const isDirty = computed(() => !!editorConfig.value?.dirty?.value)
 const canSave = computed(() => !!editorConfig.value?.workspaceFileEntry?.value)
 
@@ -576,6 +587,21 @@ function formatKind(kind: string): string {
               </div>
             </div>
 
+            <!-- Actions -->
+            <div v-if="selectedCategory === 'actions'" class="detail-content">
+              <h3 class="detail-title">Actions</h3>
+              <p class="detail-description">Configure actions that appear in context menus. Map handlers to object types.</p>
+              <component
+                v-if="ActionEditor"
+                :is="ActionEditor"
+                @dirty="triggerRef(editorConfig)"
+              />
+              <div v-else class="empty-state">
+                <i class="pi pi-info-circle"></i>
+                Action System module not loaded.
+              </div>
+            </div>
+
             <!-- Event-Action Mappings -->
             <div v-if="selectedCategory === 'events'" class="detail-content">
               <h3 class="detail-title">Event-Action Mappings</h3>
@@ -583,6 +609,7 @@ function formatKind(kind: string): string {
               <component
                 v-if="EventMappingEditor"
                 :is="EventMappingEditor"
+                @dirty="triggerRef(editorConfig)"
               />
               <div v-else class="empty-state">
                 <i class="pi pi-info-circle"></i>
