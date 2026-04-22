@@ -24,7 +24,7 @@ export { DataGenPerspective } from './components'
 // Import for service registration
 import { DataGenPerspective } from './components'
 import { setSharedAtlasBrowser } from './composables/useRemoteDataGen'
-import { setAtlasBrowser } from './composables/useDataGenAtlas'
+import { setDataGenTsm } from './composables/useDataGenAtlas'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
@@ -34,6 +34,9 @@ import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-per
  */
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Data Generator plugin...')
+
+  // Set TSM for lazy service resolution in useDataGenAtlas
+  setDataGenTsm(context.services)
 
   // Register DatagenPackage so XMI parser can resolve datagen:DataGenResult
   const pkg = DatagenPackage.eINSTANCE
@@ -106,7 +109,6 @@ export async function activate(context: ModuleContext): Promise<void> {
     if (composables?.useSharedAtlasBrowser) {
       const browser = composables.useSharedAtlasBrowser()
       setSharedAtlasBrowser(browser)
-      setAtlasBrowser(browser)
       context.log.info('Atlas Browser connected for remote data generation')
     }
   } catch {

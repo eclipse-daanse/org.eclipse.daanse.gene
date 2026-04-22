@@ -14,7 +14,7 @@ import { registerFakerProviders, setFakerLocale, setFakerSeed } from '../composa
 import { registerDatafakerProviders } from '../composables/useDatafakerProviders'
 import { generateInstances } from '../composables/useInstanceGenerator'
 import { useRemoteDataGen } from '../composables/useRemoteDataGen'
-import { useDataGenAtlas } from '../composables/useDataGenAtlas'
+import { useDataGenAtlas, setDataGenTsm } from '../composables/useDataGenAtlas'
 import { useSharedModelRegistry } from 'ui-model-browser'
 import DataGenTree from './DataGenTree.vue'
 import DataGenEditor from './DataGenEditor.vue'
@@ -22,6 +22,7 @@ import GenerationDialog from './GenerationDialog.vue'
 
 const dg = useDataGenerator()
 const tsm = inject<any>('tsm')
+setDataGenTsm(tsm)
 const registry = useGeneratorRegistry()
 const remoteGen = useRemoteDataGen()
 const atlas = useDataGenAtlas()
@@ -293,20 +294,20 @@ const showServerListDialog = ref(false)
 const serverConfigs = ref<any[]>([])
 
 
-function handleUploadToServer() {
+async function handleUploadToServer() {
   if (!dg.config.value) return
 
   const xml = serializeDatagenToXml(dg.config.value)
   const name = dg.config.value.name || 'Unnamed'
   const version = dg.config.value.version || '1.0'
 
-  atlas.uploadConfig(xml, name, version).then(result => {
-    if (result.success) {
-      console.log(`[DataGenerator] Uploaded to server: ${name} v${version}`)
-    } else {
-      console.error('[DataGenerator] Upload failed:', atlas.error.value)
-    }
-  })
+  console.log('[DataGenerator] Uploading to server:', name, 'v' + version, 'xml length:', xml.length)
+  const result = await atlas.uploadConfig(xml, name, version)
+  if (result.success) {
+    console.log(`[DataGenerator] Uploaded to server: ${name} v${version}`)
+  } else {
+    console.error('[DataGenerator] Upload failed:', atlas.error.value)
+  }
 }
 
 async function handleLoadFromServer() {

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="ASCII"?>
+<datagen:DataGenResult xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:datagen="http://www.gme.org/datagen/1.0" xmlns:dge="https://dg.de/1.0">
+  <results xsi:type="dge:Person" firstName="Mara" lastName="Lammert" email="claas.dauer@web.de" phone="032 2429587" jobTitle="Lead Facilitator"/>
+  <results xsi:type="dge:Person" firstName="Malte" lastName="Hirsch" email="lias.daub@yahoo.com" phone="032 2901841" jobTitle="IT Planner"/>
+  <results xsi:type="dge:Person" firstName="Adriano" lastName="Saile" email="angelique.spiegelburg@gmx.de" phone="06100 2212" jobTitle="Principal Manufacturing Planner"/>
+  <results xsi:type="dge:Person" firstName="Piet" lastName="Birkemeyer" email="maxim.niedermeier@gmail.com" phone="040 229559994915" jobTitle="Regional Sales Facilitator"/>
+  <results xsi:type="dge:Person" firstName="Jacob" lastName="Reinhardt" email="melanie.dombrowski@gmx.de" phone="07058 11411361" jobTitle="Consulting Developer"/>
+  <results xsi:type="dge:Person" firstName="Liana" lastName="Werner" email="rick.hohenberger@yahoo.com" phone="04504 8101" jobTitle="Corporate Hospitality Manager"/>
+  <results xsi:type="dge:Person" firstName="Jolina" lastName="Kulma" email="justus.mrugalla@gmail.com" phone="032 2089770" jobTitle="Principal Planner"/>
+  <results xsi:type="dge:Person" firstName="Nelly" lastName="Hujo" email="eren.ehrig@yahoo.com" phone="08641 334" jobTitle="Principal Planner"/>
+  <results xsi:type="dge:Person" firstName="Salome" lastName="Strege" email="janina.gromisch@gmx.de" phone="04954 38275" jobTitle="Advertising Orchestrator"/>
+  <results xsi:type="dge:Person" firstName="Adrian" lastName="Eberhard" email="kenny.geissler@mail.de" phone="089 944" jobTitle="Future Facilitator"/>
+</datagen:DataGenResult>
