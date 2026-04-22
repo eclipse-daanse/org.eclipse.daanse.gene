@@ -107,7 +107,7 @@ async function initializeCoclMetamodel(): Promise<boolean> {
       console.log('[CoclLoader] Initializing C-OCL metamodel...')
 
       // Use generated CoclPackage instead of parsing Ecore string
-      const { CoclPackage } = await import('storage-model/src/generated/cocl')
+      const { CoclPackage } = await import('../../../../storage/model/src/generated/cocl')
       coclPackage = CoclPackage.eINSTANCE
 
       const nsURI = coclPackage.getNsURI()
