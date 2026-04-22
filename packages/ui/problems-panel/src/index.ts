@@ -55,6 +55,7 @@ import { setEventBus } from './composables/useProblemsService'
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Problems Panel module...')
 
+
   // Wire up event bus from TSM
   const eventBus = context.services.get<any>('gene.eventbus')
   if (eventBus) {
