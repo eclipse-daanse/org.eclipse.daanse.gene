@@ -14,11 +14,17 @@ import { useSharedModelRegistry } from 'ui-model-browser'
 import { SearchDialog } from 'ui-search'
 import { getSharedOclClient } from 'transformation'
 import { serializeCoclToXml } from '../composables/useCoclSerializer'
+import { useCoclAtlas } from '../composables/useCoclAtlas'
 import ConstraintList from './ConstraintList.vue'
 import ConstraintForm from './ConstraintForm.vue'
 
 // TSM service access
 const _tsm = inject<any>('tsm')
+const atlas = useCoclAtlas(_tsm)
+
+// Server dialog state
+const showServerListDialog = ref(false)
+const serverConfigs = ref<any[]>([])
 
 // Reactive state
 const constraintSet = ref<CoclConstraintSet | null>(null)
@@ -549,6 +555,45 @@ function handleDiscard() {
     }
   })
 }
+
+// --- Atlas Server ---
+
+async function handleUploadToServer() {
+  if (!constraintSet.value) return
+  const xml = serializeCoclToXml(constraintSet.value)
+  const name = constraintSet.value.name || 'Unnamed'
+  const version = constraintSet.value.version || '1.0'
+  const id = constraintSet.value.id
+
+  const result = await atlas.uploadConstraintSet(xml, name, version, id)
+  if (result.success) {
+    console.log(`[CoclEditor] Uploaded to server: ${name} v${version}`)
+  } else {
+    console.error('[CoclEditor] Upload failed:', atlas.error.value)
+  }
+}
+
+async function handleLoadFromServer() {
+  showServerListDialog.value = true
+  serverConfigs.value = await atlas.listConstraintSets()
+}
+
+async function handleSelectServerConfig(cfg: any) {
+  showServerListDialog.value = false
+  const xmi = await atlas.loadConstraintSet(cfg.objectId, cfg.stage)
+  if (xmi) {
+    const parsed = await loadCoclFromString(xmi, `server:${cfg.name}`)
+    if (parsed) {
+      constraintSet.value = JSON.parse(JSON.stringify(parsed))
+      if (constraintSet.value!.constraints.length > 0) {
+        selectedConstraintName.value = constraintSet.value!.constraints[0].name
+      }
+      isDirty.value = false
+      saveStatus.value = 'saved'
+      console.log(`[CoclEditor] Loaded from server: ${cfg.name}`)
+    }
+  }
+}
 </script>
 
 <template>
@@ -620,6 +665,23 @@ function handleDiscard() {
           size="small"
           @click="handleSaveAs"
           title="Save As..."
+          text
+        />
+        <Button
+          icon="pi pi-cloud-upload"
+          severity="secondary"
+          size="small"
+          @click="handleUploadToServer"
+          title="Upload to Server"
+          :loading="atlas.loading.value"
+          text
+        />
+        <Button
+          icon="pi pi-cloud-download"
+          severity="secondary"
+          size="small"
+          @click="handleLoadFromServer"
+          title="Load from Server"
           text
         />
         <Button
@@ -721,6 +783,35 @@ function handleDiscard() {
       style="margin-top: 8px"
     />
   </div>
+
+  <!-- Server Config List Dialog -->
+  <Dialog
+    v-model:visible="showServerListDialog"
+    header="C-OCL Constraints auf Server"
+    :modal="true"
+    :style="{ width: '500px' }"
+  >
+    <div v-if="atlas.loading.value" style="text-align: center; padding: 20px;">
+      <i class="pi pi-spinner pi-spin" style="font-size: 1.5rem"></i>
+    </div>
+    <div v-else-if="serverConfigs.length === 0" style="text-align: center; padding: 20px; color: var(--text-color-secondary);">
+      Keine Constraint-Sets auf dem Server gefunden.
+    </div>
+    <div v-else style="display: flex; flex-direction: column; gap: 4px; max-height: 300px; overflow-y: auto;">
+      <div
+        v-for="cfg in serverConfigs"
+        :key="cfg.objectId"
+        style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 6px; cursor: pointer; border: 1px solid var(--surface-border);"
+        @click="handleSelectServerConfig(cfg)"
+      >
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-weight: 600; font-size: 0.875rem;">{{ cfg.name }}</span>
+          <span style="font-size: 0.75rem; color: var(--text-color-secondary);">v{{ cfg.version }}</span>
+        </div>
+        <span style="font-size: 0.6875rem; font-family: monospace; color: var(--text-color-secondary);">{{ cfg.objectId }}</span>
+      </div>
+    </div>
+  </Dialog>
 </template>
 
 <style scoped>

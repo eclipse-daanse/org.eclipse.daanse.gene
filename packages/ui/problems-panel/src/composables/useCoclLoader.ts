@@ -30,6 +30,8 @@ export type CoclRole = 'VALIDATION' | 'DERIVED' | 'REFERENCE_FILTER'
  * Parsed OCL Constraint
  */
 export interface CoclConstraint {
+  /** Unique ID for server communication */
+  id?: string
   /** Unique name of the constraint */
   name: string
   /** Human-readable description */
@@ -58,6 +60,8 @@ export interface CoclConstraint {
  * Parsed OCL Constraint Set (represents a .c-ocl file)
  */
 export interface CoclConstraintSet {
+  /** Unique ID for server communication */
+  id?: string
   /** Name of the constraint set */
   name: string
   /** Version string */
@@ -295,6 +299,7 @@ export async function loadCoclFromString(
         }
 
         const constraint: CoclConstraint = {
+          id: getStringAttr(constraintObj, 'id'),
           name: constraintName,
           description: getStringAttr(constraintObj, 'description'),
           expression,
@@ -313,7 +318,10 @@ export async function loadCoclFromString(
       }
     }
 
+    const id = getStringAttr(rootObj, 'id')
+
     const constraintSet: CoclConstraintSet = {
+      id,
       name,
       version,
       description,
