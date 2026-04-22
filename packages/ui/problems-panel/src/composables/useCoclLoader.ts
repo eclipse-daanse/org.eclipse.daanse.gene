@@ -11,7 +11,6 @@ import {
   URI,
   BasicResourceSet,
   EPackageRegistry,
-  getEcorePackage,
   type EObject,
   type EPackage,
   type ResourceSet
@@ -76,67 +75,8 @@ export interface CoclConstraintSet {
 // C-OCL metamodel namespace URI
 const COCL_NS_URI = 'http://www.gme.org/cocl/1.0'
 
-// Embedded C-OCL Ecore metamodel
-const COCL_ECORE_CONTENT = `<?xml version="1.0" encoding="UTF-8"?>
-<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
-    name="cocl" nsURI="http://www.gme.org/cocl/1.0" nsPrefix="cocl">
-
-  <eClassifiers xsi:type="ecore:EEnum" name="Severity">
-    <eLiterals name="TRACE" value="0"/>
-    <eLiterals name="INFO" value="1"/>
-    <eLiterals name="WARN" value="2"/>
-    <eLiterals name="ERROR" value="3"/>
-    <eLiterals name="FATAL" value="4"/>
-  </eClassifiers>
-
-  <eClassifiers xsi:type="ecore:EEnum" name="OclRole">
-    <eLiterals name="VALIDATION" value="0"/>
-    <eLiterals name="DERIVED" value="1"/>
-    <eLiterals name="REFERENCE_FILTER" value="2"/>
-  </eClassifiers>
-
-  <eClassifiers xsi:type="ecore:EClass" name="OclConstraint">
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="expression" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="severity" lowerBound="1"
-        eType="#//Severity" defaultValueLiteral="ERROR"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="role" lowerBound="1"
-        eType="#//OclRole" defaultValueLiteral="VALIDATION"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="contextClass" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="featureName"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="active" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
-        defaultValueLiteral="true"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="overrides"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
-        defaultValueLiteral="false"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetURIs" upperBound="-1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-  </eClassifiers>
-
-  <eClassifiers xsi:type="ecore:EClass" name="OclConstraintSet">
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="version"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
-        defaultValueLiteral="1.0"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="constraints" upperBound="-1"
-        eType="#//OclConstraint" containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetModelNsURIs" upperBound="-1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-  </eClassifiers>
-
-</ecore:EPackage>`
+// Generated CoclPackage replaces the embedded Ecore string
+// Import is done lazily in initializeCoclMetamodel()
 
 // Cache of loaded constraint sets
 const loadedConstraintSets: Map<string, CoclConstraintSet> = new Map()
@@ -162,32 +102,18 @@ async function initializeCoclMetamodel(): Promise<boolean> {
     try {
       console.log('[CoclLoader] Initializing C-OCL metamodel...')
 
-      // Create ResourceSet with Ecore package
-      coclResourceSet = new BasicResourceSet()
-      const ecorePkg = getEcorePackage()
-      coclResourceSet.getPackageRegistry().set(ecorePkg.getNsURI(), ecorePkg)
+      // Use generated CoclPackage instead of parsing Ecore string
+      const { CoclPackage } = await import('storage-model/src/generated/cocl')
+      coclPackage = CoclPackage.eINSTANCE
 
-      // Load C-OCL metamodel
-      const ecoreUri = URI.createURI('cocl.ecore')
-      const ecoreResource = new XMIResource(ecoreUri)
-      coclResourceSet.getResources().push(ecoreResource)
-      ecoreResource.setResourceSet(coclResourceSet)
-
-      await ecoreResource.loadFromString(COCL_ECORE_CONTENT)
-
-      const contents = ecoreResource.getContents()
-      if (contents.length === 0) {
-        console.error('[CoclLoader] Failed to load C-OCL metamodel - no contents')
-        return false
-      }
-
-      coclPackage = contents[0] as EPackage
       const nsURI = coclPackage.getNsURI()
       console.log('[CoclLoader] Loaded C-OCL package:', nsURI)
 
-      // Register in ResourceSet and global registry
-      coclResourceSet.getPackageRegistry().set(nsURI, coclPackage)
+      // Register in global registry
       EPackageRegistry.INSTANCE.set(nsURI, coclPackage)
+
+      // Create ResourceSet for loading .c-ocl files
+      coclResourceSet = new BasicResourceSet()
 
       console.log('[CoclLoader] C-OCL metamodel initialized successfully')
       return true
