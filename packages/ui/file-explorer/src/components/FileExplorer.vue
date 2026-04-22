@@ -156,6 +156,11 @@ const contextMenuItems = computed(() => {
         disabled: !getActions()?.isWorkspaceOpen?.value,
         command: () => handleAddCoclToWorkspace()
       })
+      items.push({
+        label: 'Send to Server',
+        icon: 'pi pi-cloud-upload',
+        command: () => handleCoclSendToServer()
+      })
       items.push({ separator: true })
     }
     if (isQvtrFile(entry)) {
@@ -597,6 +602,38 @@ async function handleAddCoclToWorkspace() {
     }
   } catch (e: any) {
     console.error('[FileExplorer] Failed to read .c-ocl file:', e)
+  }
+}
+
+// Send .c-ocl file to Atlas server
+async function handleCoclSendToServer() {
+  if (!contextMenuNode.value || contextMenuNode.value.type !== 'file') return
+  const entry = contextMenuNode.value.data as FileEntry
+  if (!isCoclFile(entry)) return
+
+  try {
+    const content = await fileSystem.readTextFile(entry)
+    if (!content) return
+
+    const nameMatch = content.match(/name="([^"]+)"/)
+    const versionMatch = content.match(/version="([^"]+)"/)
+    const name = nameMatch?.[1] || entry.name.replace('.c-ocl', '')
+    const version = versionMatch?.[1] || '1.0'
+
+    const browser = tsm?.getService('gene.atlas.browser')
+    if (!browser) { console.warn('[FileExplorer] No Atlas browser'); return }
+
+    const conn = browser.connections?.value?.find((c: any) => c.status === 'connected')
+    if (!conn) { console.warn('[FileExplorer] No Atlas connection'); return }
+
+    const client = browser.getClient(conn.id)
+    if (!client) return
+
+    const id = name.toLowerCase().replace(/\s+/g, '-')
+    await client.uploadObject(conn.scopeName, 'cocl', 'draft', id, content, { name, version, override: true })
+    console.log(`[FileExplorer] C-OCL uploaded: ${name} v${version}`)
+  } catch (e: any) {
+    console.error('[FileExplorer] Failed to send C-OCL to server:', e)
   }
 }
 

@@ -32,9 +32,14 @@ export function serializeCoclToXml(constraintSet: CoclConstraintSet): string {
     'xmi:version="2.0"',
     'xmlns:xmi="http://www.omg.org/XMI"',
     'xmlns:cocl="http://www.gme.org/cocl/1.0"',
-    `name="${escapeXml(constraintSet.name)}"`,
-    `version="${escapeXml(constraintSet.version || '1.0')}"`,
   ]
+
+  if (constraintSet.id) {
+    rootAttrs.push(`id="${escapeXml(constraintSet.id)}"`)
+  }
+
+  rootAttrs.push(`name="${escapeXml(constraintSet.name)}"`)
+  rootAttrs.push(`version="${escapeXml(constraintSet.version || '1.0')}"`)
 
   if (constraintSet.description) {
     rootAttrs.push(`description="${escapeXml(constraintSet.description)}"`)
@@ -67,6 +72,10 @@ export function serializeCoclToXml(constraintSet: CoclConstraintSet): string {
  */
 function serializeConstraint(constraint: CoclConstraint): string {
   const attrs: string[] = []
+
+  if (constraint.id) {
+    attrs.push(`id="${escapeXml(constraint.id)}"`)
+  }
 
   attrs.push(`name="${escapeXml(constraint.name)}"`)
 
