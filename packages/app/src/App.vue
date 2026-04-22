@@ -404,6 +404,9 @@ async function handleOpenWorkspace(entry: any, content: string) {
 
         // Register workspace actions and event mappings from EditorConfig
         registerWorkspaceActionsFromConfig(editorConfig)
+
+        // Notify plugins that workspace has been loaded
+        window.dispatchEvent(new CustomEvent('gene:workspace-loaded'))
       } catch (e) {
         console.warn('Failed to load EditorConfig from workspace (may be empty or different format):', e)
         // Create new config if loading fails

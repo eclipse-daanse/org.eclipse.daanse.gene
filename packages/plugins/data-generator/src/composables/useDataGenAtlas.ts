@@ -28,24 +28,52 @@ function getFeatureValue(obj: any, eClass: any, name: string): any {
 }
 
 let _sharedBrowser: any = null
+let _tsmRef: any = null
 
-/** Set the shared Atlas Browser (called from plugin activate) */
-export function setAtlasBrowser(browser: any) {
-  _sharedBrowser = browser
+/** Set the TSM reference for lazy browser resolution */
+export function setDataGenTsm(tsm: any) {
+  _tsmRef = tsm
+}
+
+/** Resolve the Atlas Browser instance */
+function getBrowser(): any {
+  if (_sharedBrowser) return _sharedBrowser
+
+  const tsm = _tsmRef
+  if (!tsm) return null
+
+  // Try all known service accessor methods
+  let browser = null
+  if (typeof tsm.getService === 'function') {
+    browser = tsm.getService('gene.atlas.browser')
+  }
+  if (!browser && typeof tsm.get === 'function') {
+    browser = tsm.get('gene.atlas.browser')
+  }
+
+  console.log('[DataGenAtlas] getBrowser - tsm:', !!tsm, 'hasGetService:', typeof tsm.getService, 'hasGet:', typeof tsm.get, 'browser:', !!browser)
+
+  if (browser) {
+    _sharedBrowser = browser
+  }
+  return _sharedBrowser
 }
 
 /** Resolve a ModelAtlasClient from the Atlas Browser */
 function getAtlasClient(connectionId?: string): { client: any; scopeName: string } | null {
-  if (!_sharedBrowser) return null
+  const browser = getBrowser()
+  if (!browser) return null
 
-  const connections = _sharedBrowser.connections?.value || []
+  const connections = browser.connections?.value || []
+  console.log('[DataGenAtlas] connections:', connections.length, connections.map((c: any) => `${c.scopeName} [${c.status}]`))
+
   const conn = connectionId
     ? connections.find((c: any) => c.id === connectionId)
     : connections.find((c: any) => c.status === 'connected')
 
   if (!conn) return null
 
-  const client = _sharedBrowser.getClient(conn.id)
+  const client = browser.getClient(conn.id)
   return client ? { client, scopeName: conn.scopeName || 'jena' } : null
 }
 
