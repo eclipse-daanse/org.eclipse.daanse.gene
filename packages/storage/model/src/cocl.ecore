@@ -68,6 +68,13 @@
       <details key="documentation" value="Zentrale Klasse zur Definition eines OCL-Constraints. Enthaelt den OCL-Ausdruck, Metadaten und optionale Einschraenkungen auf Zielobjekte."/>
     </eAnnotations>
 
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" iD="true"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Eindeutige ID des Constraints. Ermoeglicht Referenzierung unabhaengig vom Namen."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
       <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
@@ -144,8 +151,15 @@
   <!-- Container: OclConstraintSet -->
   <eClassifiers xsi:type="ecore:EClass" name="OclConstraintSet">
     <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
-      <details key="documentation" value="Container fuer eine Sammlung von OCL-Constraints. Entspricht einer *.c-ocl Datei."/>
+      <details key="documentation" value="Container fuer eine Sammlung von OCL-Constraints. Entspricht einer *.c-ocl Datei. Kann an den Model Atlas Server uebertragen werden."/>
     </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" iD="true"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Eindeutige ID des Constraint-Sets. Wird fuer Server-Kommunikation und Referenzierung verwendet."/>
+      </eAnnotations>
+    </eStructuralFeatures>
 
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
