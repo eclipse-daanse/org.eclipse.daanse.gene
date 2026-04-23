@@ -217,31 +217,49 @@ export async function activate(context: ModuleContext): Promise<void> {
 
           // Convert diagnostic to validation messages
           const messages: any[] = []
-          function collectMessages(diag: any, depth = 0) {
+          const className = obj.eClass().getName()
+          function collectMessages(diag: any) {
             if (diag.message && diag.type !== 'OK') {
               messages.push({
-                severity: diag.type === 'ERROR' ? 'ERROR' : diag.type === 'WARNING' ? 'WARN' : 'INFO',
+                severity: diag.type === 'ERROR' ? 'error' : diag.type === 'WARNING' ? 'warning' : 'info',
                 message: diag.message,
-                className: obj.eClass().getName()
+                source: 'atlas-validation',
+                objectLabel: className,
+                eClassName: className
               })
             }
             for (const child of diag.children || []) {
-              collectMessages(child, depth + 1)
+              collectMessages(child)
             }
           }
           collectMessages(diagnostic)
 
+          // Push results to Problems Panel
+          const problemsService = context.services.get<any>('gene.problems')
+          if (problemsService) {
+            // Clear previous atlas validation issues
+            problemsService.clearIssuesBySource?.('atlas-validation')
+            for (const msg of messages) {
+              problemsService.addIssue?.(msg)
+            }
+            if (messages.length > 0) {
+              // Show problems panel
+              const eventBus = context.services.get<any>('gene.eventbus')
+              eventBus?.emit?.('gene:show-problems')
+            }
+          }
+
           if (messages.length === 0) {
             return {
               status: 'SUCCESS',
-              logs: [{ message: `Validation passed for ${obj.eClass().getName()}`, level: 'INFO', timestamp: new Date() }],
+              logs: [{ message: `Server validation passed for ${className}`, level: 'INFO', timestamp: new Date() }],
               artifacts: []
             }
           }
 
           return {
             status: diagnostic.type === 'ERROR' ? 'ERROR' : 'WARNING',
-            logs: [{ message: `Validation found ${messages.length} issue(s)`, level: 'WARN', timestamp: new Date() }],
+            logs: [{ message: `Server validation found ${messages.length} issue(s) for ${className}`, level: 'WARN', timestamp: new Date() }],
             artifacts: [{
               type: 'VALIDATION_MESSAGES',
               name: 'Atlas Validation',
@@ -255,17 +273,17 @@ export async function activate(context: ModuleContext): Promise<void> {
       }
     })
 
-    // Register the action definition (editor-level, not object context menu)
+    // Register the action definition (object context menu)
     actionRegistry.register({
       definition: {
         actionId: 'atlas.validate',
         label: 'Validate on Atlas Server',
-        actionScope: 'EDITOR',
+        actionScope: 'OBJECT',
         actionType: 'VALIDATION',
         handlerId: 'atlas.validate.handler',
         order: 50,
         enabled: true,
-        perspectiveIds: ['model-editor'],
+        perspectiveIds: [],
         parameters: [],
         returnTypes: ['VALIDATION_MESSAGES']
       },
