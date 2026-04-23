@@ -496,6 +496,29 @@ export class ModelAtlasClient {
     return this.validate(jsonContent, 'application/json')
   }
 
+  /**
+   * Validate with a specific C-OCL ConstraintSet.
+   * Uses GET /validate/{oclId} with the EObject in the request body.
+   *
+   * @param xmiContent - Serialized EObject as XMI
+   * @param oclId - ID of the OclConstraintSet in the cocl registry
+   */
+  async validateWithConstraints(xmiContent: string, oclId: string): Promise<ValidationDiagnostic> {
+    const resp = await this.request('GET', `/validate/${enc(oclId)}`, xmiContent, {
+      contentType: 'application/xmi',
+      accept: 'application/xmi'
+    })
+    if (resp.status === 200) {
+      const responseText = await resp.text()
+      return this.parseDiagnosticXmi(responseText)
+    }
+    if (resp.status === 404 || resp.status === 400) {
+      const errorText = await resp.text()
+      return { type: 'ERROR', message: errorText, children: [] }
+    }
+    return { type: 'ERROR', message: `Validation failed: ${resp.status}`, children: [] }
+  }
+
   // ============================================
   // HTTP Methods
   // ============================================

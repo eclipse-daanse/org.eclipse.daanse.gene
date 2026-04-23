@@ -212,8 +212,11 @@ export async function activate(context: ModuleContext): Promise<void> {
           // Atlas server expects '_type' instead of 'eType' as attribute name
           xmiContent = xmiContent.replace(/ eType="/g, ' _type="')
 
-          // Call Atlas validation endpoint
-          const diagnostic = await client.validate(xmiContent)
+          // Call Atlas validation endpoint (with optional C-OCL constraint set)
+          const oclId = ctx.parameters?.oclId as string | undefined
+          const diagnostic = oclId
+            ? await client.validateWithConstraints(xmiContent, oclId)
+            : await client.validate(xmiContent)
 
           // Convert diagnostic to validation messages
           const messages: any[] = []
@@ -291,7 +294,27 @@ export async function activate(context: ModuleContext): Promise<void> {
       moduleId: 'atlas-browser'
     })
 
-    context.log.info('Atlas validation action registered')
+    // Register C-OCL specific validation action
+    actionRegistry.register({
+      definition: {
+        actionId: 'atlas.validate.cocl',
+        label: 'Validate with C-OCL on Server',
+        actionScope: 'OBJECT',
+        actionType: 'VALIDATION',
+        handlerId: 'atlas.validate.handler',
+        order: 51,
+        enabled: true,
+        perspectiveIds: [],
+        parameters: [
+          { name: 'oclId', displayName: 'C-OCL Constraint Set ID', type: 'STRING', required: true }
+        ],
+        returnTypes: ['VALIDATION_MESSAGES']
+      },
+      source: 'plugin',
+      moduleId: 'atlas-browser'
+    })
+
+    context.log.info('Atlas validation actions registered')
   }
 
   // Listen for workspace loaded event to auto-connect Atlas connections
