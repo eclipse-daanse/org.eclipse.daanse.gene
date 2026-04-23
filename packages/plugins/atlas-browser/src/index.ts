@@ -47,6 +47,7 @@ export async function activate(context: ModuleContext): Promise<void> {
   }
   context.services.register('ui.atlas-browser.upload', uploadService)
   context.services.register('gene.atlas.upload', uploadService)
+
   // Register the browser instance directly so other plugins can use it
   context.services.register('gene.atlas.browser', sharedBrowser)
 
@@ -212,8 +213,29 @@ export async function activate(context: ModuleContext): Promise<void> {
           // Atlas server expects '_type' instead of 'eType' as attribute name
           xmiContent = xmiContent.replace(/ eType="/g, ' _type="')
 
-          // Call Atlas validation endpoint (with optional C-OCL constraint set)
-          const oclId = ctx.parameters?.oclId as string | undefined
+          // Load available C-OCL constraint sets from server
+          let oclId: string | null = null
+          try {
+            const coclXml = await client.listAllObjects(activeConnection.scopeName, 'cocl')
+            if (coclXml) {
+              const { parseMetadataListXmi } = await import('storage-model-atlas')
+              const coclSets = parseMetadataListXmi(coclXml)
+              if (coclSets.length > 0) {
+                const options = coclSets.map((s, i) => `${i + 1}. ${s.objectName || s.objectId} (${s.stage})`).join('\n')
+                const choice = window.prompt(
+                  `Validierung mit C-OCL Constraints?\n\nVerfügbare Constraint-Sets:\n${options}\n\nNummer eingeben oder leer lassen für nur EMF-Validierung:`
+                )
+                if (choice && choice.trim()) {
+                  const idx = parseInt(choice.trim()) - 1
+                  if (idx >= 0 && idx < coclSets.length) {
+                    oclId = coclSets[idx].objectId
+                  }
+                }
+              }
+            }
+          } catch { /* no cocl registry — skip */ }
+
+          // Call Atlas validation endpoint
           const diagnostic = oclId
             ? await client.validateWithConstraints(xmiContent, oclId)
             : await client.validate(xmiContent)
@@ -294,27 +316,7 @@ export async function activate(context: ModuleContext): Promise<void> {
       moduleId: 'atlas-browser'
     })
 
-    // Register C-OCL specific validation action
-    actionRegistry.register({
-      definition: {
-        actionId: 'atlas.validate.cocl',
-        label: 'Validate with C-OCL on Server',
-        actionScope: 'OBJECT',
-        actionType: 'VALIDATION',
-        handlerId: 'atlas.validate.handler',
-        order: 51,
-        enabled: true,
-        perspectiveIds: [],
-        parameters: [
-          { name: 'oclId', displayName: 'C-OCL Constraint Set ID', type: 'STRING', required: true }
-        ],
-        returnTypes: ['VALIDATION_MESSAGES']
-      },
-      source: 'plugin',
-      moduleId: 'atlas-browser'
-    })
-
-    context.log.info('Atlas validation actions registered')
+    context.log.info('Atlas validation action registered')
   }
 
   // Listen for workspace loaded event to auto-connect Atlas connections
