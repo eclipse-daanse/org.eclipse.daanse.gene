@@ -5,10 +5,12 @@
  * Context class is selected via the SearchDialog (opened by parent).
  */
 
-import { computed } from 'tsm:vue'
+import { computed, inject } from 'tsm:vue'
 import { InputText, Dropdown, Button } from 'tsm:primevue'
 import type { CoclConstraint, CoclRole, CoclSeverity } from 'ui-problems-panel'
-import { OclMonacoEditor } from 'transformation'
+
+const _tsm = inject<any>('tsm')
+const OclMonacoEditor = computed(() => _tsm?.getService('ui.transformation.components')?.OclMonacoEditor)
 
 const props = defineProps<{
   constraint: CoclConstraint | null
@@ -149,7 +151,9 @@ function updateExpression(value: string) {
 
       <div class="form-field">
         <label>Expression</label>
-        <OclMonacoEditor
+        <component
+          :is="OclMonacoEditor"
+          v-if="OclMonacoEditor"
           :modelValue="constraint.expression"
           @update:modelValue="updateExpression"
           :height="150"
