@@ -243,7 +243,7 @@ async function buildPlugin(plugin) {
         // Transform tsm: imports and bare shared module imports
         ...(isLibraryProvider ? [] : [tsmPlugin({
           useRenderChunk: true,
-          sharedModules: ['vue', 'vue-router', 'primevue', '@emfts/core', '@emfts/vue-registry']
+          sharedModules: ['vue', 'vue-router', 'primevue', '@emfts/core', '@emfts/vue-registry', '@eclipse-daanse/tsm', '@emfts/codec.jsonschema']
         })])
       ],
       build: {

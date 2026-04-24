@@ -7,13 +7,15 @@
 
 import { getTsmPluginSystem, type TsmPluginSystem } from './tsm'
 import { repositories, tsmConfig, startupModules } from './tsm/repositories.config'
-import { initTsmRuntime } from '@eclipse-daanse/tsm'
+import { initTsmRuntime, injectable, singleton, inject as tsmInject } from '@eclipse-daanse/tsm'
+import type { ModuleContext } from '@eclipse-daanse/tsm'
 
 // Import shared libraries for TSM registration
 import * as Vue from 'vue'
 import * as VueRouter from 'vue-router'
 import * as emfts from '@emfts/core'
 import * as emftsVueRegistry from '@emfts/vue-registry'
+import * as emftsCodecJsonSchema from '@emfts/codec.jsonschema'
 
 // Import PrimeVue config and directives
 import PrimeVue from 'primevue/config'
@@ -85,7 +87,9 @@ async function bootstrap(): Promise<void> {
     }, '4.3.0')
     tsmRuntime.register('@emfts/core', emfts, '1.0.0')
     tsmRuntime.register('@emfts/vue-registry', emftsVueRegistry, '0.1.0')
-    console.log('[main] Registered shared libraries: vue, vue-router, primevue, @emfts/core, @emfts/vue-registry')
+    tsmRuntime.register('@eclipse-daanse/tsm', { injectable, singleton, inject: tsmInject }, '1.0.0')
+    tsmRuntime.register('@emfts/codec.jsonschema', emftsCodecJsonSchema, '1.0.0')
+    console.log('[main] Registered shared libraries: vue, vue-router, primevue, @emfts/core, @emfts/vue-registry, @eclipse-daanse/tsm')
 
     // 3. Create TSM plugin system for module loading
     tsm = getTsmPluginSystem({ repositories })
