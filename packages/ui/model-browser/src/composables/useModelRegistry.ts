@@ -15,7 +15,12 @@ import {
 } from '@emfts/core'
 import type { ModelPackageInfo, ClassInfo, EnumInfo, ModelTreeNode, AttributeInfo, ReferenceInfo, ConstraintInfo } from '../types'
 import { getClassifierIcon, MODEL_ICONS, getIconForClassViaRegistry } from '../types'
-import { useSharedViews } from 'ui-instance-tree'
+// Views service injected via setViewsService() from plugin activate
+let _viewsService: { version: { value: number } } | null = null
+
+export function setViewsService(views: any) {
+  _viewsService = views
+}
 
 /**
  * Registry state
@@ -274,9 +279,8 @@ export function useModelRegistry() {
     // Access iconVersionRef to create reactive dependency on icon changes
     const _iconVersion = iconVersionRef.value
 
-    // Access views version for reactivity
-    const views = useSharedViews()
-    const _viewVersion = views.version.value
+    // Access views version for reactivity (injected via setViewsService)
+    const _viewVersion = _viewsService?.version?.value ?? 0
 
     console.log('[ModelRegistry] Computing treeNodes, icon version:', _iconVersion, 'packages:', allPackages.value.length)
     try {

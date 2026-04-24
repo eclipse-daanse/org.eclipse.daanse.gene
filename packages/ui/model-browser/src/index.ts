@@ -19,7 +19,7 @@ export { ModelBrowser } from './components'
 
 // Import for service registration
 import * as components from './components'
-import { useModelRegistry, useSharedModelRegistry } from './composables/useModelRegistry'
+import { useModelRegistry, useSharedModelRegistry, setViewsService } from './composables/useModelRegistry'
 import { setIconRegistry } from './types'
 
 /**
@@ -48,6 +48,12 @@ export async function activate(context: ModuleContext): Promise<void> {
     context.log.info('Subscribed to icon changes')
   } else {
     context.log.warn('Icon registry not available for subscription')
+  }
+
+  // Inject views service from ui-instance-tree (breaks circular dependency)
+  const viewsService = context.services.get<any>('gene.views')
+  if (viewsService) {
+    setViewsService(viewsService)
   }
 
   // Register composables as service, including direct function access

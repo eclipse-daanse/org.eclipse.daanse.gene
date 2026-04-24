@@ -216,7 +216,7 @@ async function buildPlugin(plugin) {
       if (source.endsWith('.css')) return false
       if (source === 'primevue/config' || source === 'primevue/tooltip') return false
 
-      const sharedPackages = ['vue', 'vue-router', 'primevue', '@primevue', 'primeicons', '@emfts/core', '@emfts/vue-registry']
+      const sharedPackages = ['vue', 'vue-router', 'primevue', '@primevue', 'primeicons', '@emfts']
       for (const pkg of sharedPackages) {
         if (source === pkg || source.startsWith(pkg + '/')) return true
       }

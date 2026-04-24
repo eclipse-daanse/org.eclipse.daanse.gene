@@ -16,7 +16,6 @@ import { Button } from 'tsm:primevue'
 import { ContextMenu } from 'tsm:primevue'
 import { Dialog } from 'tsm:primevue'
 import { Dropdown } from 'tsm:primevue'
-import { useEventBus } from 'ui-layout'
 import type { EditorContext } from '../context/editorContext'
 import { createInstanceContext } from '../context/instanceContext'
 import { useSharedInstanceTree } from '../composables/useInstanceTree'
@@ -44,7 +43,7 @@ const tsm = inject<any>('tsm')
 const ctx = props.context
   || tsm?.getService('gene.editor.context')?.getCurrentContext?.()
   || createInstanceContext()
-const eventBus = useEventBus()
+const eventBus = tsm?.getService('gene.eventbus') as any
 const sharedTree = useSharedInstanceTree()
 
 
