@@ -4,9 +4,7 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "packages/core",
-    "packages/storage/*",
-    "packages/ui/*"
+    "packages/*"
   ],
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

@@ -112,12 +112,7 @@ function findPlugins() {
   const plugins = []
 
   const scanDirs = [
-    { base: 'packages/app', recursive: false },
-    { base: 'packages/core', recursive: false },
-    { base: 'packages/storage', recursive: true },
-    { base: 'packages/ui', recursive: true },
-    { base: 'packages/tsm-devtools', recursive: false },
-    { base: 'packages/plugins', recursive: true },
+    { base: 'packages', recursive: false },
     { base: 'plugins', recursive: true }
   ]
 

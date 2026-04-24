@@ -50,7 +50,7 @@ function scanTsmModules(): Map<string, TsmModule> {
           console.warn(`Failed to parse ${manifestPath}:`, e)
         }
       } else if (recursive) {
-        // Scan subdirectories (e.g., packages/storage/*, packages/ui/*)
+        // Scan subdirectories for nested manifest.json
         scanDirectory(path.join(baseDir, entry.name), false)
       }
     }
@@ -194,8 +194,8 @@ export default defineConfig({
       // Remote modules - types only for IDE
       { find: 'core', replacement: fileURLToPath(new URL('./.tsm/types/core/index.d.ts', import.meta.url)) },
       // Direct module aliases (without manifest.json)
-      { find: 'ui-problems-panel', replacement: fileURLToPath(new URL('./packages/ui/problems-panel/src/index.ts', import.meta.url)) },
-      { find: 'ui-search', replacement: fileURLToPath(new URL('./packages/ui/search/src/index.ts', import.meta.url)) },
+      { find: 'ui-problems-panel', replacement: fileURLToPath(new URL('./packages/ui-problems-panel/src/index.ts', import.meta.url)) },
+      { find: 'ui-search', replacement: fileURLToPath(new URL('./packages/ui-search/src/index.ts', import.meta.url)) },
     ],
   },
   build: {
