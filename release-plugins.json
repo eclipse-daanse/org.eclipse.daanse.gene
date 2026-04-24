@@ -3,13 +3,14 @@
   "plugins": [
     "gene-app",
     "core",
+    "core-extension",
     "storage-core",
     "storage-model",
+    "storage-model-atlas",
     "storage-indexeddb",
     "storage-git",
     "ui-actions",
     "ui-file-explorer",
-    "instance-builder",
     "ui-instance-tree",
     "ui-layout",
     "ui-model-browser",
@@ -20,7 +21,14 @@
     "ui-search",
     "ui-workspace",
     "ui-xmi-viewer",
+    "instance-builder",
     "icons-material",
-    "metamodeler"
+    "metamodeler",
+    "transformation",
+    "cocl-editor",
+    "data-generator",
+    "dmn-editor",
+    "atlas-browser",
+    "tsm-devtools"
   ]
 }
