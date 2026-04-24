@@ -153,7 +153,7 @@ function loadInstances() {
   }
 
   // Initialize storage strategy from workspace settings
-  storageStrategy.value = perspective.state.workspaceSettings.storageStrategy || 'single-file'
+  storageStrategy.value = perspective?.state?.workspaceSettings?.storageStrategy || 'single-file'
 
   // Get existing instance sources from EditorConfig
   const editorConfig = editorConfigService.value
@@ -341,7 +341,7 @@ async function handleSave() {
   saving.value = true
   try {
     // Update workspace settings with selected strategy
-    if (perspective.updateWorkspaceSettings) {
+    if (perspective?.updateWorkspaceSettings) {
       perspective.updateWorkspaceSettings({ storageStrategy: storageStrategy.value })
     }
 
