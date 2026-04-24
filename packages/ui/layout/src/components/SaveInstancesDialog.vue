@@ -15,8 +15,7 @@ import { Column } from 'tsm:primevue'
 import { InputText } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
 import { Dropdown } from 'tsm:primevue'
-import { useSharedPerspective, type StorageStrategy } from 'ui-perspectives'
-import { useSharedFileSystem } from 'ui-file-explorer'
+import type { StorageStrategy } from 'ui-perspectives'
 import type { EObject } from '@emfts/core'
 
 const props = defineProps<{
@@ -28,9 +27,9 @@ const emit = defineEmits<{
   'saved': []
 }>()
 
-const perspective = useSharedPerspective()
-const fileSystem = useSharedFileSystem()
 const tsm = inject<any>('tsm')
+const perspective = tsm?.getService('ui.perspectives')?.useSharedPerspective()
+const fileSystem = tsm?.getService('ui.file-explorer.composables')?.useSharedFileSystem?.()
 const _injectedEditorConfig = inject<any>('gene.editor.config', null)
 // Fallback: get from TSM if inject didn't work (timing issue)
 const editorConfigService = computed(() => _injectedEditorConfig || tsm?.getService('gene.editor.config'))

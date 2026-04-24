@@ -12,15 +12,12 @@
  */
 
 import '../theme.css'
-import { computed, ref, onMounted, onUnmounted } from 'tsm:vue'
+import { computed, ref, onMounted, onUnmounted, inject } from 'tsm:vue'
 import { Button } from 'tsm:primevue'
 import { useLayoutState } from '../composables/useLayoutState'
 import { usePanelKeyboardShortcuts } from '../composables/usePanelDragDrop'
 import { useGlobalSettings } from '../composables/useGlobalSettings'
 import { useEventBus } from '../composables/useEventBus'
-import { useSharedWorkspace } from 'ui-workspace'
-import { useSharedFileSystem } from 'ui-file-explorer'
-import { useSharedPerspective } from 'ui-perspectives'
 import ActivityBar from './ActivityBar.vue'
 import PrimarySidebar from './PrimarySidebar.vue'
 import EditorArea from './EditorArea.vue'
@@ -32,9 +29,10 @@ import SaveInstancesDialog from './SaveInstancesDialog.vue'
 
 const layout = useLayoutState()
 const panelShortcuts = usePanelKeyboardShortcuts()
-const workspaceState = useSharedWorkspace()
-const fileSystem = useSharedFileSystem()
-const perspective = useSharedPerspective()
+const workspaceState = tsm?.getService('ui.workspace.composables')?.useSharedWorkspace()
+const fileSystem = tsm?.getService('ui.file-explorer.composables')?.useSharedFileSystem()
+const tsm = inject<any>('tsm')
+const perspective = tsm?.getService('ui.perspectives')?.useSharedPerspective()
 const eventBus = useEventBus()
 
 // Initialize global settings (theme, language, colors)
