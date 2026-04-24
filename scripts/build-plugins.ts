@@ -119,8 +119,8 @@ async function buildModule(mod: ModuleInfo): Promise<boolean> {
       resolve: {
         alias: {
           '@': path.resolve(rootDir, 'src'),
-          'storage-core': path.resolve(rootDir, 'packages/storage/core/src'),
-          'storage-model': path.resolve(rootDir, 'packages/storage/model/src/generated/storage')
+          'storage-core': path.resolve(rootDir, 'packages/storage-core/src'),
+          'storage-model': path.resolve(rootDir, 'packages/storage-model/src/generated/storage')
         }
       }
     })
