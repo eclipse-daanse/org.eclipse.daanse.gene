@@ -51,6 +51,69 @@ export async function activate(context: ModuleContext): Promise<void> {
   // Register the browser instance directly so other plugins can use it
   context.services.register('gene.atlas.browser', sharedBrowser)
 
+  // Register cascade resolver service
+  const { createAtlasURIConverter } = await import('./composables/atlasURIConverter')
+  const { ModelAtlasClient } = await import('storage-model-atlas')
+
+  context.services.register('gene.atlas.cascadeResolver', {
+    async configure(editorConfig: any, resourceSet: any) {
+      const chain = editorConfig?.packageResolverChain?.value
+      if (!chain) return 0
+
+      function getVal(obj: any, name: string): any {
+        if (obj[name] !== undefined) return obj[name]
+        if (typeof obj.eGet === 'function') {
+          const eClass = obj.eClass()
+          const feature = eClass?.getEStructuralFeature(name)
+          if (feature) return obj.eGet(feature)
+        }
+        return undefined
+      }
+
+      const resolvers = getVal(chain, 'resolvers') || []
+      const autoResolve = getVal(chain, 'autoResolveReferences') ?? true
+      const maxDepth = getVal(chain, 'maxResolutionDepth') ?? -1
+
+      const providers: any[] = []
+      for (const resolver of resolvers) {
+        const kind = getVal(resolver, 'kind')
+        const enabled = getVal(resolver, 'enabled') ?? true
+        if (!enabled) continue
+
+        if (kind === 'MODEL_ATLAS' || String(kind) === 'MODEL_ATLAS') {
+          const baseUrl = getVal(resolver, 'baseUrl')
+          const scopeName = getVal(resolver, 'scopeName')
+          const stage = getVal(resolver, 'stage') || 'release'
+          const token = getVal(resolver, 'token')
+
+          if (baseUrl && scopeName) {
+            providers.push({
+              client: new ModelAtlasClient({ baseUrl, token }),
+              scopeName,
+              stage
+            })
+          }
+        }
+      }
+
+      if (providers.length === 0) return 0
+
+      resourceSet.setURIConverter(createAtlasURIConverter(providers))
+      context.log.info(`CascadeResolver: URIConverter configured with ${providers.length} Atlas provider(s)`)
+
+      if (autoResolve) {
+        try {
+          const resolved = await resourceSet.resolveProxiesAsync(maxDepth)
+          context.log.info(`CascadeResolver: ${resolved} package(s) resolved from Atlas`)
+          return resolved
+        } catch (err) {
+          context.log.warn('CascadeResolver: Proxy resolution failed:', err)
+        }
+      }
+      return 0
+    }
+  })
+
   // Mount ValidationDialog as global overlay
   const { ValidationDialog } = await import('./components')
   const dialogHost = document.createElement('div')

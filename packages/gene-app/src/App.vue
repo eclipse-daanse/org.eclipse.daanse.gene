@@ -13,9 +13,6 @@ import type { Resource } from 'tsm:emfts'
 import { Dialog, InputText, Dropdown, Button, ProgressSpinner } from 'tsm:primevue'
 import type { File, Repository } from 'storage-core'
 import { getGlobalEditorConfig } from '@/services/useEditorConfig'
-import { createAtlasURIConverter } from './services/atlasURIConverter'
-import { ModelAtlasClient } from 'storage-model-atlas'
-import { PackageResolverKind } from '@/generated/fennecui'
 import { ProblemsPanel, useSharedProblemsService } from 'ui-problems-panel'
 import { SearchDialog, setViewsService } from 'ui-search'
 
@@ -739,54 +736,12 @@ async function configureCascadeResolver() {
   const editorConfig = getGlobalEditorConfig()
   if (!editorConfig) return
 
-  const chain = editorConfig.packageResolverChain?.value
-  if (!chain) return
-
-  // Helper to get feature value from EObject
-  function getVal(obj: any, name: string): any {
-    if (obj[name] !== undefined) return obj[name]
-    if (typeof obj.eGet === 'function') {
-      const eClass = obj.eClass()
-      const feature = eClass?.getEStructuralFeature(name)
-      if (feature) return obj.eGet(feature)
-    }
-    return undefined
-  }
-
-  const resolvers = getVal(chain, 'resolvers') || []
-  const autoResolve = getVal(chain, 'autoResolveReferences') ?? true
-  const maxDepth = getVal(chain, 'maxResolutionDepth') ?? -1
-
-  // Build Atlas providers from MODEL_ATLAS resolvers
-  const providers: { client: ModelAtlasClient; scopeName: string; stage: string }[] = []
-
-  for (const resolver of resolvers) {
-    const kind = getVal(resolver, 'kind')
-    const enabled = getVal(resolver, 'enabled') ?? true
-    if (!enabled) continue
-
-    if (kind === PackageResolverKind.MODEL_ATLAS || kind === 'MODEL_ATLAS') {
-      const baseUrl = getVal(resolver, 'baseUrl')
-      const scopeName = getVal(resolver, 'scopeName')
-      const stage = getVal(resolver, 'stage') || 'release'
-      const token = getVal(resolver, 'token')
-
-      if (baseUrl && scopeName) {
-        providers.push({
-          client: new ModelAtlasClient({ baseUrl, token }),
-          scopeName,
-          stage
-        })
-      }
-    }
-  }
-
-  if (providers.length === 0) {
-    console.log('[CascadeResolver] No MODEL_ATLAS providers configured')
+  const cascadeResolver = tsm.getService('gene.atlas.cascadeResolver')
+  if (!cascadeResolver) {
+    console.log('[CascadeResolver] Atlas plugin not loaded, skipping')
     return
   }
 
-  // Get the ecore resource set from model browser
   const mbComposables = modelBrowserComposables.value
   const getRS = (mbComposables as any)?.getEcoreResourceSet
   if (!getRS) {
@@ -794,19 +749,7 @@ async function configureCascadeResolver() {
     return
   }
 
-  const rs = getRS()
-  rs.setURIConverter(createAtlasURIConverter(providers))
-  console.log(`[CascadeResolver] URIConverter configured with ${providers.length} Atlas provider(s)`)
-
-  // Auto-resolve proxies if enabled
-  if (autoResolve) {
-    try {
-      const resolved = await rs.resolveProxiesAsync(maxDepth)
-      console.log(`[CascadeResolver] ${resolved} package(s) resolved from Atlas`)
-    } catch (err) {
-      console.warn('[CascadeResolver] Proxy resolution failed:', err)
-    }
-  }
+  await cascadeResolver.configure(editorConfig, getRS())
 }
 
 /**
