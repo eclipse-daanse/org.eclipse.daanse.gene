@@ -60,8 +60,9 @@
     <div class="branch-select">
       <label for="branch">Branch:</label>
       <select id="branch"><option>main</option></select>
-      <label style="margin-left: auto;">
-        <input type="checkbox" id="create-release"> GitHub Release erstellen
+      <input type="text" id="release-name" placeholder="Release-Name (z.B. Sprint 42)" style="flex:1; padding:0.4rem 0.6rem; background:var(--bg); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:0.875rem;">
+      <label>
+        <input type="checkbox" id="create-release"> Release erstellen
       </label>
     </div>
 
@@ -256,6 +257,7 @@
           body: JSON.stringify({
             ref: branchSelect.value,
             inputs: {
+              release_name: document.getElementById('release-name').value.trim(),
               plugins: selected.join(','),
               create_release: String(createReleaseEl.checked)
             }

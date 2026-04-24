@@ -6,6 +6,10 @@ on:
       - 'v*'
   workflow_dispatch:
     inputs:
+      release_name:
+        description: 'Release-Name (z.B. "Sprint 42", "Demo März")'
+        required: false
+        type: string
       plugins:
         description: 'Komma-separierte Plugin-IDs (leer = release-plugins.json)'
         required: false
@@ -36,9 +40,13 @@ jobs:
       - name: Type check
         run: npx vue-tsc --noEmit
 
-      - name: Resolve plugin list
-        id: plugins
+      - name: Resolve version and plugin list
+        id: meta
         run: |
+          VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json','utf-8')).version)")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+
           if [ -n "${{ inputs.plugins }}" ]; then
             PLUGINS="${{ inputs.plugins }}"
           else
@@ -61,7 +69,7 @@ jobs:
 
       - name: Filter plugins
         run: |
-          PLUGIN_LIST="${{ steps.plugins.outputs.plugin_list }}"
+          PLUGIN_LIST="${{ steps.meta.outputs.plugin_list }}"
           BUILT_PLUGINS=$(ls dist/plugins/ | grep -v index.json)
 
           for plugin in $BUILT_PLUGINS; do
@@ -87,7 +95,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gene-release
+          name: gene-${{ steps.meta.outputs.version }}
           path: dist/
           retention-days: 30
 
@@ -96,22 +104,29 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cd dist && zip -r ../gene-release.zip . && cd ..
+          VERSION="${{ steps.meta.outputs.version }}"
+          RELEASE_NAME="${{ inputs.release_name }}"
+          TAG="${GITHUB_REF_NAME:-v${VERSION}}"
+          ZIP_NAME="gene-${VERSION}.zip"
 
-          TAG="${GITHUB_REF_NAME:-manual-$(date +%Y%m%d-%H%M%S)}"
+          cd dist && zip -r "../${ZIP_NAME}" . && cd ..
 
           PLUGINS=$(node -e "
             const idx = JSON.parse(require('fs').readFileSync('dist/plugins/index.json','utf-8'));
             idx.modules.forEach(m => console.log('- ' + m));
           ")
 
-          gh release create "$TAG" gene-release.zip \
-            --title "GenE $TAG" \
-            --notes "$(cat <<'NOTES'
-          ## GenE Release
+          if [ -n "$RELEASE_NAME" ]; then
+            TITLE="GenE ${VERSION} — ${RELEASE_NAME}"
+          else
+            TITLE="GenE ${VERSION}"
+          fi
+
+          gh release create "$TAG" "$ZIP_NAME" \
+            --title "$TITLE" \
+            --notes "## GenE Release ${VERSION}
 
           ### Enthaltene Plugins
-          $PLUGINS
-          NOTES
-          )" \
+          ${PLUGINS}
+          " \
             --latest
