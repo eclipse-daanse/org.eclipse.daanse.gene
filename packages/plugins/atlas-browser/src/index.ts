@@ -6,7 +6,7 @@
  */
 
 import type { ModuleContext } from '@eclipse-daanse/tsm'
-import { markRaw } from 'tsm:vue'
+import { markRaw, h, render, watch } from 'tsm:vue'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
@@ -50,6 +50,41 @@ export async function activate(context: ModuleContext): Promise<void> {
 
   // Register the browser instance directly so other plugins can use it
   context.services.register('gene.atlas.browser', sharedBrowser)
+
+  // Mount ValidationDialog as global overlay
+  const { ValidationDialog } = await import('./components')
+  const dialogHost = document.createElement('div')
+  dialogHost.id = 'atlas-validation-dialog-host'
+  document.body.appendChild(dialogHost)
+
+  // Use Vue's render() to render the dialog inside the existing app context
+  const appInstance = context.services.get<any>('app.instance')
+  function renderDialog() {
+    const vnode = h(ValidationDialog, {
+      visible: sharedBrowser.showValidationDialog.value,
+      'onUpdate:visible': (v: boolean) => {
+        if (!v) sharedBrowser.resolveValidationChoice('cancelled')
+      },
+      onValidate: (oclId: string | null) => {
+        sharedBrowser.resolveValidationChoice(oclId)
+      }
+    })
+    // Inherit app context (PrimeVue, TSM provide, etc.)
+    if (appInstance) {
+      vnode.appContext = appInstance._context
+    }
+    render(vnode, dialogHost)
+  }
+
+  // Re-render when dialog visibility changes
+  watch(sharedBrowser.showValidationDialog, () => renderDialog())
+  renderDialog()
+
+  // Store for cleanup on deactivate
+  context.services.register('gene.atlas.validation.cleanup', () => {
+    render(null, dialogHost)
+    dialogHost.remove()
+  })
 
   // Register Model Atlas perspective
   const perspectiveManager = context.services.get<PerspectiveManager>('ui.registry.perspectives')
@@ -175,9 +210,6 @@ export async function activate(context: ModuleContext): Promise<void> {
     internalExecutor.registerHandler('atlas.validate.handler', {
       async execute(ctx: any) {
         const obj = ctx.input.primaryObject
-        if (!obj) {
-          return { status: 'ERROR', logs: [{ message: 'No object selected', level: 'ERROR', timestamp: new Date() }], artifacts: [] }
-        }
 
         // Find active Atlas connection
         const browser = useSharedAtlasBrowser()
@@ -192,48 +224,39 @@ export async function activate(context: ModuleContext): Promise<void> {
         }
 
         try {
-          // Serialize all objects from the source resource to XMI
-          // This ensures cross-references between objects resolve as internal refs
-          // instead of broken hrefs like "instances.xmi#/0"
           const { XMIResource } = await import('@emfts/core')
           const resource = new XMIResource()
 
-          // Get the source resource to include all sibling objects
-          const sourceResource = obj.eResource?.()
+          // Get instance resource — from selected object or from shared instance tree
+          const sourceResource = obj?.eResource?.()
           if (sourceResource) {
             for (const content of sourceResource.getContents()) {
               resource.getContents().push(content)
             }
           } else {
-            resource.getContents().push(obj)
+            // No object selected — get the shared instance resource
+            const instanceTreeComposable = context.services.get<any>('ui.instance-tree.composables')
+            const sharedResource = instanceTreeComposable?.getSharedResource?.()
+            if (sharedResource && sharedResource.getContents().length > 0) {
+              for (const content of sharedResource.getContents()) {
+                resource.getContents().push(content)
+              }
+            } else if (obj) {
+              resource.getContents().push(obj)
+            } else {
+              return { status: 'ERROR', logs: [{ message: 'No instances to validate', level: 'ERROR', timestamp: new Date() }], artifacts: [] }
+            }
           }
 
           let xmiContent = resource.saveToString()
-
-          // Atlas server expects '_type' instead of 'eType' as attribute name
           xmiContent = xmiContent.replace(/ eType="/g, ' _type="')
 
-          // Load available C-OCL constraint sets from server
-          let oclId: string | null = null
-          try {
-            const coclXml = await client.listAllObjects(activeConnection.scopeName, 'cocl')
-            if (coclXml) {
-              const { parseMetadataListXmi } = await import('storage-model-atlas')
-              const coclSets = parseMetadataListXmi(coclXml)
-              if (coclSets.length > 0) {
-                const options = coclSets.map((s, i) => `${i + 1}. ${s.objectName || s.objectId} (${s.stage})`).join('\n')
-                const choice = window.prompt(
-                  `Validierung mit C-OCL Constraints?\n\nVerfügbare Constraint-Sets:\n${options}\n\nNummer eingeben oder leer lassen für nur EMF-Validierung:`
-                )
-                if (choice && choice.trim()) {
-                  const idx = parseInt(choice.trim()) - 1
-                  if (idx >= 0 && idx < coclSets.length) {
-                    oclId = coclSets[idx].objectId
-                  }
-                }
-              }
-            }
-          } catch { /* no cocl registry — skip */ }
+          // Show validation dialog to let user pick C-OCL constraint set
+          const oclId = await browser.requestValidationChoice()
+
+          if (oclId === 'cancelled') {
+            return { status: 'SUCCESS', logs: [{ message: 'Validation cancelled by user', level: 'INFO', timestamp: new Date() }], artifacts: [] }
+          }
 
           // Call Atlas validation endpoint
           const diagnostic = oclId
@@ -242,15 +265,15 @@ export async function activate(context: ModuleContext): Promise<void> {
 
           // Convert diagnostic to validation messages
           const messages: any[] = []
-          const className = obj.eClass().getName()
+          const label = obj?.eClass?.().getName?.() || 'instances'
           function collectMessages(diag: any) {
             if (diag.message && diag.type !== 'OK') {
               messages.push({
                 severity: diag.type === 'ERROR' ? 'error' : diag.type === 'WARNING' ? 'warning' : 'info',
                 message: diag.message,
                 source: 'atlas-validation',
-                objectLabel: className,
-                eClassName: className
+                objectLabel: label,
+                eClassName: label
               })
             }
             for (const child of diag.children || []) {
@@ -262,13 +285,11 @@ export async function activate(context: ModuleContext): Promise<void> {
           // Push results to Problems Panel
           const problemsService = context.services.get<any>('gene.problems')
           if (problemsService) {
-            // Clear previous atlas validation issues
             problemsService.clearIssuesBySource?.('atlas-validation')
             for (const msg of messages) {
               problemsService.addIssue?.(msg)
             }
             if (messages.length > 0) {
-              // Show problems panel
               const eventBus = context.services.get<any>('gene.eventbus')
               eventBus?.emit?.('gene:show-problems')
             }
@@ -277,14 +298,14 @@ export async function activate(context: ModuleContext): Promise<void> {
           if (messages.length === 0) {
             return {
               status: 'SUCCESS',
-              logs: [{ message: `Server validation passed for ${className}`, level: 'INFO', timestamp: new Date() }],
+              logs: [{ message: `Server validation passed for ${label}`, level: 'INFO', timestamp: new Date() }],
               artifacts: []
             }
           }
 
           return {
             status: diagnostic.type === 'ERROR' ? 'ERROR' : 'WARNING',
-            logs: [{ message: `Server validation found ${messages.length} issue(s) for ${className}`, level: 'WARN', timestamp: new Date() }],
+            logs: [{ message: `Server validation found ${messages.length} issue(s) for ${label}`, level: 'WARN', timestamp: new Date() }],
             artifacts: [{
               type: 'VALIDATION_MESSAGES',
               name: 'Atlas Validation',
@@ -303,7 +324,8 @@ export async function activate(context: ModuleContext): Promise<void> {
       definition: {
         actionId: 'atlas.validate',
         label: 'Validate on Atlas Server',
-        actionScope: 'OBJECT',
+        icon: 'pi pi-cloud-upload',
+        actionScope: 'BOTH',
         actionType: 'VALIDATION',
         handlerId: 'atlas.validate.handler',
         order: 50,
@@ -368,6 +390,11 @@ export async function deactivate(context: ModuleContext): Promise<void> {
   if (perspectiveManager) {
     perspectiveManager.registry.unregister('model-atlas')
   }
+
+  // Cleanup validation dialog overlay
+  const cleanupDialog = context.services.get<() => void>('gene.atlas.validation.cleanup')
+  if (cleanupDialog) cleanupDialog()
+  context.services.unregister('gene.atlas.validation.cleanup')
 
   context.services.unregister('ui.atlas-browser.open')
   context.services.unregister('gene.atlas.upload')

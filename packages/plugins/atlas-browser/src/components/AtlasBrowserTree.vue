@@ -96,7 +96,7 @@ const saveFeedback = ref<'saving' | 'saved' | 'error' | null>(null)
 // Save current connection to workspace EditorConfig
 function handleSaveToWorkspace() {
   const editorConfig = tsm?.getService('gene.editor.config')
-  console.log('[AtlasBrowser] Save to workspace, editorConfig:', !!editorConfig, 'value:', !!editorConfig?.editorConfig?.value)
+
   if (!editorConfig?.editorConfig?.value) {
     console.warn('[AtlasBrowser] No EditorConfig available')
     return
@@ -117,9 +117,15 @@ function handleSaveToWorkspace() {
 
   // Clear existing and re-add all current connections
   const connections: any[] = []
+  const atlasConnClass = eClass.getEPackage()?.getEClassifier?.('AtlasConnection')
+
+  if (!atlasConnClass) {
+    console.warn('[AtlasBrowser] AtlasConnection class not found in package')
+    return
+  }
   for (const conn of browser.connections.value) {
     if (conn.status !== 'connected') continue
-    const atlasConn = factory.create(eClass.getEPackage().getEClassifier('AtlasConnection'))
+    const atlasConn = factory.create(atlasConnClass)
     const acClass = atlasConn.eClass()
     const set = (name: string, value: any) => {
       const f = acClass.getEStructuralFeature(name)
@@ -134,6 +140,7 @@ function handleSaveToWorkspace() {
     connections.push(atlasConn)
   }
 
+  // Clear and replace all atlas connections
   config.atlasConnections = connections
 
   // Save directly to file
@@ -191,7 +198,7 @@ onMounted(async () => {
       if (alreadyConnected) continue
 
       try {
-        console.log(`[AtlasBrowser] Auto-connecting: ${scopeName}@${baseUrl}`)
+
         await browser.connect({ baseUrl, scopeName, token: token || '' })
       } catch (e: any) {
         console.warn(`[AtlasBrowser] Auto-connect failed for ${scopeName}:`, e.message)
@@ -373,7 +380,7 @@ async function handleDeleteFromAtlas(data: AtlasTreeNodeData) {
     }
 
     if (success) {
-      console.log(`[AtlasBrowser] Deleted ${data.isSchemaRegistry ? 'schema' : 'object'}: ${decodedId}`)
+
       // Refresh the parent stage
       await browser.refreshStage(data.connectionId, data.scopeName!, data.registryName!, data.stageName!)
     } else {
@@ -426,7 +433,7 @@ async function handleUploadToStage(data: AtlasTreeNodeData) {
     )
 
     if (result.success) {
-      console.log('[AtlasBrowserTree] Schema uploaded successfully')
+
       // Refresh the stage to show the new schema
       const stageNode = findNodeByKey(browser.treeNodes.value, `${data.connectionId}/${data.scopeName}/${data.registryName}/${data.stageName}`)
       if (stageNode) {

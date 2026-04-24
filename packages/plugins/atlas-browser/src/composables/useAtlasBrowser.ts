@@ -546,6 +546,32 @@ function createAtlasBrowser() {
     schemaTreeContent.value = content
   }
 
+  // Validation dialog state — Promise-based communication between handler and Vue component
+  const showValidationDialog = ref(false)
+  let validationResolve: ((oclId: string | null | 'cancelled') => void) | null = null
+
+  /**
+   * Open the validation dialog and return the user's choice.
+   * Returns oclId string, null (EMF-only), or 'cancelled'.
+   */
+  function requestValidationChoice(): Promise<string | null | 'cancelled'> {
+    return new Promise((resolve) => {
+      validationResolve = resolve
+      showValidationDialog.value = true
+    })
+  }
+
+  /**
+   * Resolve the pending validation choice. Called from ValidationDialog component.
+   */
+  function resolveValidationChoice(oclId: string | null | 'cancelled') {
+    showValidationDialog.value = false
+    if (validationResolve) {
+      validationResolve(oclId)
+      validationResolve = null
+    }
+  }
+
   // Track which content was loaded for the current selection (avoid re-fetching)
   let lastLoadedObjectId: string | null = null
 
@@ -716,6 +742,11 @@ function createAtlasBrowser() {
     getRegistryInfo,
     performTransition,
     refreshStage,
+
+    // Validation dialog
+    showValidationDialog,
+    requestValidationChoice,
+    resolveValidationChoice,
 
     /** Get the ModelAtlasClient for a connection */
     getClient(connectionId: string): ModelAtlasClient | undefined {
