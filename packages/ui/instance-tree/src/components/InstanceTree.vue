@@ -121,14 +121,50 @@ const isInstanceMode = computed(() => ctx.mode === 'instance')
 const isValidating = ref(false)
 const hasValidationErrors = ref(false)
 
-// Atlas validation state
-const isValidatingAtlas = ref(false)
-const hasAtlasConnection = computed(() => {
-  const browser = tsm?.getService('ui.atlas-browser.composables')
-  if (!browser?.useSharedAtlasBrowser) return false
-  const shared = browser.useSharedAtlasBrowser()
-  return shared.connections.value.some((c: any) => c.status === 'connected')
-})
+// Toolbar actions from ActionRegistry (contributed by plugins)
+const toolbarActions = ref<any[]>([])
+const executingActions = ref<Record<string, boolean>>({})
+
+function loadToolbarActions() {
+  const actionRegistry = tsm?.getService('gene.action.registry')
+  if (!actionRegistry) return
+  const perspectiveManager = tsm?.getService('ui.registry.perspectives')
+  const perspectiveId = perspectiveManager?.state?.currentPerspectiveId || ''
+  toolbarActions.value = actionRegistry.getActionsForPerspective(perspectiveId)
+}
+
+// Reload when registry changes — retry until registry is available
+function initToolbarActions() {
+  const actionRegistry = tsm?.getService('gene.action.registry')
+  if (actionRegistry?.onChange) {
+    actionRegistry.onChange(() => loadToolbarActions())
+    loadToolbarActions()
+  } else {
+    // Registry not yet available, retry on next tick
+    setTimeout(initToolbarActions, 500)
+  }
+}
+initToolbarActions()
+
+async function executeToolbarAction(action: any) {
+  const actionManager = tsm?.getService('gene.action.manager')
+  if (!actionManager) return
+
+  const actionId = action.definition.actionId
+  executingActions.value = { ...executingActions.value, [actionId]: true }
+  try {
+    const context = {
+      selectedObject: ctxSelectedObject.value,
+      selectedObjects: [],
+      perspectiveId: '',
+      timestamp: new Date()
+    }
+    await actionManager.execute(actionId, context)
+  } finally {
+    const { [actionId]: _, ...rest } = executingActions.value
+    executingActions.value = rest
+  }
+}
 
 async function handleValidateOcl() {
   const ps = tsm?.getService('gene.problems')
@@ -163,72 +199,6 @@ async function handleValidateOcl() {
   }
 }
 
-async function handleValidateAtlas() {
-  const browser = tsm?.getService('ui.atlas-browser.composables')?.useSharedAtlasBrowser?.()
-  if (!browser) return
-
-  const activeConnection = browser.connections.value.find((c: any) => c.status === 'connected')
-  if (!activeConnection) return
-
-  const client = browser.getClient(activeConnection.id)
-  if (!client) return
-
-  const { getSharedResource: getRes } = await import('../composables/useInstanceTree')
-  const resource = getRes()
-  if (!resource || resource.getContents().length === 0) {
-    console.warn('[InstanceTree] No instances to validate on Atlas')
-    return
-  }
-
-  isValidatingAtlas.value = true
-  try {
-    // Serialize entire resource as XMI
-    const { XMIResource } = await import('@emfts/core')
-    const exportResource = new XMIResource()
-    for (const obj of resource.getContents()) {
-      exportResource.getContents().push(obj)
-    }
-    let xmiContent = exportResource.saveToString()
-    // Atlas expects _type instead of eType
-    xmiContent = xmiContent.replace(/ eType="/g, ' _type="')
-
-    const diagnostic = await client.validate(xmiContent)
-
-    // Collect messages from diagnostic tree
-    const ps = tsm?.getService('gene.problems')
-    if (ps) {
-      const messages: any[] = []
-      function collect(diag: any) {
-        if (diag.message && diag.type !== 'OK') {
-          messages.push({
-            severity: diag.type === 'ERROR' ? 'error' : 'warning',
-            message: `[Atlas] ${diag.message}`,
-            source: 'atlas-validation'
-          })
-        }
-        for (const child of diag.children || []) collect(child)
-      }
-      collect(diagnostic)
-
-      // Clear old atlas issues and add new
-      ps.clearIssuesBySource('atlas-validation')
-      if (messages.length > 0) {
-        ps.addIssues(messages)
-        eventBus.emit('show-problems')
-      }
-
-      console.log(`[InstanceTree] Atlas validation: ${messages.length} issue(s), status: ${diagnostic.type}`)
-
-      if (messages.length === 0) {
-        console.log('[InstanceTree] Atlas validation passed')
-      }
-    }
-  } catch (e) {
-    console.error('[InstanceTree] Atlas validation failed:', e)
-  } finally {
-    isValidatingAtlas.value = false
-  }
-}
 
 /**
  * Check if a class is a subtype of another
@@ -652,14 +622,16 @@ watch(ctxSelectedObject, (obj) => {
           v-tooltip.bottom="'Validate OCL (local)'"
         />
         <Button
-          v-if="isInstanceMode && hasAtlasConnection"
-          icon="pi pi-cloud-upload"
+          v-for="action in toolbarActions"
+          :key="action.definition.actionId"
+          :icon="action.definition.icon || 'pi pi-play'"
           text
           rounded
           size="small"
-          :disabled="!hasInstances || isValidatingAtlas"
-          @click="handleValidateAtlas"
-          v-tooltip.bottom="'Validate on Atlas Server'"
+          :disabled="!hasInstances || executingActions[action.definition.actionId]"
+          :loading="executingActions[action.definition.actionId]"
+          @click="executeToolbarAction(action)"
+          v-tooltip.bottom="action.definition.label"
         />
         <Button
           icon="pi pi-sitemap"

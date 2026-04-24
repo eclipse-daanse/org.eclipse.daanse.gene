@@ -358,21 +358,26 @@ watch(() => props.contextClass, () => {
 
 // --- Helpers ---
 
+/** Extract the class name from contextClass (which may be URI format nsURI#//ClassName) */
+function contextClassName(): string {
+  const cc = props.contextClass
+  if (!cc) return ''
+  const hashIdx = cc.indexOf('#//')
+  return hashIdx >= 0 ? cc.substring(hashIdx + 3) : cc
+}
+
 function buildDocumentText(expression: string): string {
-  if (props.contextClass) {
-    // Wrap as valid OCL: ClassifierContext with an invariant constraint
-    // Grammar: 'context' type=QualifiedName 'inv' (name=ID)? ':' expression=Expression
-    // OCL uses '::' as package separator, but contextClass uses '.'
-    const oclQualifiedName = props.contextClass.replaceAll('.', '::')
-    return `context ${oclQualifiedName} inv _: ${expression}`
+  const className = contextClassName()
+  if (className) {
+    return `context ${className} inv _: ${expression}`
   }
   return expression
 }
 
 function extractExpression(text: string): string {
-  if (props.contextClass) {
-    const oclQualifiedName = props.contextClass.replaceAll('.', '::')
-    const prefix = `context ${oclQualifiedName} inv _: `
+  const className = contextClassName()
+  if (className) {
+    const prefix = `context ${className} inv _: `
     if (text.startsWith(prefix)) {
       return text.slice(prefix.length)
     }

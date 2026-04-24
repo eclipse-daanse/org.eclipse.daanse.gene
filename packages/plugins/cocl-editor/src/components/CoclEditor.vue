@@ -43,29 +43,27 @@ const contextClassOptions = computed((): string[] => {
   const options: string[] = []
   for (const pkgInfo of modelRegistry.allPackages.value) {
     const pkg = pkgInfo.ePackage
-    collectClassNames(pkg, '', options)
+    const nsURI = pkg.getNsURI?.() || ''
+    collectClassURIs(pkg, nsURI, options)
   }
   return options.sort()
 })
 
-function collectClassNames(pkg: any, prefix: string, result: string[]) {
-  const pkgName = pkg.getName?.() || ''
-  const fullPrefix = prefix ? `${prefix}.${pkgName}` : pkgName
-
+function collectClassURIs(pkg: any, nsURI: string, result: string[]) {
   const classifiers = pkg.getEClassifiers?.() || []
   for (const classifier of Array.from(classifiers)) {
     if ('getEAttributes' in classifier || 'getEAllAttributes' in classifier) {
-      // It's an EClass
       const className = (classifier as any).getName?.() || ''
-      if (className) {
-        result.push(`${fullPrefix}.${className}`)
+      if (className && nsURI) {
+        result.push(`${nsURI}#//${className}`)
       }
     }
   }
 
   const subPackages = pkg.getESubpackages?.() || []
   for (const subPkg of Array.from(subPackages)) {
-    collectClassNames(subPkg, fullPrefix, result)
+    const subNsURI = subPkg.getNsURI?.() || nsURI
+    collectClassURIs(subPkg, subNsURI, result)
   }
 }
 
@@ -107,21 +105,19 @@ function handleClassSearchSelect(hit: any) {
 
     let qualifiedName = name
 
-    // If this is an EClass, build package.ClassName format
+    // If this is an EClass, build nsURI#//ClassName format
     if (objMetaClass === 'EClass') {
-      const parts: string[] = []
+      // Walk up to find the EPackage with nsURI
       let container = obj.eContainer?.()
       while (container) {
-        const containerName = container.getName?.()
-        if (containerName) {
-          parts.unshift(containerName)
+        const nsURI = container.getNsURI?.()
+        if (nsURI) {
+          qualifiedName = `${nsURI}#//${name}`
+          break
         }
         const parent = container.eContainer?.()
         if (!parent || parent === container) break
         container = parent
-      }
-      if (parts.length > 0) {
-        qualifiedName = `${parts.join('.')}.${name}`
       }
     }
 
@@ -195,20 +191,19 @@ function handleClassTreeSelect(node: any) {
   const name = eClass.getName?.()
   if (!name) return
 
-  // Walk eContainer() chain to build package.ClassName
-  const parts: string[] = []
+  // Walk eContainer() chain to find EPackage with nsURI
+  let qualifiedName = name
   let container = eClass.eContainer?.()
   while (container) {
-    const containerName = container.getName?.()
-    if (containerName) {
-      parts.unshift(containerName)
+    const nsURI = container.getNsURI?.()
+    if (nsURI) {
+      qualifiedName = `${nsURI}#//${name}`
+      break
     }
     const parent = container.eContainer?.()
     if (!parent || parent === container) break
     container = parent
   }
-
-  const qualifiedName = parts.length > 0 ? `${parts.join('.')}.${name}` : name
 
   // Update the selected constraint's contextClass
   if (constraintSet.value && selectedConstraintName.value) {
@@ -230,36 +225,37 @@ const selectedConstraint = computed((): CoclConstraint | null => {
   return constraintSet.value.constraints.find(c => c.name === selectedConstraintName.value) || null
 })
 
-// Find EClass by contextClass string (e.g. "organization.Person")
+// Find EClass by contextClass string (URI format: "nsURI#//ClassName")
 function findEClassByContextName(contextClass: string): any | null {
   if (!contextClass) return null
-  // contextClass is "pkg.sub.ClassName" — last part is class name
-  const lastDot = contextClass.lastIndexOf('.')
-  const className = lastDot >= 0 ? contextClass.substring(lastDot + 1) : contextClass
+
+  // Parse URI format: nsURI#//ClassName
+  const hashIdx = contextClass.indexOf('#//')
+  if (hashIdx < 0) return null
+
+  const nsURI = contextClass.substring(0, hashIdx)
+  const className = contextClass.substring(hashIdx + 3)
 
   for (const pkgInfo of modelRegistry.allPackages.value) {
-    const found = findClassInPackage(pkgInfo.ePackage, '', contextClass, className)
-    if (found) return found
+    const pkg = pkgInfo.ePackage
+    if (pkg.getNsURI?.() === nsURI) {
+      const found = findClassInPackage(pkg, className)
+      if (found) return found
+    }
   }
   return null
 }
 
-function findClassInPackage(pkg: any, prefix: string, contextClass: string, className: string): any | null {
-  const pkgName = pkg.getName?.() || ''
-  const fullPrefix = prefix ? `${prefix}.${pkgName}` : pkgName
-
+function findClassInPackage(pkg: any, className: string): any | null {
   const classifiers = pkg.getEClassifiers?.() || []
   for (const classifier of Array.from(classifiers)) {
     const cName = (classifier as any).getName?.()
-    if (cName === className) {
-      const qualifiedName = `${fullPrefix}.${cName}`
-      if (qualifiedName === contextClass) return classifier
-    }
+    if (cName === className) return classifier
   }
 
   const subPackages = pkg.getESubpackages?.() || []
   for (const subPkg of Array.from(subPackages)) {
-    const found = findClassInPackage(subPkg, fullPrefix, contextClass, className)
+    const found = findClassInPackage(subPkg, className)
     if (found) return found
   }
   return null
@@ -306,6 +302,20 @@ const targetNsURIsText = computed({
 function markDirty() {
   isDirty.value = true
   saveStatus.value = 'dirty'
+  updateTargetNsURIs()
+}
+
+/** Auto-compute targetModelNsURIs from constraint contextClass values */
+function updateTargetNsURIs() {
+  if (!constraintSet.value) return
+  const nsURIs = new Set<string>()
+  for (const c of constraintSet.value.constraints) {
+    if (c.contextClass?.includes('#//')) {
+      const nsURI = c.contextClass.split('#//')[0]
+      if (nsURI) nsURIs.add(nsURI)
+    }
+  }
+  constraintSet.value.targetModelNsURIs = Array.from(nsURIs)
 }
 
 // Load the .c-ocl data

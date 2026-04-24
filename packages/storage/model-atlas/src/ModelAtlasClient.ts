@@ -504,7 +504,7 @@ export class ModelAtlasClient {
    * @param oclId - ID of the OclConstraintSet in the cocl registry
    */
   async validateWithConstraints(xmiContent: string, oclId: string): Promise<ValidationDiagnostic> {
-    const resp = await this.request('GET', `/validate/${enc(oclId)}`, xmiContent, {
+    const resp = await this.request('POST', `/validate/${enc(oclId)}`, xmiContent, {
       contentType: 'application/xmi',
       accept: 'application/xmi'
     })
