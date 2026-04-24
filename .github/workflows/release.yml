@@ -126,6 +126,14 @@ jobs:
             TITLE="GenE ${VERSION}"
           fi
 
+          # Delete existing release with same tag (if re-running)
+          gh release delete "$TAG" --yes 2>/dev/null || true
+
+          PRERELEASE_FLAG=""
+          if [[ "$VERSION" == *-* ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
           gh release create "$TAG" "$ZIP_NAME" \
             --title "$TITLE" \
             --notes "## GenE Release ${VERSION}
@@ -133,4 +141,4 @@ jobs:
           ### Enthaltene Plugins
           ${PLUGINS}
           " \
-            --latest
+            $PRERELEASE_FLAG
