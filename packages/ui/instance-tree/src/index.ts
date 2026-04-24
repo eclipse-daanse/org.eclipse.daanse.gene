@@ -134,7 +134,7 @@ import * as iconRegistry from './services/iconRegistry'
 import { getIconRegistryService } from './services/iconRegistry'
 
 // Import context functions for service registration
-import { createInstanceContext, setModelRegistryGetter } from './context/instanceContext'
+import { createInstanceContext, setTsmContext } from './context/instanceContext'
 import { createMetamodelContext } from './context/metamodelContext'
 
 // Import icon provider system
@@ -222,11 +222,8 @@ export async function activate(context: ModuleContext): Promise<void> {
   context.services.register('gene.icons.classRegistry', getIconRegistryService())
   context.services.register('ui.instance-tree.iconRegistry', iconRegistry)
 
-  // Provide lazy getter for model registry (breaks circular dependency with ui-model-browser)
-  setModelRegistryGetter(() => {
-    const composables = context.services.get<any>('ui.model-browser.composables')
-    return composables?.useSharedModelRegistry?.()
-  })
+  // Pass TSM context for lazy service resolution (model-browser loads after instance-tree)
+  setTsmContext(context)
 
   // Register shared views as DI service
   const sharedViews = useSharedViews()

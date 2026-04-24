@@ -293,7 +293,8 @@ export function useModelRegistry() {
 
       const rawNodes = rootPackages.map(pkg => packageToTreeNode(pkg))
       // Apply view filtering to hide types
-      return filterModelTreeNodes(rawNodes, views.isTypeHidden)
+      const isTypeHidden = _viewsService?.isTypeHidden ?? (() => false)
+      return filterModelTreeNodes(rawNodes, isTypeHidden)
     } catch (e) {
       console.error('[ModelRegistry] Error computing treeNodes:', e)
       return []
