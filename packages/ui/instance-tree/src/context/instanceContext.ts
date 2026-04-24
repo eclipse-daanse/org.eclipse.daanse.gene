@@ -5,16 +5,29 @@
  * for the Instance Editor perspective.
  */
 
-import { computed, ref } from 'tsm:vue'
+import { computed, ref, triggerRef } from 'tsm:vue'
 import type { EditorContext, PackageInfo, ClassInfo, TreeNode } from './editorContext'
 import { useSharedInstanceTree } from '../composables/useInstanceTree'
 import type { EClass, EReference, EObject } from '@emfts/core'
 
-// Model registry resolver — avoids circular dependency with ui-model-browser
-let _modelRegistryGetter: (() => any) | null = null
+// TSM service getter — set during activate() to avoid circular dependency
+let _tsmContext: any = null
+// Reactive version counter — incremented when model registry becomes available
+const _registryVersion = ref(0)
 
-export function setModelRegistryGetter(getter: () => any) {
-  _modelRegistryGetter = getter
+export function setTsmContext(ctx: any) {
+  _tsmContext = ctx
+  // Poll until model-browser service is available, then trigger reactivity
+  const interval = setInterval(() => {
+    if (_tsmContext?.services?.get('ui.model-browser.composables')) {
+      _registryVersion.value++
+      clearInterval(interval)
+    }
+  }, 100)
+}
+
+function getModelRegistry(): any {
+  return _tsmContext?.services?.get('ui.model-browser.composables')?.useSharedModelRegistry()
 }
 
 /**
@@ -22,13 +35,13 @@ export function setModelRegistryGetter(getter: () => any) {
  */
 export function createInstanceContext(): EditorContext {
   const instanceTree = useSharedInstanceTree()
-  // Lazy resolve: model-browser may load after instance-tree
-  const getModelRegistry = () => _modelRegistryGetter?.() ?? null
 
   // Adapt model registry packages to PackageInfo
   const allPackages = computed<PackageInfo[]>(() => {
+    // Track registry availability for reactivity
+    const _v = _registryVersion.value
     const mr = getModelRegistry()
-    if (!mr) return []
+    if (!mr?.allPackages) return []
     return mr.allPackages.value.map((pkg: any) => ({
       nsURI: pkg.nsURI,
       name: pkg.name,
