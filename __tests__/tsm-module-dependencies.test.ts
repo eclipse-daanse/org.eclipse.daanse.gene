@@ -217,8 +217,8 @@ describe('TSM Module Dependencies', () => {
     expect(deps.size, `ui-layout still imports: ${[...deps].join(', ')}`).toBe(0)
   })
 
-  // Plugins should not import from other plugins (Phase 5 TODO)
-  it.todo('should not have plugins importing from other plugins', () => {
+  // Plugins should not import from other plugins
+  it('should not have plugins importing from other plugins', () => {
     const pluginIds = [...modules.entries()]
       .filter(([_, path]) => path.includes('/plugins/'))
       .map(([id]) => id)

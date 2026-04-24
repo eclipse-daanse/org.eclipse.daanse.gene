@@ -45,7 +45,7 @@ export { OclPanel } from './components'
 
 // Import for registration
 import { ProblemsPanel } from './components'
-import { useProblemsService, useSharedProblemsService } from './composables'
+import { useProblemsService, useSharedProblemsService, loadCoclFromString } from './composables'
 import { setEventBus } from './composables/useProblemsService'
 
 /**
@@ -72,7 +72,8 @@ export async function activate(context: ModuleContext): Promise<void> {
   // Register composables as service (new ID)
   context.services.register('ui.problems-panel.service', {
     useProblemsService,
-    useSharedProblemsService
+    useSharedProblemsService,
+    loadCoclFromString
   })
 
   // Legacy service IDs for backwards compatibility

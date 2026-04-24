@@ -30,3 +30,14 @@ export {
 
 // Components
 export { default as SearchDialog } from './components/SearchDialog.vue'
+
+import type { ModuleContext } from '@eclipse-daanse/tsm'
+import SearchDialog from './components/SearchDialog.vue'
+
+export async function activate(context: ModuleContext): Promise<void> {
+  context.services.register('ui.search.components', { SearchDialog })
+}
+
+export async function deactivate(context: ModuleContext): Promise<void> {
+  context.services.unregister('ui.search.components')
+}

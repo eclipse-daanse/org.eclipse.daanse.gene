@@ -9,9 +9,6 @@
 import { ref, computed, onMounted, reactive, inject, watch } from 'tsm:vue'
 import { InputText, Button, Dialog, Tree } from 'tsm:primevue'
 import type { CoclConstraint, CoclConstraintSet } from 'ui-problems-panel'
-import { loadCoclFromString } from 'ui-problems-panel'
-import { SearchDialog } from 'ui-search'
-import { getSharedOclClient } from 'transformation'
 import { serializeCoclToXml } from '../composables/useCoclSerializer'
 import { useCoclAtlas } from '../composables/useCoclAtlas'
 import ConstraintList from './ConstraintList.vue'
@@ -19,6 +16,11 @@ import ConstraintForm from './ConstraintForm.vue'
 
 // TSM service access
 const _tsm = inject<any>('tsm')
+
+// Components and functions from other TSM modules (via service)
+const SearchDialog = computed(() => _tsm?.getService('ui.search.components')?.SearchDialog)
+const loadCoclFromString = _tsm?.getService('ui.problems-panel.service')?.loadCoclFromString
+const getSharedOclClient = () => _tsm?.getService('ui.transformation.composables')?.getSharedOclClient?.()
 const atlas = useCoclAtlas(_tsm)
 
 // Server dialog state
@@ -732,8 +734,9 @@ async function handleSelectServerConfig(cfg: any) {
   </div>
 
   <!-- Class Search Dialog -->
-  <SearchDialog
-    v-if="metamodelResource"
+  <component
+    :is="SearchDialog"
+    v-if="SearchDialog && metamodelResource"
     :visible="showClassSearch"
     :resource="metamodelResource"
     :browseMode="true"

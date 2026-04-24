@@ -13,7 +13,8 @@ export { TransformationEditor, OclMonacoEditor } from './components'
 export { getSharedOclClient } from './composables/useOclLanguageClient'
 
 // Import for service registration
-import { TransformationEditor } from './components'
+import { TransformationEditor, OclMonacoEditor } from './components'
+import { getSharedOclClient } from './composables/useOclLanguageClient'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
@@ -24,9 +25,13 @@ import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-per
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Transformation plugin...')
 
-  // Register components as service
+  // Register components and composables as service
   context.services.register('ui.transformation.components', {
-    TransformationEditor
+    TransformationEditor,
+    OclMonacoEditor
+  })
+  context.services.register('ui.transformation.composables', {
+    getSharedOclClient
   })
 
   // Register transformation perspective
