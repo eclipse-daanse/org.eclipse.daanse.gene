@@ -14,7 +14,6 @@ import { Column } from 'tsm:primevue'
 import { Dropdown } from 'tsm:primevue'
 import { InputNumber } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
-import { useSharedModelRegistry } from 'ui-model-browser'
 import {
   getAllMappings,
   MappingScope,
@@ -24,9 +23,9 @@ import {
 import IconPicker from './IconPicker.vue'
 import type { SelectedIcon } from '../services/iconProviders'
 
-// Get model registry for available classes
-const modelRegistry = useSharedModelRegistry()
+// Get model registry via TSM service (avoids circular dependency with ui-model-browser)
 const tsm = inject<any>('tsm')
+const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry?.()
 const editorConfigInjected = inject<any>('gene.editor.config', null)
 
 // Get global EditorConfig service

@@ -8,15 +8,24 @@
 import { computed, ref } from 'tsm:vue'
 import type { EditorContext, PackageInfo, ClassInfo, TreeNode } from './editorContext'
 import { useSharedInstanceTree } from '../composables/useInstanceTree'
-import { useSharedModelRegistry } from 'ui-model-browser'
 import type { EClass, EReference, EObject } from '@emfts/core'
+
+// Model registry injected via setModelRegistry() — avoids circular dependency with ui-model-browser
+let _modelRegistry: any = null
+
+export function setModelRegistry(registry: any) {
+  _modelRegistry = registry
+}
 
 /**
  * Create an EditorContext for Instance Editor mode
  */
 export function createInstanceContext(): EditorContext {
   const instanceTree = useSharedInstanceTree()
-  const modelRegistry = useSharedModelRegistry()
+  const modelRegistry = _modelRegistry
+  if (!modelRegistry) {
+    throw new Error('[instanceContext] Model registry not set. Call setModelRegistry() first.')
+  }
 
   // Adapt model registry packages to PackageInfo
   const allPackages = computed<PackageInfo[]>(() => {
