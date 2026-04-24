@@ -25,7 +25,7 @@ function findBuiltPlugins() {
   const plugins = []
 
   const scanDirs = [
-    { base: 'packages', recursive: false },
+    { base: 'packages', recursive: true },
     { base: 'plugins', recursive: true }
   ]
 
