@@ -12,7 +12,6 @@ import { Column } from 'tsm:primevue'
 import { InputNumber } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
 import { useSharedPerspective, type StorageStrategy } from 'ui-perspectives'
-import { useSharedModelRegistry } from 'ui-model-browser'
 import {
   getAllMappings,
   MappingScope,
@@ -28,8 +27,8 @@ const emit = defineEmits<{
 }>()
 
 const perspective = useSharedPerspective()
-const modelRegistry = useSharedModelRegistry()
 const tsm = inject<any>('tsm')
+const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
 const editorConfigService = inject<any>('gene.editor.config', null)
 
 const workspaceSettings = computed(() => perspective.state.workspaceSettings)

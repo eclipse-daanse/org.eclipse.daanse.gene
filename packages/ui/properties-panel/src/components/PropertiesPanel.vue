@@ -15,7 +15,6 @@ import { Button } from 'tsm:primevue'
 import { Breadcrumb } from 'tsm:primevue'
 import { InputText } from 'tsm:primevue'
 import { useSharedInstanceTree, getXmiId, setXmiId, generateXmiId } from 'ui-instance-tree'
-import { useSharedModelRegistry } from 'ui-model-browser'
 import { useInstanceEditor, PropertyField, DerivedField, CoclDerivedField, OperationField, OperationParameterDialog, GENE_EDITOR_CONTEXT_KEY } from 'instance-builder'
 import type { EObject, EStructuralFeature, EClass, EReference, EOperation, Resource } from '@emfts/core'
 
@@ -91,7 +90,7 @@ function getActions() {
 
 // Fallback to shared instance tree if no context provided
 const instanceTree = useSharedInstanceTree()
-const modelRegistry = useSharedModelRegistry()
+const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
 
 // Problems service for OCL evaluation
 const problemsService = ref<any>(null)

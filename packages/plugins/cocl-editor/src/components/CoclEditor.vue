@@ -10,7 +10,6 @@ import { ref, computed, onMounted, reactive, inject, watch } from 'tsm:vue'
 import { InputText, Button, Dialog, Tree } from 'tsm:primevue'
 import type { CoclConstraint, CoclConstraintSet } from 'ui-problems-panel'
 import { loadCoclFromString } from 'ui-problems-panel'
-import { useSharedModelRegistry } from 'ui-model-browser'
 import { SearchDialog } from 'ui-search'
 import { getSharedOclClient } from 'transformation'
 import { serializeCoclToXml } from '../composables/useCoclSerializer'
@@ -37,7 +36,7 @@ let fileEntry: any = null
 let filePath: string = ''
 
 // Model registry for context class dropdown
-const modelRegistry = useSharedModelRegistry()
+const modelRegistry = _tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
 
 const contextClassOptions = computed((): string[] => {
   const options: string[] = []

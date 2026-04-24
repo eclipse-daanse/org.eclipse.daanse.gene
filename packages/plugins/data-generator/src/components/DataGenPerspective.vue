@@ -15,7 +15,6 @@ import { registerDatafakerProviders } from '../composables/useDatafakerProviders
 import { generateInstances } from '../composables/useInstanceGenerator'
 import { useRemoteDataGen } from '../composables/useRemoteDataGen'
 import { useDataGenAtlas, setDataGenTsm } from '../composables/useDataGenAtlas'
-import { useSharedModelRegistry } from 'ui-model-browser'
 import DataGenTree from './DataGenTree.vue'
 import DataGenEditor from './DataGenEditor.vue'
 import GenerationDialog from './GenerationDialog.vue'
@@ -99,7 +98,7 @@ onMounted(() => {
 })
 
 // --- Model registry for class picker ---
-const modelRegistry = useSharedModelRegistry()
+const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
 
 const classTreeNodes = computed(() => {
   const allPkgs = modelRegistry.allPackages?.value || []

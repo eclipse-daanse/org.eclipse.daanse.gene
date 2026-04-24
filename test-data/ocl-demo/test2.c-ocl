@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cocl:OclConstraintSet xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:cocl="http://www.gme.org/cocl/1.0"
+    name="test2"
+    version="1.0">
+  <targetModelNsURIs>https://dg.de/1.0</targetModelNsURIs>
+
+  <constraints name="add"
+      expression="self.city.matches(&apos;Jena&apos;)"
+      severity="ERROR"
+      role="VALIDATION"
+      contextClass="https://dg.de/1.0#//Address"
+      active="true"/>
+
+</cocl:OclConstraintSet>

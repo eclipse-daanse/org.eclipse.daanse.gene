@@ -75,6 +75,7 @@
   "devDependencies": {
     "@emfts/codegen": "^0.0.1-next.1",
     "@originjs/vite-plugin-federation": "^1.4.1",
+
     "@tsconfig/node24": "^24.0.3",
     "@types/jsdom": "^27.0.0",
     "@types/node": "^24.10.4",

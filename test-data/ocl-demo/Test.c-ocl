@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cocl:OclConstraintSet xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:cocl="http://www.gme.org/cocl/1.0"
+    name="Test"
+    version="1.0">
+  <constraints name="EmployeeMustHaveName"
+      expression="not self.firstName.oclIsUndefined() and not self.lastName.oclIsUndefined() and self.firstName.size() &gt; 0 and self.lastName.size() &gt; 0"
+      severity="ERROR"
+      role="VALIDATION"
+      contextClass="Person"
+      active="true"/>
+
+</cocl:OclConstraintSet>
