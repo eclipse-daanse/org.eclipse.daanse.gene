@@ -1,1 +1,0 @@
-- [feedback_no_coauthor.md](feedback_no_coauthor.md) — Keine Co-Authored-By Zeilen in Commits
