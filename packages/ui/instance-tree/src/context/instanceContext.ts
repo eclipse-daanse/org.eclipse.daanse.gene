@@ -10,11 +10,11 @@ import type { EditorContext, PackageInfo, ClassInfo, TreeNode } from './editorCo
 import { useSharedInstanceTree } from '../composables/useInstanceTree'
 import type { EClass, EReference, EObject } from '@emfts/core'
 
-// Model registry injected via setModelRegistry() — avoids circular dependency with ui-model-browser
-let _modelRegistry: any = null
+// Model registry resolver — avoids circular dependency with ui-model-browser
+let _modelRegistryGetter: (() => any) | null = null
 
-export function setModelRegistry(registry: any) {
-  _modelRegistry = registry
+export function setModelRegistryGetter(getter: () => any) {
+  _modelRegistryGetter = getter
 }
 
 /**
@@ -22,14 +22,14 @@ export function setModelRegistry(registry: any) {
  */
 export function createInstanceContext(): EditorContext {
   const instanceTree = useSharedInstanceTree()
-  const modelRegistry = _modelRegistry
-  if (!modelRegistry) {
-    throw new Error('[instanceContext] Model registry not set. Call setModelRegistry() first.')
-  }
+  // Lazy resolve: model-browser may load after instance-tree
+  const getModelRegistry = () => _modelRegistryGetter?.() ?? null
 
   // Adapt model registry packages to PackageInfo
   const allPackages = computed<PackageInfo[]>(() => {
-    return modelRegistry.allPackages.value.map(pkg => ({
+    const mr = getModelRegistry()
+    if (!mr) return []
+    return mr.allPackages.value.map((pkg: any) => ({
       nsURI: pkg.nsURI,
       name: pkg.name,
       nsPrefix: pkg.nsPrefix,
@@ -41,10 +41,12 @@ export function createInstanceContext(): EditorContext {
 
   // Get concrete classes from a package
   function getConcreteClasses(pkg: PackageInfo): ClassInfo[] {
-    const modelPkg = modelRegistry.allPackages.value.find(p => p.nsURI === pkg.nsURI)
+    const mr = getModelRegistry()
+    if (!mr) return []
+    const modelPkg = mr.allPackages.value.find((p: any) => p.nsURI === pkg.nsURI)
     if (!modelPkg) return []
 
-    return modelRegistry.getConcreteClasses(modelPkg).map(cls => ({
+    return mr.getConcreteClasses(modelPkg).map((cls: any) => ({
       qualifiedName: cls.qualifiedName,
       name: cls.name,
       eClass: cls.eClass,
@@ -85,7 +87,9 @@ export function createInstanceContext(): EditorContext {
     allPackages,
     getConcreteClasses,
     findClass: (qualifiedName: string) => {
-      const classInfo = modelRegistry.findClass(qualifiedName)
+      const mr = getModelRegistry()
+      if (!mr) return null
+      const classInfo = mr.findClass(qualifiedName)
       if (!classInfo) return null
       const pkg = allPackages.value.find(p => p.nsURI === classInfo.packageInfo.nsURI)
       if (!pkg) return null
@@ -99,11 +103,11 @@ export function createInstanceContext(): EditorContext {
       }
     },
 
-    // Model Browser tree nodes
-    modelTreeNodes: modelRegistry.treeNodes,
+    // Model Browser tree nodes (lazy computed to handle late loading)
+    modelTreeNodes: computed(() => getModelRegistry()?.treeNodes?.value ?? []),
 
     // Package management
-    unregisterPackage: (nsURI: string) => modelRegistry.unregisterPackage(nsURI),
+    unregisterPackage: (nsURI: string) => getModelRegistry()?.unregisterPackage(nsURI),
 
     // Root object management
     addRootObject: (obj: EObject) => instanceTree.addRootObject(obj),
