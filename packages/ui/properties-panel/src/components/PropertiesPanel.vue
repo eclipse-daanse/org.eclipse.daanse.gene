@@ -14,13 +14,10 @@ import { Message } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
 import { Breadcrumb } from 'tsm:primevue'
 import { InputText } from 'tsm:primevue'
-import { useSharedInstanceTree, getXmiId, setXmiId, generateXmiId } from 'ui-instance-tree'
-import { useInstanceEditor, PropertyField, DerivedField, CoclDerivedField, OperationField, OperationParameterDialog, GENE_EDITOR_CONTEXT_KEY } from 'instance-builder'
 import type { EObject, EStructuralFeature, EClass, EReference, EOperation, Resource } from '@emfts/core'
 
 const OCL_SOURCES = ['http://www.eclipse.org/fennec/m2x/ocl/1.0', 'http://www.eclipse.org/emf/2002/Ecore/OCL', 'http://www.eclipse.org/OCL/Pivot']
 function isOclSource(s: string | null | undefined): boolean { return !!s && OCL_SOURCES.includes(s) }
-import { getSharedResource } from 'ui-instance-tree'
 
 /** C-OCL Constraint interface */
 interface CoclConstraint {
@@ -88,8 +85,25 @@ function getActions() {
   return tsm?.getService('gene.workspace.actions')
 }
 
-// Fallback to shared instance tree if no context provided
-const instanceTree = useSharedInstanceTree()
+// Instance tree and builder via TSM services (avoids static cross-module imports)
+const instanceTreeComposables = tsm?.getService('ui.instance-tree.composables')
+const instanceTree = instanceTreeComposables?.useSharedInstanceTree()
+const getXmiId = instanceTreeComposables?.getXmiId
+const setXmiId = instanceTreeComposables?.setXmiId
+const generateXmiId = instanceTreeComposables?.generateXmiId
+const getSharedResource = instanceTreeComposables?.getSharedResource
+
+const instanceComponents = tsm?.getService('ui.instance.components')
+const PropertyField = instanceComponents?.PropertyField
+const DerivedField = instanceComponents?.DerivedField
+const CoclDerivedField = instanceComponents?.CoclDerivedField
+const OperationField = instanceComponents?.OperationField
+const OperationParameterDialog = instanceComponents?.OperationParameterDialog
+
+const instanceComposables = tsm?.getService('ui.instance.composables')
+const useInstanceEditor = instanceComposables?.useInstanceEditor
+const GENE_EDITOR_CONTEXT_KEY = instanceComposables?.GENE_EDITOR_CONTEXT_KEY
+
 const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
 
 // Problems service for OCL evaluation

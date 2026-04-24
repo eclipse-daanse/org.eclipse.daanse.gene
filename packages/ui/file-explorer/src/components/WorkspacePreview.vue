@@ -12,12 +12,14 @@ import { Card } from 'tsm:primevue'
 import { Message } from 'tsm:primevue'
 import type { FileEntry } from '../types'
 import { useSharedFileSystem } from '../composables/useFileSystem'
-import { XmiViewer, useFileViewerRegistry, registerXmiViewer } from 'ui-xmi-viewer'
-
 const fileSystem = useSharedFileSystem()
 
 // TSM for service access
 const tsm = inject<any>('tsm')
+
+// XMI Viewer via TSM service (avoids static dependency on ui-xmi-viewer)
+const XmiViewer = computed(() => tsm?.getService('ui.xmi-viewer.component'))
+const useFileViewerRegistry = () => tsm?.getService('ui.xmi-viewer.registry')?.()
 
 // WorkspaceActionService for direct App-level actions (replaces emits)
 function getActions() {
@@ -33,9 +35,6 @@ const props = defineProps<{
 // Resolved selectedFile: prop takes priority, otherwise shared state
 const selectedFile = computed(() => props.selectedFile ?? fileSystem.selectedFile.value)
 const fileViewerRegistry = useFileViewerRegistry()
-
-// Register XMI viewer on first use
-registerXmiViewer()
 
 // Preview state
 const loading = ref(false)
@@ -321,7 +320,9 @@ function handleLoadCocl() {
 
     <!-- XMI Instance Data Preview (uses XmiViewer component) -->
     <div v-else-if="isXmiFile && !isWorkspaceFile && fileContent" class="xmi-file-preview">
-      <XmiViewer
+      <component
+        :is="XmiViewer"
+        v-if="XmiViewer"
         :content="fileContent"
         :file-name="selectedFile.name"
       />
