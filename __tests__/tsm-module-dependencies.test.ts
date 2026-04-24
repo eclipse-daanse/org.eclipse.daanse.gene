@@ -202,6 +202,38 @@ describe('TSM Module Dependencies', () => {
     expect(deps.has('ui-model-browser')).toBe(false)
   })
 
+  // Phase 2: no module should statically import ui-model-browser
+  it('should not have any module importing VALUE from ui-model-browser', () => {
+    for (const [id, deps] of graph) {
+      if (id !== 'ui-model-browser') {
+        expect(deps.has('ui-model-browser'), `${id} imports ui-model-browser`).toBe(false)
+      }
+    }
+  })
+
+  // Phase 3+4: ui-layout should have zero cross-module VALUE dependencies
+  it('should not have ui-layout importing from any other TSM module', () => {
+    const deps = graph.get('ui-layout') || new Set()
+    expect(deps.size, `ui-layout still imports: ${[...deps].join(', ')}`).toBe(0)
+  })
+
+  // Plugins should not import from other plugins (Phase 5 TODO)
+  it.todo('should not have plugins importing from other plugins', () => {
+    const pluginIds = [...modules.entries()]
+      .filter(([_, path]) => path.includes('/plugins/'))
+      .map(([id]) => id)
+
+    for (const pluginId of pluginIds) {
+      const deps = graph.get(pluginId) || new Set()
+      for (const dep of deps) {
+        const depPath = modules.get(dep)
+        if (depPath?.includes('/plugins/') && dep !== pluginId) {
+          expect.fail(`Plugin ${pluginId} imports from plugin ${dep}. Plugins should communicate via TSM services.`)
+        }
+      }
+    }
+  })
+
   it('should log the dependency graph for reference', () => {
     const lines: string[] = []
     for (const [id, deps] of [...graph.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
