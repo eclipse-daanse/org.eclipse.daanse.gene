@@ -17,7 +17,6 @@
   "dependencies": [
     "gene-app",
     "ui-layout",
-    "ui-perspectives",
-    "ui-model-browser"
+    "ui-perspectives"
   ]
 }

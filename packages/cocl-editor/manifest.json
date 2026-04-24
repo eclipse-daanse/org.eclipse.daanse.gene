@@ -6,8 +6,7 @@
   "entry": "src/index.ts",
   "dependencies": [
     "gene-app",
-    "ui-layout",
-    "transformation"
+    "ui-layout"
   ],
   "provides": [
     {
