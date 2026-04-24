@@ -27,11 +27,11 @@ import StatusBar from './StatusBar.vue'
 import WorkspaceSettingsDialog from './WorkspaceSettingsDialog.vue'
 import SaveInstancesDialog from './SaveInstancesDialog.vue'
 
+const tsm = inject<any>('tsm')
 const layout = useLayoutState()
 const panelShortcuts = usePanelKeyboardShortcuts()
 const workspaceState = tsm?.getService('ui.workspace.composables')?.useSharedWorkspace()
 const fileSystem = tsm?.getService('ui.file-explorer.composables')?.useSharedFileSystem()
-const tsm = inject<any>('tsm')
 const perspective = tsm?.getService('ui.perspectives')?.useSharedPerspective()
 const eventBus = useEventBus()
 
@@ -45,12 +45,12 @@ const showWorkspaceSettings = ref(false)
 const showSaveInstances = ref(false)
 
 // Check if we have a workspace open
-const hasWorkspace = computed(() => !!perspective.state.workspacePath)
+const hasWorkspace = computed(() => !!perspective?.state?.workspacePath)
 
 // Workspace name - prefer: workspace file path > active repo name > workspace name > file system root path
 const workspaceName = computed(() => {
   // Try workspace file path first (e.g., "sören.wsp")
-  if (perspective.state.workspacePath) {
+  if (perspective?.state?.workspacePath) {
     const fileName = perspective.state.workspacePath.split('/').pop()
     if (fileName) {
       return fileName
@@ -58,19 +58,19 @@ const workspaceName = computed(() => {
   }
 
   // Try active repository name
-  const activeRepo = workspaceState.activeRepository.value
+  const activeRepo = workspaceState?.activeRepository?.value
   if (activeRepo?.name) {
     return activeRepo.name
   }
 
   // Then workspace name (if not default)
-  const wsName = workspaceState.workspace.value?.name
+  const wsName = workspaceState?.workspace?.value?.name
   if (wsName && wsName !== 'Default Workspace') {
     return wsName
   }
 
   // Fallback to file system root path
-  if (fileSystem.rootPath.value) {
+  if (fileSystem?.rootPath?.value) {
     return fileSystem.rootPath.value
   }
 
