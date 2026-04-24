@@ -12,7 +12,6 @@
 
 import { ref, computed, onMounted, onUnmounted, nextTick, watch, reactive, inject } from 'tsm:vue'
 import { Dropdown, Button, InputText } from 'tsm:primevue'
-import { useSharedModelRegistry } from 'ui-model-browser'
 import type { ModelPackageInfo, ClassInfo } from 'ui-model-browser'
 import type { EClass } from '@emfts/core'
 import OclMonacoEditor from './OclMonacoEditor.vue'
@@ -69,7 +68,7 @@ const tsm = inject<any>('tsm')
 
 // --- Model Registry ---
 
-const modelRegistry = useSharedModelRegistry()
+const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
 
 const packageOptions = computed(() =>
   modelRegistry.allPackages.value.map(pkg => ({

@@ -9,9 +9,8 @@
  * Uses useSharedModelRegistry() to access loaded EPackages.
  */
 
-import { ref, computed, watch } from 'tsm:vue'
+import { ref, computed, watch, inject } from 'tsm:vue'
 import { Dialog, Tree, Button } from 'tsm:primevue'
-import { useSharedModelRegistry } from 'ui-model-browser'
 
 const props = defineProps<{
   visible: boolean
@@ -29,7 +28,8 @@ const emit = defineEmits<{
   'select-attribute': [data: { name: string; eAttribute: any; typeRef: string; eClass: any; feelType: string }]
 }>()
 
-const modelRegistry = useSharedModelRegistry()
+const tsm = inject<any>('tsm')
+const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
 const expandedKeys = ref<Record<string, boolean>>({})
 const selectedKey = ref<Record<string, boolean>>({})
 
