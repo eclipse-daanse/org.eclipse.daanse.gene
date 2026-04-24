@@ -35,6 +35,7 @@ export {
 // Import for service registration
 import * as components from './components'
 import { useInstanceEditor } from './composables/useInstanceEditor'
+import { GENE_EDITOR_CONTEXT_KEY } from './composables/editorContext'
 import { getPropertyRegistry } from './composables/usePropertyRegistry'
 
 /**
@@ -90,8 +91,12 @@ export async function activate(context: ModuleContext): Promise<void> {
     }
   }
 
-  // Register components as service
+  // Register components and composables as service
   context.services.register('ui.instance.components', components)
+  context.services.register('ui.instance.composables', {
+    useInstanceEditor,
+    GENE_EDITOR_CONTEXT_KEY
+  })
 
   // Register editor service
   context.services.register('ui.instance.editor', editorService)
