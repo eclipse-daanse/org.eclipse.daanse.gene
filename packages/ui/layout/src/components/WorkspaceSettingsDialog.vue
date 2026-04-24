@@ -11,12 +11,7 @@ import { DataTable } from 'tsm:primevue'
 import { Column } from 'tsm:primevue'
 import { InputNumber } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
-import { useSharedPerspective, type StorageStrategy } from 'ui-perspectives'
-import {
-  getAllMappings,
-  MappingScope,
-  IconLibrary
-} from 'ui-instance-tree'
+import type { StorageStrategy } from 'ui-perspectives'
 
 const props = defineProps<{
   visible: boolean
@@ -26,10 +21,16 @@ const emit = defineEmits<{
   'close': []
 }>()
 
-const perspective = useSharedPerspective()
 const tsm = inject<any>('tsm')
+const perspective = tsm?.getService('ui.perspectives')?.useSharedPerspective()
 const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
 const editorConfigService = inject<any>('gene.editor.config', null)
+
+// Icon registry (from ui-instance-tree via TSM service)
+const iconRegistryService = tsm?.getService('ui.instance-tree.iconRegistry')
+const getAllMappings = iconRegistryService?.getAllMappings
+const MappingScope = iconRegistryService?.MappingScope ?? { TYPE_ONLY: 'TYPE_ONLY', TYPE_AND_SUBTYPES: 'TYPE_AND_SUBTYPES' }
+const IconLibrary = iconRegistryService?.IconLibrary ?? { PRIME_ICONS: 'PRIME_ICONS', MATERIAL_SYMBOLS: 'MATERIAL_SYMBOLS', FONT_AWESOME: 'FONT_AWESOME', CUSTOM: 'CUSTOM' }
 
 const workspaceSettings = computed(() => perspective.state.workspaceSettings)
 
