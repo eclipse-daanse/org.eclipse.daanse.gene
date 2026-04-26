@@ -5,7 +5,7 @@
  * Master-Detail view with categories on the left and settings on the right.
  */
 
-import { computed, ref, shallowRef, triggerRef, watch, onMounted, onUnmounted, inject } from 'tsm:vue'
+import { computed, ref, shallowRef, triggerRef, watch, inject } from 'tsm:vue'
 import { Dropdown } from 'tsm:primevue'
 import { DataTable } from 'tsm:primevue'
 import { Column } from 'tsm:primevue'
@@ -23,36 +23,58 @@ const emit = defineEmits<{
 
 const tsm = inject<any>('tsm')
 const perspective = tsm?.getService('ui.perspectives')?.useSharedPerspective()
-const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
 const editorConfigService = inject<any>('gene.editor.config', null)
-
-// Icon registry (from ui-instance-tree via TSM service)
-const iconRegistryService = tsm?.getService('ui.instance-tree.iconRegistry')
-const getAllMappings = iconRegistryService?.getAllMappings
-const MappingScope = iconRegistryService?.MappingScope ?? { TYPE_ONLY: 'TYPE_ONLY', TYPE_AND_SUBTYPES: 'TYPE_AND_SUBTYPES' }
-const IconLibrary = iconRegistryService?.IconLibrary ?? { PRIME_ICONS: 'PRIME_ICONS', MATERIAL_SYMBOLS: 'MATERIAL_SYMBOLS', FONT_AWESOME: 'FONT_AWESOME', CUSTOM: 'CUSTOM' }
 
 const workspaceSettings = computed(() => perspective?.state?.workspaceSettings)
 
 // === Master-Detail Navigation ===
-type SettingsCategory = 'icons' | 'actions' | 'events' | 'storage' | 'resolvers'
+type SettingsCategory = 'icons' | 'views' | 'actions' | 'events' | 'storage' | 'resolvers'
 
 const categories: { id: SettingsCategory; label: string; icon: string }[] = [
   { id: 'icons', label: 'Icon Mappings', icon: 'pi pi-palette' },
+  { id: 'views', label: 'Views', icon: 'pi pi-eye' },
   { id: 'actions', label: 'Actions', icon: 'pi pi-play' },
   { id: 'events', label: 'Event Mappings', icon: 'pi pi-bolt' },
   { id: 'storage', label: 'Storage', icon: 'pi pi-database' },
   { id: 'resolvers', label: 'Package Resolvers', icon: 'pi pi-link' }
 ]
 
-// Action components (loaded from TSM)
-const actionComponents = computed(() => {
-  return tsm?.getService('gene.action.components') || null
-})
+const selectedCategory = ref<SettingsCategory>('icons')
+
+// === Deferred rendering ===
+// Every category switch defers content rendering so the spinner paints first.
+// The content render itself is what's slow (heavy computed evaluation).
+const contentVisible = ref(false)
+
+watch(selectedCategory, () => {
+  contentVisible.value = false
+  // Double rAF: frame 1 = Vue patches DOM (shows spinner), frame 2 = browser painted it
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      // setTimeout pushes the heavy render to a new task, after paint
+      setTimeout(() => {
+        contentVisible.value = true
+      }, 0)
+    })
+  })
+}, { immediate: true })
+
+// === Services (resolved lazily via computed — fast getter calls) ===
+const editorConfig = computed(() => editorConfigService || tsm?.getService('gene.editor.config') || null)
+const iconRegistryService = computed(() => tsm?.getService('ui.instance-tree.iconRegistry') || null)
+const getAllMappings = computed(() => iconRegistryService.value?.getAllMappings)
+const MappingScope = computed(() => iconRegistryService.value?.MappingScope ?? { TYPE_ONLY: 'TYPE_ONLY', TYPE_AND_SUBTYPES: 'TYPE_AND_SUBTYPES' })
+const IconLibrary = computed(() => iconRegistryService.value?.IconLibrary ?? { PRIME_ICONS: 'PRIME_ICONS', MATERIAL_SYMBOLS: 'MATERIAL_SYMBOLS', FONT_AWESOME: 'FONT_AWESOME', CUSTOM: 'CUSTOM' })
+
+const ViewsEditorPanel = computed(() => tsm?.getService('ui.instance-tree.components')?.ViewsEditorPanel || null)
+
+const actionComponents = computed(() => tsm?.getService('gene.action.components') || null)
 const EventMappingEditor = computed(() => actionComponents.value?.EventMappingEditor || null)
 const ActionEditor = computed(() => actionComponents.value?.ActionEditor || null)
 
-const selectedCategory = ref<SettingsCategory>('icons')
+const modelRegistry = computed(() => {
+  return tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry() || null
+})
 
 // === Storage Strategy ===
 const storageStrategies: { value: StorageStrategy; label: string; description: string; icon: string }[] = [
@@ -87,48 +109,7 @@ interface EditorConfigService {
   saveToFileSystem: (writeFileFn: (entry: any, content: string) => Promise<void>) => Promise<void>
 }
 
-function getEditorConfigService(): EditorConfigService | null {
-  // Try inject first, then TSM service (different plugin scopes may have different inject values)
-  return editorConfigService || tsm?.getService('gene.editor.config') || null
-}
-
-const editorConfig = shallowRef<EditorConfigService | null>(null)
 const saving = ref(false)
-
-function tryGetEditorConfig() {
-  const service = getEditorConfigService()
-  if (service) {
-    editorConfig.value = service
-    return true
-  }
-  return false
-}
-
-onMounted(() => {
-  if (!tryGetEditorConfig()) {
-    let retries = 0
-    const interval = setInterval(() => {
-      retries++
-      if (tryGetEditorConfig() || retries > 10) {
-        clearInterval(interval)
-      }
-    }, 100)
-  }
-})
-
-watch(() => props.visible, (isVisible) => {
-  if (isVisible) {
-    if (!tryGetEditorConfig()) {
-      let retries = 0
-      const interval = setInterval(() => {
-        retries++
-        if (tryGetEditorConfig() || retries > 20) {
-          clearInterval(interval)
-        }
-      }, 100)
-    }
-  }
-}, { immediate: true })
 
 function getFileSystem(): any {
   return tsm?.getService('gene.filesystem')
@@ -174,7 +155,7 @@ const mappings = computed(() => {
       const priority = getFeatureValue(m, 'priority') || 0
       const iconObj = getFeatureValue(m, 'icon')
 
-      let iconLibrary = IconLibrary.PRIME_ICONS
+      let iconLibrary = IconLibrary.value.PRIME_ICONS
       let iconName = ''
       if (iconObj) {
         const libValue = getFeatureValue(iconObj, 'library')
@@ -184,37 +165,38 @@ const mappings = computed(() => {
 
       return {
         targetType: targetTypeUri,
-        scope: scope || MappingScope.TYPE_ONLY,
+        scope: scope || MappingScope.value.TYPE_ONLY,
         priority: priority,
         icon: { library: iconLibrary, name: iconName },
         _original: m
       }
     })
   }
-  return getAllMappings()
+  return getAllMappings.value?.() || []
 })
 
-function mapFennecLibrary(fennecLib: string | undefined): IconLibrary {
-  if (!fennecLib) return IconLibrary.PRIME_ICONS
-  if (fennecLib === 'MATERIAL_SYMBOLS') return IconLibrary.MATERIAL_SYMBOLS
-  if (fennecLib === 'FONT_AWESOME') return IconLibrary.FONT_AWESOME
-  if (fennecLib === 'CUSTOM') return IconLibrary.CUSTOM
-  return IconLibrary.PRIME_ICONS
+function mapFennecLibrary(fennecLib: string | undefined): any {
+  if (!fennecLib) return IconLibrary.value.PRIME_ICONS
+  if (fennecLib === 'MATERIAL_SYMBOLS') return IconLibrary.value.MATERIAL_SYMBOLS
+  if (fennecLib === 'FONT_AWESOME') return IconLibrary.value.FONT_AWESOME
+  if (fennecLib === 'CUSTOM') return IconLibrary.value.CUSTOM
+  return IconLibrary.value.PRIME_ICONS
 }
 
-function mapToFennecLibrary(lib: IconLibrary): string {
+function mapToFennecLibrary(lib: any): string {
   switch (lib) {
-    case IconLibrary.MATERIAL_SYMBOLS: return 'MATERIAL_SYMBOLS'
-    case IconLibrary.FONT_AWESOME: return 'FONT_AWESOME'
-    case IconLibrary.CUSTOM: return 'CUSTOM'
+    case IconLibrary.value.MATERIAL_SYMBOLS: return 'MATERIAL_SYMBOLS'
+    case IconLibrary.value.FONT_AWESOME: return 'FONT_AWESOME'
+    case IconLibrary.value.CUSTOM: return 'CUSTOM'
     default: return 'CUSTOM'
   }
 }
 
 const availableClasses = computed(() => {
   const classes: { label: string; value: string; package: string }[] = []
-  if (!modelRegistry?.allPackages) return classes
-  for (const pkg of modelRegistry.allPackages.value) {
+  const reg = modelRegistry.value
+  if (!reg?.allPackages) return classes
+  for (const pkg of reg.allPackages.value) {
     const pkgName = pkg.ePackage.getName()
     const nsUri = pkg.ePackage.getNsURI()
     for (const classifier of pkg.ePackage.getEClassifiers()) {
@@ -232,15 +214,15 @@ const availableClasses = computed(() => {
 const newMapping = ref({
   targetType: '',
   icon: '',
-  scope: MappingScope.TYPE_ONLY,
+  scope: 'TYPE_ONLY',
   priority: 20,
-  library: IconLibrary.PRIME_ICONS
+  library: 'PRIME_ICONS'
 })
 
-const scopeOptions = [
-  { label: 'Nur dieser Typ', value: MappingScope.TYPE_ONLY },
-  { label: 'Typ und Subtypen', value: MappingScope.TYPE_AND_SUBTYPES }
-]
+const scopeOptions = computed(() => [
+  { label: 'Nur dieser Typ', value: MappingScope.value.TYPE_ONLY },
+  { label: 'Typ und Subtypen', value: MappingScope.value.TYPE_AND_SUBTYPES }
+])
 
 const commonIcons = [
   'circle', 'star', 'heart', 'user', 'users', 'home', 'folder', 'file',
@@ -253,7 +235,7 @@ function addMapping() {
   if (!newMapping.value.targetType || !newMapping.value.icon) return
 
   if (editorConfig.value) {
-    const iconName = newMapping.value.library === IconLibrary.PRIME_ICONS
+    const iconName = newMapping.value.library === IconLibrary.value.PRIME_ICONS
       ? `pi pi-${newMapping.value.icon}`
       : newMapping.value.icon
 
@@ -271,9 +253,9 @@ function addMapping() {
   newMapping.value = {
     targetType: '',
     icon: '',
-    scope: MappingScope.TYPE_ONLY,
+    scope: 'TYPE_ONLY',
     priority: 20,
-    library: IconLibrary.PRIME_ICONS
+    library: 'PRIME_ICONS'
   }
 }
 
@@ -283,8 +265,8 @@ function removeMapping(mapping: any) {
   }
 }
 
-function formatScope(scope: MappingScope | string): string {
-  return scope === MappingScope.TYPE_AND_SUBTYPES || scope === 'TYPE_AND_SUBTYPES'
+function formatScope(scope: any): string {
+  return scope === MappingScope.value.TYPE_AND_SUBTYPES || scope === 'TYPE_AND_SUBTYPES'
     ? 'Typ + Sub'
     : 'Nur Typ'
 }
@@ -301,17 +283,14 @@ function getIconClass(mapping: any): string {
 
   if (iconName.startsWith('pi ') || iconName.startsWith('fa-')) return iconName
 
-  switch (icon?.library) {
-    case IconLibrary.PRIME_ICONS:
+  const lib = icon?.library?.toString() || ''
+  switch (lib) {
     case 'PRIME_ICONS':
       return `pi pi-${iconName}`
-    case IconLibrary.MATERIAL_SYMBOLS:
     case 'MATERIAL_SYMBOLS':
       return `material-symbols-${icon?.variant || 'outlined'}`
-    case IconLibrary.FONT_AWESOME:
     case 'FONT_AWESOME':
       return `fa-${icon?.variant || 'solid'} fa-${iconName}`
-    case IconLibrary.CUSTOM:
     case 'CUSTOM':
       return iconName.startsWith('pi pi-') ? iconName : iconName
     default:
@@ -461,8 +440,13 @@ function formatKind(kind: string): string {
 
           <!-- Detail: Settings Content -->
           <div class="settings-detail">
+            <!-- Loading indicator between category switches -->
+            <div v-if="!contentVisible" class="category-loading">
+              <div class="loading-spinner"></div>
+            </div>
+
             <!-- Icon Mappings -->
-            <div v-if="selectedCategory === 'icons'" class="detail-content">
+            <div v-else-if="selectedCategory === 'icons'" class="detail-content">
               <h3 class="detail-title">Icon Mappings</h3>
               <p class="detail-description">Configure custom icons for EClasses in the instance tree.</p>
 
@@ -471,7 +455,7 @@ function formatKind(kind: string): string {
                 <i class="pi pi-info-circle"></i>
                 <span>Open a workspace file (.wsp) to save changes.</span>
               </div>
-              <div v-if="!hasEditorConfig" class="status-message warning">
+              <div v-else-if="!hasEditorConfig" class="status-message warning">
                 <i class="pi pi-exclamation-triangle"></i>
                 <span>EditorConfig not available.</span>
               </div>
@@ -588,8 +572,17 @@ function formatKind(kind: string): string {
               </div>
             </div>
 
+            <!-- Views -->
+            <div v-else-if="selectedCategory === 'views'" class="detail-content views-detail">
+              <h3 class="detail-title">Views</h3>
+              <p class="detail-description">Configure tree views to show/hide specific types in the instance tree.</p>
+              <div v-if="ViewsEditorPanel" class="views-panel-container">
+                <component :is="ViewsEditorPanel" :packages="[]" />
+              </div>
+            </div>
+
             <!-- Actions -->
-            <div v-if="selectedCategory === 'actions'" class="detail-content">
+            <div v-else-if="selectedCategory === 'actions'" class="detail-content">
               <h3 class="detail-title">Actions</h3>
               <p class="detail-description">Configure actions that appear in context menus. Map handlers to object types.</p>
               <component
@@ -597,14 +590,10 @@ function formatKind(kind: string): string {
                 :is="ActionEditor"
                 @dirty="triggerRef(editorConfig)"
               />
-              <div v-else class="empty-state">
-                <i class="pi pi-info-circle"></i>
-                Action System module not loaded.
-              </div>
             </div>
 
             <!-- Event-Action Mappings -->
-            <div v-if="selectedCategory === 'events'" class="detail-content">
+            <div v-else-if="selectedCategory === 'events'" class="detail-content">
               <h3 class="detail-title">Event-Action Mappings</h3>
               <p class="detail-description">Configure automated actions triggered by events (model changes, lifecycle, plugins).</p>
               <component
@@ -612,14 +601,10 @@ function formatKind(kind: string): string {
                 :is="EventMappingEditor"
                 @dirty="triggerRef(editorConfig)"
               />
-              <div v-else class="empty-state">
-                <i class="pi pi-info-circle"></i>
-                Action System module not loaded.
-              </div>
             </div>
 
             <!-- Storage Strategy -->
-            <div v-if="selectedCategory === 'storage'" class="detail-content">
+            <div v-else-if="selectedCategory === 'storage'" class="detail-content">
               <h3 class="detail-title">Storage Strategy</h3>
               <p class="detail-description">Choose how model data is stored in the workspace.</p>
 
@@ -641,7 +626,7 @@ function formatKind(kind: string): string {
             </div>
 
             <!-- Package Resolvers -->
-            <div v-if="selectedCategory === 'resolvers'" class="detail-content">
+            <div v-else-if="selectedCategory === 'resolvers'" class="detail-content">
               <h3 class="detail-title">Package Resolvers</h3>
               <p class="detail-description">Configure where imported EPackages are resolved from. Resolvers are tried in order.</p>
 
@@ -1089,6 +1074,50 @@ function formatKind(kind: string): string {
   color: var(--text-color-secondary);
   font-style: italic;
   padding: 12px 0;
+}
+
+/* Category loading */
+.category-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid var(--surface-border);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: settings-spin 0.7s linear infinite;
+}
+
+@keyframes settings-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Empty state (for missing modules) */
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  color: var(--text-color-secondary);
+  font-size: 0.8125rem;
+}
+
+/* Views panel container */
+.views-detail {
+  height: 100%;
+}
+
+.views-panel-container {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 /* Dialog Footer */

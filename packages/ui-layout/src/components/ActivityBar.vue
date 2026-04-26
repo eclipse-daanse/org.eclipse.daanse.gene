@@ -218,7 +218,7 @@ async function handlePerspectiveClick(perspectiveId: string) {
       </button>
     </div>
 
-    <WorkspaceSettingsDialog :visible="showSettings" @close="showSettings = false" />
+    <WorkspaceSettingsDialog v-if="showSettings" :visible="showSettings" @close="showSettings = false" />
   </div>
 </template>
 
