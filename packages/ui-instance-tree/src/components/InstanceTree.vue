@@ -97,12 +97,17 @@ const showIconSettings = ref(false)
 // Views editor dialog
 const showViewsEditor = ref(false)
 
-// Available classes for creating instances
+// Available classes for creating instances (filtered by active view)
+const views = useSharedViews()
 const availableClasses = computed(() => {
   const classes: any[] = []
   for (const pkg of ctxAllPackages.value) {
     const concreteClasses = ctx.getConcreteClasses(pkg)
     classes.push(...concreteClasses)
+  }
+  // Apply view filter if active
+  if (views.activeView.value) {
+    return classes.filter(cls => !views.isTypeHidden(cls.eClass))
   }
   return classes
 })
@@ -292,6 +297,10 @@ function getValidClassesForRef(ref: EReference): EClass[] {
     }
   }
 
+  // Apply view filter if active
+  if (views.activeView.value) {
+    return result.filter(cls => !views.isTypeHidden(cls))
+  }
   return result
 }
 
@@ -734,13 +743,22 @@ watch(ctxSelectedObject, (obj) => {
             :options="availableClasses"
             optionLabel="name"
             placeholder="Select a class"
+            filter
+            :filterFields="['name', 'qualifiedName', 'packageInfo.name', 'packageInfo.nsURI']"
             class="w-full"
           >
             <template #option="{ option }">
               <div class="class-option">
                 <span class="class-name">{{ option.name }}</span>
-                <span class="package-name">{{ option.packageInfo.name }}</span>
+                <span class="class-uri">{{ option.packageInfo?.nsURI }}</span>
               </div>
+            </template>
+            <template #value="{ value }">
+              <div v-if="value" class="class-option">
+                <span class="class-name">{{ value.name }}</span>
+                <span class="class-uri">{{ value.packageInfo?.nsURI }}</span>
+              </div>
+              <span v-else>Select a class</span>
             </template>
           </Dropdown>
         </div>
@@ -956,18 +974,21 @@ watch(ctxSelectedObject, (obj) => {
 
 .class-option {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 1px;
   width: 100%;
 }
 
 .class-name {
   font-weight: 500;
+  font-size: 0.875rem;
 }
 
-.package-name {
-  font-size: 0.75rem;
+.class-uri {
+  font-size: 0.7rem;
   color: var(--text-color-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-actions {

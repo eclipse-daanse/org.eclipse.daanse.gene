@@ -1877,6 +1877,9 @@ watch(currentPerspective, (perspectiveId, oldPerspectiveId) => {
     setupModelEditorPerspective(layout)
   } else if (perspectiveId === 'metamodeler') {
     setupMetamodelerPerspective(layout)
+  } else if (perspectiveId?.startsWith('view-')) {
+    // View perspectives use the same layout as model-editor
+    setupModelEditorPerspective(layout)
   } else if (perspectiveManager.value && perspectiveManager.value.registry.get(perspectiveId)) {
     perspectiveManager.value.switchTo(perspectiveId)
   }
