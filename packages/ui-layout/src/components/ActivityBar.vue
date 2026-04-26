@@ -6,7 +6,7 @@
  */
 
 import { inject, shallowRef, ref, computed, onMounted } from 'tsm:vue'
-import SettingsDialog from './SettingsDialog.vue'
+import WorkspaceSettingsDialog from './WorkspaceSettingsDialog.vue'
 
 // Perspective service (injected from TSM)
 const tsm = inject<any>('tsm')
@@ -37,8 +37,12 @@ const allPerspectives = ref<Array<{
 ])
 
 // Filtered perspectives based on workspace state
-const perspectives = computed(() => {
-  return allPerspectives.value.filter(p => !p.requiresWorkspace || hasWorkspace.value)
+const corePerspectives = computed(() => {
+  return allPerspectives.value.filter(p => (!p.requiresWorkspace || hasWorkspace.value) && !(p as any).isView)
+})
+
+const viewPerspectives = computed(() => {
+  return allPerspectives.value.filter(p => (!p.requiresWorkspace || hasWorkspace.value) && (p as any).isView)
 })
 
 // Poll for perspective service and state
@@ -60,13 +64,16 @@ onMounted(() => {
         const newIds = registeredPerspectives.map((p: any) => p.id).sort().join(',')
         const currentIds = allPerspectives.value.map(p => p.id).sort().join(',')
         if (newIds !== currentIds) {
-          allPerspectives.value = registeredPerspectives.map((p: any) => ({
-            id: p.id,
-            icon: p.icon,
-            label: p.name,
-            tooltip: p.name,
-            requiresWorkspace: p.requiresWorkspace ?? false
-          }))
+          allPerspectives.value = registeredPerspectives
+            .sort((a: any, b: any) => (a.order ?? 999) - (b.order ?? 999))
+            .map((p: any) => ({
+              id: p.id,
+              icon: p.icon,
+              label: p.name,
+              tooltip: p.name,
+              requiresWorkspace: p.requiresWorkspace ?? false,
+              isView: p.id.startsWith('view-')
+            }))
         }
       }
     }
@@ -172,10 +179,10 @@ async function handlePerspectiveClick(perspectiveId: string) {
 
 <template>
   <div class="activity-bar">
-    <!-- Perspectives -->
+    <!-- Core Perspectives -->
     <div class="activity-bar-perspectives">
       <button
-        v-for="persp in perspectives"
+        v-for="persp in corePerspectives"
         :key="persp.id"
         class="activity-item"
         :class="{ active: currentPerspective === persp.id }"
@@ -186,17 +193,32 @@ async function handlePerspectiveClick(perspectiveId: string) {
       </button>
     </div>
 
-    <div class="activity-bar-bottom">
+    <!-- View Perspectives (from workspace treeViews) -->
+    <div v-if="viewPerspectives.length > 0" class="activity-bar-views">
+      <div class="activity-divider"></div>
+      <button
+        v-for="persp in viewPerspectives"
+        :key="persp.id"
+        class="activity-item"
+        :class="{ active: currentPerspective === persp.id }"
+        :title="persp.tooltip"
+        @click="handlePerspectiveClick(persp.id)"
+      >
+        <i :class="persp.icon"></i>
+      </button>
+    </div>
+
+    <div v-if="hasWorkspace" class="activity-bar-bottom">
       <button
         class="activity-item"
-        title="Settings"
+        title="Workspace Settings"
         @click="showSettings = true"
       >
         <i class="pi pi-cog"></i>
       </button>
     </div>
 
-    <SettingsDialog :visible="showSettings" @close="showSettings = false" />
+    <WorkspaceSettingsDialog :visible="showSettings" @close="showSettings = false" />
   </div>
 </template>
 
@@ -216,7 +238,23 @@ async function handlePerspectiveClick(perspectiveId: string) {
   align-items: center;
   gap: 4px;
   padding: 10px 0;
+}
+
+.activity-bar-views {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0 0 10px 0;
   flex: 1;
+  overflow-y: auto;
+}
+
+.activity-divider {
+  width: 24px;
+  height: 1px;
+  background: var(--surface-border);
+  margin: 4px 0;
 }
 
 .activity-bar-bottom {

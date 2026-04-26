@@ -24,7 +24,7 @@ import EditorArea from './EditorArea.vue'
 import SecondarySidebar from './SecondarySidebar.vue'
 import PanelArea from './PanelArea.vue'
 import StatusBar from './StatusBar.vue'
-import WorkspaceSettingsDialog from './WorkspaceSettingsDialog.vue'
+import SettingsDialog from './SettingsDialog.vue'
 import SaveInstancesDialog from './SaveInstancesDialog.vue'
 
 const tsm = inject<any>('tsm')
@@ -248,12 +248,12 @@ onUnmounted(() => {
       <div class="title-bar-right">
         <!-- Save Instances button moved to InstanceTree header for context-specific placement -->
         <Button
-          icon="pi pi-cog"
+          icon="pi pi-palette"
           text
           rounded
           size="small"
           @click="showWorkspaceSettings = true"
-          v-tooltip.bottom="'Workspace Settings'"
+          v-tooltip.bottom="'Appearance'"
         />
       </div>
     </div>
@@ -313,7 +313,7 @@ onUnmounted(() => {
     <StatusBar v-if="layout.state.visibility.statusBar" />
 
     <!-- Workspace Settings Dialog -->
-    <WorkspaceSettingsDialog
+    <SettingsDialog
       :visible="showWorkspaceSettings"
       @close="showWorkspaceSettings = false"
     />

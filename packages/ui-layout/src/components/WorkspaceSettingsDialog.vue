@@ -32,7 +32,7 @@ const getAllMappings = iconRegistryService?.getAllMappings
 const MappingScope = iconRegistryService?.MappingScope ?? { TYPE_ONLY: 'TYPE_ONLY', TYPE_AND_SUBTYPES: 'TYPE_AND_SUBTYPES' }
 const IconLibrary = iconRegistryService?.IconLibrary ?? { PRIME_ICONS: 'PRIME_ICONS', MATERIAL_SYMBOLS: 'MATERIAL_SYMBOLS', FONT_AWESOME: 'FONT_AWESOME', CUSTOM: 'CUSTOM' }
 
-const workspaceSettings = computed(() => perspective.state.workspaceSettings)
+const workspaceSettings = computed(() => perspective?.state?.workspaceSettings)
 
 // === Master-Detail Navigation ===
 type SettingsCategory = 'icons' | 'actions' | 'events' | 'storage' | 'resolvers'
@@ -71,7 +71,7 @@ const storageStrategies: { value: StorageStrategy; label: string; description: s
 ]
 
 function setStorageStrategy(strategy: StorageStrategy) {
-  perspective.updateWorkspaceSettings({ storageStrategy: strategy })
+  perspective?.updateWorkspaceSettings?.({ storageStrategy: strategy })
 }
 
 // === Icon Settings ===
@@ -213,6 +213,7 @@ function mapToFennecLibrary(lib: IconLibrary): string {
 
 const availableClasses = computed(() => {
   const classes: { label: string; value: string; package: string }[] = []
+  if (!modelRegistry?.allPackages) return classes
   for (const pkg of modelRegistry.allPackages.value) {
     const pkgName = pkg.ePackage.getName()
     const nsUri = pkg.ePackage.getNsURI()

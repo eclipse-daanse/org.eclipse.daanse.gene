@@ -51,9 +51,19 @@ export async function activate(context: ModuleContext): Promise<void> {
   }
 
   // Inject views service from ui-instance-tree (breaks circular dependency)
-  const viewsService = context.services.get<any>('gene.views')
-  if (viewsService) {
-    setViewsService(viewsService)
+  // ui-instance-tree may load after model-browser, so retry if not available yet
+  function trySetViews() {
+    const viewsService = context.services.get<any>('gene.views')
+    if (viewsService) {
+      setViewsService(viewsService)
+      return true
+    }
+    return false
+  }
+  if (!trySetViews()) {
+    const interval = setInterval(() => {
+      if (trySetViews()) clearInterval(interval)
+    }, 100)
   }
 
   // Register composables as service, including direct function access

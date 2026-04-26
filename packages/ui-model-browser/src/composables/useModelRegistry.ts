@@ -5,7 +5,7 @@
  * Supports runtime-loaded .ecore files that users add to their workspace.
  */
 
-import { reactive, computed, ref } from 'tsm:vue'
+import { reactive, computed, ref, shallowRef } from 'tsm:vue'
 import type { EPackage, EClass, EClassifier } from '@emfts/core'
 import {
   EResourceSetImpl,
@@ -16,10 +16,10 @@ import {
 import type { ModelPackageInfo, ClassInfo, EnumInfo, ModelTreeNode, AttributeInfo, ReferenceInfo, ConstraintInfo } from '../types'
 import { getClassifierIcon, MODEL_ICONS, getIconForClassViaRegistry } from '../types'
 // Views service injected via setViewsService() from plugin activate
-let _viewsService: { version: { value: number } } | null = null
+const _viewsServiceRef = shallowRef<any>(null)
 
 export function setViewsService(views: any) {
-  _viewsService = views
+  _viewsServiceRef.value = views
 }
 
 /**
@@ -280,7 +280,7 @@ export function useModelRegistry() {
     const _iconVersion = iconVersionRef.value
 
     // Access views version for reactivity (injected via setViewsService)
-    const _viewVersion = _viewsService?.version?.value ?? 0
+    const _viewVersion = _viewsServiceRef.value?.version?.value ?? 0
 
     console.log('[ModelRegistry] Computing treeNodes, icon version:', _iconVersion, 'packages:', allPackages.value.length)
     try {
@@ -293,7 +293,7 @@ export function useModelRegistry() {
 
       const rawNodes = rootPackages.map(pkg => packageToTreeNode(pkg))
       // Apply view filtering to hide types
-      const isTypeHidden = _viewsService?.isTypeHidden ?? (() => false)
+      const isTypeHidden = _viewsServiceRef.value?.isTypeHidden ?? (() => false)
       return filterModelTreeNodes(rawNodes, isTypeHidden)
     } catch (e) {
       console.error('[ModelRegistry] Error computing treeNodes:', e)
