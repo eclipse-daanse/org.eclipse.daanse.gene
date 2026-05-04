@@ -15,6 +15,7 @@ import appRouter from '@/router'
 // PrimeVue config (from TSM shared library)
 import { PrimeVue, Aura, Tooltip } from 'tsm:primevue'
 import { useSharedEditorConfig } from '@/services/useEditorConfig'
+export type { EditorConfigService } from '@/services/useEditorConfig'
 
 // Vue app instance
 let app: App | null = null

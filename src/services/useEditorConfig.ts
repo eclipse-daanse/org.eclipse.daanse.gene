@@ -1665,9 +1665,14 @@ export function useEditorConfig() {
 }
 
 /**
+ * Public service type for TSM consumers
+ */
+export type EditorConfigService = ReturnType<typeof useEditorConfig>
+
+/**
  * Shared singleton instance
  */
-let sharedInstance: ReturnType<typeof useEditorConfig> | null = null
+let sharedInstance: EditorConfigService | null = null
 
 export function useSharedEditorConfig() {
   if (!sharedInstance) {

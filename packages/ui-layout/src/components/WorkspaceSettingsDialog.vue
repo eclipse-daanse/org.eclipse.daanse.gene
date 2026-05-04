@@ -5,13 +5,14 @@
  * Master-Detail view with categories on the left and settings on the right.
  */
 
-import { computed, ref, shallowRef, triggerRef, watch, inject } from 'tsm:vue'
+import { computed, ref, watch, inject } from 'tsm:vue'
 import { Dropdown } from 'tsm:primevue'
 import { DataTable } from 'tsm:primevue'
 import { Column } from 'tsm:primevue'
 import { InputNumber } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
 import type { StorageStrategy } from 'ui-perspectives'
+import type { EditorConfigService } from 'gene-app'
 
 const props = defineProps<{
   visible: boolean
@@ -23,7 +24,6 @@ const emit = defineEmits<{
 
 const tsm = inject<any>('tsm')
 const perspective = tsm?.getService('ui.perspectives')?.useSharedPerspective()
-const editorConfigService = inject<any>('gene.editor.config', null)
 
 const workspaceSettings = computed(() => perspective?.state?.workspaceSettings)
 
@@ -59,8 +59,9 @@ watch(selectedCategory, () => {
   })
 }, { immediate: true })
 
-// === Services (resolved lazily via computed — fast getter calls) ===
-const editorConfig = computed(() => editorConfigService || tsm?.getService('gene.editor.config') || null)
+// === Services ===
+// editorConfig is a stable singleton – get once, use its reactive refs directly
+const editorConfig = tsm?.getService<EditorConfigService>('gene.editor.config')
 const iconRegistryService = computed(() => tsm?.getService('ui.instance-tree.iconRegistry') || null)
 const getAllMappings = computed(() => iconRegistryService.value?.getAllMappings)
 const MappingScope = computed(() => iconRegistryService.value?.MappingScope ?? { TYPE_ONLY: 'TYPE_ONLY', TYPE_AND_SUBTYPES: 'TYPE_AND_SUBTYPES' })
@@ -98,17 +99,6 @@ function setStorageStrategy(strategy: StorageStrategy) {
 
 // === Icon Settings ===
 
-interface EditorConfigService {
-  iconMappings: { value: any[] }
-  addIconMapping: (targetType: string, iconName: string, options?: any) => any
-  removeIconMapping: (mapping: any) => boolean
-  clearIconMappings: () => void
-  initialized: { value: boolean }
-  dirty: { value: boolean }
-  workspaceFileEntry: { value: any }
-  saveToFileSystem: (writeFileFn: (entry: any, content: string) => Promise<void>) => Promise<void>
-}
-
 const saving = ref(false)
 
 function getFileSystem(): any {
@@ -116,7 +106,7 @@ function getFileSystem(): any {
 }
 
 async function handleSave() {
-  if (!editorConfig.value?.workspaceFileEntry?.value) {
+  if (!editorConfig?.workspaceFileEntry?.value) {
     console.warn('[WorkspaceSettings] No workspace file entry, cannot save')
     return
   }
@@ -126,8 +116,7 @@ async function handleSave() {
     const fileSystem = getFileSystem()
     console.log('[WorkspaceSettings] fileSystem:', !!fileSystem, 'writeTextFile:', !!fileSystem?.writeTextFile)
     if (fileSystem?.writeTextFile) {
-      await editorConfig.value.saveToFileSystem(fileSystem.writeTextFile)
-      isDirty.value = false
+      await editorConfig.saveToFileSystem(fileSystem.writeTextFile)
       console.log('[WorkspaceSettings] Saved successfully')
     }
   } catch (e) {
@@ -148,8 +137,10 @@ function getFeatureValue(obj: any, featureName: string): any {
 }
 
 const mappings = computed(() => {
-  if (editorConfig.value?.iconMappings?.value) {
-    return editorConfig.value.iconMappings.value.map((m: any) => {
+  // Read model shallowRef directly – gets triggerRef'd on every mutation
+  editorConfig?.editorConfig?.value
+  if (editorConfig?.iconMappings?.value) {
+    return editorConfig.iconMappings.value.map((m: any) => {
       const targetTypeUri = getFeatureValue(m, 'targetTypeUri') || ''
       const scope = getFeatureValue(m, 'scope')
       const priority = getFeatureValue(m, 'priority') || 0
@@ -234,12 +225,12 @@ const commonIcons = [
 function addMapping() {
   if (!newMapping.value.targetType || !newMapping.value.icon) return
 
-  if (editorConfig.value) {
+  if (editorConfig) {
     const iconName = newMapping.value.library === IconLibrary.value.PRIME_ICONS
       ? `pi pi-${newMapping.value.icon}`
       : newMapping.value.icon
 
-    editorConfig.value.addIconMapping(
+    editorConfig.addIconMapping(
       newMapping.value.targetType,
       iconName,
       {
@@ -260,8 +251,8 @@ function addMapping() {
 }
 
 function removeMapping(mapping: any) {
-  if (editorConfig.value && mapping._original) {
-    editorConfig.value.removeIconMapping(mapping._original)
+  if (editorConfig && mapping._original) {
+    editorConfig.removeIconMapping(mapping._original)
   }
 }
 
@@ -298,10 +289,10 @@ function getIconClass(mapping: any): string {
   }
 }
 
-const hasEditorConfig = computed(() => !!editorConfig.value?.initialized?.value)
+const hasEditorConfig = computed(() => !!editorConfig?.initialized?.value)
 // Access dirty ref directly — editorConfigService.dirty is a Vue Ref
-const isDirty = computed(() => !!editorConfig.value?.dirty?.value)
-const canSave = computed(() => !!editorConfig.value?.workspaceFileEntry?.value)
+const isDirty = computed(() => !!editorConfig?.dirty?.value)
+const canSave = computed(() => !!editorConfig?.workspaceFileEntry?.value)
 
 // === Package Resolvers ===
 
@@ -320,7 +311,7 @@ const newResolver = ref({
 })
 
 const resolversList = computed(() => {
-  const ec = editorConfig.value as any
+  const ec = editorConfig as any
   if (!ec) return []
 
   const chain = ec.packageResolverChain?.value
@@ -350,7 +341,7 @@ const resolversList = computed(() => {
 })
 
 const autoResolveReferences = computed(() => {
-  const ec = editorConfig.value as any
+  const ec = editorConfig as any
   if (!ec) return true
   const chain = ec.packageResolverChain?.value
   if (!chain) return true
@@ -359,7 +350,7 @@ const autoResolveReferences = computed(() => {
 })
 
 const maxResolutionDepth = computed(() => {
-  const ec = editorConfig.value as any
+  const ec = editorConfig as any
   if (!ec) return -1
   const chain = ec.packageResolverChain?.value
   if (!chain) return -1
@@ -368,7 +359,7 @@ const maxResolutionDepth = computed(() => {
 })
 
 function addResolver() {
-  const ec = editorConfig.value as any
+  const ec = editorConfig as any
   if (!ec?.addPackageResolver) return
 
   ec.addPackageResolver({
@@ -386,7 +377,7 @@ function addResolver() {
 }
 
 function removeResolver(index: number) {
-  const ec = editorConfig.value as any
+  const ec = editorConfig as any
   if (!ec?.removePackageResolver) return
   ec.removePackageResolver(index)
 }
@@ -402,7 +393,7 @@ function toggleResolver(resolver: any) {
   } else {
     raw.enabled = !current
   }
-  const ec = editorConfig.value as any
+  const ec = editorConfig as any
   if (ec?.markDirty) ec.markDirty()
 }
 
@@ -588,7 +579,7 @@ function formatKind(kind: string): string {
               <component
                 v-if="ActionEditor"
                 :is="ActionEditor"
-                @dirty="triggerRef(editorConfig)"
+                @dirty="editorConfig?.markDirty?.()"
               />
             </div>
 
@@ -599,7 +590,7 @@ function formatKind(kind: string): string {
               <component
                 v-if="EventMappingEditor"
                 :is="EventMappingEditor"
-                @dirty="triggerRef(editorConfig)"
+                @dirty="editorConfig?.markDirty?.()"
               />
             </div>
 
