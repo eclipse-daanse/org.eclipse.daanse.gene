@@ -351,7 +351,7 @@ export function useFileSystem() {
               isDirectory: false,
               sourceId,
               extension: ext,
-              isWorkspace: ext === '.xmi',
+              isWorkspace: ext === '.wsp' || ext === '.workspace',
               handle: {
                 atlasBaseUrl: baseUrl, scopeName, token,
                 registryName, stage: stageName,
