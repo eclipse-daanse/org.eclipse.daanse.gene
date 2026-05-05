@@ -279,45 +279,94 @@ function getClassesFromNode(node: any): EClass[] {
   return classes
 }
 
-function toggleClassInView(viewId: string, eClass: EClass) {
+// Filter mode: 'show' = checked means visible, 'hide' = checked means hidden
+const filterMode = ref<'show' | 'hide'>('show')
+
+function setClassVisibility(viewId: string, eClass: EClass, visible: boolean) {
   const view = views.views.value.find(v => v.id === viewId)
   if (!view) return
 
   const typeUri = getTypeUri(eClass)
-  const existing = view.filters.find(f => f.filterType === 'ECLASS_TYPE' && f.targetTypeUri === typeUri)
+  const index = view.filters.findIndex(f => f.filterType === 'ECLASS_TYPE' && f.targetTypeUri === typeUri)
 
-  if (existing) {
-    existing.hidden = !existing.hidden
+  if (visible) {
+    // Visible = remove hidden filter (no filter = visible)
+    if (index >= 0) view.filters.splice(index, 1)
   } else {
-    views.setActiveView(viewId)
-    views.hideType(typeUri, 'TYPE_ONLY')
+    // Hidden = ensure hidden filter exists
+    if (index < 0) {
+      view.filters.push({ filterType: 'ECLASS_TYPE', targetTypeUri: typeUri, scope: 'TYPE_ONLY', hidden: true })
+    } else {
+      view.filters[index].hidden = true
+    }
   }
+}
+
+function markDirty() {
   views.version.value++
+  editorConfigService.value?.markDirty?.()
+}
+
+function toggleClassInView(viewId: string, eClass: EClass) {
+  const hidden = isClassHidden(viewId, eClass)
+  setClassVisibility(viewId, eClass, hidden) // hidden→visible, visible→hidden
+  markDirty()
 }
 
 function togglePackageInView(viewId: string, node: any) {
-  const view = views.views.value.find(v => v.id === viewId)
-  if (!view) return
-
   const classes = getClassesFromNode(node)
   const allHidden = isPackageAllHidden(viewId, node)
-
   for (const eClass of classes) {
-    const typeUri = getTypeUri(eClass)
-    const existing = view.filters.find(f => f.filterType === 'ECLASS_TYPE' && f.targetTypeUri === typeUri)
+    setClassVisibility(viewId, eClass, allHidden)
+  }
+  markDirty()
+}
 
-    if (allHidden) {
-      if (existing) existing.hidden = false
-    } else {
-      if (existing) {
-        existing.hidden = true
-      } else {
-        views.setActiveView(viewId)
-        views.hideType(typeUri, 'TYPE_ONLY')
-      }
+function getAllClasses(): EClass[] {
+  const result: EClass[] = []
+  function collect(nodes: any[]) {
+    for (const n of nodes) {
+      if (n.data?.type === 'class' && n.data.eClass) result.push(n.data.eClass)
+      if (n.children) collect(n.children)
     }
   }
-  views.version.value++
+  collect(modelTreeNodes.value)
+  return result
+}
+
+function makeAllVisible(viewId: string) {
+  const view = views.views.value.find(v => v.id === viewId)
+  if (!view) return
+  view.filters = view.filters.filter(f => f.filterType !== 'ECLASS_TYPE')
+  markDirty()
+}
+
+function makeAllHidden(viewId: string) {
+  const view = views.views.value.find(v => v.id === viewId)
+  if (!view) return
+  view.filters = view.filters.filter(f => f.filterType !== 'ECLASS_TYPE')
+  for (const eClass of getAllClasses()) {
+    view.filters.push({ filterType: 'ECLASS_TYPE', targetTypeUri: getTypeUri(eClass), scope: 'TYPE_ONLY', hidden: true })
+  }
+  markDirty()
+}
+
+// "Alle wählen" = alle Checkboxen an (Bedeutung hängt vom Modus ab)
+function selectAll(viewId: string) {
+  if (filterMode.value === 'show') {
+    makeAllVisible(viewId)  // Sichtbar-Modus: alle checked = alle sichtbar
+  } else {
+    makeAllHidden(viewId)   // Ausblenden-Modus: alle checked = alle ausgeblendet
+  }
+}
+
+// "Keine wählen" = alle Checkboxen aus
+function selectNone(viewId: string) {
+  if (filterMode.value === 'show') {
+    makeAllHidden(viewId)   // Sichtbar-Modus: keine checked = alle ausgeblendet
+  } else {
+    makeAllVisible(viewId)  // Ausblenden-Modus: keine checked = alle sichtbar
+  }
 }
 
 function expandAll() {
@@ -512,6 +561,19 @@ function hiddenCount(viewId: string): number {
               class="type-search-input"
             />
           </div>
+          <div class="mode-toggle">
+            <Button
+              :icon="filterMode === 'show' ? 'pi pi-eye' : 'pi pi-eye-slash'"
+              :label="filterMode === 'show' ? 'Sichtbar' : 'Ausblenden'"
+              text
+              size="small"
+              :severity="filterMode === 'hide' ? 'danger' : 'secondary'"
+              @click="filterMode = filterMode === 'show' ? 'hide' : 'show'"
+              v-tooltip.bottom="filterMode === 'show' ? 'Modus: Häkchen = sichtbar' : 'Modus: Häkchen = ausgeblendet'"
+            />
+          </div>
+          <Button icon="pi pi-check-square" text rounded size="small" @click="selectAll(typeDialogView!.id)" v-tooltip.bottom="'Alle wählen'" />
+          <Button icon="pi pi-stop" text rounded size="small" @click="selectNone(typeDialogView!.id)" v-tooltip.bottom="'Keine wählen'" />
           <Button icon="pi pi-angle-double-down" text rounded size="small" @click="expandAll" v-tooltip.bottom="'Expand All'" />
           <Button icon="pi pi-angle-double-up" text rounded size="small" @click="collapseAll" v-tooltip.bottom="'Collapse All'" />
           <span class="filter-summary">{{ hiddenCount(typeDialogView.id) }} types hidden</span>
@@ -527,7 +589,7 @@ function hiddenCount(viewId: string): number {
               <div class="type-node">
                 <template v-if="node.data?.type === 'class'">
                   <Checkbox
-                    :modelValue="!isClassHidden(typeDialogView!.id, node.data.eClass)"
+                    :modelValue="filterMode === 'show' ? !isClassHidden(typeDialogView!.id, node.data.eClass) : isClassHidden(typeDialogView!.id, node.data.eClass)"
                     @update:modelValue="toggleClassInView(typeDialogView!.id, node.data.eClass)"
                     binary
                   />
@@ -538,7 +600,7 @@ function hiddenCount(viewId: string): number {
                 </template>
                 <template v-else-if="node.data?.type === 'package'">
                   <Checkbox
-                    :modelValue="!isPackageAllHidden(typeDialogView!.id, node)"
+                    :modelValue="filterMode === 'show' ? !isPackageAllHidden(typeDialogView!.id, node) : isPackageAllHidden(typeDialogView!.id, node)"
                     @update:modelValue="togglePackageInView(typeDialogView!.id, node)"
                     binary
                   />
@@ -816,6 +878,11 @@ function hiddenCount(viewId: string): number {
 .type-search-input :deep(.p-inputtext) {
   padding: 0.35rem 0.5rem 0.35rem 28px;
   font-size: 0.8125rem;
+}
+
+.mode-toggle :deep(.p-button) {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
 }
 
 .filter-summary {

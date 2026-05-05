@@ -1470,18 +1470,26 @@ export function useEditorConfig() {
       setFeatureValue(treeView, 'perspectiveOrder', viewState.perspectiveOrder)
     }
 
-    // Create filters array
-    const filters: any[] = []
+    // Add filters via EList (containment reference requires proper EList for XMI serialization)
+    const rawTreeView = toRaw(treeView) as any
+    const tvEClass = rawTreeView.eClass?.()
+    const filtersFeature = tvEClass?.getEStructuralFeature('filters')
+    let filtersList: any = null
+    if (typeof rawTreeView.eGet === 'function' && filtersFeature) {
+      filtersList = rawTreeView.eGet(filtersFeature)
+    }
+    if (!filtersList) {
+      filtersList = rawTreeView.filters
+    }
+
     for (const filterState of viewState.filters) {
       const filter = factory.createTreeFilter()
-      // FilterType enum is empty in codegen, use numeric value (0=ECLASS_TYPE, 1=ELEMENT)
       const filterTypeValue = filterState.filterType === 'ECLASS_TYPE' ? 0 : 1
       setFeatureValue(filter, 'filterType', filterTypeValue)
       if (filterState.targetTypeUri) {
         setFeatureValue(filter, 'targetTypeUri', filterState.targetTypeUri)
       }
       if (filterState.scope) {
-        // MappingScope: 0=TYPE_ONLY, 1=TYPE_AND_SUBTYPES
         const scopeValue = filterState.scope === 'TYPE_ONLY' ? 0 : 1
         setFeatureValue(filter, 'scope', scopeValue)
       }
@@ -1489,12 +1497,14 @@ export function useEditorConfig() {
         setFeatureValue(filter, 'elementUri', filterState.elementUri)
       }
       setFeatureValue(filter, 'hidden', filterState.hidden)
-      filters.push(filter)
-    }
 
-    // Set filters array directly on TreeView
-    setFeatureValue(treeView, 'filters', filters)
-    console.log('[EditorConfig] Added TreeView with', filters.length, 'filters')
+      if (filtersList && typeof filtersList.add === 'function') {
+        filtersList.add(filter)
+      } else if (filtersList && typeof filtersList.push === 'function') {
+        filtersList.push(filter)
+      }
+    }
+    console.log('[EditorConfig] Added TreeView with', viewState.filters.length, 'filters via EList')
 
     // Add to config
     const rawConfig = toRaw(editorConfig.value) as any
@@ -1708,7 +1718,8 @@ export function useEditorConfig() {
             targetTypeUri: getFeatureValue(rawFilter, 'targetTypeUri'),
             scope,
             elementUri: getFeatureValue(rawFilter, 'elementUri'),
-            hidden: getFeatureValue(rawFilter, 'hidden') ?? true
+            // Strict boolean conversion (XMI may return string "false"/"true")
+            hidden: (() => { const v = getFeatureValue(rawFilter, 'hidden'); return v === true || v === 'true' })()
           })
         }
       }

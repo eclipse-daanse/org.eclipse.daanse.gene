@@ -169,6 +169,8 @@ export function useViews() {
 
   // Computed: Set of hidden type URIs from active view
   const hiddenTypeUris = computed<Map<string, MappingScope>>(() => {
+    // Access version to re-evaluate when filters are mutated
+    void version.value
     const result = new Map<string, MappingScope>()
     const view = activeView.value
     if (!view || !view.enabled) return result
@@ -184,6 +186,8 @@ export function useViews() {
 
   // Computed: Set of hidden element URIs from active view
   const hiddenElementUris = computed<Set<string>>(() => {
+    // Access version to re-evaluate when filters are mutated
+    void version.value
     const result = new Set<string>()
     const view = activeView.value
     if (!view || !view.enabled) return result

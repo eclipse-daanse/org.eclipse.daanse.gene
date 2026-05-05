@@ -18,6 +18,180 @@ import { getClassifierIcon, MODEL_ICONS, getIconForClassViaRegistry } from '../t
 // Views service injected via setViewsService() from plugin activate
 const _viewsServiceRef = shallowRef<any>(null)
 
+/**
+ * Resolve internal cross-references within an EPackage.
+ * EMFTs may not resolve eType="#//ClassName" references during XMI parsing.
+ * This walks all EReferences and EAttributes and sets their eType
+ * by looking up classifiers in the same package (and registered packages).
+ */
+function resolveInternalReferences(ePackage: EPackage, ecoreXml?: string): void {
+  const classifiers = ePackage.getEClassifiers?.() || []
+  const classifierMap = new Map<string, any>()
+  for (const c of classifiers) {
+    const name = c.getName?.()
+    if (name) classifierMap.set(name, c)
+  }
+
+  // Parse eType mappings from XML source
+  const typeMap = ecoreXml ? parseETypeMapFromXml(ecoreXml) : new Map<string, string>()
+  console.log('[resolveInternalReferences] Package:', ePackage.getName?.(), 'typeMap entries:', typeMap.size)
+
+  for (const classifier of classifiers) {
+    const metaName = classifier.eClass?.()?.getName?.()
+    if (metaName !== 'EClass') continue
+    const clsName = classifier.getName?.()
+
+    const features = classifier.getEAllStructuralFeatures?.() || []
+    for (const feature of features) {
+      const featureMeta = feature.eClass?.()
+      if (!featureMeta) continue
+      const featureName = feature.getName?.()
+
+      const eTypeFeature = featureMeta.getEStructuralFeature?.('eType')
+      if (!eTypeFeature) continue
+
+      const currentType = feature.eGet?.(eTypeFeature)
+      if (currentType) continue // Already resolved
+
+      // Look up type from XML-parsed map: "ClassName.featureName" → eType URI
+      const key = `${clsName}.${featureName}`
+      const eTypeUri = typeMap.get(key)
+      if (!eTypeUri) continue
+
+      const typeName = extractClassNameFromURI(eTypeUri)
+      if (!typeName) continue
+
+      // Resolve from same package
+      const resolved = classifierMap.get(typeName)
+      if (resolved) {
+        feature.eSet(eTypeFeature, resolved)
+        console.log('[resolveInternalReferences] RESOLVED:', key, '→', typeName)
+        continue
+      }
+      // Resolve from package registry (cross-package refs like Ecore#//EString)
+      const fromRegistry = resolveFromPackageRegistry(typeName)
+      if (fromRegistry) {
+        feature.eSet(eTypeFeature, fromRegistry)
+        console.log('[resolveInternalReferences] RESOLVED (registry):', key, '→', typeName)
+      }
+    }
+
+    // Resolve eOpposite
+    resolveOpposites(classifier, classifierMap, typeMap)
+  }
+}
+
+/**
+ * Parse eType attribute mappings from raw ecore XML.
+ * Returns a map: "ClassName.featureName" → "eType URI string"
+ */
+function parseETypeMapFromXml(xml: string): Map<string, string> {
+  const result = new Map<string, string>()
+
+  // Match EClass elements and their features
+  // Pattern: <eClassifiers ... name="University" ...> ... <eStructuralFeatures ... name="students" eType="#//Student" ...> ...
+  let currentClass = ''
+
+  // Simple regex-based parser for ecore XML
+  const tagRegex = /<(\w+:)?(\w+)\s([^>]*?)(?:\/>|>)/g
+  let match
+
+  while ((match = tagRegex.exec(xml)) !== null) {
+    const tagName = match[2]
+    const attrs = match[3]
+
+    if (tagName === 'eClassifiers' || tagName === 'EClass') {
+      const nameMatch = attrs.match(/\bname="([^"]*)"/)
+      if (nameMatch) {
+        currentClass = nameMatch[1]
+      }
+    }
+
+    if (tagName === 'eStructuralFeatures') {
+      const nameMatch = attrs.match(/\bname="([^"]*)"/)
+      const eTypeMatch = attrs.match(/\beType="([^"]*)"/)
+      const eOppositeMatch = attrs.match(/\beOpposite="([^"]*)"/)
+
+      if (nameMatch && eTypeMatch && currentClass) {
+        result.set(`${currentClass}.${nameMatch[1]}`, eTypeMatch[1])
+      }
+      if (nameMatch && eOppositeMatch && currentClass) {
+        result.set(`${currentClass}.${nameMatch[1]}.__opposite`, eOppositeMatch[1])
+      }
+    }
+  }
+
+  return result
+}
+
+function extractClassNameFromURI(uri: string): string | null {
+  // '#//Student' or 'http://example.org/pkg#//Student'
+  const hashIdx = uri.indexOf('#//')
+  if (hashIdx >= 0) {
+    return uri.substring(hashIdx + 3)
+  }
+  // '#Student'
+  const simpleHash = uri.indexOf('#')
+  if (simpleHash >= 0) {
+    return uri.substring(simpleHash + 1).replace(/^\/\//, '')
+  }
+  // 'ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString'
+  if (uri.includes('ecore:EDataType')) {
+    const parts = uri.split('#//')
+    if (parts.length > 1) return parts[1]
+  }
+  return null
+}
+
+function resolveFromPackageRegistry(typeName: string): any | null {
+  // Check all registered packages
+  for (const [, pkg] of EPackageRegistry.INSTANCE) {
+    if (typeof pkg === 'object' && pkg !== null) {
+      const classifier = (pkg as any).getEClassifier?.(typeName)
+      if (classifier) return classifier
+    }
+  }
+  return null
+}
+
+/**
+ * Resolve eOpposite references between EReferences in the same package
+ */
+function resolveOpposites(classifier: any, classifierMap: Map<string, any>, typeMap: Map<string, string>): void {
+  const clsName = classifier.getName?.()
+  const features = classifier.getEAllStructuralFeatures?.() || []
+  for (const feature of features) {
+    const featureMeta = feature.eClass?.()
+    if (!featureMeta || featureMeta.getName?.() !== 'EReference') continue
+
+    const oppositeFeature = featureMeta.getEStructuralFeature?.('eOpposite')
+    if (!oppositeFeature) continue
+
+    const currentOpposite = feature.eGet?.(oppositeFeature)
+    if (currentOpposite) continue
+
+    const featureName = feature.getName?.()
+    const key = `${clsName}.${featureName}.__opposite`
+    const oppositeUri = typeMap.get(key)
+    if (!oppositeUri) continue
+
+    // Format: '#//ClassName/featureName'
+    const match = oppositeUri.match(/#\/\/(\w+)\/(\w+)/)
+    if (match) {
+      const [, targetClass, targetFeature] = match
+      const targetCls = classifierMap.get(targetClass)
+      if (targetCls) {
+        const targetFeatures = targetCls.getEAllStructuralFeatures?.() || []
+        const opposite = targetFeatures.find((f: any) => f.getName?.() === targetFeature)
+        if (opposite) {
+          feature.eSet(oppositeFeature, opposite)
+          console.log('[resolveInternalReferences] RESOLVED opposite:', key, '→', targetClass + '.' + targetFeature)
+        }
+      }
+    }
+  }
+}
+
 export function setViewsService(views: any) {
   _viewsServiceRef.value = views
 }
@@ -118,6 +292,9 @@ export function useModelRegistry() {
       subPackages.forEach((sp: any) => {
         console.log('[ModelRegistry]   Subpackage:', sp.getName ? sp.getName() : sp)
       })
+
+      // Resolve internal cross-references (eType="#//ClassName") that EMFTs may not resolve
+      resolveInternalReferences(ePackage, ecoreContent)
 
       // Register in global package registry (for XMI loading)
       EPackageRegistry.INSTANCE.set(ePackage.getNsURI(), ePackage)
@@ -302,6 +479,19 @@ export function useModelRegistry() {
   })
 
   /**
+   * Check if a node subtree contains at least one visible class
+   */
+  function hasVisibleClass(node: ModelTreeNode, isTypeHidden: (eClass: EClass) => boolean): boolean {
+    if (node.type === 'class' && node.data?.eClass) {
+      return !isTypeHidden(node.data.eClass)
+    }
+    if (node.children) {
+      return node.children.some(child => hasVisibleClass(child, isTypeHidden))
+    }
+    return false
+  }
+
+  /**
    * Recursively filter model tree nodes based on type visibility
    */
   function filterModelTreeNodes(
@@ -313,32 +503,27 @@ export function useModelRegistry() {
         // For class nodes, check if the type is hidden
         if (node.type === 'class' && node.data?.eClass) {
           if (isTypeHidden(node.data.eClass)) {
-            return null // Mark for removal
-          }
-          return node
-        }
-
-        // For packages/subpackages, filter children first
-        if (!node.children || node.children.length === 0) {
-          // Package with no children - remove it
-          if (node.type === 'package' || node.type === 'subpackage') {
             return null
           }
           return node
         }
 
-        const filteredChildren = filterModelTreeNodes(node.children, isTypeHidden)
-
-        // Remove packages that have no visible children
-        if ((node.type === 'package' || node.type === 'subpackage') && filteredChildren.length === 0) {
-          return null
+        // For packages/subpackages, only keep if they contain visible classes
+        if (node.type === 'package' || node.type === 'subpackage') {
+          if (!node.children || !hasVisibleClass(node, isTypeHidden)) {
+            return null
+          }
+          const filteredChildren = filterModelTreeNodes(node.children, isTypeHidden)
+          if (filteredChildren.length === 0) return null
+          return {
+            ...node,
+            children: filteredChildren,
+            leaf: false
+          }
         }
 
-        return {
-          ...node,
-          children: filteredChildren.length > 0 ? filteredChildren : undefined,
-          leaf: filteredChildren.length === 0
-        }
+        // Other nodes (enums, attributes, etc.) — keep as-is
+        return node
       })
       .filter((node): node is ModelTreeNode => node !== null)
   }
