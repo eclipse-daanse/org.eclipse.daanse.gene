@@ -6,7 +6,7 @@
  * Displays EPackage, EClass, EAttribute, EReference, and OCL constraints.
  */
 
-import { ref, computed, watch } from 'tsm:vue'
+import { ref, computed, watch, inject } from 'tsm:vue'
 import { Tree } from 'tsm:primevue'
 import type { TreeNode } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
@@ -24,6 +24,16 @@ import type { MetaTreeNode } from '../types'
 const emit = defineEmits<{
   'element-select': [element: ENamedElement]
 }>()
+
+const tsm = inject<any>('tsm')
+
+function getIconDataUrl(iconClass: string | undefined): string | undefined {
+  if (!iconClass || !iconClass.startsWith('custom-icon custom-icon--')) return undefined
+  const id = iconClass.replace('custom-icon custom-icon--', '')
+  const registry = tsm?.getService('gene.icons.registry')
+  const provider = registry?.get?.('custom-icons') as any
+  return provider?.getDataUrl?.(id)
+}
 
 const metamodeler = useSharedMetamodeler()
 
@@ -493,6 +503,7 @@ async function exportJsonSchema() {
             }"
             @contextmenu.prevent="handleContextMenu($event, node)"
           >
+            <img v-if="getIconDataUrl(node.icon)" :src="getIconDataUrl(node.icon)" class="node-icon node-icon--img" alt="" />
             <span class="node-label">{{ node.label }}</span>
             <span v-if="node.type === 'class' && (node.data as any).isInterface?.()" class="badge interface">I</span>
             <span v-else-if="node.type === 'class' && (node.data as any).isAbstract?.()" class="badge abstract">A</span>
@@ -883,6 +894,22 @@ async function exportJsonSchema() {
 :deep(.p-tree-node-icon) {
   color: var(--text-color-secondary);
   margin-right: 0.5rem;
+}
+
+:deep(.p-tree-node-icon.custom-icon) {
+  display: none;
+}
+
+.node-icon--img {
+  width: 1rem;
+  height: 1rem;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+:root.p-dark .node-icon--img,
+.dark-theme .node-icon--img {
+  filter: invert(0.85);
 }
 
 :deep(.p-tree-node-label) {

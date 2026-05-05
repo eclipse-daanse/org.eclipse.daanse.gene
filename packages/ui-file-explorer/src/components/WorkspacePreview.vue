@@ -18,7 +18,7 @@ const fileSystem = useSharedFileSystem()
 const tsm = inject<any>('tsm')
 
 // XMI Viewer via TSM service (avoids static dependency on ui-xmi-viewer)
-const XmiViewer = computed(() => tsm?.getService('ui.xmi-viewer.component'))
+const XmiViewer = ref<any>(null)
 const useFileViewerRegistry = () => tsm?.getService('ui.xmi-viewer.registry')?.()
 
 // WorkspaceActionService for direct App-level actions (replaces emits)
@@ -35,6 +35,13 @@ const props = defineProps<{
 // Resolved selectedFile: prop takes priority, otherwise shared state
 const selectedFile = computed(() => props.selectedFile ?? fileSystem.selectedFile.value)
 const fileViewerRegistry = useFileViewerRegistry()
+
+// Re-resolve XmiViewer on file selection (service may register after us)
+watch(selectedFile, () => {
+  if (!XmiViewer.value) {
+    XmiViewer.value = tsm?.getService('ui.xmi-viewer.component') ?? null
+  }
+}, { immediate: true })
 
 // Preview state
 const loading = ref(false)
@@ -321,11 +328,15 @@ function handleLoadCocl() {
     <!-- XMI Instance Data Preview (uses XmiViewer component) -->
     <div v-else-if="isXmiFile && !isWorkspaceFile && fileContent" class="xmi-file-preview">
       <component
-        :is="XmiViewer"
         v-if="XmiViewer"
+        :is="XmiViewer"
         :content="fileContent"
         :file-name="selectedFile.name"
       />
+      <div v-else class="xmi-fallback-preview">
+        <div class="preview-label">{{ selectedFile.name }}</div>
+        <pre class="xmi-content">{{ fileContent.substring(0, 2000) }}{{ fileContent.length > 2000 ? '\n...' : '' }}</pre>
+      </div>
     </div>
 
     <!-- Workspace preview -->

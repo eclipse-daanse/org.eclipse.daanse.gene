@@ -89,7 +89,7 @@ export interface FileFilter {
 /**
  * Workspace file extensions
  */
-export const WORKSPACE_EXTENSIONS = ['.wsp', '.workspace', '.xmi']
+export const WORKSPACE_EXTENSIONS = ['.wsp', '.workspace']
 
 /**
  * Check if a file is a workspace file

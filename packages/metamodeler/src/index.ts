@@ -19,7 +19,7 @@ export * from './components'
 
 // Import for service registration
 import { MetamodelerPerspective, MetamodelerTree, MetamodelerEditor } from './components'
-import { useMetamodeler, useSharedMetamodeler } from './composables/useMetamodeler'
+import { useMetamodeler, useSharedMetamodeler, setMetamodelerIconRegistry, refreshMetamodelerIcons } from './composables/useMetamodeler'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
@@ -30,6 +30,30 @@ import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-per
  */
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Metamodeler plugin...')
+
+  // Set icon registry reference for custom icons in metamodeler tree
+  // ui-instance-tree may load after metamodeler, so retry if not available yet
+  function trySetupIconRegistry() {
+    const svc = context.services.get<any>('gene.icons.classRegistry')
+    if (svc) {
+      setMetamodelerIconRegistry(svc)
+      if (svc.onIconsChanged) {
+        svc.onIconsChanged(() => refreshMetamodelerIcons())
+      }
+      // Refresh immediately to pick up icons loaded before we subscribed
+      refreshMetamodelerIcons()
+      context.log.info('Subscribed to icon changes')
+      return true
+    }
+    return false
+  }
+  if (!trySetupIconRegistry()) {
+    setTimeout(() => {
+      if (!trySetupIconRegistry()) {
+        setTimeout(() => trySetupIconRegistry(), 2000)
+      }
+    }, 500)
+  }
 
   // Register components as service
   context.services.register('ui.metamodeler.components', {

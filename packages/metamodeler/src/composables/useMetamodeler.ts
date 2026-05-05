@@ -18,6 +18,30 @@ import {
 import type { MetamodelerState, MetaTreeNode, OclConstraintInfo } from '../types'
 import { META_ICONS, OCL_ANNOTATION_SOURCES, getClassifierIcon } from '../types'
 
+// Icon registry reference (set externally via setIconRegistry)
+let _iconRegistry: { getIconForClass: (eClass: EClass) => string } | null = null
+
+export function setMetamodelerIconRegistry(registry: any): void {
+  _iconRegistry = registry
+}
+
+// Reactive version counter for icon changes
+const _iconVersion = ref(0)
+
+export function refreshMetamodelerIcons(): void {
+  _iconVersion.value++
+}
+
+function getIconForClassViaRegistry(eClass: EClass): string | null {
+  if (_iconRegistry?.getIconForClass) {
+    const icon = _iconRegistry.getIconForClass(eClass)
+    if (icon && icon !== 'pi pi-circle') {
+      return icon
+    }
+  }
+  return null
+}
+
 // Shared resource set for creating new resources
 let resourceSet: BasicResourceSet | null = null
 
@@ -226,6 +250,8 @@ export function useMetamodeler() {
    * Shows Ecore.ecore + imported packages with their classes and datatypes
    */
   const modelTreeNodes = computed(() => {
+    // Access icon version to trigger re-computation when icons change
+    void _iconVersion.value
     const nodes: any[] = []
 
     for (const pkgInfo of importedPackages.value.values()) {
@@ -245,10 +271,11 @@ export function useMetamodeler() {
           const isAbstract = eClass.isAbstract()
           const isInterface = eClass.isInterface()
 
+          const customIcon = getIconForClassViaRegistry(eClass)
           classChildren.push({
             key: `cls:${pkgInfo.nsPrefix}:${name}`,
             label: name,
-            icon: isInterface ? 'pi pi-circle' : (isAbstract ? 'pi pi-circle-off' : 'pi pi-file'),
+            icon: customIcon || (isInterface ? 'pi pi-circle' : (isAbstract ? 'pi pi-circle-off' : 'pi pi-file')),
             data: {
               qualifiedName: `${pkgInfo.nsPrefix}:${name}`,
               name: name,
@@ -377,6 +404,8 @@ export function useMetamodeler() {
   const treeNodes = computed<MetaTreeNode[]>(() => {
     // Access version to create dependency (triggers recompute on model changes)
     const currentVersion = version.value
+    // Access icon version to trigger recompute on icon changes
+    void _iconVersion.value
     console.log('[Metamodeler] treeNodes recomputing, version:', currentVersion)
 
     nodeCache.clear()
@@ -507,7 +536,7 @@ export function useMetamodeler() {
   function getNodeIcon(obj: EObject, className: string): string {
     switch (className) {
       case 'EPackage': return META_ICONS.package
-      case 'EClass': return getClassifierIcon(obj as EClass)
+      case 'EClass': return getIconForClassViaRegistry(obj as EClass) || getClassifierIcon(obj as EClass)
       case 'EAttribute': return META_ICONS.attribute
       case 'EReference':
         return (obj as EReference).isContainment() ? META_ICONS.containment : META_ICONS.reference

@@ -37,17 +37,27 @@ export async function activate(context: ModuleContext): Promise<void> {
   context.log.info(`Model registry initialized with ${registry.allPackages.value.length} packages`)
 
   // Set icon registry reference and subscribe to changes (via TSM DI)
-  const iconRegistrySvc = context.services.get<any>('gene.icons.classRegistry')
-  if (iconRegistrySvc) {
-    setIconRegistry(iconRegistrySvc)
-  }
-  if (iconRegistrySvc?.onIconsChanged) {
-    iconRegistrySvc.onIconsChanged(() => {
+  // ui-instance-tree may load after model-browser, so retry if not available yet
+  function trySetupIconRegistry() {
+    const svc = context.services.get<any>('gene.icons.classRegistry')
+    if (svc) {
+      setIconRegistry(svc)
+      if (svc.onIconsChanged) {
+        svc.onIconsChanged(() => registry.refreshIcons())
+      }
+      // Refresh immediately to pick up icons loaded before we subscribed
       registry.refreshIcons()
-    })
-    context.log.info('Subscribed to icon changes')
-  } else {
-    context.log.warn('Icon registry not available for subscription')
+      context.log.info('Subscribed to icon changes')
+      return true
+    }
+    return false
+  }
+  if (!trySetupIconRegistry()) {
+    setTimeout(() => {
+      if (!trySetupIconRegistry()) {
+        setTimeout(() => trySetupIconRegistry(), 2000)
+      }
+    }, 500)
   }
 
   // Inject views service from ui-instance-tree (breaks circular dependency)
