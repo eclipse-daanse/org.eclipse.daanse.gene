@@ -62,6 +62,7 @@ export type { TreeFilter } from './TreeFilter';
 export type { PackageResolverChain } from './PackageResolverChain';
 export type { PackageResolver } from './PackageResolver';
 export type { AtlasConnection } from './AtlasConnection';
+export type { CustomIconDefinition } from './CustomIconDefinition';
 
 // Implementations
 export { EditorConfigImpl } from './EditorConfigImpl';
@@ -113,6 +114,7 @@ export { TreeFilterImpl } from './TreeFilterImpl';
 export { PackageResolverChainImpl } from './PackageResolverChainImpl';
 export { PackageResolverImpl } from './PackageResolverImpl';
 export { AtlasConnectionImpl } from './AtlasConnectionImpl';
+export { CustomIconDefinitionImpl } from './CustomIconDefinitionImpl';
 
 // Enums
 export { PatternKind, getPatternKind, getPatternKindByLiteral } from './PatternKind';

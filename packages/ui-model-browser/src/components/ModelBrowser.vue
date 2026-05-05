@@ -56,6 +56,15 @@ function getActions() {
   return tsm?.getService('gene.workspace.actions')
 }
 
+// Resolve custom icon dataUrl from CSS class
+function getIconDataUrl(iconClass: string | undefined): string | undefined {
+  if (!iconClass || !iconClass.startsWith('custom-icon custom-icon--')) return undefined
+  const id = iconClass.replace('custom-icon custom-icon--', '')
+  const registry = tsm?.getService('gene.icons.registry')
+  const provider = registry?.get?.('custom-icons') as any
+  return provider?.getDataUrl?.(id)
+}
+
 const activeContext = computed(() => getActiveContext())
 
 console.log('[ModelBrowser.vue] Using context:', props.context?.mode ?? 'fallback', 'from props:', !!props.context)
@@ -272,6 +281,7 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
             @dragstart="handleDragStart($event, node)"
             @contextmenu.prevent="handleContextMenu($event, node)"
           >
+            <img v-if="getIconDataUrl(node.icon)" :src="getIconDataUrl(node.icon)" class="node-icon node-icon--img" alt="" />
             <span class="node-label">{{ node.label }}</span>
             <span v-if="node.type === 'class' && (node.data as ClassInfo).isInterface" class="badge interface" v-tooltip.top="'Interface'">I</span>
             <span v-else-if="node.type === 'class' && (node.data as ClassInfo).isAbstract" class="badge abstract" v-tooltip.top="'Abstract'">A</span>
@@ -459,6 +469,18 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
   font-size: 0.875rem;
 }
 
+.node-icon--img {
+  width: 1rem;
+  height: 1rem;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+:root.p-dark .node-icon--img,
+.dark-theme .node-icon--img {
+  filter: invert(0.85);
+}
+
 .extends-info {
   font-size: 0.75rem;
   color: var(--text-color-muted);
@@ -587,6 +609,11 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
 :deep(.p-tree-node-icon) {
   color: var(--text-color-secondary);
   margin-right: 0.5rem;
+}
+
+/* Hide PrimeVue's auto-rendered icon for custom icons */
+:deep(.p-tree-node-icon.custom-icon) {
+  display: none;
 }
 
 :deep(.p-tree-node-label) {

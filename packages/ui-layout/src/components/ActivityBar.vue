@@ -10,6 +10,15 @@ import WorkspaceSettingsDialog from './WorkspaceSettingsDialog.vue'
 
 // Perspective service (injected from TSM)
 const tsm = inject<any>('tsm')
+
+// Resolve custom icon dataUrl from CSS class
+function getIconDataUrl(iconClass: string): string | undefined {
+  if (!iconClass || !iconClass.startsWith('custom-icon custom-icon--')) return undefined
+  const id = iconClass.replace('custom-icon custom-icon--', '')
+  const registry = tsm?.getService('gene.icons.registry')
+  const provider = registry?.get?.('custom-icons') as any
+  return provider?.getDataUrl?.(id)
+}
 const perspectiveService = shallowRef<any>(null)
 
 // Perspective manager (new registry-based)
@@ -60,10 +69,10 @@ onMounted(() => {
     if (perspectiveManager.value) {
       const registeredPerspectives = perspectiveManager.value.registry.getAll()
       if (registeredPerspectives.length > 0) {
-        // Only update if the list changed
-        const newIds = registeredPerspectives.map((p: any) => p.id).sort().join(',')
-        const currentIds = allPerspectives.value.map(p => p.id).sort().join(',')
-        if (newIds !== currentIds) {
+        // Update if IDs or icons changed
+        const newFingerprint = registeredPerspectives.map((p: any) => `${p.id}:${p.icon}`).sort().join(',')
+        const currentFingerprint = allPerspectives.value.map(p => `${p.id}:${p.icon}`).sort().join(',')
+        if (newFingerprint !== currentFingerprint) {
           allPerspectives.value = registeredPerspectives
             .sort((a: any, b: any) => (a.order ?? 999) - (b.order ?? 999))
             .map((p: any) => ({
@@ -189,7 +198,8 @@ async function handlePerspectiveClick(perspectiveId: string) {
         :title="persp.tooltip"
         @click="handlePerspectiveClick(persp.id)"
       >
-        <i :class="persp.icon"></i>
+        <img v-if="getIconDataUrl(persp.icon)" :src="getIconDataUrl(persp.icon)" class="activity-icon activity-icon--img" alt="" />
+        <i v-else :class="persp.icon"></i>
       </button>
     </div>
 
@@ -204,12 +214,14 @@ async function handlePerspectiveClick(perspectiveId: string) {
         :title="persp.tooltip"
         @click="handlePerspectiveClick(persp.id)"
       >
-        <i :class="persp.icon"></i>
+        <img v-if="getIconDataUrl(persp.icon)" :src="getIconDataUrl(persp.icon)" class="activity-icon activity-icon--img" alt="" />
+        <i v-else :class="persp.icon"></i>
       </button>
     </div>
 
     <div v-if="hasWorkspace" class="activity-bar-bottom">
       <button
+        v-tid="'open-workspace-settings'"
         class="activity-item"
         title="Workspace Settings"
         @click="showSettings = true"
@@ -295,5 +307,16 @@ async function handlePerspectiveClick(perspectiveId: string) {
 
 .activity-item i {
   font-size: 1.25rem;
+}
+
+.activity-icon--img {
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
+}
+
+:root.p-dark .activity-icon--img,
+.dark-theme .activity-icon--img {
+  filter: invert(0.85);
 }
 </style>

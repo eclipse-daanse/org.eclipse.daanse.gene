@@ -147,3 +147,14 @@ export const iconProviderRegistry = new IconProviderRegistry()
 export function getIconProviderRegistry(): IconProviderRegistry {
   return iconProviderRegistry
 }
+
+/**
+ * Check if a CSS icon class represents a custom icon and return its dataUrl.
+ * Returns undefined for non-custom icons.
+ */
+export function resolveCustomIconDataUrl(iconCssClass: string): string | undefined {
+  if (!iconCssClass || !iconCssClass.startsWith('custom-icon custom-icon--')) return undefined
+  const id = iconCssClass.replace('custom-icon custom-icon--', '')
+  const provider = iconProviderRegistry.get('custom-icons') as any
+  return provider?.getDataUrl?.(id)
+}

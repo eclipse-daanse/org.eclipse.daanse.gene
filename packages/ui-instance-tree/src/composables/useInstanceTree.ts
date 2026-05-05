@@ -9,7 +9,7 @@ import { ref, computed, watch, triggerRef, toRaw, type Ref } from 'tsm:vue'
 import type { EObject, EClass, EReference, Resource } from '@emfts/core'
 import { XMIResource, URI, BasicResourceSet, EContentAdapter, type Notification } from '@emfts/core'
 import type { InstanceTreeNode, TreeSelection } from '../types'
-import { getObjectId, getObjectLabel, getObjectIcon } from '../types'
+import { getObjectId, getObjectLabel, getObjectIcon, getObjectIconInfo } from '../types'
 import { useSharedViews } from './useViews'
 
 // Shared resource set for creating new resources
@@ -29,7 +29,8 @@ function getElementName(element: any): string {
   if (!element) return 'unknown'
   // Try native getName first
   if (typeof element.getName === 'function') {
-    return element.getName() ?? 'unknown'
+    const name = element.getName()
+    if (name) return name
   }
   // DynamicEObject - try eGet
   try {
@@ -37,8 +38,16 @@ function getElementName(element: any): string {
     if (eClass) {
       const nameFeature = eClass.getEStructuralFeature?.('name')
       if (nameFeature) {
-        return element.eGet?.(nameFeature) ?? 'unknown'
+        const name = element.eGet?.(nameFeature)
+        if (name) return String(name)
       }
+    }
+  } catch { /* ignore */ }
+  // Try eSettings Map
+  try {
+    if (element.eSettings instanceof Map) {
+      const name = element.eSettings.get('name')
+      if (name) return String(name)
     }
   } catch { /* ignore */ }
   return 'unknown'
@@ -291,10 +300,13 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
       } catch { /* ignore */ }
     }
 
+    const { icon, iconClass, iconDataUrl } = getObjectIconInfo(rawObj)
     const node: InstanceTreeNode = {
       key: id,
       label,
-      icon: getObjectIcon(rawObj),
+      icon,
+      iconClass,
+      iconDataUrl,
       data: rawObj,
       eClass,
       leaf: true,

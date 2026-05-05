@@ -22,6 +22,7 @@ import {
 } from '../services/iconRegistry'
 import IconPicker from './IconPicker.vue'
 import type { SelectedIcon } from '../services/iconProviders'
+import { resolveCustomIconDataUrl } from '../services/iconProviderRegistry'
 
 // Get model registry via TSM service (avoids circular dependency with ui-model-browser)
 const tsm = inject<any>('tsm')
@@ -396,6 +397,11 @@ function getIconClass(mapping: any): string {
   }
 }
 
+function getIconDataUrl(mapping: any): string | undefined {
+  const cssClass = getIconClass(mapping)
+  return resolveCustomIconDataUrl(cssClass)
+}
+
 // Check if EditorConfig is available
 const hasEditorConfig = computed(() => {
   const result = !!editorConfig.value?.initialized?.value
@@ -497,7 +503,8 @@ const canSave = computed(() => {
       <DataTable :value="mappings" size="small" scrollable scrollHeight="300px">
         <Column header="Icon" style="width: 60px">
           <template #body="{ data }">
-            <i :class="getIconClass(data)" style="font-size: 1.2rem"></i>
+            <img v-if="getIconDataUrl(data)" :src="getIconDataUrl(data)" class="custom-icon-preview" alt="" />
+            <i v-else :class="getIconClass(data)" style="font-size: 1.2rem"></i>
           </template>
         </Column>
         <Column header="Klasse">
@@ -708,5 +715,16 @@ const canSave = computed(() => {
 .form-row :deep(.p-inputnumber),
 .form-row :deep(.p-button) {
   height: 2.5rem;
+}
+
+.custom-icon-preview {
+  width: 1.2rem;
+  height: 1.2rem;
+  object-fit: contain;
+}
+
+:root.p-dark .custom-icon-preview,
+.dark-theme .custom-icon-preview {
+  filter: invert(0.85);
 }
 </style>
