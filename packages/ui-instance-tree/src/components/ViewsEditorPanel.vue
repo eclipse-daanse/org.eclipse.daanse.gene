@@ -6,7 +6,7 @@
  * Type visibility assignment via a separate dialog with checkbox tree.
  */
 
-import { ref, computed, inject } from 'tsm:vue'
+import { ref, computed, inject, watch } from 'tsm:vue'
 import { Button } from 'tsm:primevue'
 import { InputText } from 'tsm:primevue'
 import { Checkbox } from 'tsm:primevue'
@@ -142,11 +142,14 @@ const typeDialogView = computed(() => {
 function openTypeDialog(viewId: string) {
   typeDialogViewId.value = viewId
   views.setActiveView(viewId)
+  typeSearchQuery.value = ''
+  expandToDepth(2)
   showTypeDialog.value = true
 }
 
 // Tree
 const expandedKeys = ref<Record<string, boolean>>({})
+const typeSearchQuery = ref('')
 
 const resolvedPackages = computed(() => {
   if (props.packages && props.packages.length > 0) return props.packages
@@ -156,7 +159,10 @@ const resolvedPackages = computed(() => {
 
 const modelTreeNodes = computed(() => {
   const nodes: any[] = []
+  // Only show root packages (no eSuperPackage) — subpackages appear as children
   for (const pkgInfo of resolvedPackages.value) {
+    const eSuperPackage = pkgInfo.ePackage.getESuperPackage?.()
+    if (eSuperPackage) continue
     const pkgNode = packageInfoToTreeNode(pkgInfo)
     if (pkgNode) nodes.push(pkgNode)
   }
@@ -330,6 +336,52 @@ function collapseAll() {
   expandedKeys.value = {}
 }
 
+function expandToDepth(maxDepth: number) {
+  const keys: Record<string, boolean> = {}
+  function traverse(nodes: any[], depth: number) {
+    if (depth >= maxDepth) return
+    for (const n of nodes) {
+      if (n.children && n.children.length > 0) {
+        keys[n.key] = true
+        traverse(n.children, depth + 1)
+      }
+    }
+  }
+  traverse(modelTreeNodes.value, 0)
+  expandedKeys.value = keys
+}
+
+// Filtered tree nodes for search
+const filteredTreeNodes = computed(() => {
+  const q = typeSearchQuery.value.trim().toLowerCase()
+  if (!q) return modelTreeNodes.value
+  return filterTree(modelTreeNodes.value, q)
+})
+
+function filterTree(nodes: any[], query: string): any[] {
+  const result: any[] = []
+  for (const node of nodes) {
+    if (node.data?.type === 'class') {
+      if (node.label.toLowerCase().includes(query)) {
+        result.push(node)
+      }
+    } else if (node.children) {
+      const filteredChildren = filterTree(node.children, query)
+      if (filteredChildren.length > 0) {
+        result.push({ ...node, children: filteredChildren })
+      }
+    }
+  }
+  return result
+}
+
+// Auto-expand all when searching
+watch(typeSearchQuery, (q) => {
+  if (q.trim()) {
+    expandAll()
+  }
+})
+
 function hiddenCount(viewId: string): number {
   const view = views.views.value.find(v => v.id === viewId)
   if (!view) return 0
@@ -452,13 +504,21 @@ function hiddenCount(viewId: string): number {
           </Button>
         </div>
         <div class="type-toolbar">
+          <div class="type-search">
+            <i class="pi pi-search type-search-icon" />
+            <InputText
+              v-model="typeSearchQuery"
+              placeholder="Klasse suchen..."
+              class="type-search-input"
+            />
+          </div>
           <Button icon="pi pi-angle-double-down" text rounded size="small" @click="expandAll" v-tooltip.bottom="'Expand All'" />
           <Button icon="pi pi-angle-double-up" text rounded size="small" @click="collapseAll" v-tooltip.bottom="'Collapse All'" />
           <span class="filter-summary">{{ hiddenCount(typeDialogView.id) }} types hidden</span>
         </div>
         <div class="type-tree-container">
           <Tree
-            :value="modelTreeNodes"
+            :value="filteredTreeNodes"
             v-model:expandedKeys="expandedKeys"
             class="type-tree"
             scrollHeight="flex"
@@ -729,6 +789,33 @@ function hiddenCount(viewId: string): number {
   padding: 0.5rem;
   border-bottom: 1px solid var(--surface-border);
   flex-shrink: 0;
+}
+
+.type-search {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.type-search-icon {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-color-secondary);
+  font-size: 0.8rem;
+  pointer-events: none;
+}
+
+.type-search-input {
+  width: 100%;
+  padding-left: 28px !important;
+  font-size: 0.8125rem;
+}
+
+.type-search-input :deep(.p-inputtext) {
+  padding: 0.35rem 0.5rem 0.35rem 28px;
+  font-size: 0.8125rem;
 }
 
 .filter-summary {
