@@ -527,7 +527,7 @@ function hiddenCount(viewId: string): number {
               <div class="type-node">
                 <template v-if="node.data?.type === 'class'">
                   <Checkbox
-                    :modelValue="isClassHidden(typeDialogView!.id, node.data.eClass)"
+                    :modelValue="!isClassHidden(typeDialogView!.id, node.data.eClass)"
                     @update:modelValue="toggleClassInView(typeDialogView!.id, node.data.eClass)"
                     binary
                   />
@@ -538,7 +538,7 @@ function hiddenCount(viewId: string): number {
                 </template>
                 <template v-else-if="node.data?.type === 'package'">
                   <Checkbox
-                    :modelValue="isPackageAllHidden(typeDialogView!.id, node)"
+                    :modelValue="!isPackageAllHidden(typeDialogView!.id, node)"
                     @update:modelValue="togglePackageInView(typeDialogView!.id, node)"
                     binary
                   />
