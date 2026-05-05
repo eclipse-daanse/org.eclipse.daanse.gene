@@ -11,6 +11,7 @@ import { DataTable } from 'tsm:primevue'
 import { Column } from 'tsm:primevue'
 import { InputNumber } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
+import { Dialog } from 'tsm:primevue'
 import type { StorageStrategy } from 'ui-perspectives'
 import type { EditorConfigService } from 'gene-app'
 
@@ -63,11 +64,13 @@ watch(selectedCategory, () => {
 // editorConfig is a stable singleton – get once, use its reactive refs directly
 const editorConfig = tsm?.getService<EditorConfigService>('gene.editor.config')
 const iconRegistryService = computed(() => tsm?.getService('ui.instance-tree.iconRegistry') || null)
+const iconProviderRegistry = computed(() => tsm?.getService('gene.icons.registry') || null)
 const getAllMappings = computed(() => iconRegistryService.value?.getAllMappings)
 const MappingScope = computed(() => iconRegistryService.value?.MappingScope ?? { TYPE_ONLY: 'TYPE_ONLY', TYPE_AND_SUBTYPES: 'TYPE_AND_SUBTYPES' })
 const IconLibrary = computed(() => iconRegistryService.value?.IconLibrary ?? { PRIME_ICONS: 'PRIME_ICONS', MATERIAL_SYMBOLS: 'MATERIAL_SYMBOLS', FONT_AWESOME: 'FONT_AWESOME', CUSTOM: 'CUSTOM' })
 
 const ViewsEditorPanel = computed(() => tsm?.getService('ui.instance-tree.components')?.ViewsEditorPanel || null)
+const IconPickerComponent = computed(() => tsm?.getService('ui.instance-tree.components')?.IconPicker || null)
 
 const actionComponents = computed(() => tsm?.getService('gene.action.components') || null)
 const EventMappingEditor = computed(() => actionComponents.value?.EventMappingEditor || null)
@@ -205,30 +208,42 @@ const availableClasses = computed(() => {
 const newMapping = ref({
   targetType: '',
   icon: '',
+  iconCssClass: '',
   scope: 'TYPE_ONLY',
   priority: 20,
   library: 'PRIME_ICONS'
 })
+
+const iconPickerVisible = ref(false)
+const iconPickerValue = ref<any>(null)
+
+function openIconPicker() {
+  iconPickerVisible.value = true
+}
+
+function handleIconSelect(selected: any) {
+  newMapping.value.icon = selected.iconName
+  newMapping.value.iconCssClass = selected.cssClass
+  newMapping.value.library = selected.providerId === 'primeicons' ? 'PRIME_ICONS' : 'CUSTOM'
+  iconPickerVisible.value = false
+}
 
 const scopeOptions = computed(() => [
   { label: 'Nur dieser Typ', value: MappingScope.value.TYPE_ONLY },
   { label: 'Typ und Subtypen', value: MappingScope.value.TYPE_AND_SUBTYPES }
 ])
 
-const commonIcons = [
-  'circle', 'star', 'heart', 'user', 'users', 'home', 'folder', 'file',
-  'calendar', 'clock', 'bell', 'envelope', 'comment', 'comments',
-  'cog', 'wrench', 'database', 'server', 'cloud', 'code',
-  'box', 'building', 'microphone', 'video', 'image', 'book'
-]
 
 function addMapping() {
   if (!newMapping.value.targetType || !newMapping.value.icon) return
 
   if (editorConfig) {
-    const iconName = newMapping.value.library === IconLibrary.value.PRIME_ICONS
-      ? `pi pi-${newMapping.value.icon}`
-      : newMapping.value.icon
+    // Use the full CSS class from picker if available, otherwise build it
+    const iconName = newMapping.value.iconCssClass || (
+      newMapping.value.library === IconLibrary.value.PRIME_ICONS
+        ? `pi pi-${newMapping.value.icon}`
+        : newMapping.value.icon
+    )
 
     editorConfig.addIconMapping(
       newMapping.value.targetType,
@@ -244,6 +259,7 @@ function addMapping() {
   newMapping.value = {
     targetType: '',
     icon: '',
+    iconCssClass: '',
     scope: 'TYPE_ONLY',
     priority: 20,
     library: 'PRIME_ICONS'
@@ -255,6 +271,7 @@ function removeMapping(mapping: any) {
     editorConfig.removeIconMapping(mapping._original)
   }
 }
+
 
 function formatScope(scope: any): string {
   return scope === MappingScope.value.TYPE_AND_SUBTYPES || scope === 'TYPE_AND_SUBTYPES'
@@ -287,6 +304,15 @@ function getIconClass(mapping: any): string {
     default:
       return iconName
   }
+}
+
+function getIconDataUrl(mapping: any): string | undefined {
+  const cssClass = getIconClass(mapping)
+  if (!cssClass || !cssClass.startsWith('custom-icon custom-icon--')) return undefined
+  const id = cssClass.replace('custom-icon custom-icon--', '')
+  const registry = iconProviderRegistry.value
+  const provider = registry?.get?.('custom-icons') as any
+  return provider?.getDataUrl?.(id)
 }
 
 const hasEditorConfig = computed(() => !!editorConfig?.initialized?.value)
@@ -420,6 +446,7 @@ function formatKind(kind: string): string {
             <button
               v-for="cat in categories"
               :key="cat.id"
+              :data-testid="`ui-layout.WorkspaceSettingsDialog.category-${cat.id}`"
               class="category-item"
               :class="{ active: selectedCategory === cat.id }"
               @click="selectedCategory = cat.id"
@@ -457,6 +484,7 @@ function formatKind(kind: string): string {
                   <div class="field">
                     <label>Class</label>
                     <Dropdown
+                      v-tid="'class-dropdown'"
                       v-model="newMapping.targetType"
                       :options="availableClasses"
                       optionLabel="label"
@@ -476,27 +504,16 @@ function formatKind(kind: string): string {
                   </div>
                   <div class="field field-icon">
                     <label>Icon</label>
-                    <Dropdown
-                      v-model="newMapping.icon"
-                      :options="commonIcons"
-                      placeholder="Icon..."
-                      editable
-                      filter
-                    >
-                      <template #option="{ option }">
-                        <div class="icon-option">
-                          <i :class="`pi pi-${option}`"></i>
-                          <span>{{ option }}</span>
-                        </div>
-                      </template>
-                      <template #value="{ value }">
-                        <div v-if="value" class="icon-option">
-                          <i :class="`pi pi-${value}`"></i>
-                          <span>{{ value }}</span>
-                        </div>
-                        <span v-else>Icon...</span>
-                      </template>
-                    </Dropdown>
+                    <Button
+                      v-tid="'icon-picker-btn'"
+                      :label="newMapping.icon || 'Icon wählen...'"
+                      :icon="newMapping.iconCssClass || (newMapping.icon ? `pi pi-${newMapping.icon}` : 'pi pi-th-large')"
+                      severity="secondary"
+                      outlined
+                      size="small"
+                      class="icon-picker-trigger"
+                      @click="openIconPicker"
+                    />
                   </div>
                 </div>
                 <div class="form-row">
@@ -515,6 +532,7 @@ function formatKind(kind: string): string {
                   </div>
                   <div class="field-action">
                     <Button
+                      v-tid="'add-icon-mapping'"
                       icon="pi pi-plus"
                       label="Add"
                       @click="addMapping"
@@ -525,11 +543,12 @@ function formatKind(kind: string): string {
               </div>
 
               <!-- Existing mappings -->
-              <div class="mappings-table" v-if="mappings.length > 0">
+              <div v-tid="'mappings-table'" class="mappings-table" v-if="mappings.length > 0">
                 <DataTable :value="mappings" size="small" scrollable scrollHeight="250px">
                   <Column header="" style="width: 40px">
                     <template #body="{ data }">
-                      <i :class="getIconClass(data)" style="font-size: 1.1rem"></i>
+                      <img v-if="getIconDataUrl(data)" :src="getIconDataUrl(data)" class="custom-icon-preview" alt="" />
+                      <i v-else :class="getIconClass(data)" style="font-size: 1.1rem"></i>
                     </template>
                   </Column>
                   <Column header="Class">
@@ -561,6 +580,7 @@ function formatKind(kind: string): string {
               <div v-else class="empty-hint">
                 No icon mappings configured yet.
               </div>
+
             </div>
 
             <!-- Views -->
@@ -763,6 +783,22 @@ function formatKind(kind: string): string {
             </div>
           </div>
         </div>
+
+        <!-- Icon Picker Dialog (outside v-else-if chain) -->
+        <Dialog
+          v-model:visible="iconPickerVisible"
+          header="Icon auswählen"
+          :modal="true"
+          :style="{ width: '520px' }"
+        >
+          <component
+            v-if="IconPickerComponent"
+            :is="IconPickerComponent"
+            v-model="iconPickerValue"
+            :add-custom-icon="(editorConfig as any)?.addCustomIcon"
+            @select="handleIconSelect"
+          />
+        </Dialog>
 
         <!-- Footer with Save button -->
         <div class="settings-footer">
@@ -1026,6 +1062,22 @@ function formatKind(kind: string): string {
   gap: 0.5rem;
 }
 
+.icon-picker-trigger {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.custom-icon-preview {
+  width: 1.1rem;
+  height: 1.1rem;
+  object-fit: contain;
+}
+
+:root.p-dark .custom-icon-preview,
+.dark-theme .custom-icon-preview {
+  filter: invert(0.85);
+}
+
 /* Mappings table */
 .mappings-table {
   border: 1px solid var(--surface-border);
@@ -1065,6 +1117,73 @@ function formatKind(kind: string): string {
   color: var(--text-color-secondary);
   font-style: italic;
   padding: 12px 0;
+}
+
+/* Section divider within a category */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.25rem 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--surface-border);
+}
+
+/* File input */
+.file-input {
+  font-size: 0.8125rem;
+  padding: 4px 0;
+  color: var(--text-color);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+/* Generic text input used in custom icon form */
+.text-input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 0.8125rem;
+  background: var(--surface-b, var(--surface-section));
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  color: var(--text-color);
+}
+.text-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+/* Required field marker */
+.required {
+  color: var(--red-500, #ef4444);
+  margin-left: 2px;
+}
+
+/* Icon preview in upload form */
+.field-icon-preview {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 2px;
+}
+.icon-preview-sm {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  padding: 2px;
+  background: var(--surface-section);
 }
 
 /* Category loading */

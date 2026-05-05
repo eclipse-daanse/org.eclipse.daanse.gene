@@ -29,7 +29,8 @@ import {
   type LayoutConfig,
   type TreeView,
   type PackageResolverChain,
-  type PackageResolver
+  type PackageResolver,
+  type CustomIconDefinition
 } from '../generated/fennecui'
 
 // Panel position type for layout state sync
@@ -38,7 +39,7 @@ interface PanelPositionData {
   location: 'primary' | 'secondary' | 'editor' | 'bottom'
   order: number
 }
-import { loadFromEditorConfig as loadIconsFromConfig, getSharedViews } from 'ui-instance-tree'
+import { loadFromEditorConfig as loadIconsFromConfig, getSharedViews, iconProviderRegistry, CustomIconProvider, CUSTOM_ICONS_PROVIDER_ID, type CustomIconEntry } from 'ui-instance-tree'
 
 // Default workspace filename
 const DEFAULT_WORKSPACE_FILENAME = 'workspace.fennecui'
@@ -67,6 +68,27 @@ export function useEditorConfig() {
   const workspaceFilePath = ref<string | null>(null)
   const workspaceRepository = ref<any>(null) // Repository from useWorkspace
   const workspaceFileEntry = ref<any>(null) // FileEntry for file system save
+
+  // Computed: Custom icon libraries - supports both EditorConfigImpl and DynamicEObject
+  const customIconLibraries = computed(() => {
+    if (!editorConfig.value) return []
+
+    const config = toRaw(editorConfig.value) as any
+
+    let libs = config.customIconLibraries
+    if (libs === undefined && typeof config.eGet === 'function') {
+      const eClass = config.eClass()
+      const feature = eClass.getEStructuralFeature('customIconLibraries')
+      if (feature) {
+        libs = config.eGet(feature)
+      }
+    }
+
+    if (libs && typeof libs.toArray === 'function') {
+      return libs.toArray()
+    }
+    return libs || []
+  })
 
   // Computed: Icon mappings - supports both EditorConfigImpl and DynamicEObject
   const iconMappings = computed(() => {
@@ -349,6 +371,7 @@ export function useEditorConfig() {
       // Apply icon mappings to registry
       if (editorConfig.value) {
         loadIconsFromConfig(editorConfig.value)
+        loadCustomIconsIntoRegistry()
       }
 
       // Load tree views into composable
@@ -742,6 +765,110 @@ export function useEditorConfig() {
     loadIconsFromConfig(rawConfig)
 
     console.log('[EditorConfig] Cleared all icon mappings')
+  }
+
+  // ============================================
+  // Custom Icon Libraries Management
+  // ============================================
+
+  /**
+   * Register all custom icons from the EditorConfig into the icon provider registry.
+   * Called on workspace load and after add/remove.
+   */
+  function loadCustomIconsIntoRegistry(): void {
+    const icons = customIconLibraries.value.map((e: any) => {
+      const raw = toRaw(e) as any
+      return {
+        id: getFeatureValue(raw, 'id') || '',
+        label: getFeatureValue(raw, 'label') || '',
+        category: getFeatureValue(raw, 'category') || 'custom',
+        dataUrl: getFeatureValue(raw, 'dataUrl') || '',
+        keywords: getFeatureValue(raw, 'keywords') || ''
+      }
+    })
+
+    iconProviderRegistry.unregister(CUSTOM_ICONS_PROVIDER_ID)
+    if (icons.length > 0) {
+      const iconsRef = ref(icons)
+      const provider = new CustomIconProvider(iconsRef)
+      iconProviderRegistry.register(provider)
+      console.log('[EditorConfig] Registered CustomIconProvider with', icons.length, 'icons')
+    }
+  }
+
+  /**
+   * Add a custom icon to the EditorConfig
+   */
+  function addCustomIcon(options: CustomIconEntry): CustomIconDefinition | null {
+    if (!editorConfig.value) {
+      console.error('[EditorConfig] EditorConfig not initialized')
+      return null
+    }
+
+    const iconDef = factory.createCustomIconDefinition()
+    const rawIcon = toRaw(iconDef) as any
+    setFeatureValue(rawIcon, 'id', options.id)
+    setFeatureValue(rawIcon, 'label', options.label || options.id)
+    setFeatureValue(rawIcon, 'category', options.category || 'custom')
+    setFeatureValue(rawIcon, 'dataUrl', options.dataUrl)
+    setFeatureValue(rawIcon, 'keywords', options.keywords || '')
+
+    const rawConfig = toRaw(editorConfig.value) as any
+    let libs = rawConfig.customIconLibraries
+    if (libs === undefined && typeof rawConfig.eGet === 'function') {
+      const eClass = rawConfig.eClass()
+      const feature = eClass.getEStructuralFeature('customIconLibraries')
+      if (feature) {
+        libs = rawConfig.eGet(feature)
+      }
+    }
+
+    if (libs && typeof libs.add === 'function') {
+      libs.add(iconDef)
+    } else if (libs && typeof libs.push === 'function') {
+      libs.push(iconDef)
+    } else {
+      console.error('[EditorConfig] Cannot add to customIconLibraries')
+      return null
+    }
+
+    dirty.value = true
+    triggerRef(editorConfig)
+    loadCustomIconsIntoRegistry()
+
+    console.log('[EditorConfig] Added custom icon:', options.id)
+    return iconDef as CustomIconDefinition
+  }
+
+  /**
+   * Remove a custom icon from the EditorConfig
+   */
+  function removeCustomIcon(icon: CustomIconDefinition): boolean {
+    if (!editorConfig.value) return false
+
+    const rawConfig = toRaw(editorConfig.value) as any
+    let libs = rawConfig.customIconLibraries
+    if (libs === undefined && typeof rawConfig.eGet === 'function') {
+      const eClass = rawConfig.eClass()
+      const feature = eClass.getEStructuralFeature('customIconLibraries')
+      if (feature) {
+        libs = rawConfig.eGet(feature)
+      }
+    }
+
+    if (libs && typeof libs.remove === 'function') {
+      libs.remove(icon)
+    } else if (libs) {
+      const index = libs.indexOf(icon)
+      if (index >= 0) libs.splice(index, 1)
+    }
+
+    dirty.value = true
+    triggerRef(editorConfig)
+    loadCustomIconsIntoRegistry()
+
+    console.log('[EditorConfig] Removed custom icon')
+    return true
   }
 
   // ============================================
@@ -1608,6 +1735,7 @@ export function useEditorConfig() {
   return {
     // State
     editorConfig,
+    customIconLibraries,
     iconMappings,
     modelSources,
     instanceSources,
@@ -1636,6 +1764,10 @@ export function useEditorConfig() {
     addIconMapping,
     removeIconMapping,
     clearIconMappings,
+    // Custom icon library methods
+    addCustomIcon,
+    removeCustomIcon,
+    loadCustomIconsIntoRegistry,
     // Model source methods
     addModelSource,
     removeModelSource,

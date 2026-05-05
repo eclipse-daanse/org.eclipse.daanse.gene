@@ -61,6 +61,7 @@ export class FennecuiPackage extends BasicEPackage {
     EDITOR_CONFIG__ACTIVE_VIEW_ID: null as unknown as EAttribute | EReference,
     EDITOR_CONFIG__PACKAGE_RESOLVER_CHAIN: null as unknown as EAttribute | EReference,
     EDITOR_CONFIG__ATLAS_CONNECTIONS: null as unknown as EAttribute | EReference,
+    EDITOR_CONFIG__CUSTOM_ICON_LIBRARIES: null as unknown as EAttribute | EReference,
     MODEL_SOURCE: null as unknown as EClass,
     MODEL_SOURCE__ID: null as unknown as EAttribute | EReference,
     MODEL_SOURCE__NAME: null as unknown as EAttribute | EReference,
@@ -371,6 +372,12 @@ export class FennecuiPackage extends BasicEPackage {
     ATLAS_CONNECTION__TOKEN: null as unknown as EAttribute | EReference,
     ATLAS_CONNECTION__AUTO_CONNECT: null as unknown as EAttribute | EReference,
     ATLAS_CONNECTION__ENABLED: null as unknown as EAttribute | EReference,
+    CUSTOM_ICON_DEFINITION: null as unknown as EClass,
+    CUSTOM_ICON_DEFINITION__ID: null as unknown as EAttribute | EReference,
+    CUSTOM_ICON_DEFINITION__LABEL: null as unknown as EAttribute | EReference,
+    CUSTOM_ICON_DEFINITION__CATEGORY: null as unknown as EAttribute | EReference,
+    CUSTOM_ICON_DEFINITION__DATA_URL: null as unknown as EAttribute | EReference,
+    CUSTOM_ICON_DEFINITION__KEYWORDS: null as unknown as EAttribute | EReference,
   };
 
   private constructor() {
@@ -638,6 +645,15 @@ export class FennecuiPackage extends BasicEPackage {
     editorConfig_atlasConnections.setUpperBound(-1);
     editorConfigClass.getEStructuralFeatures().push(editorConfig_atlasConnections);
     FennecuiPackage.Literals.EDITOR_CONFIG__ATLAS_CONNECTIONS = editorConfig_atlasConnections;
+
+    // Create customIconLibraries feature
+    const editorConfig_customIconLibraries = new BasicEReference();
+    editorConfig_customIconLibraries.setContainment(true);
+    editorConfig_customIconLibraries.setName('customIconLibraries');
+    editorConfig_customIconLibraries.setLowerBound(0);
+    editorConfig_customIconLibraries.setUpperBound(-1);
+    editorConfigClass.getEStructuralFeatures().push(editorConfig_customIconLibraries);
+    FennecuiPackage.Literals.EDITOR_CONFIG__CUSTOM_ICON_LIBRARIES = editorConfig_customIconLibraries;
 
     // Create ModelSource class
     const modelSourceClass = new BasicEClass();
@@ -3202,6 +3218,55 @@ export class FennecuiPackage extends BasicEPackage {
     atlasConnectionClass.getEStructuralFeatures().push(atlasConnection_enabled);
     FennecuiPackage.Literals.ATLAS_CONNECTION__ENABLED = atlasConnection_enabled;
 
+    // Create CustomIconDefinition class
+    const customIconDefinitionClass = new BasicEClass();
+    customIconDefinitionClass.setName('CustomIconDefinition');
+    customIconDefinitionClass.setAbstract(false);
+    customIconDefinitionClass.setInterface(false);
+    this.getEClassifiers().push(customIconDefinitionClass);
+    customIconDefinitionClass.setEPackage(this);
+    FennecuiPackage.Literals.CUSTOM_ICON_DEFINITION = customIconDefinitionClass;
+
+    // Create id feature
+    const customIconDefinition_id = new BasicEAttribute();
+    customIconDefinition_id.setName('id');
+    customIconDefinition_id.setLowerBound(1);
+    customIconDefinition_id.setUpperBound(1);
+    customIconDefinitionClass.getEStructuralFeatures().push(customIconDefinition_id);
+    FennecuiPackage.Literals.CUSTOM_ICON_DEFINITION__ID = customIconDefinition_id;
+
+    // Create label feature
+    const customIconDefinition_label = new BasicEAttribute();
+    customIconDefinition_label.setName('label');
+    customIconDefinition_label.setLowerBound(0);
+    customIconDefinition_label.setUpperBound(1);
+    customIconDefinitionClass.getEStructuralFeatures().push(customIconDefinition_label);
+    FennecuiPackage.Literals.CUSTOM_ICON_DEFINITION__LABEL = customIconDefinition_label;
+
+    // Create category feature
+    const customIconDefinition_category = new BasicEAttribute();
+    customIconDefinition_category.setName('category');
+    customIconDefinition_category.setLowerBound(0);
+    customIconDefinition_category.setUpperBound(1);
+    customIconDefinitionClass.getEStructuralFeatures().push(customIconDefinition_category);
+    FennecuiPackage.Literals.CUSTOM_ICON_DEFINITION__CATEGORY = customIconDefinition_category;
+
+    // Create dataUrl feature
+    const customIconDefinition_dataUrl = new BasicEAttribute();
+    customIconDefinition_dataUrl.setName('dataUrl');
+    customIconDefinition_dataUrl.setLowerBound(0);
+    customIconDefinition_dataUrl.setUpperBound(1);
+    customIconDefinitionClass.getEStructuralFeatures().push(customIconDefinition_dataUrl);
+    FennecuiPackage.Literals.CUSTOM_ICON_DEFINITION__DATA_URL = customIconDefinition_dataUrl;
+
+    // Create keywords feature
+    const customIconDefinition_keywords = new BasicEAttribute();
+    customIconDefinition_keywords.setName('keywords');
+    customIconDefinition_keywords.setLowerBound(0);
+    customIconDefinition_keywords.setUpperBound(1);
+    customIconDefinitionClass.getEStructuralFeatures().push(customIconDefinition_keywords);
+    FennecuiPackage.Literals.CUSTOM_ICON_DEFINITION__KEYWORDS = customIconDefinition_keywords;
+
 
     // ============================================
     // Set ESuperTypes (must be done after all classes are created)
@@ -3240,6 +3305,7 @@ export class FennecuiPackage extends BasicEPackage {
     (FennecuiPackage.Literals.EDITOR_CONFIG__TREE_VIEWS as BasicEReference).setEType(FennecuiPackage.Literals.TREE_VIEW);
     (FennecuiPackage.Literals.EDITOR_CONFIG__PACKAGE_RESOLVER_CHAIN as BasicEReference).setEType(FennecuiPackage.Literals.PACKAGE_RESOLVER_CHAIN);
     (FennecuiPackage.Literals.EDITOR_CONFIG__ATLAS_CONNECTIONS as BasicEReference).setEType(FennecuiPackage.Literals.ATLAS_CONNECTION);
+    (FennecuiPackage.Literals.EDITOR_CONFIG__CUSTOM_ICON_LIBRARIES as BasicEReference).setEType(FennecuiPackage.Literals.CUSTOM_ICON_DEFINITION);
     (FennecuiPackage.Literals.MODEL_REPOSITORY__PATTERNS as BasicEReference).setEType(FennecuiPackage.Literals.FILE_PATTERN);
     (FennecuiPackage.Literals.MODEL_REPOSITORY__LOAD_PROFILE as BasicEReference).setEType(FennecuiPackage.Literals.LOAD_PROFILE);
     (FennecuiPackage.Literals.IMPORT_RULE__PATTERNS as BasicEReference).setEType(FennecuiPackage.Literals.FILE_PATTERN);

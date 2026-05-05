@@ -14,6 +14,7 @@ import { ref, computed, watch, inject } from 'tsm:vue'
 import { Tree } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
 import { ContextMenu } from 'tsm:primevue'
+import { Menu } from 'tsm:primevue'
 import { Dialog } from 'tsm:primevue'
 import { Dropdown } from 'tsm:primevue'
 import type { EditorContext } from '../context/editorContext'
@@ -52,7 +53,8 @@ function getElementName(element: any): string {
   if (!element) return 'unknown'
   // Try native getName first
   if (typeof element.getName === 'function') {
-    return element.getName() ?? 'unknown'
+    const name = element.getName()
+    if (name) return name
   }
   // DynamicEObject - try eGet
   try {
@@ -60,8 +62,16 @@ function getElementName(element: any): string {
     if (eClass) {
       const nameFeature = eClass.getEStructuralFeature?.('name')
       if (nameFeature) {
-        return element.eGet?.(nameFeature) ?? 'unknown'
+        const name = element.eGet?.(nameFeature)
+        if (name) return String(name)
       }
+    }
+  } catch { /* ignore */ }
+  // Try eSettings Map
+  try {
+    if (element.eSettings instanceof Map) {
+      const name = element.eSettings.get('name')
+      if (name) return String(name)
     }
   } catch { /* ignore */ }
   return 'unknown'
@@ -96,6 +106,34 @@ const showIconSettings = ref(false)
 
 // Views editor dialog
 const showViewsEditor = ref(false)
+
+// View filter menu
+const viewFilterMenu = ref<any>(null)
+
+const viewFilterMenuItems = computed(() => {
+  const items: any[] = [
+    {
+      label: 'Kein Filter',
+      icon: views.activeView.value ? undefined : 'pi pi-check',
+      command: () => views.setActiveView(null)
+    },
+    { separator: true }
+  ]
+  for (const v of views.views.value) {
+    if (v.enabled) {
+      items.push({
+        label: v.name,
+        icon: views.activeView.value?.id === v.id ? 'pi pi-check' : undefined,
+        command: () => views.setActiveView(v.id)
+      })
+    }
+  }
+  return items
+})
+
+function toggleViewFilterMenu(event: Event) {
+  viewFilterMenu.value?.toggle(event)
+}
 
 // Available classes for creating instances (filtered by active view)
 const views = useSharedViews()
@@ -651,13 +689,15 @@ watch(ctxSelectedObject, (obj) => {
           v-tooltip.bottom="'Show Supertypes'"
         />
         <Button
-          icon="pi pi-filter"
+          :icon="views.activeView.value ? 'pi pi-filter-fill' : 'pi pi-filter'"
           text
           rounded
           size="small"
-          @click="showViewsEditor = true"
-          v-tooltip.bottom="'Edit Views'"
+          :class="{ 'toggle-active': !!views.activeView.value }"
+          @click="toggleViewFilterMenu"
+          v-tooltip.bottom="views.activeView.value ? `Filter: ${views.activeView.value.name}` : 'View-Filter'"
         />
+        <Menu ref="viewFilterMenu" :model="viewFilterMenuItems" :popup="true" />
         <Button
           icon="pi pi-cog"
           text
@@ -713,6 +753,8 @@ watch(ctxSelectedObject, (obj) => {
             class="tree-node"
             @contextmenu.prevent="(event) => { ctx.selectNode(node); handleContextMenu(event) }"
           >
+            <img v-if="node.iconDataUrl" :src="node.iconDataUrl" class="node-icon node-icon--img" alt="" />
+            <i v-else-if="node.iconClass" :class="node.iconClass" class="node-icon" />
             <span class="node-label">{{ node.label }}</span>
           </div>
         </template>
@@ -855,6 +897,24 @@ watch(ctxSelectedObject, (obj) => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.node-icon {
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+  flex-shrink: 0;
+}
+
+.node-icon--img {
+  width: 1rem;
+  height: 1rem;
+  object-fit: contain;
+}
+
+/* Dark mode: invert monochrome custom icons so they appear light */
+:root.p-dark .node-icon--img,
+.dark-theme .node-icon--img {
+  filter: invert(0.85);
 }
 
 .node-label {
@@ -1010,4 +1070,5 @@ watch(ctxSelectedObject, (obj) => {
   color: var(--primary-color);
   background: var(--primary-50);
 }
+
 </style>

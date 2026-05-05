@@ -106,6 +106,8 @@ import type { PackageResolver } from './PackageResolver';
 import { PackageResolverImpl } from './PackageResolverImpl';
 import type { AtlasConnection } from './AtlasConnection';
 import { AtlasConnectionImpl } from './AtlasConnectionImpl';
+import type { CustomIconDefinition } from './CustomIconDefinition';
+import { CustomIconDefinitionImpl } from './CustomIconDefinitionImpl';
 
 /**
  * Factory for creating Fennecui model objects
@@ -464,6 +466,13 @@ export class FennecuiFactory extends BasicEFactory {
   }
 
   /**
+   * Create a new CustomIconDefinition instance
+   */
+  createCustomIconDefinition(): CustomIconDefinition {
+    return new CustomIconDefinitionImpl();
+  }
+
+  /**
    * Create an instance of the given class
    */
   override create(eClass: EClass): EObject {
@@ -566,6 +575,8 @@ export class FennecuiFactory extends BasicEFactory {
         return this.createPackageResolver();
       case 'AtlasConnection':
         return this.createAtlasConnection();
+      case 'CustomIconDefinition':
+        return this.createCustomIconDefinition();
       default:
         throw new Error(`Unknown class: ${eClass.getName()}`);
     }

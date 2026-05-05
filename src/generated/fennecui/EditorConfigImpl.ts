@@ -29,6 +29,7 @@ import type { LayoutConfig } from './LayoutConfig';
 import type { TreeView } from './TreeView';
 import type { PackageResolverChain } from './PackageResolverChain';
 import type { AtlasConnection } from './AtlasConnection';
+import type { CustomIconDefinition } from './CustomIconDefinition';
 import type { EditorConfig } from './EditorConfig';
 import { FennecuiPackage } from './FennecuiPackage';
 
@@ -66,6 +67,7 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
   static readonly ACTIVE_VIEW_ID: number = 25;
   static readonly PACKAGE_RESOLVER_CHAIN: number = 26;
   static readonly ATLAS_CONNECTIONS: number = 27;
+  static readonly CUSTOM_ICON_LIBRARIES: number = 28;
 
   // Private fields
   private _id?: string;
@@ -96,6 +98,7 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
   private _activeViewId?: string;
   private _packageResolverChain?: PackageResolverChain;
   private _atlasConnections: AtlasConnection[] = [];
+  private _customIconLibraries: CustomIconDefinition[] = [];
 
   /**
    * Returns the EClass of this object
@@ -777,6 +780,30 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
     }
   }
 
+  get customIconLibraries(): CustomIconDefinition[] {
+    return this._customIconLibraries;
+  }
+
+  set customIconLibraries(value: CustomIconDefinition[]) {
+    const oldValue = this._customIconLibraries;
+    this._customIconLibraries = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(EditorConfigImpl.CUSTOM_ICON_LIBRARIES),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => EditorConfigImpl.CUSTOM_ICON_LIBRARIES,
+        merge: () => false
+      });
+    }
+  }
+
   // Reflective API
 
   /**
@@ -841,6 +868,8 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         return this.packageResolverChain;
       case EditorConfigImpl.ATLAS_CONNECTIONS:
         return this.atlasConnections;
+      case EditorConfigImpl.CUSTOM_ICON_LIBRARIES:
+        return this.customIconLibraries;
       default:
         return super.eGet(feature);
     }
@@ -964,6 +993,10 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         this.atlasConnections = newValue as AtlasConnection[];
         super.eSet(feature, newValue);
         break;
+      case EditorConfigImpl.CUSTOM_ICON_LIBRARIES:
+        this.customIconLibraries = newValue as CustomIconDefinition[];
+        super.eSet(feature, newValue);
+        break;
       default:
         super.eSet(feature, newValue);
     }
@@ -1031,6 +1064,8 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         return this._packageResolverChain !== undefined;
       case EditorConfigImpl.ATLAS_CONNECTIONS:
         return this._atlasConnections !== undefined && this._atlasConnections.length > 0;
+      case EditorConfigImpl.CUSTOM_ICON_LIBRARIES:
+        return this._customIconLibraries !== undefined && this._customIconLibraries.length > 0;
       default:
         return super.eIsSet(feature);
     }
@@ -1125,6 +1160,9 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         return;
       case EditorConfigImpl.ATLAS_CONNECTIONS:
         this._atlasConnections = [];
+        return;
+      case EditorConfigImpl.CUSTOM_ICON_LIBRARIES:
+        this._customIconLibraries = [];
         return;
       default:
         super.eUnset(feature);

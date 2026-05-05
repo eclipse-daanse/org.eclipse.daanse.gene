@@ -8,40 +8,34 @@
 
 import { ref, computed, inject } from 'tsm:vue'
 import { Button } from 'tsm:primevue'
-import { Dropdown } from 'tsm:primevue'
 import { InputText } from 'tsm:primevue'
 import { Checkbox } from 'tsm:primevue'
 import { Dialog } from 'tsm:primevue'
+import IconPicker from './IconPicker.vue'
+import type { SelectedIcon } from '../services/iconProviders'
+import { resolveCustomIconDataUrl } from '../services/iconProviderRegistry'
 import { Tree } from 'tsm:primevue'
 import { useSharedViews, getTypeUri } from '../composables/useViews'
 
-const availableIcons = [
-  { label: 'Filter', value: 'pi pi-filter' },
-  { label: 'Eye', value: 'pi pi-eye' },
-  { label: 'Star', value: 'pi pi-star' },
-  { label: 'Bookmark', value: 'pi pi-bookmark' },
-  { label: 'Tag', value: 'pi pi-tag' },
-  { label: 'Heart', value: 'pi pi-heart' },
-  { label: 'Flag', value: 'pi pi-flag' },
-  { label: 'Circle', value: 'pi pi-circle' },
-  { label: 'Check Circle', value: 'pi pi-check-circle' },
-  { label: 'Box', value: 'pi pi-box' },
-  { label: 'List', value: 'pi pi-list' },
-  { label: 'Table', value: 'pi pi-table' },
-  { label: 'Shield', value: 'pi pi-shield' },
-  { label: 'Lock', value: 'pi pi-lock' },
-  { label: 'Bolt', value: 'pi pi-bolt' },
-  { label: 'Cog', value: 'pi pi-cog' },
-  { label: 'Sitemap', value: 'pi pi-sitemap' },
-  { label: 'Code', value: 'pi pi-code' },
-  { label: 'Database', value: 'pi pi-database' },
-  { label: 'Globe', value: 'pi pi-globe' },
-  { label: 'User', value: 'pi pi-user' },
-  { label: 'Users', value: 'pi pi-users' },
-  { label: 'Palette', value: 'pi pi-palette' },
-  { label: 'Sparkles', value: 'pi pi-sparkles' },
-  { label: 'Crown', value: 'pi pi-crown' }
-]
+// Icon picker for perspective icons
+const showIconPicker = ref(false)
+const iconPickerValue = ref<SelectedIcon | null>(null)
+
+function openViewIconPicker() {
+  showIconPicker.value = true
+}
+
+function handleViewIconSelect(selected: SelectedIcon) {
+  if (!typeDialogView.value) return
+  typeDialogView.value.perspectiveIcon = selected.cssClass
+  handleIconChange(typeDialogView.value)
+  showIconPicker.value = false
+}
+
+function getViewIconDataUrl(iconClass: string | undefined): string | undefined {
+  if (!iconClass) return undefined
+  return resolveCustomIconDataUrl(iconClass)
+}
 
 import type { PackageInfo } from '../context/editorContext'
 import type { EPackage, EClass, EClassifier } from '@emfts/core'
@@ -51,6 +45,7 @@ const props = defineProps<{
 }>()
 
 const tsm = inject<any>('tsm')
+const editorConfigService = computed(() => tsm?.getService('gene.editor.config') as any)
 const views = useSharedViews()
 
 // === New View Dialog ===
@@ -376,7 +371,8 @@ function hiddenCount(viewId: string): number {
         @click="views.setActiveView(view.id)"
       >
         <i class="pi pi-bars drag-handle"></i>
-        <i v-if="view.perspectiveIcon" :class="view.perspectiveIcon" class="view-icon"></i>
+        <img v-if="getViewIconDataUrl(view.perspectiveIcon)" :src="getViewIconDataUrl(view.perspectiveIcon)" class="view-icon view-icon--img" alt="" />
+        <i v-else-if="view.perspectiveIcon" :class="view.perspectiveIcon" class="view-icon"></i>
         <span class="view-name" :class="{ disabled: !view.enabled }">{{ view.name }}</span>
         <span v-if="hiddenCount(view.id) > 0" class="badge">{{ hiddenCount(view.id) }}</span>
         <div class="card-actions">
@@ -442,24 +438,18 @@ function hiddenCount(viewId: string): number {
             @update:modelValue="handlePerspectiveToggle(typeDialogView)"
           />
           <label for="td-activity-bar" class="meta-label">Activity Bar</label>
-          <Dropdown
+          <Button
             v-if="typeDialogView.showInActivityBar"
-            v-model="typeDialogView.perspectiveIcon"
-            :options="availableIcons"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Icon"
-            class="icon-dropdown"
-            @update:modelValue="handleIconChange(typeDialogView)"
+            severity="secondary"
+            outlined
+            size="small"
+            class="icon-picker-btn"
+            @click="openViewIconPicker"
           >
-            <template #value="slotProps">
-              <i v-if="slotProps.value" :class="slotProps.value"></i>
-              <span v-else>Icon</span>
-            </template>
-            <template #option="slotProps">
-              <div class="icon-option"><i :class="slotProps.option.value"></i> <span>{{ slotProps.option.label }}</span></div>
-            </template>
-          </Dropdown>
+            <img v-if="getViewIconDataUrl(typeDialogView.perspectiveIcon)" :src="getViewIconDataUrl(typeDialogView.perspectiveIcon)" class="btn-icon-img" alt="" />
+            <i v-else-if="typeDialogView.perspectiveIcon" :class="typeDialogView.perspectiveIcon"></i>
+            <span v-else>Icon</span>
+          </Button>
         </div>
         <div class="type-toolbar">
           <Button icon="pi pi-angle-double-down" text rounded size="small" @click="expandAll" v-tooltip.bottom="'Expand All'" />
@@ -502,6 +492,20 @@ function hiddenCount(viewId: string): number {
       <template #footer>
         <Button label="Close" @click="showTypeDialog = false" />
       </template>
+    </Dialog>
+
+    <!-- Icon Picker Dialog -->
+    <Dialog
+      v-model:visible="showIconPicker"
+      header="Icon auswählen"
+      :modal="true"
+      :style="{ width: '520px' }"
+    >
+      <IconPicker
+        v-model="iconPickerValue"
+        :add-custom-icon="editorConfigService?.addCustomIcon"
+        @select="handleViewIconSelect"
+      />
     </Dialog>
   </div>
 </template>
@@ -584,6 +588,33 @@ function hiddenCount(viewId: string): number {
   font-size: 0.8rem;
   color: var(--text-color-secondary);
   flex-shrink: 0;
+}
+
+.view-icon--img {
+  width: 0.9rem;
+  height: 0.9rem;
+  object-fit: contain;
+}
+
+:root.p-dark .view-icon--img,
+.dark-theme .view-icon--img {
+  filter: invert(0.85);
+}
+
+.icon-picker-btn {
+  min-width: 36px;
+  padding: 0.25rem 0.5rem;
+}
+
+.btn-icon-img {
+  width: 1rem;
+  height: 1rem;
+  object-fit: contain;
+}
+
+:root.p-dark .btn-icon-img,
+.dark-theme .btn-icon-img {
+  filter: invert(0.85);
 }
 
 .view-name {
@@ -683,20 +714,6 @@ function hiddenCount(viewId: string): number {
   margin: 0 4px;
 }
 
-.icon-dropdown {
-  width: 100px;
-}
-
-.icon-dropdown :deep(.p-dropdown-label) {
-  padding: 0.25rem 0.5rem;
-  font-size: 0.8125rem;
-}
-
-.icon-option {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
 
 .type-dialog-content {
   display: flex;

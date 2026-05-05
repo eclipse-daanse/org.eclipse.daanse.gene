@@ -92,7 +92,8 @@ export {
 // Re-export icon provider system
 export {
   iconProviderRegistry,
-  getIconProviderRegistry
+  getIconProviderRegistry,
+  resolveCustomIconDataUrl
 } from './services/iconProviderRegistry'
 export type {
   IconProvider,
@@ -101,9 +102,10 @@ export type {
   ProviderSearchResult
 } from './services/iconProviders'
 export { PrimeIconsProvider } from './services/providers/PrimeIconsProvider'
+export { CustomIconProvider, CUSTOM_ICONS_PROVIDER_ID, type CustomIconEntry } from './services/providers/CustomIconProvider'
 
 // Re-export components
-export { InstanceTree, ViewsPanel } from './components'
+export { InstanceTree, ViewsPanel, IconPicker } from './components'
 
 // Import for service registration
 import * as components from './components'

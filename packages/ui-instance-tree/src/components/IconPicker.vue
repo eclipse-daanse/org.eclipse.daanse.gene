@@ -23,6 +23,39 @@
           class="search-input"
         />
       </div>
+      <button
+        v-if="addCustomIcon"
+        class="add-icon-btn"
+        :class="{ active: showUploadForm }"
+        title="Eigenes Icon hinzufügen"
+        @click="toggleUploadForm"
+      >
+        <i :class="showUploadForm ? 'pi pi-times' : 'pi pi-plus'" />
+      </button>
+    </div>
+
+    <!-- Upload form for custom icons -->
+    <div v-if="showUploadForm && addCustomIcon" class="upload-form">
+      <div class="upload-row">
+        <label class="upload-file-label">
+          <i class="pi pi-upload" />
+          <span>{{ newCustomIcon.dataUrl ? 'Datei gewählt' : 'SVG / PNG wählen' }}</span>
+          <input type="file" accept=".svg,.png,image/svg+xml,image/png" class="upload-file-input" @change="handleCustomIconFile" />
+        </label>
+        <img v-if="newCustomIcon.dataUrl" :src="newCustomIcon.dataUrl" class="upload-preview" alt="" />
+      </div>
+      <div class="upload-row">
+        <input v-model="newCustomIcon.id" class="upload-input" placeholder="ID *" />
+        <input v-model="newCustomIcon.label" class="upload-input" placeholder="Bezeichnung" />
+        <input v-model="newCustomIcon.category" class="upload-input upload-input--sm" placeholder="Kategorie" />
+        <button
+          class="upload-submit"
+          :disabled="!newCustomIcon.id || !newCustomIcon.dataUrl"
+          @click="submitCustomIcon"
+        >
+          <i class="pi pi-check" />
+        </button>
+      </div>
     </div>
 
     <!-- Category Chips -->
@@ -57,6 +90,7 @@
           @click="selectIcon(icon)"
         >
           <span v-if="isMaterialProvider" :class="getMaterialClass()" class="icon-display">{{ icon.name }}</span>
+          <img v-else-if="isCustomProvider" :src="getCustomIconDataUrl(icon)" class="icon-display icon-display--img" :alt="icon.label" />
           <i v-else :class="getIconClass(icon)" class="icon-display" />
           <span class="icon-name">{{ icon.label }}</span>
         </div>
@@ -71,6 +105,7 @@
     <!-- Selected Icon Info -->
     <div v-if="selectedIcon" class="selected-info">
       <span v-if="selectedIcon.providerId === 'material-symbols'" class="material-symbols-outlined selected-preview">{{ selectedIcon.iconName }}</span>
+      <img v-else-if="selectedIcon.providerId === CUSTOM_ICONS_PROVIDER_ID" :src="selectedIconDef ? getCustomIconDataUrl(selectedIconDef) : ''" class="selected-preview selected-preview--img" :alt="selectedIcon.iconName" />
       <i v-else :class="selectedIcon.cssClass" class="selected-preview" />
       <div class="selected-details">
         <span class="selected-name">{{ selectedIconDef?.label || selectedIcon.iconName }}</span>
@@ -85,9 +120,12 @@ import { ref, computed, watch, onMounted } from 'tsm:vue'
 import { InputText } from 'tsm:primevue'
 import { iconProviderRegistry } from '../services/iconProviderRegistry'
 import type { IconDefinition, IconProvider, SelectedIcon } from '../services/iconProviders'
+import type { CustomIconEntry } from '../services/providers/CustomIconProvider'
+import { CUSTOM_ICONS_PROVIDER_ID } from '../services/providers/CustomIconProvider'
 
 const props = defineProps<{
   modelValue?: SelectedIcon | null
+  addCustomIcon?: (options: CustomIconEntry) => void
 }>()
 
 const emit = defineEmits<{
@@ -99,6 +137,38 @@ const emit = defineEmits<{
 const searchQuery = ref('')
 const activeProviderId = ref('')
 const activeCategory = ref<string | null>(null)
+
+// Custom icon upload form
+const showUploadForm = ref(false)
+const newCustomIcon = ref({ id: '', label: '', category: 'custom', dataUrl: '', keywords: '' })
+
+function toggleUploadForm() {
+  showUploadForm.value = !showUploadForm.value
+  if (!showUploadForm.value) {
+    newCustomIcon.value = { id: '', label: '', category: 'custom', dataUrl: '', keywords: '' }
+  }
+}
+
+function handleCustomIconFile(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file || !['image/svg+xml', 'image/png'].includes(file.type)) return
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    newCustomIcon.value.dataUrl = e.target?.result as string
+    if (!newCustomIcon.value.id) {
+      newCustomIcon.value.id = file.name.replace(/\.[^.]+$/, '')
+    }
+  }
+  reader.readAsDataURL(file)
+}
+
+function submitCustomIcon() {
+  if (!newCustomIcon.value.id || !newCustomIcon.value.dataUrl) return
+  props.addCustomIcon?.({ ...newCustomIcon.value })
+  newCustomIcon.value = { id: '', label: '', category: 'custom', dataUrl: '', keywords: '' }
+  showUploadForm.value = false
+}
 
 // Watch registry version for reactivity
 const registryVersion = iconProviderRegistry.version
@@ -169,6 +239,16 @@ const selectedIconDef = computed<IconDefinition | null>(() => {
 const isMaterialProvider = computed(() => {
   return activeProvider.value?.id === 'material-symbols'
 })
+
+// Check if current provider is the custom icon provider
+const isCustomProvider = computed(() => {
+  return activeProvider.value?.id === CUSTOM_ICONS_PROVIDER_ID
+})
+
+function getCustomIconDataUrl(icon: IconDefinition): string | undefined {
+  const provider = activeProvider.value as any
+  return provider?.getDataUrl?.(icon.name)
+}
 
 // Methods
 function getIconClass(icon: IconDefinition): string {
@@ -264,11 +344,121 @@ watch(activeProviderId, () => {
 /* Search Bar */
 .search-bar {
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.add-icon-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+.add-icon-btn:hover,
+.add-icon-btn.active {
+  background: var(--surface-hover);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* Inline upload form */
+.upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: var(--surface-section);
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+}
+
+.upload-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.upload-file-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--surface-b, var(--surface-ground));
+  border: 1px dashed var(--surface-border);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+  flex: 1;
+}
+.upload-file-label:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+.upload-file-input {
+  display: none;
+}
+
+.upload-preview {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border: 1px solid var(--surface-border);
+  border-radius: 3px;
+  padding: 2px;
+  background: var(--surface-ground);
+}
+
+.upload-input {
+  flex: 1;
+  padding: 5px 8px;
+  font-size: 0.8rem;
+  background: var(--surface-b, var(--surface-ground));
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  color: var(--text-color);
+  min-width: 0;
+}
+.upload-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+.upload-input--sm {
+  max-width: 90px;
+}
+
+.upload-submit {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  background: var(--primary-color);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+}
+.upload-submit:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .search-input-wrapper {
   position: relative;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .search-icon {
@@ -359,6 +549,19 @@ watch(activeProviderId, () => {
   color: var(--text-color);
 }
 
+.icon-item .icon-display--img {
+  width: 1.4rem;
+  height: 1.4rem;
+  object-fit: contain;
+  font-size: unset;
+}
+
+/* Dark mode: invert monochrome custom icons */
+:root.p-dark .icon-display--img,
+.dark-theme .icon-display--img {
+  filter: invert(0.85);
+}
+
 .icon-item.selected .icon-display {
   color: var(--primary-700);
 }
@@ -418,6 +621,24 @@ watch(activeProviderId, () => {
 .selected-preview {
   font-size: 1.8rem;
   color: var(--primary-600);
+}
+
+.selected-preview--img {
+  width: 1.8rem;
+  height: 1.8rem;
+  object-fit: contain;
+  font-size: unset;
+}
+
+:root.p-dark .selected-preview--img,
+.dark-theme .selected-preview--img {
+  filter: invert(0.85);
+}
+
+/* Upload form preview */
+:root.p-dark .upload-preview,
+.dark-theme .upload-preview {
+  filter: invert(0.85);
 }
 
 .selected-details {

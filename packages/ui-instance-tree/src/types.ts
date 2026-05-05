@@ -7,6 +7,7 @@
 import { toRaw } from 'tsm:vue'
 import type { EObject, EClass, EReference, Resource } from '@emfts/core'
 import { getIconForClass } from './services/iconRegistry'
+import { resolveCustomIconDataUrl } from './services/iconProviderRegistry'
 
 /**
  * Represents a node in the instance tree
@@ -16,8 +17,12 @@ export interface InstanceTreeNode {
   key: string
   /** Display label */
   label: string
-  /** Icon class */
+  /** Icon class — always empty to prevent PrimeVue double-rendering */
   icon: string
+  /** CSS class for regular icons (rendered in slot) */
+  iconClass?: string
+  /** DataURL for custom icons (rendered as img in slot) */
+  iconDataUrl?: string
   /** The EObject this node represents */
   data: EObject
   /** The EClass of the object */
@@ -65,11 +70,56 @@ export function getObjectIcon(obj: EObject): string {
 }
 
 /**
+ * Get icon info for an EObject, including dataUrl for custom icons.
+ * Returns { icon, iconDataUrl } where iconDataUrl is set for custom icons
+ * and icon is cleared (empty) so PrimeVue Tree won't render a broken span.
+ */
+export function getObjectIconInfo(obj: EObject): { icon: string; iconClass?: string; iconDataUrl?: string } {
+  const cssClass = getObjectIcon(obj)
+  const dataUrl = resolveCustomIconDataUrl(cssClass)
+  if (dataUrl) {
+    return { icon: '', iconDataUrl: dataUrl }
+  }
+  return { icon: '', iconClass: cssClass }
+}
+
+/**
+ * Get the class name from an EClass, handling both native and DynamicEObject
+ */
+export function getClassName(eClass: EClass): string {
+  // Try native getName
+  if (typeof eClass.getName === 'function') {
+    const name = eClass.getName()
+    if (name) return name
+  }
+  // DynamicEObject - try eGet for 'name' feature
+  try {
+    const metaClass = (eClass as any).eClass?.()
+    if (metaClass) {
+      const nameFeature = metaClass.getEStructuralFeature?.('name')
+      if (nameFeature) {
+        const name = (eClass as any).eGet?.(nameFeature)
+        if (name) return String(name)
+      }
+    }
+  } catch { /* ignore */ }
+  // Try eSettings Map (EMFTs internal storage)
+  try {
+    if ((eClass as any).eSettings instanceof Map) {
+      const name = (eClass as any).eSettings.get('name')
+      if (name) return String(name)
+    }
+  } catch { /* ignore */ }
+  return 'Object'
+}
+
+/**
  * Get display label for an EObject
  */
 export function getObjectLabel(obj: EObject): string {
   const eClass = obj.eClass()
-  const className = typeof eClass.getName === 'function' ? eClass.getName() : 'Object'
+  const className = getClassName(eClass)
+
 
   // Try common naming attributes
   const nameAttr = eClass.getEStructuralFeature('name')
