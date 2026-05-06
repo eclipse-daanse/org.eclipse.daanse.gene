@@ -6,6 +6,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import { importMapPlugin } from './src/vite/importmap-plugin'
+import { tidPlugin } from './src/vite/tid-plugin'
 import { tsmPlugin } from '@eclipse-daanse/tsm/vite'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -69,6 +70,7 @@ const tsmModules = scanTsmModules()
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
+    tidPlugin(),
     vue(),
     vueDevTools(),
     importMapPlugin(),
@@ -197,6 +199,14 @@ export default defineConfig({
       { find: 'ui-problems-panel', replacement: fileURLToPath(new URL('./packages/ui-problems-panel/src/index.ts', import.meta.url)) },
       { find: 'ui-search', replacement: fileURLToPath(new URL('./packages/ui-search/src/index.ts', import.meta.url)) },
     ],
+  },
+  optimizeDeps: {
+    // Exclude @emfts/core from pre-bundling to avoid module duplication.
+    // Pre-bundling creates a separate copy, causing singletons like
+    // EPackageRegistry.INSTANCE to exist twice (pre-bundled vs original ESM).
+    exclude: ['@emfts/core'],
+    // sax is a CJS dep of @emfts/core that must be pre-bundled for ESM compat
+    include: ['sax']
   },
   build: {
     modulePreload: false,

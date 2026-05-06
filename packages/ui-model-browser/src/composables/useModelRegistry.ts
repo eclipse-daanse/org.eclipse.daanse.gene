@@ -145,13 +145,79 @@ function extractClassNameFromURI(uri: string): string | null {
 
 function resolveFromPackageRegistry(typeName: string): any | null {
   // Check all registered packages
-  for (const [, pkg] of EPackageRegistry.INSTANCE) {
-    if (typeof pkg === 'object' && pkg !== null) {
+  for (const nsURI of EPackageRegistry.INSTANCE.keys()) {
+    const pkg = EPackageRegistry.INSTANCE.getEPackage(nsURI)
+    if (pkg) {
       const classifier = (pkg as any).getEClassifier?.(typeName)
       if (classifier) return classifier
     }
   }
   return null
+}
+
+/**
+ * Resolve cross-package eType proxies in all registered packages.
+ * After loading multiple .ecore files, EReferences that point to types
+ * in other packages may still be proxies. This walks all features
+ * and resolves them via the EPackageRegistry.
+ */
+function resolveCrossPackageProxies(): void {
+  for (const [, info] of state.packages) {
+    resolveProxiesInPackage(info.ePackage)
+  }
+}
+
+// Find an EPackage by nsURI from state.packages (navigates into subpackage paths)
+function findPackageForProxy(nsURI: string, subPath: string[]): any {
+  let pkg: any = state.packages.get(nsURI)?.ePackage
+  if (!pkg) return null
+  for (const seg of subPath) {
+    const subs = pkg.getESubpackages?.() || []
+    pkg = null
+    for (const sp of subs) {
+      if (sp.getName?.() === seg) { pkg = sp; break }
+    }
+    if (!pkg) return null
+  }
+  return pkg
+}
+
+function resolveProxiesInPackage(pkg: EPackage): void {
+  const classifiers = (pkg as any).getEClassifiers?.() || []
+  for (const classifier of classifiers) {
+    if (classifier.eClass?.()?.getName?.() !== 'EClass') continue
+    // Use getEStructuralFeatures (own features only) to avoid traversing
+    // supertype chains that may themselves contain unresolved proxies
+    const features = classifier.getEStructuralFeatures?.() || []
+    for (const feature of features) {
+      const eType = feature.eType
+      if (!eType || typeof eType.eIsProxy !== 'function' || !eType.eIsProxy()) continue
+
+      const proxyURI = eType.eProxyURI?.()?.toString?.() || ''
+      const hashIdx = proxyURI.indexOf('#')
+      if (hashIdx < 0) continue
+
+      const nsURI = proxyURI.substring(0, hashIdx)
+      const fragment = proxyURI.substring(hashIdx + 1).replace(/^\/+/, '')
+      const segments = fragment.split('/')
+      const className = segments.pop()!
+
+      const targetPkg = findPackageForProxy(nsURI, segments)
+      if (!targetPkg) continue
+
+      const resolved = targetPkg.getEClassifier?.(className)
+      if (resolved) {
+        feature.eType = resolved
+        if (typeof feature.setEType === 'function') feature.setEType(resolved)
+      }
+    }
+  }
+
+  // Recurse into subpackages
+  const subPackages = (pkg as any).getESubpackages?.() || []
+  for (const sub of subPackages) {
+    resolveProxiesInPackage(sub)
+  }
 }
 
 /**
@@ -206,6 +272,25 @@ interface RegistryState {
 const state = reactive<RegistryState>({
   packages: new Map()
 })
+
+// Register built-in EMF packages (Ecore, XMLType) from EPackageRegistry.INSTANCE
+// into state.packages so cross-package proxy resolution can find them.
+function registerBuiltInPackages(): void {
+  for (const nsURI of EPackageRegistry.INSTANCE.keys()) {
+    if (state.packages.has(nsURI)) continue
+    const ePackage = EPackageRegistry.INSTANCE.getEPackage(nsURI) as EPackage
+    if (!ePackage) continue
+    state.packages.set(nsURI, {
+      nsURI,
+      name: ePackage.getName?.() ?? 'unknown',
+      nsPrefix: ePackage.getNsPrefix?.() ?? '',
+      ePackage,
+      sourceFile: '<built-in>',
+      isBuiltIn: true
+    })
+  }
+}
+registerBuiltInPackages()
 
 // Track icon version for reactivity - used to trigger tree re-renders when icons change
 const iconVersionRef = ref(0)
@@ -303,6 +388,9 @@ export function useModelRegistry() {
       const info = registerLoadedPackage(ePackage, sourceFile)
       console.log('[ModelRegistry] Registered, total packages:', state.packages.size)
 
+      // Resolve cross-package eType proxies now that all packages are registered
+      resolveCrossPackageProxies()
+
       return info
     } catch (error) {
       console.error('[ModelRegistry] Failed to load .ecore file:', error)
@@ -356,6 +444,7 @@ export function useModelRegistry() {
           isBuiltIn: false
         }
         state.packages.set(nsURI, info)
+        EPackageRegistry.INSTANCE.set(nsURI, subPkg)
         console.log('[ModelRegistry] Registered subpackage:', info.name, info.nsURI, 'prefix:', nsPrefix)
       }
 
@@ -462,7 +551,9 @@ export function useModelRegistry() {
     console.log('[ModelRegistry] Computing treeNodes, icon version:', _iconVersion, 'packages:', allPackages.value.length)
     try {
       // Filter to only show root packages (those without an eSuperPackage)
+      // Hide built-in packages (Ecore, XMLType etc.) from the model browser
       const rootPackages = allPackages.value.filter(pkg => {
+        if (pkg.isBuiltIn) return false
         const eSuperPackage = pkg.ePackage.getESuperPackage?.()
         return !eSuperPackage
       })
