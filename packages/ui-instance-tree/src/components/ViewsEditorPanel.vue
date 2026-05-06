@@ -230,7 +230,7 @@ function ePackageToTreeNode(pkg: EPackage): any {
           key: `class-${nsURI}-${eClass.getName()}`,
           label: eClass.getName(),
           icon: eClass.isAbstract() ? 'pi pi-code' : 'pi pi-box',
-          data: { type: 'class', eClass },
+          data: { type: 'class', eClass, pkgInfo: { nsURI } },
           leaf: true
         })
       }
@@ -593,10 +593,12 @@ function hiddenCount(viewId: string): number {
                     @update:modelValue="toggleClassInView(typeDialogView!.id, node.data.eClass)"
                     binary
                   />
-                  <span class="type-label" :class="{ hidden: isClassHidden(typeDialogView!.id, node.data.eClass) }">
+                  <span class="type-label" :class="{ hidden: isClassHidden(typeDialogView!.id, node.data.eClass) }"
+                    :title="node.key">
                     {{ node.label }}
                   </span>
                   <span v-if="node.data.eClass?.isAbstract?.()" class="abstract-tag">abstract</span>
+                  <span class="ns-uri-label">{{ node.data.pkgInfo?.nsURI || '' }}</span>
                 </template>
                 <template v-else-if="node.data?.type === 'package'">
                   <Checkbox
@@ -605,6 +607,7 @@ function hiddenCount(viewId: string): number {
                     binary
                   />
                   <span class="type-label pkg-label">{{ node.label }}</span>
+                  <span class="ns-uri-label">{{ node.data.pkgInfo?.nsURI || node.data.pkg?.getNsURI?.() || '' }}</span>
                 </template>
               </div>
             </template>
@@ -931,5 +934,16 @@ function hiddenCount(viewId: string): number {
   padding: 1px 4px;
   border-radius: 3px;
   font-style: italic;
+}
+
+.ns-uri-label {
+  font-size: 0.65rem;
+  color: var(--text-color-secondary);
+  opacity: 0.7;
+  margin-left: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
 }
 </style>

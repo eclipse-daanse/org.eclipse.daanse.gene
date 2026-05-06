@@ -169,6 +169,27 @@ const xmiId = computed(() => {
   return getXmiId(selectedObject.value)
 })
 
+// Primary-Key ID (model-level iD="true" attribute or 'id' attribute)
+const primaryKeyId = computed(() => {
+  if (!selectedObject.value || !currentEClass.value) return null
+  const eClass = currentEClass.value
+  // Try EClass ID attribute (marked with iD="true" in ecore)
+  if (typeof eClass.getEIDAttribute === 'function') {
+    const eidAttr = eClass.getEIDAttribute()
+    if (eidAttr) {
+      const val = selectedObject.value.eGet(eidAttr)
+      if (val) return { name: eidAttr.getName(), value: String(val) }
+    }
+  }
+  // Try 'id' attribute by name
+  const idAttr = eClass.getEStructuralFeature('id')
+  if (idAttr) {
+    const val = selectedObject.value.eGet(idAttr)
+    if (val) return { name: 'id', value: String(val) }
+  }
+  return null
+})
+
 // Editing state for XMI ID
 const editingXmiId = ref(false)
 const editXmiIdValue = ref('')
@@ -577,7 +598,8 @@ function getReferenceType(ref: EReference): EClass | null {
   // Try native getEReferenceType first
   if (typeof ref.getEReferenceType === 'function') {
     try {
-      return ref.getEReferenceType()
+      const result = ref.getEReferenceType()
+      if (result) return result
     } catch {
       // Fall through to alternative
     }
@@ -585,27 +607,96 @@ function getReferenceType(ref: EReference): EClass | null {
   // Fallback: use getEType (more general)
   if (typeof ref.getEType === 'function') {
     const eType = ref.getEType()
-    if (eType && typeof (eType as any).getEAllStructuralFeatures === 'function') {
-      return eType as EClass
-    }
-    // Handle unresolved proxy: resolve via model registry by parsing the proxy URI
-    if (eType && typeof (eType as any).eIsProxy === 'function' && (eType as any).eIsProxy()) {
-      const proxyURI = (eType as any).eProxyURI?.()?.toString?.() || ''
-      const hashIdx = proxyURI.indexOf('#//')
-      if (hashIdx >= 0) {
-        const nsURI = proxyURI.substring(0, hashIdx)
-        const className = proxyURI.substring(hashIdx + 3) // after #//
-        // Look up in model registry
-        const pkg = modelRegistry.allPackages.value.find(p => p.nsURI === nsURI)
-        if (pkg) {
-          const cls = modelRegistry.getAllClasses(pkg).find(c => c.name === className)
-          if (cls?.eClass) {
-            return cls.eClass
+    if (eType) {
+      // Check if it's a proper EClass (native or DynamicEObject with EClass features)
+      if (typeof (eType as any).getEAllStructuralFeatures === 'function') {
+        return eType as EClass
+      }
+      // DynamicEObject EClass: has eClass() that returns Ecore.EClass metaclass
+      // Check by verifying it has EClass-like features via its metaclass
+      try {
+        const metaClass = (eType as any).eClass?.()
+        if (metaClass) {
+          const metaName = metaClass.getName?.()
+          if (metaName === 'EClass') {
+            return eType as EClass
           }
         }
+      } catch { /* ignore */ }
+      // Handle unresolved proxy: resolve via model registry by parsing the proxy URI
+      if (typeof (eType as any).eIsProxy === 'function' && (eType as any).eIsProxy()) {
+        return resolveProxyType(eType)
       }
     }
   }
+  // Last resort: try to resolve via reference name + model registry
+  return resolveTypeByName(ref)
+}
+
+// Resolve proxy EType via model registry
+function resolveProxyType(eType: any): EClass | null {
+  const proxyURI = eType.eProxyURI?.()?.toString?.() || ''
+  // Try #// format: "nsURI#//ClassName"
+  const hashIdx = proxyURI.indexOf('#//')
+  if (hashIdx >= 0) {
+    const nsURI = proxyURI.substring(0, hashIdx)
+    const className = proxyURI.substring(hashIdx + 3)
+    return findClassInRegistry(nsURI, className)
+  }
+  // Try # format: "nsURI#ClassName"
+  const simpleHashIdx = proxyURI.indexOf('#')
+  if (simpleHashIdx >= 0) {
+    const nsURI = proxyURI.substring(0, simpleHashIdx)
+    const className = proxyURI.substring(simpleHashIdx + 1).replace(/^\/\//, '')
+    return findClassInRegistry(nsURI, className)
+  }
+  return null
+}
+
+// Find a class in model registry by nsURI and name
+function findClassInRegistry(nsURI: string, className: string): EClass | null {
+  if (!modelRegistry?.allPackages?.value) return null
+  for (const pkg of modelRegistry.allPackages.value) {
+    if (pkg.nsURI === nsURI) {
+      // Try getAllClasses first (includes abstract)
+      if (modelRegistry.getAllClasses) {
+        const cls = modelRegistry.getAllClasses(pkg).find((c: any) => c.name === className)
+        if (cls?.eClass) return cls.eClass
+      }
+      // Try getConcreteClasses
+      const cls = modelRegistry.getConcreteClasses(pkg).find((c: any) => c.name === className)
+      if (cls?.eClass) return cls.eClass
+      // Try ePackage.getEClassifier
+      const classifier = pkg.ePackage?.getEClassifier?.(className)
+      if (classifier && typeof (classifier as any).getEAllStructuralFeatures === 'function') {
+        return classifier as EClass
+      }
+    }
+  }
+  return null
+}
+
+// Resolve reference type by looking at the reference's name and metadata
+function resolveTypeByName(ref: EReference): EClass | null {
+  try {
+    // DynamicEObject: try to get eType via eGet
+    const refClass = (ref as any).eClass?.()
+    if (refClass) {
+      const eTypeFeature = refClass.getEStructuralFeature?.('eType')
+      if (eTypeFeature) {
+        const eType = (ref as any).eGet?.(eTypeFeature)
+        if (eType) {
+          // Check if it's a proxy
+          if (typeof eType.eIsProxy === 'function' && eType.eIsProxy()) {
+            return resolveProxyType(eType)
+          }
+          // Check if it's a valid EClass
+          const metaName = eType.eClass?.()?.getName?.()
+          if (metaName === 'EClass') return eType as EClass
+        }
+      }
+    }
+  } catch { /* ignore */ }
   return null
 }
 
@@ -952,6 +1043,12 @@ function handleCancelParameterDialog() {
             v-tooltip.bottom="'Generate new UUID'"
           />
         </template>
+      </div>
+
+      <!-- Primary-Key ID (model-level) -->
+      <div v-if="primaryKeyId" class="xmi-id-row">
+        <label class="xmi-id-label">ID ({{ primaryKeyId.name }}):</label>
+        <span class="xmi-id-value">{{ primaryKeyId.value }}</span>
       </div>
 
       <!-- Validation errors -->
