@@ -743,6 +743,13 @@ const selectedAddOption = computed({
   font-size: 0.75rem;
 }
 
+:deep(.p-invalid.p-inputtext),
+:deep(.p-invalid.p-select),
+:deep(.p-invalid.p-textarea) {
+  border-color: var(--p-red-500, #ef4444) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--p-red-500, #ef4444) 40%, transparent);
+}
+
 /* OCL filter styles */
 .dropdown-option {
   display: flex;

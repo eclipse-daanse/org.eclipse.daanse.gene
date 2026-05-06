@@ -35,6 +35,8 @@ export interface InstanceTreeNode {
   containmentRef?: EReference
   /** Parent node */
   parent?: InstanceTreeNode
+  /** XMI ID (for tooltip) */
+  xmiId?: string | null
 }
 
 /**
@@ -120,7 +122,6 @@ export function getObjectLabel(obj: EObject): string {
   const eClass = obj.eClass()
   const className = getClassName(eClass)
 
-
   // Try common naming attributes
   const nameAttr = eClass.getEStructuralFeature('name')
   if (nameAttr) {
@@ -133,7 +134,7 @@ export function getObjectLabel(obj: EObject): string {
     const eidAttr = eClass.getEIDAttribute()
     if (eidAttr) {
       const eid = obj.eGet(eidAttr)
-      if (eid) return `${className}: ${eid}`
+      if (eid) return `${className} [${eid}]`
     }
   }
 
@@ -141,8 +142,17 @@ export function getObjectLabel(obj: EObject): string {
   const idAttr = eClass.getEStructuralFeature('id')
   if (idAttr) {
     const id = obj.eGet(idAttr)
-    if (id) return `${className}: ${id}`
+    if (id) return `${className} [${id}]`
   }
+
+  // Try XMI ID as fallback
+  try {
+    const resource = obj.eResource?.()
+    if (resource && typeof (resource as any).getID === 'function') {
+      const xmiId = (resource as any).getID(obj)
+      if (xmiId) return `${className} [${xmiId}]`
+    }
+  } catch { /* ignore */ }
 
   // Try first non-empty string attribute as fallback
   if (typeof eClass.getEAllAttributes === 'function') {
@@ -155,7 +165,19 @@ export function getObjectLabel(obj: EObject): string {
     }
   }
 
-  // Fall back to class name only
+  // Fall back to class name with sibling index
+  try {
+    const container = obj.eContainer?.()
+    const feature = obj.eContainingFeature?.()
+    if (container && feature && (feature as any).isMany?.()) {
+      const siblings = container.eGet(feature)
+      if (siblings && typeof siblings.indexOf === 'function') {
+        const idx = siblings.indexOf(obj)
+        if (idx >= 0) return `${className} #${idx + 1}`
+      }
+    }
+  } catch { /* ignore */ }
+
   return className
 }
 
