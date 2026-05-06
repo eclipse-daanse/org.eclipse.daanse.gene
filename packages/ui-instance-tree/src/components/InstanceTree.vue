@@ -755,7 +755,7 @@ watch(ctxSelectedObject, (obj) => {
           >
             <img v-if="node.iconDataUrl" :src="node.iconDataUrl" class="node-icon node-icon--img" alt="" />
             <i v-else-if="node.iconClass" :class="node.iconClass" class="node-icon" />
-            <span class="node-label">{{ node.label }}</span>
+            <span class="node-label" :title="node.xmiId ? `XMI-ID: ${node.xmiId}` : undefined">{{ node.label }}</span>
           </div>
         </template>
       </Tree>
