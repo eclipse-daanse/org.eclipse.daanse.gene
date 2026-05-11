@@ -22,6 +22,13 @@ export interface ValidationDiagnostic {
   data?: string[]
 }
 
+/** Result from server-side derived computation */
+export interface DeriveResult {
+  success: boolean
+  xmi?: string
+  error?: string
+}
+
 export interface ModelAtlasClientOptions {
   /** Base URL of the Model Atlas REST API */
   baseUrl: string
@@ -517,6 +524,31 @@ export class ModelAtlasClient {
       return { type: 'ERROR', message: errorText, children: [] }
     }
     return { type: 'ERROR', message: `Validation failed: ${resp.status}`, children: [] }
+  }
+
+  /**
+   * Compute derived features server-side using OCL expressions.
+   * POST /validate/derive?oclId=...
+   *
+   * The request body is a DerivedValidationRequest XMI containing:
+   * - validationObjects: the EObject(s) to compute derived values for
+   * - derivedFeature: the EStructuralFeature(s) to compute
+   *
+   * @param xmiContent - Serialized DerivedValidationRequest as XMI
+   * @param oclId - Optional C-OCL ConstraintSet ID
+   * @returns Raw XMI response string (ValidationResponse)
+   */
+  async derive(xmiContent: string, oclId?: string): Promise<DeriveResult> {
+    const path = oclId ? `/validate/derive?oclId=${enc(oclId)}` : '/validate/derive'
+    const resp = await this.request('POST', path, xmiContent, {
+      contentType: 'application/xmi',
+      accept: 'application/xmi'
+    })
+    if (resp.status === 200) {
+      return { success: true, xmi: await resp.text() }
+    }
+    const errorText = await resp.text().catch(() => '')
+    return { success: false, error: `Derive failed: ${resp.status} — ${errorText}` }
   }
 
   // ============================================

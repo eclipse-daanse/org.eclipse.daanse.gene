@@ -402,6 +402,150 @@ export async function activate(context: ModuleContext): Promise<void> {
     })
 
     context.log.info('Atlas validation action registered')
+
+    // Register the derive handler
+    internalExecutor.registerHandler('atlas.derive.handler', {
+      async execute(ctx: any) {
+        const obj = ctx.input.primaryObject
+
+        const browser = useSharedAtlasBrowser()
+        const activeConnection = browser.connections.value.find((c: any) => c.status === 'connected')
+        if (!activeConnection) {
+          return { status: 'ERROR', logs: [{ message: 'No active Atlas connection.', level: 'ERROR', timestamp: new Date() }], artifacts: [] }
+        }
+        const client = browser.getClient(activeConnection.id)
+        if (!client) {
+          return { status: 'ERROR', logs: [{ message: 'Atlas client not available', level: 'ERROR', timestamp: new Date() }], artifacts: [] }
+        }
+
+        try {
+          const { XMIResource, URI: EmfURI } = await import('@emfts/core')
+
+          // Serialize the instance as XMI
+          const sourceResource = obj?.eResource?.()
+          const tempResource = new XMIResource(EmfURI.createURI('derive-request.xmi'))
+          if (sourceResource) {
+            for (const content of sourceResource.getContents()) {
+              tempResource.getContents().push(content)
+            }
+          } else if (obj) {
+            tempResource.getContents().push(obj)
+          } else {
+            return { status: 'ERROR', logs: [{ message: 'No object to compute derived values for', level: 'ERROR', timestamp: new Date() }], artifacts: [] }
+          }
+
+          // Build XMI body: wrap object in a DerivedValidationRequest envelope
+          let instanceXmi = await tempResource.saveToString()
+          // Strip XML declaration — will be part of the wrapper
+          instanceXmi = instanceXmi.replace(/<\?xml[^?]*\?>\s*/, '')
+
+          // Build derived feature references from the object's EClass
+          const eClass = obj.eClass()
+          const derivedFeatures: string[] = []
+          const allFeatures = eClass.getEAllStructuralFeatures?.() || eClass.getEStructuralFeatures?.() || []
+          for (const f of allFeatures) {
+            if (f.isDerived?.()) {
+              derivedFeatures.push(f.getName())
+            }
+          }
+
+          if (derivedFeatures.length === 0) {
+            return { status: 'SUCCESS', logs: [{ message: 'No derived features on this object', level: 'INFO', timestamp: new Date() }], artifacts: [] }
+          }
+
+          // Build the DerivedValidationRequest XMI
+          const nsURI = eClass.getEPackage?.()?.getNsURI?.() || ''
+          const featureRefs = derivedFeatures.map(name =>
+            `    <derivedFeature href="${nsURI}#//${eClass.getName()}/${name}"/>`
+          ).join('\n')
+
+          const requestXmi = `<?xml version="1.0" encoding="UTF-8"?>
+<cocl:DerivedValidationRequest xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:cocl="http://eclipse.org/fennec/model/atlas/cocl/1.0">
+  <validationObjects>
+${instanceXmi}
+  </validationObjects>
+${featureRefs}
+</cocl:DerivedValidationRequest>`
+
+          const result = await client.derive(requestXmi)
+
+          if (!result.success) {
+            return { status: 'ERROR', logs: [{ message: result.error || 'Derive failed', level: 'ERROR', timestamp: new Date() }], artifacts: [] }
+          }
+
+          // Parse response XMI and extract derived values
+          const parser = new DOMParser()
+          const doc = parser.parseFromString(result.xmi!, 'text/xml')
+
+          // Extract results and update local object
+          const resultElements = doc.querySelectorAll('results')
+          const updates: string[] = []
+          for (const resEl of Array.from(resultElements)) {
+            // Each result may contain the updated object with derived values set
+            const children = resEl.children
+            for (const child of Array.from(children)) {
+              // Try to read derived attribute values from the result
+              for (const featureName of derivedFeatures) {
+                const value = child.getAttribute(featureName)
+                if (value !== null) {
+                  updates.push(`${featureName} = ${value}`)
+                }
+              }
+            }
+          }
+
+          // Extract diagnostics
+          const diagElements = doc.querySelectorAll('diagnostics')
+          const messages: any[] = []
+          for (const diag of Array.from(diagElements)) {
+            const msg = diag.getAttribute('message') || diag.textContent
+            const severity = diag.getAttribute('severity') || 'info'
+            if (msg) {
+              messages.push({ severity, message: msg, source: 'atlas-derived' })
+            }
+          }
+
+          const label = obj.eClass().getName()
+          return {
+            status: 'SUCCESS',
+            logs: [
+              { message: `Derived computation completed for ${label}: ${updates.length > 0 ? updates.join(', ') : 'no values returned'}`, level: 'INFO', timestamp: new Date() },
+              ...messages.map((m: any) => ({ message: m.message, level: m.severity.toUpperCase(), timestamp: new Date() }))
+            ],
+            artifacts: result.xmi ? [{
+              type: 'XMI',
+              label: `Derived result for ${label}`,
+              data: result.xmi
+            }] : []
+          }
+        } catch (e: any) {
+          return { status: 'ERROR', logs: [{ message: `Atlas derive failed: ${e.message}`, level: 'ERROR', timestamp: new Date() }], artifacts: [] }
+        }
+      }
+    })
+
+    // Register the derive action definition
+    actionRegistry.register({
+      definition: {
+        actionId: 'atlas.derive',
+        label: 'Compute Derived (Atlas Server)',
+        icon: 'pi pi-calculator',
+        actionScope: 'BOTH',
+        actionType: 'COMPUTATION',
+        handlerId: 'atlas.derive.handler',
+        order: 51,
+        enabled: true,
+        perspectiveIds: [],
+        parameters: [],
+        returnTypes: ['XMI']
+      },
+      source: 'plugin',
+      moduleId: 'atlas-browser'
+    })
+
+    context.log.info('Atlas derive action registered')
   }
 
   // Listen for workspace loaded event to auto-connect Atlas connections
