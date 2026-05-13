@@ -2281,6 +2281,11 @@ onMounted(() => {
   --border-radius: 6px;
 }
 
+/* Dark theme overrides */
+.dark-theme {
+  --surface-border: #3f3f3f7a;
+}
+
 *,
 *::before,
 *::after {
