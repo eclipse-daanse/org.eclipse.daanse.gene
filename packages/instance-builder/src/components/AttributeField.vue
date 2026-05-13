@@ -238,18 +238,20 @@ const isRequired = computed(() => {
 .attribute-field {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .field-label {
   font-weight: 500;
-  font-size: 0.875rem;
-  color: var(--text-color);
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .required-indicator {
   color: var(--p-red-500, #ef4444);
-  margin-left: 0.25rem;
 }
 
 .boolean-field {
