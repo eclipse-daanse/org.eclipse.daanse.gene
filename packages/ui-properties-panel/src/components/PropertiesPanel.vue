@@ -877,12 +877,14 @@ function handleNavigate(obj: EObject) {
 
 // Handle search request from ReferenceField
 function handleSearch(feature: EReference, callback: (obj: EObject) => void) {
-  const resource = getSharedResource()
-  if (resource) {
-    const actions = getActions()
-    if (actions) {
-      actions.openSearchDialog({ feature, resource, callback })
-    }
+  // In metamodel mode, use rootPackage's resource; in instance mode, use shared instance resource
+  const resource = ctx.value?.mode === 'metamodel'
+    ? (rootPackage.value?.eResource?.() ?? null)
+    : (getSharedResource?.() ?? null)
+  if (!resource) return
+  const actions = getActions()
+  if (actions) {
+    actions.openSearchDialog({ feature, resource, callback })
   }
 }
 
