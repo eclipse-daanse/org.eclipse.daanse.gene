@@ -10,5 +10,5 @@
       "description": "Problems panel service and components"
     }
   ],
-  "dependencies": ["gene-app"]
+  "dependencies": ["gene-app", "ui-actions"]
 }

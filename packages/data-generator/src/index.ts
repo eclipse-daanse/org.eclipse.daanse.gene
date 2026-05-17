@@ -10,6 +10,7 @@ import type { ModuleContext } from '@eclipse-daanse/tsm'
 import { EPackageRegistry } from '@emfts/core'
 import { markRaw } from 'tsm:vue'
 import { DatagenPackage } from './generated/datagen'
+import datagenCommandsEcore from '../model/datagen-commands.ecore?raw'
 
 // Re-export types
 export * from './types'
@@ -113,6 +114,15 @@ export async function activate(context: ModuleContext): Promise<void> {
     }
   } catch {
     // Atlas browser not available — remote generation disabled
+  }
+
+  // Register commands from ecore
+  const commandRegistry = context.services.get<any>('gene.command.registry')
+  const keybindingSvc = context.services.get<any>('gene.keybindings')
+  if (commandRegistry) {
+    const cmds = commandRegistry.registerCommandsFromEcore(datagenCommandsEcore, 'data-generator')
+    if (keybindingSvc) keybindingSvc.registerFromCommands(cmds)
+    context.log.info('Data generator commands registered')
   }
 
   context.log.info('Data Generator plugin activated')

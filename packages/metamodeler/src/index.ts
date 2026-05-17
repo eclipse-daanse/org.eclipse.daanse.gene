@@ -7,6 +7,7 @@
 
 import type { ModuleContext } from '@eclipse-daanse/tsm'
 import { markRaw } from 'tsm:vue'
+import metamodelCommandsEcore from '../model/metamodel-commands.ecore?raw'
 
 // Re-export types
 export * from './types'
@@ -138,6 +139,15 @@ export async function activate(context: ModuleContext): Promise<void> {
 
   // Register the opener as a service
   context.services.register('ui.metamodeler.open', openMetamodeler)
+
+  // Register commands from ecore
+  const commandRegistry = context.services.get<any>('gene.command.registry')
+  const keybindingSvc = context.services.get<any>('gene.keybindings')
+  if (commandRegistry) {
+    const cmds = commandRegistry.registerCommandsFromEcore(metamodelCommandsEcore, 'metamodeler')
+    if (keybindingSvc) keybindingSvc.registerFromCommands(cmds)
+    context.log.info('Metamodeler commands registered')
+  }
 
   context.log.info('Metamodeler plugin activated')
 }

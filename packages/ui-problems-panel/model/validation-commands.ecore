@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="validationcommands" nsURI="http://gene/commands/validation/1.0.0"
+    nsPrefix="validationcommands">
+
+  <eClassifiers xsi:type="ecore:EClass" name="ValidationCommands"
+      eSuperTypes="command-model.ecore#//CommandInterface">
+
+    <eOperations name="runValidation">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="validation.runValidation"/>
+        <details key="label" value="Run Validation"/>
+        <details key="category" value="TOOLS"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-check-circle"/>
+        <details key="when" value="hasWorkspace"/>
+      </eAnnotations>
+    </eOperations>
+
+    <eOperations name="clearProblems">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="validation.clearProblems"/>
+        <details key="label" value="Clear Problems"/>
+        <details key="category" value="TOOLS"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-eraser"/>
+      </eAnnotations>
+    </eOperations>
+
+    <eOperations name="showProblems">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="validation.showProblems"/>
+        <details key="label" value="Show Problems Panel"/>
+        <details key="category" value="VIEW"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-exclamation-triangle"/>
+      </eAnnotations>
+    </eOperations>
+
+  </eClassifiers>
+</ecore:EPackage>

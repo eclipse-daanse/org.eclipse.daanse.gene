@@ -8,6 +8,7 @@
 import type { ModuleContext } from '@eclipse-daanse/tsm'
 import { markRaw } from 'tsm:vue'
 import type { PanelRegistry } from 'ui-perspectives'
+import validationCommandsEcore from '../model/validation-commands.ecore?raw'
 
 // Re-export types
 export * from './types'
@@ -96,6 +97,27 @@ export async function activate(context: ModuleContext): Promise<void> {
       defaultOrder: 0
     })
     context.log.info('Problems panel registered')
+  }
+
+  // Register commands from ecore
+  const commandRegistry = context.services.get<any>('gene.command.registry')
+  const keybindingSvc = context.services.get<any>('gene.keybindings')
+  if (commandRegistry) {
+    const cmds = commandRegistry.registerCommandsFromEcore(validationCommandsEcore, 'ui-problems-panel')
+    if (keybindingSvc) keybindingSvc.registerFromCommands(cmds)
+
+    commandRegistry.registerHandler('validation.clearProblems', async () => {
+      const problems = context.services.get<any>('gene.problems')
+      if (problems?.clearAll) problems.clearAll()
+    })
+    commandRegistry.registerHandler('validation.showProblems', async () => {
+      const ls = context.services.get<any>('gene.layout.state')
+      if (ls) {
+        if (!ls.state?.visibility?.panelArea) ls.togglePanelArea?.()
+        ls.selectPanelTab?.('ocl-problems')
+      }
+    })
+    context.log.info('Validation commands registered')
   }
 
   context.log.info('Problems Panel module activated')

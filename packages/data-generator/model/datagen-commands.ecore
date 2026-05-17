@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="datagencommands" nsURI="http://gene/commands/datagen/1.0.0"
+    nsPrefix="datagencommands">
+
+  <eClassifiers xsi:type="ecore:EClass" name="DatagenCommands"
+      eSuperTypes="command-model.ecore#//CommandInterface">
+
+    <eOperations name="runGeneration">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="datagen.runGeneration"/>
+        <details key="label" value="Run Data Generation"/>
+        <details key="category" value="TOOLS"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-play"/>
+        <details key="when" value="perspectiveId == 'data-generator'"/>
+      </eAnnotations>
+    </eOperations>
+
+    <eOperations name="configure">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="datagen.configure"/>
+        <details key="label" value="Configure Data Generator"/>
+        <details key="category" value="TOOLS"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-cog"/>
+        <details key="when" value="perspectiveId == 'data-generator'"/>
+      </eAnnotations>
+    </eOperations>
+
+  </eClassifiers>
+</ecore:EPackage>

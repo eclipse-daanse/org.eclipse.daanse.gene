@@ -8,6 +8,7 @@ import type { ModuleContext } from '@eclipse-daanse/tsm'
 import { markRaw } from 'tsm:vue'
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
 import { setPerspectiveManager, setEditorConfigForViews } from './composables/useViews'
+import instanceCommandsEcore from '../model/instance-commands.ecore?raw'
 
 // Re-export types
 export * from './types'
@@ -157,6 +158,68 @@ import {
 } from './context/editorContext'
 
 /**
+ * Check for dangling (unresolved proxy) references in the shared resource
+ */
+function checkDanglingReferences(): Array<{ className: string; featureName: string; objectUri: string }> {
+  const resource = getSharedResource()
+  if (!resource) return []
+
+  const results: Array<{ className: string; featureName: string; objectUri: string }> = []
+  const contents = resource.getContents()
+
+  function checkObject(obj: any) {
+    if (!obj?.eClass) return
+    const eClass = obj.eClass()
+    const features = eClass.getEAllStructuralFeatures?.() || eClass.getEStructuralFeatures?.() || []
+
+    for (const feature of features) {
+      // Only check references (not attributes or containments)
+      if (!feature.getEType || feature.isContainment?.()) continue
+      const isRef = feature.constructor?.name?.includes('Reference') ||
+                    (feature.getEType?.()?.constructor?.name?.includes('Class') && !feature.isContainment?.())
+      if (!isRef) continue
+
+      const value = obj.eGet?.(feature)
+      if (!value) continue
+
+      const checkProxy = (v: any) => {
+        if (v && typeof v.eIsProxy === 'function' && v.eIsProxy()) {
+          results.push({
+            className: eClass.getName?.() || 'Unknown',
+            featureName: feature.getName?.() || 'unknown',
+            objectUri: v.eProxyURI?.()?.toString?.() || 'unknown'
+          })
+        }
+      }
+
+      if (Array.isArray(value)) {
+        value.forEach(checkProxy)
+      } else if (value && typeof value[Symbol.iterator] === 'function') {
+        for (const v of value) checkProxy(v)
+      } else {
+        checkProxy(value)
+      }
+    }
+
+    // Recurse into contained objects
+    const containments = eClass.getEAllContainments?.() || []
+    for (const cont of containments) {
+      const children = obj.eGet?.(cont)
+      if (!children) continue
+      const arr = Array.isArray(children) ? children :
+                  typeof children[Symbol.iterator] === 'function' ? Array.from(children) : [children]
+      arr.forEach(checkObject)
+    }
+  }
+
+  for (const root of contents) {
+    checkObject(root)
+  }
+
+  return results
+}
+
+/**
  * TSM lifecycle: activate
  * Registers instance tree services
  */
@@ -273,9 +336,9 @@ export async function activate(context: ModuleContext): Promise<void> {
         left: ['instance-tree'],
         center: ['properties'],
         right: ['model-browser'],
-        bottom: ['ocl-problems']
+        bottom: ['ocl-problems', 'action-jobs']
       },
-      defaultVisibility: { left: true, right: true, bottom: false },
+      defaultVisibility: { left: true, right: true, bottom: true },
       onActivate: () => {
         setEditorMode('instance')
       }
@@ -314,6 +377,131 @@ context.log.info('ViewsPanel available as component (integrated in InstanceTree)
     })
     context.log.info('Instance Tree activity registered')
 
+  }
+
+  // Register commands from ecore
+  const commandRegistry = context.services.get<any>('gene.command.registry')
+  const keybindingSvc = context.services.get<any>('gene.keybindings')
+  if (commandRegistry) {
+    const cmds = commandRegistry.registerCommandsFromEcore(instanceCommandsEcore, 'ui-instance-tree')
+    if (keybindingSvc) keybindingSvc.registerFromCommands(cmds)
+
+    // UC-ACT-006: XMI-Import als Aktionsergebnis
+    commandRegistry.registerHandler('instance.importXmi', async (args: any) => {
+      const xmiContent = args?.xmiContent as string
+      if (!xmiContent) return
+
+      const mode = args?.mode as string | undefined
+      const targetUri = (args?.targetResourceUri as string) || 'action-result://import.xmi'
+      const artifactName = args?.name as string | undefined
+
+      // No mode specified → show import dialog to let user choose
+      if (!mode) {
+        const eventBus = context.services.get<any>('gene.eventbus')
+        eventBus?.emit('instance:showImportDialog', { xmiContent, name: artifactName })
+        return
+      }
+
+      const state = useSharedInstanceTree()
+      const eventBus = context.services.get<any>('gene.eventbus')
+      const problemsService = context.services.get<any>('gene.problems')
+
+      try {
+        if (mode === 'REPLACE') {
+          // Clear existing resource before loading new content
+          setSharedResource(null)
+          const result = await loadInstancesFromXMI(xmiContent, targetUri)
+          context.log.info(`XMI Import (REPLACE): ${result.loadedCount} objects loaded`)
+
+          if (result.loadedCount === 0) {
+            if (problemsService?.addIssues) {
+              problemsService.addIssues([{
+                severity: 'ERROR',
+                message: 'XMI Import failed: No objects could be loaded. The metamodel may not be registered.',
+                className: 'XMI Import'
+              }])
+            }
+          }
+
+          if (result.errors.length > 0) {
+            if (problemsService?.addIssues) {
+              problemsService.addIssues(result.errors.map((e: any) => ({
+                severity: 'ERROR',
+                message: `Import error: ${e.message}`,
+                className: 'XMI Import'
+              })))
+            }
+          }
+
+          // Check for dangling references
+          const danglingRefs = checkDanglingReferences()
+          if (danglingRefs.length > 0 && problemsService?.addIssues) {
+            problemsService.addIssues(danglingRefs.map(d => ({
+              severity: 'WARN',
+              message: `Dangling reference: ${d.featureName} on ${d.className} → unresolved proxy`,
+              className: d.className,
+              featureName: d.featureName
+            })))
+          }
+
+          eventBus?.emit('instance:imported', { mode, count: result.loadedCount, danglingRefs: danglingRefs.length })
+
+        } else if (mode === 'MERGE') {
+          // MERGE: add to existing resource (loadInstancesFromXMI appends by default)
+          const result = await loadInstancesFromXMI(xmiContent, targetUri)
+          context.log.info(`XMI Import (MERGE): ${result.loadedCount} objects merged`)
+
+          if (result.loadedCount === 0) {
+            if (problemsService?.addIssues) {
+              problemsService.addIssues([{
+                severity: 'ERROR',
+                message: 'XMI Import (MERGE) failed: No objects could be parsed. The metamodel may not be registered.',
+                className: 'XMI Import'
+              }])
+            }
+          }
+
+          if (result.errors.length > 0) {
+            if (problemsService?.addIssues) {
+              problemsService.addIssues(result.errors.map((e: any) => ({
+                severity: 'ERROR',
+                message: `Import error: ${e.message}`,
+                className: 'XMI Import'
+              })))
+            }
+          }
+
+          const danglingRefs = checkDanglingReferences()
+          if (danglingRefs.length > 0 && problemsService?.addIssues) {
+            problemsService.addIssues(danglingRefs.map(d => ({
+              severity: 'WARN',
+              message: `Dangling reference: ${d.featureName} on ${d.className} → unresolved proxy`,
+              className: d.className,
+              featureName: d.featureName
+            })))
+          }
+
+          eventBus?.emit('instance:imported', { mode, count: result.loadedCount, danglingRefs: danglingRefs.length })
+        }
+      } catch (err: any) {
+        context.log.error(`XMI Import failed: ${err.message}`)
+        if (problemsService?.addIssues) {
+          problemsService.addIssues([{
+            severity: 'ERROR',
+            message: `XMI Import failed: ${err.message}. The required metamodel may not be loaded.`,
+            className: 'XMI Import'
+          }])
+        }
+        // Show problems panel
+        const ls = context.services.get<any>('gene.layout.state')
+        if (ls) {
+          if (!ls.state?.visibility?.panelArea) ls.togglePanelArea?.()
+          ls.selectPanelTab?.('ocl-problems')
+        }
+      }
+    })
+
+    context.log.info('Instance commands registered')
   }
 
   context.log.info('Instance Tree module activated')

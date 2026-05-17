@@ -10,6 +10,7 @@ import { markRaw, h, render, watch } from 'tsm:vue'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
+import atlasCommandsEcore from '../model/atlas-commands.ecore?raw'
 
 /**
  * TSM lifecycle: activate
@@ -438,6 +439,15 @@ export async function activate(context: ModuleContext): Promise<void> {
       }
     }
   })
+
+  // Register commands from ecore
+  const commandRegistry = context.services.get<any>('gene.command.registry')
+  const keybindingSvc = context.services.get<any>('gene.keybindings')
+  if (commandRegistry) {
+    const cmds = commandRegistry.registerCommandsFromEcore(atlasCommandsEcore, 'atlas-browser')
+    if (keybindingSvc) keybindingSvc.registerFromCommands(cmds)
+    context.log.info('Atlas commands registered')
+  }
 
   context.log.info('Atlas Browser plugin activated')
 }

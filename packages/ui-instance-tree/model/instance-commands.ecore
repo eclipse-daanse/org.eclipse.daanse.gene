@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="instancecommands" nsURI="http://gene/commands/instance-tree/1.0.0"
+    nsPrefix="instancecommands">
+
+  <eClassifiers xsi:type="ecore:EClass" name="InstanceCommands"
+      eSuperTypes="command-model.ecore#//CommandInterface">
+
+    <eOperations name="loadInstance">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="instance.loadInstance"/>
+        <details key="label" value="Load Instance"/>
+        <details key="category" value="MODEL"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-download"/>
+        <details key="when" value="hasWorkspace"/>
+      </eAnnotations>
+      <eParameters name="path" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+    </eOperations>
+
+    <eOperations name="saveInstance">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="instance.saveInstance"/>
+        <details key="label" value="Save Instance"/>
+        <details key="category" value="MODEL"/>
+        <details key="scope" value="EDITOR"/>
+        <details key="keybinding" value="Ctrl+S"/>
+        <details key="icon" value="pi pi-save"/>
+        <details key="when" value="perspectiveId == 'model-editor' &amp;&amp; hasWorkspace"/>
+      </eAnnotations>
+    </eOperations>
+
+    <eOperations name="createInstance">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="instance.createInstance"/>
+        <details key="label" value="Create Instance"/>
+        <details key="category" value="MODEL"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-plus"/>
+        <details key="when" value="hasWorkspace"/>
+      </eAnnotations>
+      <eParameters name="className" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+    </eOperations>
+
+    <eOperations name="deleteSelected">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="instance.deleteSelected"/>
+        <details key="label" value="Delete Selected"/>
+        <details key="category" value="EDIT"/>
+        <details key="scope" value="OBJECT"/>
+        <details key="keybinding" value="Delete"/>
+        <details key="icon" value="pi pi-trash"/>
+        <details key="when" value="hasSelection"/>
+      </eAnnotations>
+    </eOperations>
+
+    <eOperations name="importXmi">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="instance.importXmi"/>
+        <details key="label" value="Import XMI"/>
+        <details key="category" value="MODEL"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-file-import"/>
+      </eAnnotations>
+      <eParameters name="xmiContent" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+      <eParameters name="mode" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eParameters name="targetResourceUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+
+    <eOperations name="duplicateSelected">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="instance.duplicateSelected"/>
+        <details key="label" value="Duplicate Selected"/>
+        <details key="category" value="EDIT"/>
+        <details key="scope" value="OBJECT"/>
+        <details key="keybinding" value="Ctrl+D"/>
+        <details key="icon" value="pi pi-copy"/>
+        <details key="when" value="hasSelection"/>
+      </eAnnotations>
+    </eOperations>
+
+  </eClassifiers>
+</ecore:EPackage>

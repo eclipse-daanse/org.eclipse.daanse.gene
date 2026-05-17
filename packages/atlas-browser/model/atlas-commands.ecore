@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="atlascommands" nsURI="http://gene/commands/atlas/1.0.0"
+    nsPrefix="atlascommands">
+
+  <eClassifiers xsi:type="ecore:EClass" name="AtlasCommands"
+      eSuperTypes="command-model.ecore#//CommandInterface">
+
+    <eOperations name="connect">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="atlas.connect"/>
+        <details key="label" value="Connect to Atlas"/>
+        <details key="category" value="TOOLS"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-link"/>
+      </eAnnotations>
+      <eParameters name="url" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+
+    <eOperations name="disconnect">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="atlas.disconnect"/>
+        <details key="label" value="Disconnect from Atlas"/>
+        <details key="category" value="TOOLS"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-link-off"/>
+      </eAnnotations>
+    </eOperations>
+
+    <eOperations name="refresh">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="atlas.refresh"/>
+        <details key="label" value="Refresh Atlas"/>
+        <details key="category" value="TOOLS"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-refresh"/>
+      </eAnnotations>
+    </eOperations>
+
+    <eOperations name="stageTransition">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="atlas.stageTransition"/>
+        <details key="label" value="Stage Transition"/>
+        <details key="category" value="TOOLS"/>
+        <details key="scope" value="OBJECT"/>
+        <details key="icon" value="pi pi-arrow-right-arrow-left"/>
+        <details key="when" value="hasSelection"/>
+      </eAnnotations>
+      <eParameters name="objectId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+      <eParameters name="stage" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+    </eOperations>
+
+  </eClassifiers>
+</ecore:EPackage>
