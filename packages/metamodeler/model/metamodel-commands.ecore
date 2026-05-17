@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="metamodelcommands" nsURI="http://gene/commands/metamodeler/1.0.0"
+    nsPrefix="metamodelcommands">
+
+  <eClassifiers xsi:type="ecore:EClass" name="MetamodelCommands"
+      eSuperTypes="command-model.ecore#//CommandInterface">
+
+    <eOperations name="createPackage">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="metamodeler.createPackage"/>
+        <details key="label" value="Create Package"/>
+        <details key="category" value="MODEL"/>
+        <details key="scope" value="EDITOR"/>
+        <details key="icon" value="pi pi-box"/>
+        <details key="when" value="perspectiveId == 'metamodeler'"/>
+      </eAnnotations>
+      <eParameters name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+    </eOperations>
+
+    <eOperations name="createClass">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="metamodeler.createClass"/>
+        <details key="label" value="Create Class"/>
+        <details key="category" value="MODEL"/>
+        <details key="scope" value="EDITOR"/>
+        <details key="icon" value="pi pi-table"/>
+        <details key="when" value="perspectiveId == 'metamodeler'"/>
+      </eAnnotations>
+      <eParameters name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+    </eOperations>
+
+  </eClassifiers>
+</ecore:EPackage>

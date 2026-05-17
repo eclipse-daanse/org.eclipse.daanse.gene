@@ -4,17 +4,21 @@
   "version": "0.0.1",
   "description": "Configurable action framework with internal handlers and remote REST execution",
   "entry": "src/index.ts",
-  "dependencies": ["ui-layout"],
+  "dependencies": ["ui-layout", "ui-perspectives"],
   "services": {
     "provides": [
       { "id": "gene.action.registry" },
       { "id": "gene.action.manager" },
       { "id": "gene.action.executor.internal" },
       { "id": "gene.action.executor.remote" },
-      { "id": "gene.action.events" }
+      { "id": "gene.action.events" },
+      { "id": "gene.jobs" },
+      { "id": "gene.command.registry" },
+      { "id": "gene.keybindings" }
     ],
     "requires": [
-      { "id": "gene.eventbus" }
+      { "id": "gene.eventbus" },
+      { "id": "ui.registry.panels" }
     ]
   }
 }

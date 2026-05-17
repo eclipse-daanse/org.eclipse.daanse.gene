@@ -19,6 +19,16 @@ export interface ActionResult {
   status: 'SUCCESS' | 'WARNING' | 'ERROR' | 'CANCELED'
   logs: LogEntry[]
   artifacts: Artifact[]
+  proposedActions?: ProposedAction[]
+}
+
+/** Server-proposed follow-up command (requires user approval) */
+export interface ProposedAction {
+  commandId: string
+  label: string
+  description?: string
+  args?: string
+  autoExecute?: boolean
 }
 
 export interface LogEntry {
@@ -102,4 +112,88 @@ export interface EventContext {
   eventData: Record<string, unknown>
   sourceObject?: EObject
   timestamp: Date
+}
+
+// ─── Job & Async Types ────────────────────────────────────────────
+
+export type JobState = 'QUEUED' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'CANCELED'
+
+export interface Job {
+  id: string
+  actionId: string
+  actionLabel: string
+  status: JobState
+  progress: number
+  progressMessage: string
+  startedAt: Date
+  completedAt: Date | null
+  logs: JobLogEntry[]
+  result: ActionResult | null
+  /** Remote job ID (from server) */
+  remoteJobId: string | null
+  /** Async configuration for polling */
+  asyncConfig: AsyncConfig | null
+  /** Cancel function (set by poller) */
+  cancelFn: (() => void) | null
+}
+
+export interface JobLogEntry {
+  message: string
+  level: 'INFO' | 'WARN' | 'ERROR'
+  timestamp: string
+}
+
+export interface AsyncConfig {
+  pollIntervalMs: number
+  maxJobDurationMs: number
+  statusEndpoint: string
+  cancelEndpoint: string
+  resultEndpoint: string
+}
+
+export interface JobStatusResponse {
+  jobId: string
+  status: JobState
+  progress: number
+  progressMessage: string
+  startedAt?: string
+  logs?: JobLogEntry[]
+}
+
+// ─── Discovery Types ──────────────────────────────────────────────
+
+export interface ServiceCapabilities {
+  name: string
+  version: string
+  endpoints: Endpoint[]
+  jobManagement?: JobManagement
+}
+
+export interface Endpoint {
+  id: string
+  name: string
+  description: string
+  path: string
+  httpMethod: string
+  inputType: string
+  outputType: string
+  asyncSupported: boolean
+  parameters: EndpointParameter[]
+  category: string
+}
+
+export interface EndpointParameter {
+  name: string
+  type: string
+  required: boolean
+  description: string
+  defaultValue?: string
+}
+
+export interface JobManagement {
+  statusEndpoint: string
+  cancelEndpoint: string
+  resultEndpoint: string
+  pollIntervalMs: number
+  maxJobDurationMs: number
 }

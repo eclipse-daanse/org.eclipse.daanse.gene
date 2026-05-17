@@ -3,7 +3,8 @@
  */
 
 import { injectable, singleton } from '@eclipse-daanse/tsm'
-import type { ActionResult, CollectedInput, LogEntry } from './types'
+import type { ActionResult, CollectedInput, LogEntry, AsyncConfig, ProposedAction } from './types'
+import { parseJobStatusXmi, parseActionApiXmi } from './ActionApiResourceSet'
 
 @injectable()
 @singleton()
@@ -169,8 +170,7 @@ export class RemoteExecutorImpl {
         return JSON.stringify(body)
       }
       case 'XMI_BODY':
-        // TODO: serialize primaryObject as XMI
-        return undefined
+        return this.buildXmiBody(input)
       case 'QUERY_PARAMS':
         return undefined
       default:
@@ -219,6 +219,11 @@ export class RemoteExecutorImpl {
       artifacts.push({ type: 'HTML', name: 'result', data: text })
     } else if (contentType.includes('application/xml') || contentType.includes('application/xmi')) {
       const text = await response.text()
+      // Try to parse as ActionApi JobStatus/ActionResult
+      const parsed = this.tryParseActionApiXmi(text)
+      if (parsed) {
+        return parsed
+      }
       artifacts.push({ type: 'XMI', name: 'result', xmiContent: text, data: text, importMode: 'NEW_RESOURCE' })
     } else {
       const blob = await response.blob()
@@ -244,6 +249,202 @@ export class RemoteExecutorImpl {
       current = current[part]
     }
     return current
+  }
+
+  /**
+   * Execute an async request — sends initial POST, returns remote job ID
+   */
+  async executeAsync(action: any, input: CollectedInput, params: Record<string, unknown>): Promise<{ jobId: string } | ActionResult> {
+    const url = this.buildUrl(action, input, params)
+    const method = action.httpMethod || 'POST'
+    const headers = this.buildHeaders(action)
+    headers['X-Async'] = 'true'
+    const body = this.buildBody(action, input, params)
+
+    const timeoutMs = action.readTimeoutMs || 30000
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers,
+        body: method !== 'GET' ? body : undefined,
+        signal: controller.signal
+      })
+      clearTimeout(timeoutId)
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => '')
+        return {
+          status: 'ERROR',
+          logs: [{
+            message: `HTTP ${response.status}: ${response.statusText}`,
+            detail: errorText,
+            level: 'ERROR',
+            timestamp: new Date()
+          }],
+          artifacts: []
+        }
+      }
+
+      const contentType = response.headers.get('content-type') || ''
+
+      // XMI response — parse as JobStatus, extract jobId
+      if (contentType.includes('xml') || contentType.includes('xmi')) {
+        const xmi = await response.text()
+        const jobStatus = parseJobStatusXmi(xmi)
+        const jobId = jobStatus ? (jobStatus.jobId || this.featVal(jobStatus, 'jobId')) : null
+        if (jobId) {
+          return { jobId }
+        }
+        // No jobId = sync result returned as XMI
+        return await this.parseResponse(new Response(xmi, {
+          headers: { 'content-type': contentType }
+        }), action)
+      }
+
+      // JSON fallback
+      const json = await response.json()
+      if (json.jobId) {
+        return { jobId: json.jobId }
+      }
+      return await this.parseResponse(new Response(JSON.stringify(json), {
+        headers: { 'content-type': 'application/json' }
+      }), action)
+    } catch (err: any) {
+      clearTimeout(timeoutId)
+      return {
+        status: 'ERROR',
+        logs: [{
+          message: err.name === 'AbortError' ? 'Request timeout' : `Network error: ${err.message}`,
+          level: 'ERROR',
+          timestamp: new Date()
+        }],
+        artifacts: []
+      }
+    }
+  }
+
+  private buildXmiBody(input: CollectedInput): string | undefined {
+    if (!input.primaryObject) return undefined
+    try {
+      // Dynamic import pattern (same as builtinHandlers)
+      // In sync context we try to access an already-loaded XMIResource
+      const core = (globalThis as any).__emfts_core
+      if (core?.XMIResource) {
+        const resource = new core.XMIResource()
+        resource.getContents().push(input.primaryObject)
+        return resource.saveToString()
+      }
+    } catch { /* fall through */ }
+    return undefined
+  }
+
+  private featVal(obj: any, name: string): any {
+    if (obj[name] !== undefined) return obj[name]
+    if (obj.eClass && obj.eGet) {
+      const features = obj.eClass().getEAllStructuralFeatures?.() || obj.eClass().getEStructuralFeatures?.() || []
+      for (const f of features) {
+        if (f.getName() === name) return obj.eGet(f)
+      }
+    }
+    return undefined
+  }
+
+  /**
+   * Try to parse XMI as an ActionApi JobStatus (with embedded ActionResult).
+   * Extracts structured artifacts, logs, and proposedActions.
+   */
+  private tryParseActionApiXmi(xmi: string): ActionResult | null {
+    try {
+      const jobStatus = parseJobStatusXmi(xmi)
+      if (!jobStatus) return null
+
+      const resultStatus = this.featVal(jobStatus, 'resultStatus')
+        || this.featVal(this.featVal(jobStatus, 'result'), 'resultStatus')
+
+      const resultObj = this.featVal(jobStatus, 'result')
+      if (!resultObj && !resultStatus) return null
+
+      const source = resultObj || jobStatus
+      const status = this.featVal(source, 'resultStatus') || 'SUCCESS'
+      const message = this.featVal(source, 'message') || ''
+
+      const logs: LogEntry[] = []
+      if (message) logs.push({ message, level: 'INFO', timestamp: new Date() })
+
+      // Extract logs from JobStatus
+      const rawLogs = this.toArray(this.featVal(jobStatus, 'logs'))
+      for (const l of rawLogs) {
+        logs.push({
+          message: this.featVal(l, 'message') || '',
+          level: this.featVal(l, 'level') || 'INFO',
+          timestamp: new Date(this.featVal(l, 'timestamp') || Date.now())
+        })
+      }
+
+      // Extract artifacts
+      const artifacts: any[] = []
+      const rawArtifacts = this.toArray(this.featVal(source, 'artifacts'))
+      for (const a of rawArtifacts) {
+        const artifactType = this.featVal(a, 'artifactType') || 'XMI'
+        const art: any = {
+          type: artifactType,
+          name: this.featVal(a, 'name') || 'result',
+          data: this.featVal(a, 'content')
+        }
+        if (artifactType === 'XMI') {
+          art.xmiContent = this.featVal(a, 'content')
+          art.importMode = 'NEW_RESOURCE'
+        }
+        if (artifactType === 'VALIDATION_MESSAGES') {
+          art.messages = this.toArray(this.featVal(a, 'validationMessages')).map((vm: any) => ({
+            severity: this.featVal(vm, 'severity') || 'INFO',
+            message: this.featVal(vm, 'message') || '',
+            objectUri: this.featVal(vm, 'objectUri'),
+            className: this.featVal(vm, 'className'),
+            featureName: this.featVal(vm, 'featureName')
+          }))
+        }
+        artifacts.push(art)
+      }
+
+      // Extract proposedActions
+      const proposedActions: ProposedAction[] = []
+      const rawPA = this.toArray(this.featVal(source, 'proposedActions'))
+      for (const pa of rawPA) {
+        proposedActions.push({
+          commandId: this.featVal(pa, 'commandId') || '',
+          label: this.featVal(pa, 'label') || '',
+          description: this.featVal(pa, 'description'),
+          args: this.featVal(pa, 'args'),
+          autoExecute: this.featVal(pa, 'autoExecute') === 'true' || this.featVal(pa, 'autoExecute') === true
+        })
+      }
+
+      const statusMap: Record<string, ActionResult['status']> = {
+        'SUCCESS': 'SUCCESS', 'WARNING': 'WARNING', 'ERROR': 'ERROR'
+      }
+
+      return {
+        status: statusMap[status] || 'SUCCESS',
+        logs,
+        artifacts,
+        ...(proposedActions.length > 0 ? { proposedActions } : {})
+      }
+    } catch (e) {
+      console.warn('[RemoteExecutor] Failed to parse ActionApi XMI:', e)
+      return null
+    }
+  }
+
+  private toArray(val: any): any[] {
+    if (!val) return []
+    if (Array.isArray(val)) return val
+    if (typeof val.toArray === 'function') return val.toArray()
+    if (typeof val[Symbol.iterator] === 'function') return Array.from(val)
+    return []
   }
 
   private getFilenameFromResponse(response: Response): string {

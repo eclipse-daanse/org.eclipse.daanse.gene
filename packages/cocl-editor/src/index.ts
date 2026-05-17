@@ -7,6 +7,7 @@
 
 import type { ModuleContext } from '@eclipse-daanse/tsm'
 import { markRaw } from 'tsm:vue'
+import coclCommandsEcore from '../model/cocl-commands.ecore?raw'
 
 // Re-export components
 export { CoclEditor } from './components'
@@ -78,6 +79,15 @@ export async function activate(context: ModuleContext): Promise<void> {
       perspectives: ['cocl-editor']
     })
     context.log.info('C-OCL Editor activity registered')
+  }
+
+  // Register commands from ecore
+  const commandRegistry = context.services.get<any>('gene.command.registry')
+  const keybindingSvc = context.services.get<any>('gene.keybindings')
+  if (commandRegistry) {
+    const cmds = commandRegistry.registerCommandsFromEcore(coclCommandsEcore, 'cocl-editor')
+    if (keybindingSvc) keybindingSvc.registerFromCommands(cmds)
+    context.log.info('C-OCL commands registered')
   }
 
   context.log.info('C-OCL Editor plugin activated')

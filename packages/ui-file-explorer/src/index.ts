@@ -7,6 +7,7 @@
 import type { ModuleContext } from '@eclipse-daanse/tsm'
 import { markRaw } from 'tsm:vue'
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
+import fileCommandsEcore from '../model/file-commands.ecore?raw'
 
 // Re-export types
 export * from './types'
@@ -104,6 +105,15 @@ export async function activate(context: ModuleContext): Promise<void> {
       perspectives: ['explorer']
     })
     context.log.info('File Explorer activity registered')
+  }
+
+  // Register commands from ecore
+  const commandRegistry = context.services.get<any>('gene.command.registry')
+  const keybindingService = context.services.get<any>('gene.keybindings')
+  if (commandRegistry) {
+    const cmds = commandRegistry.registerCommandsFromEcore(fileCommandsEcore, 'ui-file-explorer')
+    if (keybindingService) keybindingService.registerFromCommands(cmds)
+    context.log.info('File commands registered')
   }
 
   context.log.info('File Explorer module activated')

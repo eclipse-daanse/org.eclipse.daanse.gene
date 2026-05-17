@@ -497,13 +497,9 @@ function handleActionArtifact(artifact: any) {
       }
       break
     case 'VALIDATION_MESSAGES':
-      // Route to problems panel via eventbus
-      if (artifact.messages) {
-        const problemsService = tsm?.getService('gene.problems')
-        if (problemsService?.addIssues) {
-          problemsService.addIssues(artifact.messages)
-        }
-      }
+      // Validation results are stored in the job — visible in Jobs panel.
+      // Not auto-applied to Problems panel (user navigates there manually).
+      console.log('[Action] Validation result:', artifact.messages?.length, 'issue(s)')
       break
     case 'MARKDOWN':
       console.log('[Action] Markdown result:', artifact.content)

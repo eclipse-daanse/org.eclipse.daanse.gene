@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="command" nsURI="http://gene/model/command/1.0.0"
+    nsPrefix="command">
+
+  <!-- Command Scope -->
+  <eClassifiers xsi:type="ecore:EEnum" name="CommandScope">
+    <eLiterals name="GLOBAL"/>
+    <eLiterals name="EDITOR" value="1"/>
+    <eLiterals name="OBJECT" value="2"/>
+    <eLiterals name="BOTH" value="3"/>
+  </eClassifiers>
+
+  <!-- Command Category -->
+  <eClassifiers xsi:type="ecore:EEnum" name="CommandCategory">
+    <eLiterals name="FILE"/>
+    <eLiterals name="EDIT" value="1"/>
+    <eLiterals name="VIEW" value="2"/>
+    <eLiterals name="MODEL" value="3"/>
+    <eLiterals name="TOOLS" value="4"/>
+    <eLiterals name="NAVIGATION" value="5"/>
+  </eClassifiers>
+
+  <!--
+    CommandInterface (abstract)
+    Base for all Plugin Command Interfaces.
+    Plugins define EClasses that extend CommandInterface.
+    Each EOperation on such a class represents a Command.
+    EOperations carry an EAnnotation with source="http://gene/model/command/Command"
+    containing: commandId, label, category, scope, keybinding, icon, when
+  -->
+  <eClassifiers xsi:type="ecore:EClass" name="CommandInterface" abstract="true">
+    <eAnnotations source="http://gene/model/command">
+      <details key="description" value="Base interface for plugin commands. Extend this class and add EOperations with @Command annotations."/>
+    </eAnnotations>
+  </eClassifiers>
+
+</ecore:EPackage>
