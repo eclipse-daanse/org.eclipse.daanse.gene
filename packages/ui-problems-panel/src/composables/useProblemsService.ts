@@ -513,6 +513,17 @@ export function useProblemsService(options: OclServiceOptions = {}) {
       if (details instanceof Map) {
         return details
       }
+      // Handle BasicEMap (has size()/get(i) but is not a native Map)
+      if (details && typeof details.size === 'function' && typeof details.get === 'function') {
+        const result = new Map<string, string>()
+        for (let i = 0; i < details.size(); i++) {
+          const entry = details.get(i)
+          const key = getMapEntryKeyValue(entry)
+          const value = getMapEntryValueValue(entry)
+          if (key !== null) result.set(key, value ?? '')
+        }
+        if (result.size > 0) return result
+      }
     }
 
     if ('eGet' in annotation && typeof annotation.eGet === 'function') {
@@ -556,6 +567,11 @@ export function useProblemsService(options: OclServiceOptions = {}) {
   function getMapEntryKeyValue(entry: any): string | null {
     if (!entry) return null
     if ('key' in entry) return entry.key
+    // DynamicEObject: check eSettings Map
+    if (entry.eSettings instanceof Map) {
+      const val = entry.eSettings.get('key')
+      if (val !== undefined) return val
+    }
     if ('eGet' in entry && typeof entry.eGet === 'function') {
       const eClass = entry.eClass?.()
       if (eClass) {
@@ -569,6 +585,11 @@ export function useProblemsService(options: OclServiceOptions = {}) {
   function getMapEntryValueValue(entry: any): string | null {
     if (!entry) return null
     if ('value' in entry) return entry.value
+    // DynamicEObject: check eSettings Map
+    if (entry.eSettings instanceof Map) {
+      const val = entry.eSettings.get('value')
+      if (val !== undefined) return val
+    }
     if ('eGet' in entry && typeof entry.eGet === 'function') {
       const eClass = entry.eClass?.()
       if (eClass) {

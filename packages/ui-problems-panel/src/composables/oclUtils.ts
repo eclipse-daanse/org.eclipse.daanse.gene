@@ -11,6 +11,7 @@ export const OCL_DELEGATE_URI = 'http://www.eclipse.org/fennec/m2x/ocl/1.0'
 export const OCL_ANNOTATION_SOURCES = [
   OCL_DELEGATE_URI,
   'http://www.eclipse.org/emf/2002/Ecore/OCL',
+  'http://www.eclipse.org/emf/2002/OCL',
   'http://www.eclipse.org/OCL/Pivot'
 ] as const
 
