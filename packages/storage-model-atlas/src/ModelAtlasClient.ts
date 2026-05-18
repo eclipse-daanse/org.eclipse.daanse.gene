@@ -538,8 +538,8 @@ export class ModelAtlasClient {
    * @param oclId - Optional C-OCL ConstraintSet ID
    * @returns Raw XMI response string (ValidationResponse)
    */
-  async derive(xmiContent: string, oclId?: string): Promise<DeriveResult> {
-    const path = oclId ? `/validate/derive?oclId=${enc(oclId)}` : '/validate/derive'
+  async derive(scopeName: string, stageName: string, xmiContent: string, oclId?: string): Promise<DeriveResult> {
+    const path = `/${enc(scopeName)}/${enc(stageName)}/validate/derive${oclId ? `?oclId=${enc(oclId)}` : ''}`
     const resp = await this.request('POST', path, xmiContent, {
       contentType: 'application/xmi',
       accept: 'application/xmi'

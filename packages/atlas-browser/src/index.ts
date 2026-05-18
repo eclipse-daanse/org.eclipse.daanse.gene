@@ -419,25 +419,20 @@ export async function activate(context: ModuleContext): Promise<void> {
         }
 
         try {
-          const { XMIResource, URI: EmfURI } = await import('@emfts/core')
-
-          // Serialize the instance as XMI
-          const sourceResource = obj?.eResource?.()
-          const tempResource = new XMIResource(EmfURI.createURI('derive-request.xmi'))
-          if (sourceResource) {
-            for (const content of sourceResource.getContents()) {
-              tempResource.getContents().push(content)
-            }
-          } else if (obj) {
-            tempResource.getContents().push(obj)
-          } else {
+          if (!obj) {
             return { status: 'ERROR', logs: [{ message: 'No object to compute derived values for', level: 'ERROR', timestamp: new Date() }], artifacts: [] }
           }
 
-          // Build XMI body: wrap object in a DerivedValidationRequest envelope
+          const { XMIResource, URI: EmfURI } = await import('@emfts/core')
+
+          // Serialize only the selected object as XMI
+          const tempResource = new XMIResource(EmfURI.createURI('derive-request.xmi'))
+          tempResource.getContents().push(obj)
           let instanceXmi = await tempResource.saveToString()
-          // Strip XML declaration — will be part of the wrapper
+          // Strip XML declaration and xmi:XMI wrapper — server expects bare EObject element
           instanceXmi = instanceXmi.replace(/<\?xml[^?]*\?>\s*/, '')
+          instanceXmi = instanceXmi.replace(/<xmi:XMI[^>]*>\s*/, '').replace(/\s*<\/xmi:XMI>\s*$/, '')
+          instanceXmi = instanceXmi.trim()
 
           // Build derived feature references from the object's EClass
           const eClass = obj.eClass()
@@ -462,14 +457,16 @@ export async function activate(context: ModuleContext): Promise<void> {
           const requestXmi = `<?xml version="1.0" encoding="UTF-8"?>
 <cocl:DerivedValidationRequest xmi:version="2.0"
     xmlns:xmi="http://www.omg.org/XMI"
-    xmlns:cocl="http://eclipse.org/fennec/model/atlas/cocl/1.0">
+    xmlns:cocl="http://www.gme.org/cocl/1.0">
   <validationObjects>
 ${instanceXmi}
   </validationObjects>
 ${featureRefs}
 </cocl:DerivedValidationRequest>`
 
-          const result = await client.derive(requestXmi)
+          const scopeName = activeConnection.scopeName || 'jena'
+          const stageName = activeConnection.stageName || 'released'
+          const result = await client.derive(scopeName, stageName, requestXmi)
 
           if (!result.success) {
             return { status: 'ERROR', logs: [{ message: result.error || 'Derive failed', level: 'ERROR', timestamp: new Date() }], artifacts: [] }
