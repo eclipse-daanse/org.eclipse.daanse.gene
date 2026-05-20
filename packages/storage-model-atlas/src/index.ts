@@ -16,7 +16,7 @@ import { RestPackage } from './generated/rest'
 
 // Re-export adapter and client
 export { ModelAtlasAdapter, type AtlasConnectionOptions } from './ModelAtlasAdapter'
-export { ModelAtlasClient, type ModelAtlasClientOptions, type ValidationDiagnostic, type DeriveResult } from './ModelAtlasClient'
+export { ModelAtlasClient, type ModelAtlasClientOptions, type ValidationDiagnostic, type DeriveResult, type BatchValidationResponse } from './ModelAtlasClient'
 
 // Re-export config types
 export type { AtlasConfig, AtlasMediaType } from './types'

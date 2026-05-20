@@ -30,6 +30,7 @@ import type { TreeView } from './TreeView';
 import type { PackageResolverChain } from './PackageResolverChain';
 import type { AtlasConnection } from './AtlasConnection';
 import type { CustomIconDefinition } from './CustomIconDefinition';
+import type { CoclSource } from './CoclSource';
 import type { EditorConfig } from './EditorConfig';
 import { FennecuiPackage } from './FennecuiPackage';
 
@@ -68,6 +69,7 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
   static readonly PACKAGE_RESOLVER_CHAIN: number = 26;
   static readonly ATLAS_CONNECTIONS: number = 27;
   static readonly CUSTOM_ICON_LIBRARIES: number = 28;
+  static readonly COCL_SOURCES: number = 29;
 
   // Private fields
   private _id?: string;
@@ -99,6 +101,7 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
   private _packageResolverChain?: PackageResolverChain;
   private _atlasConnections: AtlasConnection[] = [];
   private _customIconLibraries: CustomIconDefinition[] = [];
+  private _coclSources: CoclSource[] = [];
 
   /**
    * Returns the EClass of this object
@@ -804,6 +807,30 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
     }
   }
 
+  get coclSources(): CoclSource[] {
+    return this._coclSources;
+  }
+
+  set coclSources(value: CoclSource[]) {
+    const oldValue = this._coclSources;
+    this._coclSources = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(EditorConfigImpl.COCL_SOURCES),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => EditorConfigImpl.COCL_SOURCES,
+        merge: () => false
+      });
+    }
+  }
+
   // Reflective API
 
   /**
@@ -870,6 +897,8 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         return this.atlasConnections;
       case EditorConfigImpl.CUSTOM_ICON_LIBRARIES:
         return this.customIconLibraries;
+      case EditorConfigImpl.COCL_SOURCES:
+        return this.coclSources;
       default:
         return super.eGet(feature);
     }
@@ -997,6 +1026,10 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         this.customIconLibraries = newValue as CustomIconDefinition[];
         super.eSet(feature, newValue);
         break;
+      case EditorConfigImpl.COCL_SOURCES:
+        this.coclSources = newValue as CoclSource[];
+        super.eSet(feature, newValue);
+        break;
       default:
         super.eSet(feature, newValue);
     }
@@ -1066,6 +1099,8 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         return this._atlasConnections !== undefined && this._atlasConnections.length > 0;
       case EditorConfigImpl.CUSTOM_ICON_LIBRARIES:
         return this._customIconLibraries !== undefined && this._customIconLibraries.length > 0;
+      case EditorConfigImpl.COCL_SOURCES:
+        return this._coclSources !== undefined && this._coclSources.length > 0;
       default:
         return super.eIsSet(feature);
     }
@@ -1163,6 +1198,9 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         return;
       case EditorConfigImpl.CUSTOM_ICON_LIBRARIES:
         this._customIconLibraries = [];
+        return;
+      case EditorConfigImpl.COCL_SOURCES:
+        this._coclSources = [];
         return;
       default:
         super.eUnset(feature);

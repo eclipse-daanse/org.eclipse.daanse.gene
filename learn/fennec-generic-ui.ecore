@@ -642,6 +642,13 @@
         <details key="documentation" value="User-defined custom icons uploaded or referenced by URL. Registered as an additional IconProvider in the IconPicker."/>
       </eAnnotations>
     </eStructuralFeatures>
+
+    <!-- C-OCL Constraint Sources -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="coclSources" upperBound="-1" eType="#//CoclSource" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="C-OCL constraint files (.c-ocl) linked to this workspace. Loaded on workspace open and available for batch validation."/>
+      </eAnnotations>
+    </eStructuralFeatures>
   </eClassifiers>
 
   <!-- ============================================================
@@ -732,6 +739,42 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
       <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
         <details key="documentation" value="Whether this instance source is active."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="CoclSource">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="A C-OCL constraint source (.c-ocl file) linked to this workspace. Loaded when the workspace is opened and available for server-side batch validation."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Technical identifier for this COCL source."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable name for this COCL source."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="location" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Path or URI to the .c-ocl constraint file."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="resolution" eType="#//ResolutionStrategy" defaultValueLiteral="RELATIVE_TO_CONFIG">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="How to resolve relative paths."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="enabled" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this COCL source is active."/>
       </eAnnotations>
     </eStructuralFeatures>
   </eClassifiers>

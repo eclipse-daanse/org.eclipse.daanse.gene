@@ -550,6 +550,16 @@ function createAtlasBrowser() {
   const showValidationDialog = ref(false)
   let validationResolve: ((oclId: string | null | 'cancelled') => void) | null = null
 
+  // Batch validation dialog state (UC-OCL-009)
+  const showBatchValidationDialog = ref(false)
+  // Instances + workspace COCL files prepared by the handler before opening the dialog
+  const batchInstances = ref<{ obj: any; label: string; sourcePath: string }[]>([])
+  const batchWorkspaceCocls = ref<{ name: string; path: string }[]>([])
+  // Server COCL options + error, loaded by the dialog
+  const batchServerCocls = ref<{ id: string; name: string; stage: string }[]>([])
+  const batchCoclError = ref<string | null>(null)
+  let batchValidationResolve: ((choice: { selectedObjects: any[]; referenceDepth: number; coclId: string; coclSource: 'server' | 'workspace'; coclContent?: string } | 'cancelled') => void) | null = null
+
   /**
    * Open the validation dialog and return the user's choice.
    * Returns oclId string, null (EMF-only), or 'cancelled'.
@@ -569,6 +579,28 @@ function createAtlasBrowser() {
     if (validationResolve) {
       validationResolve(oclId)
       validationResolve = null
+    }
+  }
+
+  /**
+   * Open the batch validation dialog and return the user's choice (UC-OCL-009).
+   * Handler must populate batchInstances and batchWorkspaceCocls before calling this.
+   */
+  function requestBatchValidationChoice(): Promise<{ selectedObjects: any[]; referenceDepth: number; coclId: string; coclSource: 'server' | 'workspace'; coclContent?: string } | 'cancelled'> {
+    return new Promise((resolve) => {
+      batchValidationResolve = resolve
+      showBatchValidationDialog.value = true
+    })
+  }
+
+  /**
+   * Resolve the pending batch validation choice.
+   */
+  function resolveBatchValidationChoice(choice: { selectedObjects: any[]; referenceDepth: number; coclId: string; coclSource: 'server' | 'workspace'; coclContent?: string } | 'cancelled') {
+    showBatchValidationDialog.value = false
+    if (batchValidationResolve) {
+      batchValidationResolve(choice)
+      batchValidationResolve = null
     }
   }
 
@@ -747,6 +779,15 @@ function createAtlasBrowser() {
     showValidationDialog,
     requestValidationChoice,
     resolveValidationChoice,
+
+    // Batch validation dialog (UC-OCL-009)
+    showBatchValidationDialog,
+    batchInstances,
+    batchWorkspaceCocls,
+    batchServerCocls,
+    batchCoclError,
+    requestBatchValidationChoice,
+    resolveBatchValidationChoice,
 
     /** Get the ModelAtlasClient for a connection */
     getClient(connectionId: string): ModelAtlasClient | undefined {

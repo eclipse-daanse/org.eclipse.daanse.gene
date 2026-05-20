@@ -14,6 +14,8 @@ import type { ModelSource } from './ModelSource';
 import { ModelSourceImpl } from './ModelSourceImpl';
 import type { InstanceSource } from './InstanceSource';
 import { InstanceSourceImpl } from './InstanceSourceImpl';
+import type { CoclSource } from './CoclSource';
+import { CoclSourceImpl } from './CoclSourceImpl';
 import type { ModelRepository } from './ModelRepository';
 import { ModelRepositoryImpl } from './ModelRepositoryImpl';
 import type { ImportRule } from './ImportRule';
@@ -141,6 +143,13 @@ export class FennecuiFactory extends BasicEFactory {
    */
   createInstanceSource(): InstanceSource {
     return new InstanceSourceImpl();
+  }
+
+  /**
+   * Create a new CoclSource instance
+   */
+  createCoclSource(): CoclSource {
+    return new CoclSourceImpl();
   }
 
   /**
@@ -483,6 +492,8 @@ export class FennecuiFactory extends BasicEFactory {
         return this.createModelSource();
       case 'InstanceSource':
         return this.createInstanceSource();
+      case 'CoclSource':
+        return this.createCoclSource();
       case 'ModelRepository':
         return this.createModelRepository();
       case 'ImportRule':

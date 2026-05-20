@@ -6,7 +6,7 @@
  */
 
 import type { ModuleContext } from '@eclipse-daanse/tsm'
-import { markRaw, h, render, watch } from 'tsm:vue'
+import { markRaw, h, render, watch, toRaw } from 'tsm:vue'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
@@ -114,8 +114,8 @@ export async function activate(context: ModuleContext): Promise<void> {
     }
   })
 
-  // Mount ValidationDialog as global overlay
-  const { ValidationDialog } = await import('./components')
+  // Mount ValidationDialog + BatchValidationDialog as global overlays
+  const { ValidationDialog, BatchValidationDialog } = await import('./components')
   const dialogHost = document.createElement('div')
   dialogHost.id = 'atlas-validation-dialog-host'
   document.body.appendChild(dialogHost)
@@ -143,10 +143,43 @@ export async function activate(context: ModuleContext): Promise<void> {
   watch(sharedBrowser.showValidationDialog, () => renderDialog())
   renderDialog()
 
+  // Mount BatchValidationDialog as global overlay (UC-OCL-009)
+  const batchDialogHost = document.createElement('div')
+  batchDialogHost.id = 'atlas-batch-validation-dialog-host'
+  document.body.appendChild(batchDialogHost)
+
+  function renderBatchDialog() {
+    const vnode = h(BatchValidationDialog, {
+      visible: sharedBrowser.showBatchValidationDialog.value,
+      serverCocls: sharedBrowser.batchServerCocls.value,
+      workspaceCocls: sharedBrowser.batchWorkspaceCocls.value,
+      instances: sharedBrowser.batchInstances.value,
+      coclError: sharedBrowser.batchCoclError.value,
+      'onUpdate:visible': (v: boolean) => {
+        // Only cancel if dialog is closed without validating (resolveBatchValidationChoice already clears the ref)
+        if (!v && sharedBrowser.showBatchValidationDialog.value) {
+          sharedBrowser.resolveBatchValidationChoice('cancelled')
+        }
+      },
+      onValidate: (choice: { selectedObjects: any[]; referenceDepth: number; coclId: string; coclSource: 'server' | 'workspace'; coclContent?: string }) => {
+        sharedBrowser.resolveBatchValidationChoice(choice)
+      }
+    })
+    if (appInstance) {
+      vnode.appContext = appInstance._context
+    }
+    render(vnode, batchDialogHost)
+  }
+
+  watch([sharedBrowser.showBatchValidationDialog, sharedBrowser.batchCoclError, sharedBrowser.batchServerCocls, sharedBrowser.batchInstances], () => renderBatchDialog())
+  renderBatchDialog()
+
   // Store for cleanup on deactivate
   context.services.register('gene.atlas.validation.cleanup', () => {
     render(null, dialogHost)
     dialogHost.remove()
+    render(null, batchDialogHost)
+    batchDialogHost.remove()
   })
 
   // Register Model Atlas perspective
@@ -454,13 +487,30 @@ export async function activate(context: ModuleContext): Promise<void> {
             `    <derivedFeature href="${nsURI}#//${eClass.getName()}/${name}"/>`
           ).join('\n')
 
+          // Build validationObjects element with xsi:type instead of wrapping
+          // Server expects: <validationObjects xsi:type="prefix:Class" attr1="val" .../>
+          const nsPrefix = eClass.getEPackage?.()?.getNsPrefix?.() || 'ns'
+          const className = eClass.getName() || ''
+          const xsiType = `${nsPrefix}:${className}`
+
+          // Extract attributes from the serialized XMI element
+          // instanceXmi is like: <company:Person xmlns:company="..." firstName="Max" .../>
+          // We need to extract the attributes and namespace declarations
+          const attrMatch = instanceXmi.match(/^<[^\s>]+\s+([\s\S]*?)\/>$/) ||
+                            instanceXmi.match(/^<[^\s>]+\s+([\s\S]*?)>/)
+          const attrs = attrMatch ? attrMatch[1]
+            .replace(/xmlns:xmi="[^"]*"/g, '')
+            .replace(/xmi:version="[^"]*"/g, '')
+            .replace(/xmlns:xsi="[^"]*"/g, '')
+            .trim() : ''
+
           const requestXmi = `<?xml version="1.0" encoding="UTF-8"?>
 <cocl:DerivedValidationRequest xmi:version="2.0"
     xmlns:xmi="http://www.omg.org/XMI"
-    xmlns:cocl="http://www.gme.org/cocl/1.0">
-  <validationObjects>
-${instanceXmi}
-  </validationObjects>
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:cocl="http://www.gme.org/cocl/1.0"
+    xmlns:${nsPrefix}="${nsURI}">
+  <validationObjects xsi:type="${xsiType}" ${attrs}/>
 ${featureRefs}
 </cocl:DerivedValidationRequest>`
 
@@ -543,6 +593,395 @@ ${featureRefs}
     })
 
     context.log.info('Atlas derive action registered')
+
+    // ==============================
+    // UC-OCL-009: Batch Validation (Client-seitig)
+    // ==============================
+    internalExecutor.registerHandler('atlas.validate-batch.handler', {
+      async execute(_ctx: any) {
+        const browser = useSharedAtlasBrowser()
+        const activeConnection = browser.connections.value.find((c: any) => c.status === 'connected')
+        if (!activeConnection) {
+          return { status: 'ERROR', logs: [{ message: 'No active Atlas connection. Connect to a Model Atlas server first.', level: 'ERROR', timestamp: new Date() }], artifacts: [] }
+        }
+
+        const client = browser.getClient(activeConnection.id)
+        if (!client) {
+          return { status: 'ERROR', logs: [{ message: 'Atlas client not available for connection', level: 'ERROR', timestamp: new Date() }], artifacts: [] }
+        }
+
+        try {
+          // Prepare instance data for the dialog (via context.services, NOT window)
+          const instanceTreeComposable = context.services.get<any>('ui.instance-tree.composables')
+          const getSharedResource = instanceTreeComposable?.getSharedResource
+          const getObjectSourcePath = instanceTreeComposable?.getObjectSourcePath
+
+          const instances: { obj: any; label: string; sourcePath: string }[] = []
+          if (getSharedResource) {
+            const resource = getSharedResource()
+            if (resource) {
+              const contents = resource.getContents()
+              for (let i = 0; i < contents.size(); i++) {
+                const obj = contents.get(i)
+                const rawObj = toRaw(obj)
+                const sourcePath = getObjectSourcePath?.(rawObj) || getObjectSourcePath?.(obj) || 'unknown'
+                const label = getInstanceLabel(rawObj)
+                instances.push({ obj: rawObj, label, sourcePath })
+              }
+            }
+          }
+          browser.batchInstances.value = instances
+
+          // Prepare workspace COCL files from EditorConfig.coclSources
+          const workspaceCocls: { name: string; path: string }[] = []
+          const editorConfig = context.services.get<any>('gene.editor.config')
+          const config = editorConfig?.editorConfig?.value
+          if (config) {
+            const eClass = config.eClass?.()
+            const coclSourcesFeature = eClass?.getEStructuralFeature?.('coclSources')
+            if (coclSourcesFeature) {
+              const coclSources = config.eGet(coclSourcesFeature) || []
+              for (const src of Array.from(coclSources)) {
+                const srcClass = (src as any).eClass()
+                const nameF = srcClass?.getEStructuralFeature?.('name')
+                const locF = srcClass?.getEStructuralFeature?.('location')
+                const enabledF = srcClass?.getEStructuralFeature?.('enabled')
+                const enabled = enabledF ? (src as any).eGet(enabledF) : true
+                if (enabled !== false) {
+                  const name = nameF ? (src as any).eGet(nameF) : ''
+                  const location = locF ? (src as any).eGet(locF) : ''
+                  if (location) {
+                    workspaceCocls.push({ name: name || location, path: location })
+                  }
+                }
+              }
+            }
+          }
+          browser.batchWorkspaceCocls.value = workspaceCocls
+
+          // Pre-load server COCLs (before opening dialog)
+          browser.batchServerCocls.value = []
+          browser.batchCoclError.value = null
+          try {
+            let xmi = await client.listAllObjects(activeConnection.scopeName, 'cocl')
+            if (!xmi) {
+              xmi = await client.listReleasedObjects(activeConnection.scopeName, 'cocl')
+            }
+            if (xmi) {
+              const { parseMetadataListXmi } = await import('storage-model-atlas')
+              const metadataList = parseMetadataListXmi(xmi)
+              browser.batchServerCocls.value = metadataList.map(m => ({
+                id: m.objectId,
+                name: m.objectName || m.objectId,
+                stage: m.stage || ''
+              }))
+            }
+            if (browser.batchServerCocls.value.length === 0) {
+              browser.batchCoclError.value = 'Keine C-OCL Registry auf dem Server gefunden (HTTP 400). Die COCL-Registry muss im Scope konfiguriert sein.'
+            }
+          } catch (e: any) {
+            browser.batchCoclError.value = `Server-COCLs konnten nicht geladen werden: ${e.message || e}`
+          }
+
+          // Show batch validation dialog — user picks instances, depth, COCL
+          const choice = await browser.requestBatchValidationChoice()
+
+          if (choice === 'cancelled') {
+            return { status: 'SUCCESS', logs: [{ message: 'Batch validation cancelled by user', level: 'INFO', timestamp: new Date() }], artifacts: [] }
+          }
+
+          context.log.info(`[BatchValidation] Choice received: ${choice.selectedObjects.length} objects, depth=${choice.referenceDepth}, coclId=${choice.coclId}, source=${choice.coclSource}`)
+
+          const scopeName = activeConnection.scopeName || 'jena'
+          const stageName = (activeConnection as any).stageName || 'released'
+
+          // Step 1: If workspace COCL, read file content and upload it first
+          if (choice.coclSource === 'workspace') {
+            try {
+              const geneFS = context.services.get<any>('gene.filesystem')
+              if (!geneFS) {
+                console.error('[BatchValidation] No filesystem service')
+                return { status: 'ERROR', logs: [{ message: 'Kein Dateisystem-Service verfuegbar', level: 'ERROR', timestamp: new Date() }], artifacts: [] }
+              }
+
+              // Find the FileEntry by scanning all files for matching .c-ocl name
+              const coclFile = workspaceCocls.find(c => c.name === choice.coclId || c.name === choice.coclId + '.c-ocl')
+              const coclPath = coclFile?.path || choice.coclId
+              let fileEntry: any = null
+              const allFiles = geneFS.files?.value || []
+              for (const f of allFiles) {
+                if (f.path === coclPath || f.name === coclPath || f.name === choice.coclId + '.c-ocl' || f.name === choice.coclId) {
+                  fileEntry = f
+                  break
+                }
+              }
+
+              if (!fileEntry) {
+                console.error('[BatchValidation] COCL file not found in workspace:', coclPath)
+                return { status: 'ERROR', logs: [{ message: `COCL-Datei nicht im Workspace gefunden: ${coclPath}`, level: 'ERROR', timestamp: new Date() }], artifacts: [] }
+              }
+
+              const coclContent = await geneFS.readTextFile(fileEntry)
+              if (!coclContent) {
+                console.error('[BatchValidation] Empty COCL file:', fileEntry.path)
+                return { status: 'ERROR', logs: [{ message: `COCL-Datei ist leer: ${fileEntry.path}`, level: 'ERROR', timestamp: new Date() }], artifacts: [] }
+              }
+
+              context.log.info(`[BatchValidation] Uploading workspace COCL "${choice.coclId}" (${coclContent.length} chars)`)
+              await client.uploadObject(scopeName, 'cocl', 'draft', choice.coclId, coclContent, {
+                name: choice.coclId,
+                override: true
+              })
+              context.log.info(`[BatchValidation] Workspace COCL "${choice.coclId}" uploaded to server`)
+            } catch (uploadErr: any) {
+              console.error('[BatchValidation] Upload failed:', uploadErr)
+              const problemsService = context.services.get<any>('gene.problems')
+              problemsService?.addIssue?.({ severity: 'error', message: `Workspace-COCL-Upload fehlgeschlagen: ${uploadErr.message}`, source: 'atlas-batch-validation' })
+              const eventBus = context.services.get<any>('gene.eventbus')
+              eventBus?.emit?.('gene:show-problems')
+              return { status: 'ERROR', logs: [{ message: `Workspace-COCL-Upload fehlgeschlagen: ${uploadErr.message}`, level: 'ERROR', timestamp: new Date() }], artifacts: [] }
+            }
+          }
+
+          // Step 2: Collect selected objects + referenced objects at given depth
+          const { XMIResource, URI: EmfURI } = await import('@emfts/core')
+
+          const allObjects = new Set<any>()
+          for (const obj of choice.selectedObjects) {
+            const rawObj = toRaw(obj)
+            allObjects.add(rawObj)
+            // Traverse non-containment references up to depth
+            if (choice.referenceDepth !== 0) {
+              collectReferences(rawObj, choice.referenceDepth, allObjects)
+            }
+          }
+
+          // Step 3: Serialize selected objects to XMI
+          const tempResource = new XMIResource(EmfURI.createURI('batch-objects.xmi'))
+          const objectsArray = Array.from(allObjects)
+          for (const obj of objectsArray) {
+            tempResource.getContents().push(obj)
+          }
+          let objectsXmi = await tempResource.saveToString()
+          // Remove from temp resource
+          const tempContents = tempResource.getContents()
+          for (let i = objectsArray.length - 1; i >= 0; i--) {
+            if (typeof (tempContents as any).removeAt === 'function') {
+              (tempContents as any).removeAt(i)
+            } else if (typeof (tempContents as any).remove === 'function') {
+              (tempContents as any).remove(objectsArray[i])
+            }
+          }
+
+          // Step 4: Build BatchValidationRequest XMI
+          // Extract namespace declarations and object elements from serialized XMI
+          objectsXmi = objectsXmi.replace(/<\?xml[^?]*\?>\s*/, '')
+          // Replace eType with _type for Atlas compatibility
+          objectsXmi = objectsXmi.replace(/ eType="/g, ' _type="')
+
+          // Extract namespace declarations from the XMI wrapper or root elements
+          const nsDecls = new Map<string, string>()
+          const nsRegex = /xmlns:([a-zA-Z0-9_]+)="([^"]+)"/g
+          let nsMatch: RegExpExecArray | null
+          while ((nsMatch = nsRegex.exec(objectsXmi)) !== null) {
+            if (nsMatch[1] !== 'xmi' && nsMatch[1] !== 'xsi') {
+              nsDecls.set(nsMatch[1], nsMatch[2])
+            }
+          }
+
+          // Extract inner object elements (strip xmi:XMI wrapper if present)
+          let innerElements: string
+          const xmiWrapperMatch = objectsXmi.match(/<xmi:XMI[^>]*>([\s\S]*)<\/xmi:XMI>/)
+          if (xmiWrapperMatch) {
+            innerElements = xmiWrapperMatch[1].trim()
+          } else {
+            // Single root element — use as-is but strip namespace declarations
+            innerElements = objectsXmi.trim()
+          }
+
+          // Convert each top-level element into a <validationObjects> element
+          // Replace the root element tag names with validationObjects,
+          // preserving xsi:type and all attributes
+          const validationObjectsXml = innerElements
+            .replace(/<([a-zA-Z0-9_]+:)?([a-zA-Z0-9_]+)\s/g, (match, prefix, _localName, offset) => {
+              // Only replace top-level elements (not nested ones)
+              // Check if this is at the beginning or right after whitespace following a >
+              const before = innerElements.substring(0, offset)
+              const lastClose = before.lastIndexOf('>')
+              const lastOpen = before.lastIndexOf('<')
+              // Top-level if we're at position 0 or the last tag closed before this one
+              if (offset === 0 || (lastClose > lastOpen)) {
+                // If element already has xsi:type, just rename the tag
+                const elementEnd = innerElements.indexOf('>', offset)
+                const elementStr = innerElements.substring(offset, elementEnd + 1)
+                if (elementStr.includes('xsi:type=')) {
+                  return '<validationObjects '
+                }
+                // Add xsi:type based on current prefix:localName
+                const xsiType = prefix ? `${prefix}${_localName}` : _localName
+                return `<validationObjects xsi:type="${xsiType}" `
+              }
+              return match
+            })
+            // Fix closing tags for top-level elements
+            .replace(/<\/([a-zA-Z0-9_]+:)?([a-zA-Z0-9_]+)>(?=\s*(?:<[a-zA-Z]|$))/g, '</validationObjects>')
+
+          // Build namespace string
+          let nsString = ''
+          for (const [prefix, uri] of nsDecls) {
+            nsString += `\n    xmlns:${prefix}="${uri}"`
+          }
+
+          const requestXmi = `<?xml version="1.0" encoding="UTF-8"?>
+<cocl:BatchValidationRequest xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:cocl="http://www.gme.org/cocl/1.0"${nsString}
+    coclId="${choice.coclId}">
+  ${validationObjectsXml}
+</cocl:BatchValidationRequest>`
+
+          // Step 5: Call server
+          const result = await client.validateBatch(scopeName, stageName, requestXmi)
+
+          // Step 6: Convert diagnostics to Problems Panel messages
+          const messages: any[] = []
+          function collectDiagMessages(diag: any, instanceLabel: string) {
+            if (diag.message && diag.type !== 'OK') {
+              messages.push({
+                severity: diag.type === 'ERROR' ? 'error' : diag.type === 'WARNING' ? 'warning' : 'info',
+                message: diag.message,
+                source: 'atlas-batch-validation',
+                objectLabel: instanceLabel,
+                eClassName: diag.source || ''
+              })
+            }
+            for (const child of diag.children || []) {
+              collectDiagMessages(child, instanceLabel)
+            }
+          }
+
+          result.diagnostics.forEach((diag: any, i: number) => {
+            // Extract instance label from data field if available
+            const dataStr = diag.data?.[0] || ''
+            const labelMatch = dataStr.match(/\(([^)]+)\)/) || dataStr.match(/impl\.(\w+)Impl/)
+            const instanceLabel = labelMatch ? labelMatch[1] : `Instanz #${i + 1}`
+            collectDiagMessages(diag, instanceLabel)
+          })
+
+          // Push results to Problems Panel
+          const problemsService = context.services.get<any>('gene.problems')
+          if (problemsService) {
+            problemsService.clearIssuesBySource?.('atlas-batch-validation')
+            for (const msg of messages) {
+              problemsService.addIssue?.(msg)
+            }
+            if (messages.length > 0) {
+              const eventBus = context.services.get<any>('gene.eventbus')
+              eventBus?.emit?.('gene:show-problems')
+            }
+          }
+
+          // Step 7: Build summary
+          const totalInstances = result.diagnostics.length
+          const failedInstances = result.diagnostics.filter((d: any) => d.type === 'ERROR' || d.type === 'WARNING').length
+          const hasErrors = result.diagnostics.some((d: any) => d.type === 'ERROR')
+
+          const summaryMsg = `Batch-Validierung: ${totalInstances} Instanz(en) gepruft, ${failedInstances} mit Fehlern`
+          const status = failedInstances > 0 ? (hasErrors ? 'ERROR' : 'WARNING') : 'SUCCESS'
+
+          return {
+            status,
+            logs: [{ message: summaryMsg, level: status === 'SUCCESS' ? 'INFO' : 'WARN', timestamp: new Date() }],
+            artifacts: [{
+              type: 'VALIDATION_MESSAGES',
+              name: 'Batch Validation',
+              data: messages,
+              messages
+            }]
+          }
+        } catch (e: any) {
+          console.error('[BatchValidation] Error:', e)
+          const problemsService = context.services.get<any>('gene.problems')
+          problemsService?.addIssue?.({ severity: 'error', message: `Batch-Validierung fehlgeschlagen: ${e.message}`, source: 'atlas-batch-validation' })
+          const eventBus = context.services.get<any>('gene.eventbus')
+          eventBus?.emit?.('gene:show-problems')
+          return { status: 'ERROR', logs: [{ message: `Batch validation failed: ${e.message}`, level: 'ERROR', timestamp: new Date() }], artifacts: [] }
+        }
+      }
+    })
+
+    /** Get a human-readable label for an EObject */
+    function getInstanceLabel(obj: any): string {
+      try {
+        const eClass = obj.eClass?.()
+        const className = eClass?.getName?.() || 'EObject'
+        for (const attr of ['name', 'id', 'label', 'title']) {
+          const f = eClass?.getEStructuralFeature?.(attr)
+          if (f) {
+            const v = obj.eGet(f)
+            if (v && typeof v === 'string') return `${className} "${v}"`
+          }
+        }
+        return className
+      } catch { return 'EObject' }
+    }
+
+    /** Collect non-containment references recursively up to maxDepth */
+    function collectReferences(obj: any, maxDepth: number, collected: Set<any>, currentDepth = 1): void {
+      if (maxDepth !== -1 && currentDepth > maxDepth) return
+      try {
+        const eClass = obj.eClass?.()
+        if (!eClass) return
+        const features = eClass.getEAllStructuralFeatures?.() || eClass.getEStructuralFeatures?.() || []
+        for (const feature of features) {
+          // Skip containment references and attributes
+          if (feature.isContainment?.() || !feature.getEType?.()?.eClass) continue
+          // Only process EReferences
+          const featureEClass = feature.eClass?.()
+          if (!featureEClass || featureEClass.getName?.() !== 'EReference') continue
+
+          const value = obj.eGet(feature)
+          if (!value) continue
+
+          if (typeof value[Symbol.iterator] === 'function') {
+            for (const ref of value) {
+              if (ref && !collected.has(ref)) {
+                collected.add(ref)
+                collectReferences(ref, maxDepth, collected, currentDepth + 1)
+              }
+            }
+          } else if (typeof value === 'object' && value.eClass) {
+            if (!collected.has(value)) {
+              collected.add(value)
+              collectReferences(value, maxDepth, collected, currentDepth + 1)
+            }
+          }
+        }
+      } catch {
+        // Ignore errors during reference traversal
+      }
+    }
+
+    actionRegistry.register({
+      definition: {
+        actionId: 'atlas.validate-batch',
+        label: 'Batch-Validierung (alle Instanzen)',
+        icon: 'pi pi-list-check',
+        actionScope: 'GLOBAL',
+        actionType: 'VALIDATION',
+        handlerId: 'atlas.validate-batch.handler',
+        order: 52,
+        enabled: true,
+        perspectiveIds: [],
+        parameters: [],
+        returnTypes: ['VALIDATION_MESSAGES']
+      },
+      source: 'plugin',
+      moduleId: 'atlas-browser'
+    })
+
+    context.log.info('Atlas batch validation action registered (UC-OCL-009)')
   }
 
   // Listen for workspace loaded event to auto-connect Atlas connections

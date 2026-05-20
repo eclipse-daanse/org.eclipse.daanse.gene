@@ -29,6 +29,13 @@ export interface DeriveResult {
   error?: string
 }
 
+/** Response from batch validation endpoint (UC-OCL-009) */
+export interface BatchValidationResponse {
+  role: 'VALIDATION' | 'REFERENCE_FILTER'
+  results: unknown[]
+  diagnostics: ValidationDiagnostic[]
+}
+
 export interface ModelAtlasClientOptions {
   /** Base URL of the Model Atlas REST API */
   baseUrl: string
@@ -524,6 +531,34 @@ export class ModelAtlasClient {
       return { type: 'ERROR', message: errorText, children: [] }
     }
     return { type: 'ERROR', message: `Validation failed: ${resp.status}`, children: [] }
+  }
+
+  /**
+   * Batch-validate EObjects on the server (UC-OCL-009).
+   * Client sends a pre-built BatchValidationRequest XMI.
+   *
+   * @param scopeName - Atlas scope
+   * @param stageName - Stage (e.g. 'released')
+   * @param requestXmi - Complete BatchValidationRequest XMI string
+   * @returns Parsed BatchValidationResponse (JSON)
+   */
+  async validateBatch(
+    scopeName: string,
+    stageName: string,
+    requestXmi: string
+  ): Promise<BatchValidationResponse> {
+    const path = `/${enc(scopeName)}/${enc(stageName)}/validate/batch`
+    const resp = await this.request('POST', path, requestXmi, {
+      contentType: 'application/xmi',
+      accept: 'application/json'
+    })
+
+    if (resp.status === 200) {
+      return await resp.json() as BatchValidationResponse
+    }
+
+    const errorText = await resp.text().catch(() => '')
+    throw new Error(`Batch validation failed (${resp.status}): ${errorText}`)
   }
 
   /**

@@ -567,6 +567,96 @@ function handleDiscard() {
   })
 }
 
+// --- Workspace ---
+
+async function handleSaveToWorkspace() {
+  if (!constraintSet.value) return
+
+  const name = constraintSet.value.name || 'constraints'
+  const location = filePath || (name.endsWith('.c-ocl') ? name : `${name}.c-ocl`)
+
+  // Get the EditorConfig from the workspace
+  const editorConfig = _tsm?.getService('gene.editor.config')
+  const config = editorConfig?.editorConfig?.value
+  if (!config) {
+    console.warn('[CoclEditor] No EditorConfig available — cannot link to workspace')
+    return
+  }
+
+  try {
+    const eClass = config.eClass()
+    const coclSourcesFeature = eClass?.getEStructuralFeature?.('coclSources')
+    if (!coclSourcesFeature) {
+      console.warn('[CoclEditor] EditorConfig has no coclSources feature — model may need regeneration')
+      return
+    }
+
+    // Check if already linked
+    const existing = config.eGet(coclSourcesFeature) || []
+    const alreadyLinked = Array.from(existing).some((src: any) => {
+      const srcClass = src.eClass()
+      const locFeature = srcClass?.getEStructuralFeature?.('location')
+      return locFeature && src.eGet(locFeature) === location
+    })
+
+    if (alreadyLinked) {
+      console.log('[CoclEditor] COCL source already linked in workspace:', location)
+      return
+    }
+
+    // Create a new CoclSource instance via reflective API
+    const { EPackageRegistry } = await import('@emfts/core')
+    const fennecuiPkg = EPackageRegistry.INSTANCE.get('https://eclipse.org/fennec/ts/generic/ui')
+    if (!fennecuiPkg) {
+      console.warn('[CoclEditor] FennecuiPackage not registered')
+      return
+    }
+    const coclSourceClassifier = fennecuiPkg.getEClassifier?.('CoclSource')
+    if (!coclSourceClassifier) {
+      console.warn('[CoclEditor] CoclSource class not found in FennecuiPackage')
+      return
+    }
+    const factory = fennecuiPkg.getEFactoryInstance?.()
+    if (!factory) {
+      console.warn('[CoclEditor] No factory for FennecuiPackage')
+      return
+    }
+    const coclSource = factory.create(coclSourceClassifier as any)
+    const csClass = coclSource.eClass()
+    const setFeature = (fname: string, val: any) => {
+      const f = csClass.getEStructuralFeature(fname)
+      if (f) coclSource.eSet(f, val)
+    }
+    setFeature('id', constraintSet.value.id || name.toLowerCase().replace(/\s+/g, '-'))
+    setFeature('name', name)
+    setFeature('location', location)
+    setFeature('enabled', true)
+
+    // Add to the EditorConfig's coclSources list
+    const coclSources = config.eGet(coclSourcesFeature)
+    if (coclSources && typeof coclSources.push === 'function') {
+      coclSources.push(coclSource)
+    } else if (Array.isArray(coclSources)) {
+      coclSources.push(coclSource)
+      config.eSet(coclSourcesFeature, coclSources)
+    }
+
+    console.log('[CoclEditor] COCL source linked in workspace:', location)
+
+    // Mark EditorConfig dirty and trigger save
+    editorConfig.markDirty?.()
+    if (editorConfig.saveToFileSystem) {
+      const geneFS = _tsm?.getService('gene.filesystem')
+      if (geneFS?.writeTextFile) {
+        await editorConfig.saveToFileSystem((entry: any, content: string) => geneFS.writeTextFile(entry, content))
+        console.log('[CoclEditor] Workspace file saved')
+      }
+    }
+  } catch (e: any) {
+    console.error('[CoclEditor] Failed to link COCL in workspace:', e)
+  }
+}
+
 // --- Atlas Server ---
 
 async function handleUploadToServer() {
@@ -676,6 +766,14 @@ async function handleSelectServerConfig(cfg: any) {
           size="small"
           @click="handleSaveAs"
           title="Save As..."
+          text
+        />
+        <Button
+          icon="pi pi-folder-plus"
+          severity="secondary"
+          size="small"
+          @click="handleSaveToWorkspace"
+          title="Im Workspace speichern"
           text
         />
         <Button

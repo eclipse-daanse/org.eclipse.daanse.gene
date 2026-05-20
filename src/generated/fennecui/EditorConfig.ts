@@ -29,6 +29,7 @@ import type { TreeView } from './TreeView';
 import type { PackageResolverChain } from './PackageResolverChain';
 import type { AtlasConnection } from './AtlasConnection';
 import type { CustomIconDefinition } from './CustomIconDefinition';
+import type { CoclSource } from './CoclSource';
 
 /**
  * EditorConfig
@@ -64,5 +65,6 @@ export interface EditorConfig extends EObject {
   packageResolverChain?: PackageResolverChain;
   atlasConnections: AtlasConnection[];
   customIconLibraries: CustomIconDefinition[];
+  coclSources: CoclSource[];
 
 }

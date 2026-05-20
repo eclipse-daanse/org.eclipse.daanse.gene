@@ -62,6 +62,7 @@ export class FennecuiPackage extends BasicEPackage {
     EDITOR_CONFIG__PACKAGE_RESOLVER_CHAIN: null as unknown as EAttribute | EReference,
     EDITOR_CONFIG__ATLAS_CONNECTIONS: null as unknown as EAttribute | EReference,
     EDITOR_CONFIG__CUSTOM_ICON_LIBRARIES: null as unknown as EAttribute | EReference,
+    EDITOR_CONFIG__COCL_SOURCES: null as unknown as EAttribute | EReference,
     MODEL_SOURCE: null as unknown as EClass,
     MODEL_SOURCE__ID: null as unknown as EAttribute | EReference,
     MODEL_SOURCE__NAME: null as unknown as EAttribute | EReference,
@@ -76,6 +77,12 @@ export class FennecuiPackage extends BasicEPackage {
     INSTANCE_SOURCE__LOCATION: null as unknown as EAttribute | EReference,
     INSTANCE_SOURCE__RESOLUTION: null as unknown as EAttribute | EReference,
     INSTANCE_SOURCE__ENABLED: null as unknown as EAttribute | EReference,
+    COCL_SOURCE: null as unknown as EClass,
+    COCL_SOURCE__ID: null as unknown as EAttribute | EReference,
+    COCL_SOURCE__NAME: null as unknown as EAttribute | EReference,
+    COCL_SOURCE__LOCATION: null as unknown as EAttribute | EReference,
+    COCL_SOURCE__RESOLUTION: null as unknown as EAttribute | EReference,
+    COCL_SOURCE__ENABLED: null as unknown as EAttribute | EReference,
     MODEL_REPOSITORY: null as unknown as EClass,
     MODEL_REPOSITORY__ID: null as unknown as EAttribute | EReference,
     MODEL_REPOSITORY__NAME: null as unknown as EAttribute | EReference,
@@ -655,6 +662,15 @@ export class FennecuiPackage extends BasicEPackage {
     editorConfigClass.getEStructuralFeatures().push(editorConfig_customIconLibraries);
     FennecuiPackage.Literals.EDITOR_CONFIG__CUSTOM_ICON_LIBRARIES = editorConfig_customIconLibraries;
 
+    // Create coclSources feature
+    const editorConfig_coclSources = new BasicEReference();
+    editorConfig_coclSources.setContainment(true);
+    editorConfig_coclSources.setName('coclSources');
+    editorConfig_coclSources.setLowerBound(0);
+    editorConfig_coclSources.setUpperBound(-1);
+    editorConfigClass.getEStructuralFeatures().push(editorConfig_coclSources);
+    FennecuiPackage.Literals.EDITOR_CONFIG__COCL_SOURCES = editorConfig_coclSources;
+
     // Create ModelSource class
     const modelSourceClass = new BasicEClass();
     modelSourceClass.setName('ModelSource');
@@ -768,6 +784,55 @@ export class FennecuiPackage extends BasicEPackage {
     instanceSource_enabled.setUpperBound(1);
     instanceSourceClass.getEStructuralFeatures().push(instanceSource_enabled);
     FennecuiPackage.Literals.INSTANCE_SOURCE__ENABLED = instanceSource_enabled;
+
+    // Create CoclSource class
+    const coclSourceClass = new BasicEClass();
+    coclSourceClass.setName('CoclSource');
+    coclSourceClass.setAbstract(false);
+    coclSourceClass.setInterface(false);
+    this.getEClassifiers().push(coclSourceClass);
+    coclSourceClass.setEPackage(this);
+    FennecuiPackage.Literals.COCL_SOURCE = coclSourceClass;
+
+    // Create id feature
+    const coclSource_id = new BasicEAttribute();
+    coclSource_id.setName('id');
+    coclSource_id.setLowerBound(0);
+    coclSource_id.setUpperBound(1);
+    coclSourceClass.getEStructuralFeatures().push(coclSource_id);
+    FennecuiPackage.Literals.COCL_SOURCE__ID = coclSource_id;
+
+    // Create name feature
+    const coclSource_name = new BasicEAttribute();
+    coclSource_name.setName('name');
+    coclSource_name.setLowerBound(0);
+    coclSource_name.setUpperBound(1);
+    coclSourceClass.getEStructuralFeatures().push(coclSource_name);
+    FennecuiPackage.Literals.COCL_SOURCE__NAME = coclSource_name;
+
+    // Create location feature
+    const coclSource_location = new BasicEAttribute();
+    coclSource_location.setName('location');
+    coclSource_location.setLowerBound(0);
+    coclSource_location.setUpperBound(1);
+    coclSourceClass.getEStructuralFeatures().push(coclSource_location);
+    FennecuiPackage.Literals.COCL_SOURCE__LOCATION = coclSource_location;
+
+    // Create resolution feature
+    const coclSource_resolution = new BasicEAttribute();
+    coclSource_resolution.setName('resolution');
+    coclSource_resolution.setLowerBound(0);
+    coclSource_resolution.setUpperBound(1);
+    coclSourceClass.getEStructuralFeatures().push(coclSource_resolution);
+    FennecuiPackage.Literals.COCL_SOURCE__RESOLUTION = coclSource_resolution;
+
+    // Create enabled feature
+    const coclSource_enabled = new BasicEAttribute();
+    coclSource_enabled.setName('enabled');
+    coclSource_enabled.setLowerBound(0);
+    coclSource_enabled.setUpperBound(1);
+    coclSourceClass.getEStructuralFeatures().push(coclSource_enabled);
+    FennecuiPackage.Literals.COCL_SOURCE__ENABLED = coclSource_enabled;
 
     // Create ModelRepository class
     const modelRepositoryClass = new BasicEClass();
@@ -3306,6 +3371,7 @@ export class FennecuiPackage extends BasicEPackage {
     (FennecuiPackage.Literals.EDITOR_CONFIG__PACKAGE_RESOLVER_CHAIN as BasicEReference).setEType(FennecuiPackage.Literals.PACKAGE_RESOLVER_CHAIN);
     (FennecuiPackage.Literals.EDITOR_CONFIG__ATLAS_CONNECTIONS as BasicEReference).setEType(FennecuiPackage.Literals.ATLAS_CONNECTION);
     (FennecuiPackage.Literals.EDITOR_CONFIG__CUSTOM_ICON_LIBRARIES as BasicEReference).setEType(FennecuiPackage.Literals.CUSTOM_ICON_DEFINITION);
+    (FennecuiPackage.Literals.EDITOR_CONFIG__COCL_SOURCES as BasicEReference).setEType(FennecuiPackage.Literals.COCL_SOURCE);
     (FennecuiPackage.Literals.MODEL_REPOSITORY__PATTERNS as BasicEReference).setEType(FennecuiPackage.Literals.FILE_PATTERN);
     (FennecuiPackage.Literals.MODEL_REPOSITORY__LOAD_PROFILE as BasicEReference).setEType(FennecuiPackage.Literals.LOAD_PROFILE);
     (FennecuiPackage.Literals.IMPORT_RULE__PATTERNS as BasicEReference).setEType(FennecuiPackage.Literals.FILE_PATTERN);
