@@ -22,6 +22,16 @@ export interface ValidationDiagnostic {
   data?: string[]
 }
 
+/** Result from server-side OCL operation invocation (UC-OCL-010) */
+export interface OperationResult {
+  success: boolean
+  /** Primitive return value (string, number, boolean) */
+  value?: unknown
+  /** Object result as XMI (if EObject/list) */
+  xmi?: string
+  error?: string
+}
+
 /** Result from server-side derived computation */
 export interface DeriveResult {
   success: boolean
@@ -584,6 +594,39 @@ export class ModelAtlasClient {
     }
     const errorText = await resp.text().catch(() => '')
     return { success: false, error: `Derive failed: ${resp.status} — ${errorText}` }
+  }
+
+  /**
+   * Invoke an OCL operation on an EObject server-side (UC-OCL-010).
+   * POST /{scopeName}/{stageName}/validate/operation
+   *
+   * Request body: OperationValidationRequest XMI (cocl namespace) with:
+   * - validationObjects: the EObject to invoke the operation on
+   * - operationName: name of the EOperation
+   * - parameters: OperationRequestParameter[] with parameterName + javaValue
+   * - coclId: optional C-OCL ConstraintSet ID
+   *
+   * @param scopeName - Atlas scope
+   * @param stageName - Stage (e.g. 'released')
+   * @param requestXmi - OperationValidationRequest XMI
+   * @returns OperationResult with value or error
+   */
+  async invokeOperation(
+    scopeName: string,
+    stageName: string,
+    requestXmi: string
+  ): Promise<OperationResult> {
+    const path = `/${enc(scopeName)}/${enc(stageName)}/validate/operation`
+    const resp = await this.request('POST', path, requestXmi, {
+      contentType: 'application/xmi',
+      accept: 'application/json'
+    })
+    if (resp.status === 200) {
+      const json = await resp.json()
+      return { success: true, value: json.value ?? json.result ?? json, xmi: json.xmi }
+    }
+    const errorText = await resp.text().catch(() => '')
+    return { success: false, error: `Operation failed: ${resp.status} — ${errorText}` }
   }
 
   // ============================================

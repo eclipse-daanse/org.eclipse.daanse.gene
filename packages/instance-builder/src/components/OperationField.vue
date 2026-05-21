@@ -9,9 +9,11 @@
  * - Displays result inline
  */
 
-import { ref, computed, onMounted, watch } from 'tsm:vue'
+import { ref, computed, onMounted, watch, inject, toRaw } from 'tsm:vue'
 import { Button } from 'tsm:primevue'
 import type { EObject, EOperation, EParameter } from '@emfts/core'
+
+const _tsm = inject<any>('tsm')
 
 const OCL_SOURCES = ['http://www.eclipse.org/fennec/m2x/ocl/1.0', 'http://www.eclipse.org/emf/2002/Ecore/OCL', 'http://www.eclipse.org/OCL/Pivot']
 function isOclSource(s: string | null | undefined): boolean { return !!s && OCL_SOURCES.includes(s) }
@@ -452,6 +454,117 @@ watch(() => props.eObject, async () => {
     await execute()
   }
 })
+
+// --- Server-side execution (UC-OCL-010) ---
+
+const isExecutingOnServer = ref(false)
+
+const hasAtlasConnection = computed(() => {
+  const browser = _tsm?.getService('gene.atlas.browser')
+  if (!browser) return false
+  const connections = browser.connections?.value || []
+  return connections.some((c: any) => c.status === 'connected')
+})
+
+async function handleExecuteOnServer(params?: Record<string, unknown>) {
+  const browser = _tsm?.getService('gene.atlas.browser')
+  if (!browser) return
+
+  const connections = browser.connections?.value || []
+  const conn = connections.find((c: any) => c.status === 'connected')
+  if (!conn) return
+
+  const client = browser.getClient(conn.id)
+  if (!client) return
+
+  isExecutingOnServer.value = true
+  error.value = null
+
+  try {
+    const obj = toRaw(props.eObject)
+    const eClass = obj.eClass()
+    const nsURI = eClass.getEPackage?.()?.getNsURI?.() || ''
+    const nsPrefix = eClass.getEPackage?.()?.getNsPrefix?.() || 'ns'
+    const className = eClass.getName() || ''
+    const xsiType = `${nsPrefix}:${className}`
+
+    // Serialize the object to XMI
+    const { XMIResource, URI: EmfURI } = await import('@emfts/core')
+    const tempResource = new XMIResource(EmfURI.createURI('op-request.xmi'))
+    tempResource.getContents().push(obj)
+    let instanceXmi = await tempResource.saveToString()
+    // Remove from temp resource
+    const contents = tempResource.getContents()
+    if (typeof (contents as any).removeAt === 'function') {
+      (contents as any).removeAt(0)
+    } else if (typeof (contents as any).remove === 'function') {
+      (contents as any).remove(obj)
+    }
+
+    // Strip XML declaration and XMI wrapper, extract bare element
+    instanceXmi = instanceXmi.replace(/<\?xml[^?]*\?>\s*/, '')
+    instanceXmi = instanceXmi.replace(/<xmi:XMI[^>]*>\s*/, '').replace(/\s*<\/xmi:XMI>\s*$/, '')
+    instanceXmi = instanceXmi.replace(/ eType="/g, ' _type="')
+    instanceXmi = instanceXmi.trim()
+
+    // Extract attributes from the serialized element
+    const attrMatch = instanceXmi.match(/^<[^\s>]+\s+([\s\S]*?)\/>$/) ||
+                      instanceXmi.match(/^<[^\s>]+\s+([\s\S]*?)>/)
+    const attrs = attrMatch ? attrMatch[1]
+      .replace(/xmlns:xmi="[^"]*"/g, '')
+      .replace(/xmi:version="[^"]*"/g, '')
+      .replace(/xmlns:xsi="[^"]*"/g, '')
+      .trim() : ''
+
+    // Build parameters XML (OperationRequestParameter with javaValue)
+    let paramsXml = ''
+    if (params && Object.keys(params).length > 0) {
+      for (const [name, value] of Object.entries(params)) {
+        const isNull = value === null || value === undefined
+        const javaValue = isNull ? '' : String(value)
+        paramsXml += `\n  <parameters parameterName="${name}" javaValue="${javaValue.replace(/"/g, '&quot;')}" isNull="${isNull}"/>`
+      }
+    }
+
+    // Build OperationValidationRequest XMI
+    const requestXmi = `<?xml version="1.0" encoding="UTF-8"?>
+<cocl:OperationValidationRequest xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:cocl="http://www.gme.org/cocl/1.0"
+    xmlns:${nsPrefix}="${nsURI}"
+    operationName="${operationName.value}">
+  <validationObjects xsi:type="${xsiType}" ${attrs}/>${paramsXml}
+</cocl:OperationValidationRequest>`
+
+    const scopeName = conn.scopeName || 'jena'
+    const stageName = (conn as any).stageName || 'released'
+
+    const opResult = await client.invokeOperation(scopeName, stageName, requestXmi)
+
+    if (opResult.success) {
+      result.value = opResult.value
+      hasExecuted.value = true
+    } else {
+      error.value = opResult.error || 'Server operation failed'
+    }
+  } catch (e: any) {
+    console.error('[OperationField] Server execution error:', e)
+    error.value = `Server: ${e.message || 'Unknown error'}`
+  } finally {
+    isExecutingOnServer.value = false
+  }
+}
+
+function handleExecuteOnServerClick() {
+  if (hasParameters.value) {
+    emit('open-parameter-dialog', props.operation, (params) => {
+      handleExecuteOnServer(params)
+    })
+  } else {
+    handleExecuteOnServer()
+  }
+}
 </script>
 
 <template>
@@ -462,16 +575,37 @@ watch(() => props.eObject, async () => {
         {{ displayName }}
       </span>
       <span class="return-type">→ {{ returnType }}</span>
-      <Button
-        icon="pi pi-play"
-        size="small"
-        rounded
-        text
-        :loading="isExecuting"
-        :disabled="isExecuting"
-        @click="handleExecute"
-        v-tooltip.top="'Execute operation'"
-      />
+      <span class="action-buttons">
+        <Button
+          icon="pi pi-play"
+          size="small"
+          rounded
+          text
+          :loading="isExecuting"
+          :disabled="isExecuting || isExecutingOnServer"
+          @click="handleExecute"
+          v-tooltip.top="'Lokal ausfuehren'"
+          class="action-btn"
+        />
+        <span v-if="hasAtlasConnection" class="server-btn-wrapper" v-tooltip.top="'Auf Atlas Server ausfuehren'">
+          <Button
+            size="small"
+            rounded
+            text
+            :loading="isExecutingOnServer"
+            :disabled="isExecuting || isExecutingOnServer"
+            @click="handleExecuteOnServerClick"
+            class="action-btn server-btn"
+          >
+            <template #icon>
+              <span class="server-icon-stack">
+                <i class="pi pi-globe"></i>
+                <i class="pi pi-play server-play-badge"></i>
+              </span>
+            </template>
+          </Button>
+        </span>
+      </span>
     </div>
 
     <div class="field-value" :class="{ 'has-error': error, 'is-loading': isExecuting }">
@@ -528,6 +662,45 @@ watch(() => props.eObject, async () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.action-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.action-btn {
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  padding: 0 !important;
+}
+
+.server-btn-wrapper {
+  display: inline-flex;
+}
+
+.server-icon-stack {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+}
+
+.server-icon-stack > .pi-globe {
+  font-size: 0.85rem;
+}
+
+.server-play-badge {
+  position: absolute;
+  bottom: -3px;
+  right: -4px;
+  font-size: 0.45rem;
+  color: var(--primary-color);
 }
 
 .field-label {
