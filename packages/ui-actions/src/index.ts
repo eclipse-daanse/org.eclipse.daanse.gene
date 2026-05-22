@@ -24,6 +24,7 @@ import { initActionApiPackage } from './ActionApiResourceSet'
 import { CommandRegistryImpl } from './CommandRegistry'
 import { KeybindingServiceImpl } from './KeybindingService'
 import * as OAuth2Service from './OAuth2Service'
+import { ActionsPluginPackage } from './generated/actionsplugin/ActionsPluginPackage'
 import type { PanelRegistry } from 'ui-perspectives'
 
 // Import own command ecore
@@ -54,8 +55,11 @@ export type { KeybindingEntry } from './KeybindingService'
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Action System module...')
 
-  // Register ActionApi EPackage for XMI parsing
+  // Register EPackages for XMI parsing
   initActionApiPackage()
+  // Register ActionsPluginConfig EPackage so xsi:type resolves in config.xmi
+  const { EPackageRegistry } = await import('@emfts/core')
+  EPackageRegistry.INSTANCE.set(ActionsPluginPackage.eNS_URI, ActionsPluginPackage.eINSTANCE)
 
   // Bind core services via DI
   context.services.bindClass('gene.action.registry', ActionRegistryImpl)
@@ -288,10 +292,33 @@ export async function activate(context: ModuleContext): Promise<void> {
  * Runs in background — failures are silently logged.
  */
 async function discoverActionServers(registry: ActionRegistryImpl, context: ModuleContext): Promise<void> {
-  // Known server URLs (could come from workspace config in the future)
-  const servers = [
-    'http://localhost:3099'
-  ]
+  // Read action server URLs from AppConfig plugin config
+  const appConfig = context.services.get<any>('gene.app.config')
+  const pluginConfig = appConfig?.getPluginConfig?.('ui-actions')
+
+  const servers: string[] = []
+  if (pluginConfig) {
+    const feat = (obj: any, name: string) => {
+      if (obj[name] !== undefined) return obj[name]
+      if (typeof obj.eGet === 'function' && typeof obj.eClass === 'function') {
+        const f = obj.eClass().getEStructuralFeature?.(name)
+        if (f) return obj.eGet(f)
+      }
+      return undefined
+    }
+    const urls = feat(pluginConfig, 'serverUrls')
+    if (urls) {
+      const arr = Array.isArray(urls) ? urls : (urls.data || [])
+      servers.push(...arr.map(String))
+    }
+  }
+
+  if (servers.length === 0) {
+    context.log.info('No action servers configured in AppConfig')
+    return
+  }
+
+  context.log.info(`Discovering ${servers.length} action server(s)...`)
 
   for (const baseUrl of servers) {
     try {
