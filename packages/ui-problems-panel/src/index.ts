@@ -117,6 +117,35 @@ export async function activate(context: ModuleContext): Promise<void> {
         ls.selectPanelTab?.('ocl-problems')
       }
     })
+
+    // UC-ACT-012: Handle validation results from remote actions
+    commandRegistry.registerHandler('problems.showValidation', async (args: any) => {
+      const problems = context.services.get<any>('gene.problems')
+      if (!problems) return
+
+      const parsed = typeof args === 'string' ? JSON.parse(args) : args
+      const messages = parsed?.messages || []
+      const source = parsed?.source || 'remote-validation'
+
+      problems.clearIssuesBySource?.(source)
+      for (const msg of messages) {
+        problems.addIssue?.({
+          severity: msg.severity === 'WARN' ? 'warning' : msg.severity === 'ERROR' ? 'error' : 'info',
+          message: msg.message,
+          source,
+          objectLabel: msg.className || '',
+          eClassName: msg.className || ''
+        })
+      }
+
+      // Show problems panel
+      const ls = context.services.get<any>('gene.layout.state')
+      if (ls && messages.length > 0) {
+        if (!ls.state?.visibility?.panelArea) ls.togglePanelArea?.()
+        ls.selectPanelTab?.('ocl-problems')
+      }
+    })
+
     context.log.info('Validation commands registered')
   }
 

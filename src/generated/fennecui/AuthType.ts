@@ -13,7 +13,8 @@ export const AuthType = {
   NONE: 'NONE',
   BASIC: 'BASIC',
   BEARER: 'BEARER',
-  API_KEY: 'API_KEY'
+  API_KEY: 'API_KEY',
+  OAUTH2: 'OAUTH2'
 } as const;
 
 export type AuthType = typeof AuthType[keyof typeof AuthType];
@@ -33,5 +34,6 @@ export function getAuthTypeByLiteral(literal: string): AuthType | undefined {
   if (literal === 'BASIC') return AuthType.BASIC;
   if (literal === 'BEARER') return AuthType.BEARER;
   if (literal === 'API_KEY') return AuthType.API_KEY;
+  if (literal === 'OAUTH2') return AuthType.OAUTH2;
   return undefined;
 }

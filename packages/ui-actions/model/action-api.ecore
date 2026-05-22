@@ -4,6 +4,12 @@
     nsPrefix="actionapi">
 
   <!-- Enums -->
+  <eClassifiers xsi:type="ecore:EEnum" name="AuthMethod">
+    <eLiterals name="NONE"/>
+    <eLiterals name="OAUTH2_PKCE" value="1"/>
+    <eLiterals name="BEARER" value="2"/>
+    <eLiterals name="API_KEY" value="3"/>
+  </eClassifiers>
   <eClassifiers xsi:type="ecore:EEnum" name="HttpMethod">
     <eLiterals name="GET"/>
     <eLiterals name="POST" value="1"/>
@@ -46,6 +52,24 @@
     <eLiterals name="MARKDOWN" value="4"/>
   </eClassifiers>
 
+  <!-- ServiceAuthConfig — OAuth2/Auth configuration advertised by the server -->
+  <eClassifiers xsi:type="ecore:EClass" name="ServiceAuthConfig">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="authMethod"
+        eType="#//AuthMethod"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="authorizationEndpoint"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="tokenEndpoint"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="logoutEndpoint"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="clientId"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scopes"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="issuer"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
   <!-- ServiceCapabilities (Root) -->
   <eClassifiers xsi:type="ecore:EClass" name="ServiceCapabilities">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="name"
@@ -56,6 +80,8 @@
         eType="#//Endpoint" containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="jobManagement"
         eType="#//JobManagement" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="authConfig"
+        eType="#//ServiceAuthConfig" containment="true"/>
   </eClassifiers>
 
   <!-- Endpoint -->

@@ -162,11 +162,22 @@ export interface JobStatusResponse {
 
 // ─── Discovery Types ──────────────────────────────────────────────
 
+export interface ServiceAuthConfig {
+  authMethod: string
+  authorizationEndpoint?: string
+  tokenEndpoint?: string
+  logoutEndpoint?: string
+  clientId?: string
+  scopes?: string
+  issuer?: string
+}
+
 export interface ServiceCapabilities {
   name: string
   version: string
   endpoints: Endpoint[]
   jobManagement?: JobManagement
+  authConfig?: ServiceAuthConfig
 }
 
 export interface Endpoint {
