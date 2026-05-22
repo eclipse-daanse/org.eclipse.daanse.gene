@@ -18,6 +18,7 @@ import { Dialog } from 'tsm:primevue'
 import { InputText } from 'tsm:primevue'
 import { Message } from 'tsm:primevue'
 import { useSharedFileSystem } from '../composables/useFileSystem'
+import { addRecentWorkspace } from '../composables/useRecentWorkspaces'
 import type { FileEntry, FileTreeNode, FileSource } from '../types'
 import { isWorkspaceFile } from '../types'
 
@@ -307,6 +308,14 @@ async function handleNodeDoubleClick(node: FileTreeNode) {
       const content = await fileSystem.readTextFile(entry)
       if (content) {
         getActions()?.openWorkspace(entry, content)
+        // Track as recent workspace
+        const source = fileSystem.getSource(entry.sourceId)
+        addRecentWorkspace({
+          name: entry.name,
+          filePath: entry.path,
+          sourceId: entry.sourceId,
+          sourceName: source?.name || ''
+        })
       }
     } catch (e) {
       console.error('[FileExplorer] Failed to read workspace file:', e)
@@ -830,6 +839,7 @@ function toggleAddMenu(event: Event) {
         size="small"
         @click="toggleAddMenu"
       />
+
     </div>
 
     <!-- File tree with sources -->
