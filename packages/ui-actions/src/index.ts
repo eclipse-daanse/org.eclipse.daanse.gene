@@ -23,6 +23,7 @@ import { fetchCapabilities, autoRegisterActions } from './composables/useCapabil
 import { initActionApiPackage } from './ActionApiResourceSet'
 import { CommandRegistryImpl } from './CommandRegistry'
 import { KeybindingServiceImpl } from './KeybindingService'
+import * as OAuth2Service from './OAuth2Service'
 import type { PanelRegistry } from 'ui-perspectives'
 
 // Import own command ecore
@@ -188,6 +189,16 @@ export async function activate(context: ModuleContext): Promise<void> {
     XmiImportDialog: markRaw(XmiImportDialog)
   })
 
+  // Register OAuth2 Service + callback handler
+  context.services.register('gene.oauth2', OAuth2Service)
+
+  // Handle OAuth2 callback message from popup (popup itself is intercepted in main.ts)
+  window.addEventListener('message', (event: MessageEvent) => {
+    if (event.data?.type === 'oauth2-callback' && event.data.code && event.data.state) {
+      OAuth2Service.handleCallback(event.data.code, event.data.state)
+    }
+  })
+
   // Register Job Store as service
   const jobStore = useJobStore()
   context.services.register('gene.jobs', jobStore)
@@ -287,7 +298,8 @@ async function discoverActionServers(registry: ActionRegistryImpl, context: Modu
       const caps = await fetchCapabilities(baseUrl)
       if (caps) {
         autoRegisterActions(baseUrl, caps, registry)
-        context.log.info(`Discovered ${caps.endpoints.length} action(s) from ${caps.name || baseUrl}`)
+        const authMethod = caps.authConfig?.authMethod || 'NONE'
+        context.log.info(`Discovered ${caps.endpoints.length} action(s) from ${caps.name || baseUrl} (auth: ${authMethod})`)
       }
     } catch (err) {
       context.log.warn(`Discovery failed for ${baseUrl}: ${err}`)

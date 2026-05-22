@@ -178,7 +178,8 @@ export class ActionManagerImpl {
       jobId: remoteJobId,
       localJobId: jobId,
       actionId: def.actionId,
-      eventBus: this.eventBus
+      eventBus: this.eventBus,
+      authConfig: def.authConfig
     })
 
     this.activePollers.set(jobId, poller)
