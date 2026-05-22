@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gene:AppConfig xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0"
+    xmlns:gene="http://gene/config/1.0"
+    name="Gene Workspace" version="1.0">
+
+  <!-- Plugin Repositories -->
+  <pluginRepositories id="local" name="Local Plugins" url="/plugins" enabled="true" priority="10"/>
+
+  <!-- Startup Modules (load order resolved by TSM via dependencies) -->
+  <startupModules>storage-indexeddb</startupModules>
+  <startupModules>storage-git</startupModules>
+  <startupModules>storage-model-atlas</startupModules>
+  <startupModules>gene-app</startupModules>
+  <startupModules>ui-layout</startupModules>
+  <startupModules>ui-actions</startupModules>
+  <startupModules>ui-perspectives</startupModules>
+  <startupModules>ui-file-explorer</startupModules>
+  <startupModules>ui-model-browser</startupModules>
+  <startupModules>ui-instance-tree</startupModules>
+  <startupModules>ui-properties-panel</startupModules>
+  <startupModules>ui-problems-panel</startupModules>
+  <startupModules>ui-workspace</startupModules>
+  <startupModules>instance-builder</startupModules>
+  <startupModules>tsm-devtools</startupModules>
+  <startupModules>ui-model-view</startupModules>
+  <startupModules>metamodeler</startupModules>
+  <startupModules>transformation</startupModules>
+  <startupModules>cocl-editor</startupModules>
+  <startupModules>atlas-browser</startupModules>
+  <startupModules>data-generator</startupModules>
+
+  <!-- Plugin Configs -->
+  <pluginConfigs xsi:type="actions:ActionsPluginConfig"
+      xmlns:actions="http://gene/plugin/actions/1.0"
+      pluginId="ui-actions" enabled="true">
+    <serverUrls>http://localhost:3099</serverUrls>
+  </pluginConfigs>
+
+</gene:AppConfig>

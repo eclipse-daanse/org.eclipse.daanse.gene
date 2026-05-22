@@ -6,7 +6,8 @@
  */
 
 import { getTsmPluginSystem, type TsmPluginSystem } from './tsm'
-import { repositories, tsmConfig, startupModules } from './tsm/repositories.config'
+import { repositories as defaultRepositories, tsmConfig, startupModules as defaultStartupModules } from './tsm/repositories.config'
+import { loadAppConfig, type AppConfigData } from './services/appConfigLoader'
 import { initTsmRuntime, injectable, singleton, inject as tsmInject } from '@eclipse-daanse/tsm'
 import type { ModuleContext } from '@eclipse-daanse/tsm'
 
@@ -91,13 +92,24 @@ async function bootstrap(): Promise<void> {
     tsmRuntime.register('@emfts/codec.jsonschema', emftsCodecJsonSchema, '1.0.0')
     console.log('[main] Registered shared libraries: vue, vue-router, primevue, @emfts/core, @emfts/vue-registry, @eclipse-daanse/tsm')
 
-    // 3. Create TSM plugin system for module loading
+    // 3. Load AppConfig from config.xmi (fallback to hardcoded defaults)
+    const appConfig = await loadAppConfig('/config.xmi')
+    const repositories = appConfig.pluginRepositories.length > 0
+      ? appConfig.pluginRepositories
+      : defaultRepositories
+    const startupModules = appConfig.startupModules.length > 0
+      ? appConfig.startupModules
+      : defaultStartupModules
+    console.log(`[main] AppConfig: ${repositories.length} repo(s), ${startupModules.length} module(s), ${appConfig.pluginConfigs.length} plugin config(s)`)
+
+    // 4. Create TSM plugin system for module loading
     tsm = getTsmPluginSystem({ repositories })
 
-    // 4. Register TSM system as a service so plugins can access it
+    // 5. Register TSM system and AppConfig as services
     tsm.registerService('tsm.system', tsm)
+    tsm.registerService('gene.app.config', appConfig)
 
-    // 5. Listen for module events
+    // 6. Listen for module events
     tsm.onModuleEvent({
       onModuleEvent: (event) => {
         console.log(`TSM: ${event.moduleId} - ${event.type}`)
@@ -105,10 +117,10 @@ async function bootstrap(): Promise<void> {
       }
     })
 
-    // 6. Initialize and discover plugins
+    // 7. Initialize and discover plugins
     await tsm.init(tsmConfig.autoDiscover)
 
-    // 7. Load startup modules (with dependencies)
+    // 8. Load startup modules (with dependencies)
     if (startupModules.length > 0) {
       await tsm.loadModules(startupModules)
     }
