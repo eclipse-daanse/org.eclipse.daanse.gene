@@ -36,6 +36,9 @@ export async function activate(context: ModuleContext): Promise<void> {
   const sharedFS = useSharedFileSystem()
   context.services.register('gene.filesystem', sharedFS)
 
+  // Note: restoreLocalSources() requires a user gesture for requestPermission().
+  // It is called from the Recent Workspaces list on click, not automatically.
+
   // Register composables as service (legacy)
   context.services.register('ui.file-explorer.composables', {
     useFileSystem,
