@@ -17,5 +17,9 @@ export interface AuthConfiguration extends EObject {
   credentialRef?: string;
   tokenEndpoint?: string;
   apiKeyHeader?: string;
+  authorizationEndpoint?: string;
+  clientId?: string;
+  scopes?: string;
+  logoutEndpoint?: string;
 
 }

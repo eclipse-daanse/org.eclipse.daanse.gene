@@ -5,6 +5,7 @@
 import type { Job, JobState, JobStatusResponse, JobLogEntry, ProposedAction } from './types'
 import { useJobStore } from './composables/useJobStore'
 import { parseJobStatusXmi } from './ActionApiResourceSet'
+import { extractOAuth2Config, ensureAccessToken } from './OAuth2Service'
 
 /** Read a feature value from an EObject by name */
 function feat(obj: any, name: string): any {
@@ -36,6 +37,7 @@ export interface AsyncPollerConfig {
   localJobId: string
   actionId?: string
   eventBus?: any
+  authConfig?: any
 }
 
 export class AsyncPoller {
@@ -48,6 +50,28 @@ export class AsyncPoller {
     this.config = config
     this.abortController = new AbortController()
     this.startTime = Date.now()
+  }
+
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    const headers: Record<string, string> = {
+      'Accept': 'application/xmi, application/xml, application/json'
+    }
+    const auth = this.config.authConfig
+    if (auth) {
+      const authType = auth.authType || auth
+      if (authType === 'OAUTH2') {
+        const oauthConfig = extractOAuth2Config(auth)
+        if (oauthConfig) {
+          const token = await ensureAccessToken(oauthConfig)
+          if (token) headers['Authorization'] = `Bearer ${token}`
+        }
+      } else if (authType === 'BEARER' && auth.credentialRef) {
+        headers['Authorization'] = `Bearer ${auth.credentialRef}`
+      } else if (authType === 'API_KEY' && auth.credentialRef) {
+        headers[auth.apiKeyHeader || 'X-API-Key'] = auth.credentialRef
+      }
+    }
+    return headers
   }
 
   start(): void {
@@ -66,8 +90,10 @@ export class AsyncPoller {
     this.stop()
     const store = useJobStore()
     try {
+      const headers = await this.getAuthHeaders()
       await fetch(this.config.cancelUrl, {
         method: 'DELETE',
+        headers,
         signal: AbortSignal.timeout(5000)
       })
     } catch {
@@ -92,8 +118,9 @@ export class AsyncPoller {
     }
 
     try {
+      const headers = await this.getAuthHeaders()
       const response = await fetch(this.config.statusUrl, {
-        headers: { 'Accept': 'application/xmi, application/xml, application/json' },
+        headers,
         signal: this.abortController.signal
       })
       if (!response.ok) {
@@ -166,8 +193,9 @@ export class AsyncPoller {
   private async fetchResult(): Promise<void> {
     const store = useJobStore()
     try {
+      const headers = await this.getAuthHeaders()
       const response = await fetch(this.config.resultUrl, {
-        headers: { 'Accept': 'application/xmi, application/xml, application/json' },
+        headers,
         signal: AbortSignal.timeout(30000)
       })
       if (!response.ok) {
@@ -263,8 +291,10 @@ export class AsyncPoller {
 
   private async cancelRemote(): Promise<void> {
     try {
+      const headers = await this.getAuthHeaders()
       await fetch(this.config.cancelUrl, {
         method: 'DELETE',
+        headers,
         signal: AbortSignal.timeout(5000)
       })
     } catch {

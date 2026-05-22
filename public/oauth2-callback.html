@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><title>Login...</title></head>
+<body>
+<p>Login erfolgreich — Fenster wird geschlossen...</p>
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const state = params.get('state');
+  if (code && state && window.opener) {
+    window.opener.postMessage({ type: 'oauth2-callback', code: code, state: state }, window.location.origin);
+    setTimeout(function() { window.close(); }, 300);
+  } else if (code && state) {
+    // Redirect flow fallback — store in sessionStorage for main app
+    sessionStorage.setItem('oauth2_callback', JSON.stringify({ code: code, state: state }));
+    window.location.href = '/';
+  } else {
+    document.body.textContent = 'OAuth2 Fehler: Kein Authorization Code erhalten.';
+  }
+</script>
+</body>
+</html>

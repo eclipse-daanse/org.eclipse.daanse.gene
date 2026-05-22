@@ -5,6 +5,7 @@
 import { injectable, singleton } from '@eclipse-daanse/tsm'
 import type { ActionResult, CollectedInput, LogEntry, AsyncConfig, ProposedAction } from './types'
 import { parseJobStatusXmi, parseActionApiXmi } from './ActionApiResourceSet'
+import { extractOAuth2Config, ensureAccessToken, startAuthFlow } from './OAuth2Service'
 
 @injectable()
 @singleton()
@@ -13,7 +14,7 @@ export class RemoteExecutorImpl {
   async execute(action: any, input: CollectedInput, params: Record<string, unknown>): Promise<ActionResult> {
     const url = this.buildUrl(action, input, params)
     const method = action.httpMethod || 'POST'
-    const headers = this.buildHeaders(action)
+    const headers = await this.buildHeaders(action)
     const body = this.buildBody(action, input, params)
 
     const timeoutMs = action.readTimeoutMs || 30000
@@ -111,7 +112,7 @@ export class RemoteExecutorImpl {
     return url
   }
 
-  private buildHeaders(action: any): Record<string, string> {
+  private async buildHeaders(action: any): Promise<Record<string, string>> {
     const headers: Record<string, string> = {}
 
     if (action.contentType) {
@@ -126,17 +127,20 @@ export class RemoteExecutorImpl {
 
     // Auth
     if (action.authConfig) {
-      this.applyAuth(headers, action.authConfig)
+      await this.applyAuth(headers, action.authConfig)
+    } else {
+      console.log('[RemoteExecutor] No authConfig on action:', action.actionId || action.label)
     }
 
     return headers
   }
 
-  private applyAuth(headers: Record<string, string>, auth: any): void {
-    switch (auth.authType) {
+  private async applyAuth(headers: Record<string, string>, auth: any): Promise<void> {
+    const authType = auth.authType || auth
+    console.log('[RemoteExecutor] applyAuth:', authType, auth)
+    switch (authType) {
       case 'BEARER':
         if (auth.credentialRef) {
-          // TODO: resolve from credential store
           headers['Authorization'] = `Bearer ${auth.credentialRef}`
         }
         break
@@ -150,6 +154,20 @@ export class RemoteExecutorImpl {
           headers['Authorization'] = `Basic ${btoa(auth.credentialRef)}`
         }
         break
+      case 'OAUTH2': {
+        const config = extractOAuth2Config(auth)
+        if (!config) break
+        // Try existing token or refresh
+        let token = await ensureAccessToken(config)
+        if (!token) {
+          // No valid token — start interactive login
+          token = await startAuthFlow(config)
+        }
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`
+        }
+        break
+      }
     }
   }
 
@@ -257,7 +275,7 @@ export class RemoteExecutorImpl {
   async executeAsync(action: any, input: CollectedInput, params: Record<string, unknown>): Promise<{ jobId: string } | ActionResult> {
     const url = this.buildUrl(action, input, params)
     const method = action.httpMethod || 'POST'
-    const headers = this.buildHeaders(action)
+    const headers = await this.buildHeaders(action)
     headers['X-Async'] = 'true'
     const body = this.buildBody(action, input, params)
 
