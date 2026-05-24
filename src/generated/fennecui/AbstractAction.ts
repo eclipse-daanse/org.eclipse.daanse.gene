@@ -5,7 +5,7 @@
  * @generated
  */
 
-import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
+import type { EObject } from '@emfts/core';
 import type { IconSpec } from './IconSpec';
 import type { ActionType } from './ActionType';
 import type { ActionScope } from './ActionScope';
@@ -35,5 +35,8 @@ export interface AbstractAction extends EObject {
   inputSpec?: InputSpecification;
   parameters: ActionParameter[];
   returnTypes: ReturnType[];
+  menuGroup?: string;
+  menuOrder?: number;
+  keybinding?: string;
 
 }

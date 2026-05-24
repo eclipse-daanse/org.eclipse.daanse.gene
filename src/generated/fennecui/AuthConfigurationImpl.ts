@@ -21,12 +21,20 @@ export class AuthConfigurationImpl extends BasicEObject implements AuthConfigura
   static readonly CREDENTIAL_REF: number = 1;
   static readonly TOKEN_ENDPOINT: number = 2;
   static readonly API_KEY_HEADER: number = 3;
+  static readonly AUTHORIZATION_ENDPOINT: number = 4;
+  static readonly CLIENT_ID: number = 5;
+  static readonly SCOPES: number = 6;
+  static readonly LOGOUT_ENDPOINT: number = 7;
 
   // Private fields
   private _authType: AuthType = AuthType.NONE;
   private _credentialRef?: string;
   private _tokenEndpoint?: string;
   private _apiKeyHeader: string = "X-API-Key";
+  private _authorizationEndpoint?: string;
+  private _clientId?: string;
+  private _scopes: string = "openid profile email";
+  private _logoutEndpoint?: string;
 
   /**
    * Returns the EClass of this object
@@ -132,6 +140,102 @@ export class AuthConfigurationImpl extends BasicEObject implements AuthConfigura
     }
   }
 
+  get authorizationEndpoint(): string {
+    return this._authorizationEndpoint!;
+  }
+
+  set authorizationEndpoint(value: string) {
+    const oldValue = this._authorizationEndpoint;
+    this._authorizationEndpoint = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(AuthConfigurationImpl.AUTHORIZATION_ENDPOINT),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => AuthConfigurationImpl.AUTHORIZATION_ENDPOINT,
+        merge: () => false
+      });
+    }
+  }
+
+  get clientId(): string {
+    return this._clientId!;
+  }
+
+  set clientId(value: string) {
+    const oldValue = this._clientId;
+    this._clientId = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(AuthConfigurationImpl.CLIENT_ID),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => AuthConfigurationImpl.CLIENT_ID,
+        merge: () => false
+      });
+    }
+  }
+
+  get scopes(): string {
+    return this._scopes!;
+  }
+
+  set scopes(value: string) {
+    const oldValue = this._scopes;
+    this._scopes = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(AuthConfigurationImpl.SCOPES),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => AuthConfigurationImpl.SCOPES,
+        merge: () => false
+      });
+    }
+  }
+
+  get logoutEndpoint(): string {
+    return this._logoutEndpoint!;
+  }
+
+  set logoutEndpoint(value: string) {
+    const oldValue = this._logoutEndpoint;
+    this._logoutEndpoint = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(AuthConfigurationImpl.LOGOUT_ENDPOINT),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => AuthConfigurationImpl.LOGOUT_ENDPOINT,
+        merge: () => false
+      });
+    }
+  }
+
   // Reflective API
 
   /**
@@ -148,6 +252,14 @@ export class AuthConfigurationImpl extends BasicEObject implements AuthConfigura
         return this.tokenEndpoint;
       case AuthConfigurationImpl.API_KEY_HEADER:
         return this.apiKeyHeader;
+      case AuthConfigurationImpl.AUTHORIZATION_ENDPOINT:
+        return this.authorizationEndpoint;
+      case AuthConfigurationImpl.CLIENT_ID:
+        return this.clientId;
+      case AuthConfigurationImpl.SCOPES:
+        return this.scopes;
+      case AuthConfigurationImpl.LOGOUT_ENDPOINT:
+        return this.logoutEndpoint;
       default:
         return super.eGet(feature);
     }
@@ -175,6 +287,22 @@ export class AuthConfigurationImpl extends BasicEObject implements AuthConfigura
         this.apiKeyHeader = newValue as string;
         super.eSet(feature, newValue);
         break;
+      case AuthConfigurationImpl.AUTHORIZATION_ENDPOINT:
+        this.authorizationEndpoint = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case AuthConfigurationImpl.CLIENT_ID:
+        this.clientId = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case AuthConfigurationImpl.SCOPES:
+        this.scopes = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case AuthConfigurationImpl.LOGOUT_ENDPOINT:
+        this.logoutEndpoint = newValue as string;
+        super.eSet(feature, newValue);
+        break;
       default:
         super.eSet(feature, newValue);
     }
@@ -194,6 +322,14 @@ export class AuthConfigurationImpl extends BasicEObject implements AuthConfigura
         return this._tokenEndpoint !== undefined;
       case AuthConfigurationImpl.API_KEY_HEADER:
         return this._apiKeyHeader !== "X-API-Key";
+      case AuthConfigurationImpl.AUTHORIZATION_ENDPOINT:
+        return this._authorizationEndpoint !== undefined;
+      case AuthConfigurationImpl.CLIENT_ID:
+        return this._clientId !== undefined;
+      case AuthConfigurationImpl.SCOPES:
+        return this._scopes !== "openid profile email";
+      case AuthConfigurationImpl.LOGOUT_ENDPOINT:
+        return this._logoutEndpoint !== undefined;
       default:
         return super.eIsSet(feature);
     }
@@ -216,6 +352,18 @@ export class AuthConfigurationImpl extends BasicEObject implements AuthConfigura
         return;
       case AuthConfigurationImpl.API_KEY_HEADER:
         this._apiKeyHeader = "X-API-Key";
+        return;
+      case AuthConfigurationImpl.AUTHORIZATION_ENDPOINT:
+        this._authorizationEndpoint = undefined;
+        return;
+      case AuthConfigurationImpl.CLIENT_ID:
+        this._clientId = undefined;
+        return;
+      case AuthConfigurationImpl.SCOPES:
+        this._scopes = "openid profile email";
+        return;
+      case AuthConfigurationImpl.LOGOUT_ENDPOINT:
+        this._logoutEndpoint = undefined;
         return;
       default:
         super.eUnset(feature);

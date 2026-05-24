@@ -102,6 +102,7 @@ export async function activate(context: ModuleContext): Promise<void> {
     definition: {
       actionId: 'gene.export-xmi',
       label: 'Export as XMI',
+      icon: 'pi pi-file-export',
       actionScope: 'OBJECT',
       actionType: 'TRANSFORMATION',
       handlerId: 'gene.handler.export-xmi',
@@ -109,7 +110,8 @@ export async function activate(context: ModuleContext): Promise<void> {
       enabled: true,
       perspectiveIds: [],
       parameters: [],
-      returnTypes: ['FILE']
+      returnTypes: ['FILE'],
+      perspectiveIds: []
     },
     source: 'plugin',
     moduleId: 'ui-actions'
@@ -157,6 +159,9 @@ export async function activate(context: ModuleContext): Promise<void> {
   const keybindingService = new KeybindingServiceImpl()
   keybindingService.setCommandRegistry(commandRegistry)
   context.services.register('gene.keybindings', keybindingService)
+
+  // Wire keybinding service into action registry for auto-registration
+  registry.setKeybindingService(keybindingService)
 
   // Register own commands from ecore
   const jobCmds = commandRegistry.registerCommandsFromEcore(jobCommandsEcore, 'ui-actions')

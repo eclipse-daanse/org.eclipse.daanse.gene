@@ -7,11 +7,21 @@
  * When minimized, shows a collapsed bar with panel icons.
  */
 
-import { computed } from 'tsm:vue'
+import { computed, inject } from 'tsm:vue'
 import { useLayoutState } from '../composables/useLayoutState'
 import { usePanelDragDrop } from '../composables/usePanelDragDrop'
 
 const layout = useLayoutState()
+const tsm = inject<any>('tsm')
+
+// Get headerActions from PanelRegistry (not from layout state which strips extra fields)
+const panelHeaderActions = computed(() => {
+  const panelId = activePanel.value?.id
+  if (!panelId) return null
+  const panelRegistry = tsm?.getService('ui.registry.panels')
+  const regPanel = panelRegistry?.get?.(panelId)
+  return regPanel?.headerActions || null
+})
 const dragDrop = usePanelDragDrop()
 
 const visible = computed(() => layout.state.visibility.primarySidebar)
@@ -138,6 +148,18 @@ function onDrop(event: DragEvent) {
     >
       <i class="pi pi-arrows-alt drag-handle" title="Drag to move panel"></i>
       <span class="sidebar-title">{{ activePanel.title }}</span>
+      <div v-if="panelHeaderActions" class="sidebar-header-actions">
+        <button
+          v-for="action in panelHeaderActions"
+          :key="action.icon"
+          class="sidebar-action-btn"
+          :disabled="action.disabled"
+          @click.stop="action.onClick"
+          v-tooltip.bottom="action.tooltip"
+        >
+          <i :class="action.icon"></i>
+        </button>
+      </div>
       <button class="minimize-btn" title="Minimize" @click.stop="handleMinimize">
         <i class="pi pi-chevron-left"></i>
       </button>
@@ -321,6 +343,38 @@ function onDrop(event: DragEvent) {
 
 .sidebar-header:active {
   cursor: grabbing;
+}
+
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.sidebar-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-color-secondary);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+
+.sidebar-action-btn:hover {
+  color: var(--text-color);
+  background: var(--surface-hover);
+}
+
+.sidebar-action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .drag-handle {

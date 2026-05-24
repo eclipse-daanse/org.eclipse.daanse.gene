@@ -198,6 +198,9 @@ export class FennecuiPackage extends BasicEPackage {
     ABSTRACT_ACTION__INPUT_SPEC: null as unknown as EAttribute | EReference,
     ABSTRACT_ACTION__PARAMETERS: null as unknown as EAttribute | EReference,
     ABSTRACT_ACTION__RETURN_TYPES: null as unknown as EAttribute | EReference,
+    ABSTRACT_ACTION__MENU_GROUP: null as unknown as EAttribute | EReference,
+    ABSTRACT_ACTION__MENU_ORDER: null as unknown as EAttribute | EReference,
+    ABSTRACT_ACTION__KEYBINDING: null as unknown as EAttribute | EReference,
     QUICK_ACTION: null as unknown as EClass,
     INTERNAL_ACTION: null as unknown as EClass,
     INTERNAL_ACTION__HANDLER_ID: null as unknown as EAttribute | EReference,
@@ -238,6 +241,10 @@ export class FennecuiPackage extends BasicEPackage {
     AUTH_CONFIGURATION__CREDENTIAL_REF: null as unknown as EAttribute | EReference,
     AUTH_CONFIGURATION__TOKEN_ENDPOINT: null as unknown as EAttribute | EReference,
     AUTH_CONFIGURATION__API_KEY_HEADER: null as unknown as EAttribute | EReference,
+    AUTH_CONFIGURATION__AUTHORIZATION_ENDPOINT: null as unknown as EAttribute | EReference,
+    AUTH_CONFIGURATION__CLIENT_ID: null as unknown as EAttribute | EReference,
+    AUTH_CONFIGURATION__SCOPES: null as unknown as EAttribute | EReference,
+    AUTH_CONFIGURATION__LOGOUT_ENDPOINT: null as unknown as EAttribute | EReference,
     RETRY_CONFIGURATION: null as unknown as EClass,
     RETRY_CONFIGURATION__MAX_RETRIES: null as unknown as EAttribute | EReference,
     RETRY_CONFIGURATION__RETRY_DELAY_MS: null as unknown as EAttribute | EReference,
@@ -1780,6 +1787,30 @@ export class FennecuiPackage extends BasicEPackage {
     abstractActionClass.getEStructuralFeatures().push(abstractAction_returnTypes);
     FennecuiPackage.Literals.ABSTRACT_ACTION__RETURN_TYPES = abstractAction_returnTypes;
 
+    // Create menuGroup feature
+    const abstractAction_menuGroup = new BasicEAttribute();
+    abstractAction_menuGroup.setName('menuGroup');
+    abstractAction_menuGroup.setLowerBound(0);
+    abstractAction_menuGroup.setUpperBound(1);
+    abstractActionClass.getEStructuralFeatures().push(abstractAction_menuGroup);
+    FennecuiPackage.Literals.ABSTRACT_ACTION__MENU_GROUP = abstractAction_menuGroup;
+
+    // Create menuOrder feature
+    const abstractAction_menuOrder = new BasicEAttribute();
+    abstractAction_menuOrder.setName('menuOrder');
+    abstractAction_menuOrder.setLowerBound(0);
+    abstractAction_menuOrder.setUpperBound(1);
+    abstractActionClass.getEStructuralFeatures().push(abstractAction_menuOrder);
+    FennecuiPackage.Literals.ABSTRACT_ACTION__MENU_ORDER = abstractAction_menuOrder;
+
+    // Create keybinding feature
+    const abstractAction_keybinding = new BasicEAttribute();
+    abstractAction_keybinding.setName('keybinding');
+    abstractAction_keybinding.setLowerBound(0);
+    abstractAction_keybinding.setUpperBound(1);
+    abstractActionClass.getEStructuralFeatures().push(abstractAction_keybinding);
+    FennecuiPackage.Literals.ABSTRACT_ACTION__KEYBINDING = abstractAction_keybinding;
+
     // Create QuickAction class
     const quickActionClass = new BasicEClass();
     quickActionClass.setName('QuickAction');
@@ -2111,6 +2142,38 @@ export class FennecuiPackage extends BasicEPackage {
     authConfiguration_apiKeyHeader.setUpperBound(1);
     authConfigurationClass.getEStructuralFeatures().push(authConfiguration_apiKeyHeader);
     FennecuiPackage.Literals.AUTH_CONFIGURATION__API_KEY_HEADER = authConfiguration_apiKeyHeader;
+
+    // Create authorizationEndpoint feature
+    const authConfiguration_authorizationEndpoint = new BasicEAttribute();
+    authConfiguration_authorizationEndpoint.setName('authorizationEndpoint');
+    authConfiguration_authorizationEndpoint.setLowerBound(0);
+    authConfiguration_authorizationEndpoint.setUpperBound(1);
+    authConfigurationClass.getEStructuralFeatures().push(authConfiguration_authorizationEndpoint);
+    FennecuiPackage.Literals.AUTH_CONFIGURATION__AUTHORIZATION_ENDPOINT = authConfiguration_authorizationEndpoint;
+
+    // Create clientId feature
+    const authConfiguration_clientId = new BasicEAttribute();
+    authConfiguration_clientId.setName('clientId');
+    authConfiguration_clientId.setLowerBound(0);
+    authConfiguration_clientId.setUpperBound(1);
+    authConfigurationClass.getEStructuralFeatures().push(authConfiguration_clientId);
+    FennecuiPackage.Literals.AUTH_CONFIGURATION__CLIENT_ID = authConfiguration_clientId;
+
+    // Create scopes feature
+    const authConfiguration_scopes = new BasicEAttribute();
+    authConfiguration_scopes.setName('scopes');
+    authConfiguration_scopes.setLowerBound(0);
+    authConfiguration_scopes.setUpperBound(1);
+    authConfigurationClass.getEStructuralFeatures().push(authConfiguration_scopes);
+    FennecuiPackage.Literals.AUTH_CONFIGURATION__SCOPES = authConfiguration_scopes;
+
+    // Create logoutEndpoint feature
+    const authConfiguration_logoutEndpoint = new BasicEAttribute();
+    authConfiguration_logoutEndpoint.setName('logoutEndpoint');
+    authConfiguration_logoutEndpoint.setLowerBound(0);
+    authConfiguration_logoutEndpoint.setUpperBound(1);
+    authConfigurationClass.getEStructuralFeatures().push(authConfiguration_logoutEndpoint);
+    FennecuiPackage.Literals.AUTH_CONFIGURATION__LOGOUT_ENDPOINT = authConfiguration_logoutEndpoint;
 
     // Create RetryConfiguration class
     const retryConfigurationClass = new BasicEClass();

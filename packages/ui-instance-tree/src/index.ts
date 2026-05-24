@@ -349,6 +349,7 @@ export async function activate(context: ModuleContext): Promise<void> {
   // Register with panel registry
   const panelRegistry = context.services.get<PanelRegistry>('ui.registry.panels')
   if (panelRegistry) {
+    const eventBus = context.services.get<any>('gene.eventbus')
     panelRegistry.register({
       id: 'instance-tree',
       title: 'Instances',
@@ -356,8 +357,12 @@ export async function activate(context: ModuleContext): Promise<void> {
       component: markRaw(components.InstanceTree),
       perspectives: ['model-editor'],
       defaultLocation: 'left',
-      defaultOrder: 0
-    })
+      defaultOrder: 0,
+      headerActions: [
+        { icon: 'pi pi-search', tooltip: 'Search (Ctrl+Shift+F)', onClick: () => eventBus?.emit('open-search-dialog') },
+        { icon: 'pi pi-plus', tooltip: 'New Instance', onClick: () => eventBus?.emit('show-new-instance-dialog') }
+      ]
+    } as any)
     context.log.info('Instance Tree panel registered')
 
 context.log.info('ViewsPanel available as component (integrated in InstanceTree)')
@@ -502,6 +507,40 @@ context.log.info('ViewsPanel available as component (integrated in InstanceTree)
     })
 
     context.log.info('Instance commands registered')
+  }
+
+  // Register menu for model-editor perspective
+  const menuRegistry = context.services.get<any>('gene.menu.registry')
+  if (menuRegistry) {
+    const eventBus = context.services.get<any>('gene.eventbus')
+    const sharedTree = useSharedInstanceTree()
+    const hasContent = () => !!(getSharedResource()?.getContents()?.size())
+
+    menuRegistry.registerMenu('model-editor', [
+      {
+        id: 'instance.save',
+        icon: 'pi pi-save',
+        label: 'Save Instances',
+        disabled: () => !hasContent(),
+        action: () => eventBus?.emit('save-instances-request')
+      },
+      {
+        id: 'instance.validateOcl',
+        icon: 'pi pi-check-circle',
+        label: 'Validate OCL (local)',
+        disabled: () => !hasContent(),
+        action: () => eventBus?.emit('validate-ocl-request')
+      },
+      { id: 'sep1', separator: true, icon: '', label: '', action: () => {} },
+      {
+        id: 'instance.showSupertypes',
+        icon: 'pi pi-sitemap',
+        label: 'Show Supertypes',
+        active: () => sharedTree.showSuperTypes.value,
+        action: () => { sharedTree.showSuperTypes.value = !sharedTree.showSuperTypes.value }
+      }
+    ])
+    context.log.info('Model-editor menu registered')
   }
 
   context.log.info('Instance Tree module activated')

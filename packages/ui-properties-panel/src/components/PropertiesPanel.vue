@@ -1003,10 +1003,9 @@ function handleCancelParameterDialog() {
 
 <template>
   <div class="properties-panel">
-    <!-- Header -->
-    <div class="panel-header">
-      <span class="header-title">Properties</span>
-      <div v-if="editor?.isDirty.value" class="header-actions">
+    <!-- Header (only shown when dirty — buttons for reset/save) -->
+    <div v-if="editor?.isDirty.value" class="panel-header">
+      <div class="header-actions">
         <Button
           icon="pi pi-refresh"
           text
