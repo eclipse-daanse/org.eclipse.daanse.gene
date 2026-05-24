@@ -89,6 +89,7 @@ export async function activate(context: ModuleContext): Promise<void> {
   // Register with panel registry
   const panelRegistry = context.services.get<PanelRegistry>('ui.registry.panels')
   if (panelRegistry) {
+    const eventBus = context.services.get<any>('gene.eventbus')
     panelRegistry.register({
       id: 'model-browser',
       title: 'Models',
@@ -96,8 +97,11 @@ export async function activate(context: ModuleContext): Promise<void> {
       component: markRaw(components.ModelBrowser),
       perspectives: ['model-editor', 'metamodeler'],
       defaultLocation: 'right',
-      defaultOrder: 0
-    })
+      defaultOrder: 0,
+      headerActions: [
+        { icon: 'pi pi-plus', tooltip: 'Add Model', onClick: () => eventBus?.emit('show-add-model-dialog') }
+      ]
+    } as any)
     context.log.info('Model Browser panel registered')
   }
 

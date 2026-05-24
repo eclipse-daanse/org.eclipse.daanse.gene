@@ -396,13 +396,39 @@ export async function activate(context: ModuleContext): Promise<void> {
         enabled: true,
         perspectiveIds: [],
         parameters: [],
-        returnTypes: ['VALIDATION_MESSAGES']
+        returnTypes: ['VALIDATION_MESSAGES'],
+        perspectiveIds: []
       },
       source: 'plugin',
       moduleId: 'atlas-browser'
     })
 
     context.log.info('Atlas validation action registered')
+
+    // Append Atlas items to model-editor menu
+    const menuRegistry = context.services.get<any>('gene.menu.registry')
+    if (menuRegistry) {
+      menuRegistry.appendMenu('model-editor', [
+        { id: 'sep.atlas', separator: true, icon: '', label: '', action: () => {} },
+        {
+          id: 'atlas.validate.toolbar',
+          icon: 'pi pi-cloud-upload',
+          label: 'Validate on Atlas Server',
+          action: async () => {
+            const actionManager = context.services.get<any>('gene.action.manager')
+            if (actionManager) {
+              await actionManager.execute('atlas.validate', {
+                selectedObject: null,
+                selectedObjects: [],
+                perspectiveId: 'model-editor',
+                timestamp: new Date()
+              })
+            }
+          }
+        }
+      ])
+      context.log.info('Atlas menu items appended to model-editor')
+    }
   }
 
   // Listen for workspace loaded event to auto-connect Atlas connections

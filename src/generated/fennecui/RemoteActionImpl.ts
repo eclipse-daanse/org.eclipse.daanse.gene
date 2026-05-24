@@ -24,17 +24,17 @@ import { FennecuiPackage } from './FennecuiPackage';
  */
 export class RemoteActionImpl extends AbstractActionImpl implements RemoteAction {
   // Feature ID Constants (eLiterals)
-  static readonly ENDPOINT_URL: number = 16;
-  static readonly HTTP_METHOD: number = 17;
-  static readonly SERIALIZATION: number = 18;
-  static readonly CONTENT_TYPE: number = 19;
-  static readonly AUTH_CONFIG: number = 20;
-  static readonly CONNECTION_TIMEOUT_MS: number = 21;
-  static readonly READ_TIMEOUT_MS: number = 22;
-  static readonly RETRY_CONFIG: number = 23;
-  static readonly EXECUTION_MODE: number = 24;
-  static readonly ASYNC_CONFIG: number = 25;
-  static readonly RESPONSE_MAPPING: number = 26;
+  static readonly ENDPOINT_URL: number = 19;
+  static readonly HTTP_METHOD: number = 20;
+  static readonly SERIALIZATION: number = 21;
+  static readonly CONTENT_TYPE: number = 22;
+  static readonly AUTH_CONFIG: number = 23;
+  static readonly CONNECTION_TIMEOUT_MS: number = 24;
+  static readonly READ_TIMEOUT_MS: number = 25;
+  static readonly RETRY_CONFIG: number = 26;
+  static readonly EXECUTION_MODE: number = 27;
+  static readonly ASYNC_CONFIG: number = 28;
+  static readonly RESPONSE_MAPPING: number = 29;
 
   // Private fields
   private _endpointUrl?: string;

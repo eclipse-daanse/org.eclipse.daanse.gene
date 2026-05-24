@@ -19,6 +19,7 @@ import { usePanelKeyboardShortcuts } from '../composables/usePanelDragDrop'
 import { useGlobalSettings } from '../composables/useGlobalSettings'
 import { useEventBus } from '../composables/useEventBus'
 import ActivityBar from './ActivityBar.vue'
+import MenuBar from './MenuBar.vue'
 import PrimarySidebar from './PrimarySidebar.vue'
 import EditorArea from './EditorArea.vue'
 import SecondarySidebar from './SecondarySidebar.vue'
@@ -246,15 +247,6 @@ onUnmounted(() => {
         <span class="workspace-name">{{ workspaceName }}</span>
       </div>
       <div class="title-bar-right">
-        <!-- Save Instances button moved to InstanceTree header for context-specific placement -->
-        <Button
-          icon="pi pi-palette"
-          text
-          rounded
-          size="small"
-          @click="showWorkspaceSettings = true"
-          v-tooltip.bottom="'Appearance'"
-        />
       </div>
     </div>
 
@@ -264,6 +256,11 @@ onUnmounted(() => {
       <div class="horizontal-layout">
         <!-- Activity Bar -->
         <ActivityBar @perspective-change="handlePerspectiveChange" />
+
+        <!-- Content area (Menu Toolbar + Panels) -->
+        <div class="content-with-menu">
+          <MenuBar @show-settings="showWorkspaceSettings = true" />
+          <div class="content-panels">
 
         <!-- Primary Sidebar with resize handle -->
         <div class="primary-sidebar-container" :style="primarySidebarStyle">
@@ -306,6 +303,9 @@ onUnmounted(() => {
           ></div>
           <SecondarySidebar />
         </div>
+
+          </div><!-- /content-panels -->
+        </div><!-- /content-with-menu -->
       </div>
     </div>
 
@@ -381,6 +381,19 @@ onUnmounted(() => {
 }
 
 .horizontal-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.content-with-menu {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.content-panels {
   display: flex;
   flex: 1;
   overflow: hidden;
