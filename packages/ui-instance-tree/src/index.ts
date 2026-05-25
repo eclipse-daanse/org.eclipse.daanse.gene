@@ -514,6 +514,7 @@ context.log.info('ViewsPanel available as component (integrated in InstanceTree)
   if (menuRegistry) {
     const eventBus = context.services.get<any>('gene.eventbus')
     const sharedTree = useSharedInstanceTree()
+    const sharedViews = useSharedViews()
     const hasContent = () => !!(getSharedResource()?.getContents()?.size())
 
     menuRegistry.registerMenu('model-editor', [
@@ -538,6 +539,22 @@ context.log.info('ViewsPanel available as component (integrated in InstanceTree)
         label: 'Show Supertypes',
         active: () => sharedTree.showSuperTypes.value,
         action: () => { sharedTree.showSuperTypes.value = !sharedTree.showSuperTypes.value }
+      },
+      { id: 'sep2', separator: true, icon: '', label: '', action: () => {} },
+      {
+        id: 'instance.views',
+        icon: 'pi pi-filter',
+        label: 'Views & Filter',
+        active: () => !!sharedViews.activeViewId.value,
+        popover: markRaw(components.ViewFilterPopover),
+        action: () => {}
+      },
+      { id: 'sep3', separator: true, icon: '', label: '', action: () => {} },
+      {
+        id: 'instance.iconSettings',
+        icon: 'pi pi-cog',
+        label: 'Icon Settings',
+        action: () => eventBus?.emit('show-icon-settings')
       }
     ])
     context.log.info('Model-editor menu registered')
