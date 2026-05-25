@@ -47,8 +47,9 @@ const ctx = props.context
 const eventBus = tsm?.getService('gene.eventbus') as any
 const sharedTree = useSharedInstanceTree()
 
-// Listen for events from sidebar header actions
+// Listen for events from sidebar header actions and central menu
 eventBus?.on?.('show-new-instance-dialog', () => { showNewInstanceDialog.value = true })
+eventBus?.on?.('show-icon-settings', () => { showIconSettings.value = true })
 
 
 // Helper to get name from ENamedElement - handles both native and DynamicEObject
