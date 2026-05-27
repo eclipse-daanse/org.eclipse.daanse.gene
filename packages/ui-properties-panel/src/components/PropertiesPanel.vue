@@ -762,8 +762,62 @@ function getAvailableObjects(feature: EStructuralFeature): EObject[] {
     return collectObjectsFromPackage(rootPackage.value, refType)
   }
 
+  // Special handling: Ecore meta-type references (EStructuralFeature, EClass, etc.)
+  // These objects live in the package registry, not in the instance XMI resource
+  if (isEcoreMetaType(refType) && modelRegistry?.allPackages?.value) {
+    return collectEcoreMetaObjects(refType, selectedObject.value)
+  }
+
   // Get all objects of the reference type from the instance tree
   return instanceTree.getAllObjectsOfType(refType)
+}
+
+// Returns true if refType belongs to the Ecore meta-metamodel (nsURI = http://www.eclipse.org/emf/2002/Ecore)
+function isEcoreMetaType(refType: EClass): boolean {
+  try {
+    const uri = (refType as any).getEPackage?.()?.getNsURI?.()
+    return uri === 'http://www.eclipse.org/emf/2002/Ecore'
+  } catch { return false }
+}
+
+// Collect Ecore meta-objects (EStructuralFeature / EClass) from all registered packages.
+// If the current object has targetClasses set, restrict features to those classes.
+function collectEcoreMetaObjects(refType: EClass, currentObj: any): EObject[] {
+  const typeName = (refType as any).getName?.() ?? ''
+  const wantsFeature = typeName === 'EStructuralFeature' || typeName === 'EAttribute' || typeName === 'EReference'
+  const wantsClass = typeName === 'EClass'
+  const result: EObject[] = []
+
+  // Try to get targetClasses from the current object for filtering
+  let targetClasses: any[] = []
+  try {
+    const tcRaw = currentObj?.eGet?.('targetClasses')
+    if (tcRaw) {
+      targetClasses = Array.isArray(tcRaw) ? tcRaw :
+        (typeof tcRaw[Symbol.iterator] === 'function' ? Array.from(tcRaw) : [])
+    }
+  } catch { /* ignore */ }
+
+  for (const pkg of modelRegistry.allPackages.value) {
+    // Skip built-in packages — only user-registered metamodels
+    if ((pkg as any).isBuiltIn) continue
+
+    const classes = modelRegistry.getAllClasses(pkg)
+    for (const classInfo of classes) {
+      const eClass = classInfo.eClass
+      if (wantsClass) {
+        if (!result.includes(eClass)) result.push(eClass)
+      } else if (wantsFeature) {
+        // If targetClasses is set, only return features from those classes
+        if (targetClasses.length > 0 && !targetClasses.includes(eClass)) continue
+        const features = (eClass as any).getEStructuralFeatures?.() ?? []
+        for (const f of features) {
+          if (!result.includes(f)) result.push(f)
+        }
+      }
+    }
+  }
+  return result
 }
 
 // Collect all EObjects of a given type from an EPackage (for metamodel mode)
@@ -877,15 +931,23 @@ function handleNavigate(obj: EObject) {
 
 // Handle search request from ReferenceField
 function handleSearch(feature: EReference, callback: (obj: EObject) => void) {
+  const actions = getActions()
+  if (!actions) return
+
+  // For Ecore meta-type references, bypass resource search and pass pre-collected candidates
+  const refType = getReferenceType(feature)
+  if (refType && isEcoreMetaType(refType) && modelRegistry?.allPackages?.value) {
+    const candidates = collectEcoreMetaObjects(refType, selectedObject.value)
+    actions.openSearchDialog({ feature, resource: null as any, callback, candidates })
+    return
+  }
+
   // In metamodel mode, use rootPackage's resource; in instance mode, use shared instance resource
   const resource = ctx.value?.mode === 'metamodel'
     ? (rootPackage.value?.eResource?.() ?? null)
     : (getSharedResource?.() ?? null)
   if (!resource) return
-  const actions = getActions()
-  if (actions) {
-    actions.openSearchDialog({ feature, resource, callback })
-  }
+  actions.openSearchDialog({ feature, resource, callback })
 }
 
 /**
