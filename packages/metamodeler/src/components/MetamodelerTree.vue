@@ -429,53 +429,6 @@ async function exportJsonSchema() {
         Metamodel
         <span v-if="metamodeler.dirty.value" class="dirty-indicator">*</span>
       </span>
-      <div class="header-actions">
-        <Button
-          v-if="!metamodeler.rootPackage.value"
-          icon="pi pi-plus"
-          text
-          rounded
-          size="small"
-          @click="handleCreateInitialPackage"
-          v-tooltip.bottom="'New Package'"
-        />
-        <Button
-          icon="pi pi-sitemap"
-          text
-          rounded
-          size="small"
-          :class="{ 'toggle-active': metamodeler.showSuperTypes.value }"
-          @click="metamodeler.showSuperTypes.value = !metamodeler.showSuperTypes.value"
-          v-tooltip.bottom="'Show Supertypes'"
-        />
-        <Button
-          icon="pi pi-save"
-          text
-          rounded
-          size="small"
-          :disabled="!metamodeler.rootPackage.value || !metamodeler.dirty.value"
-          @click="handleSave"
-          v-tooltip.bottom="'Save Metamodel'"
-        />
-        <Button
-          icon="pi pi-file-export"
-          text
-          rounded
-          size="small"
-          :disabled="!metamodeler.rootPackage.value"
-          @click="handleSaveAs"
-          v-tooltip.bottom="'Save As...'"
-        />
-        <Button
-          icon="pi pi-download"
-          text
-          rounded
-          size="small"
-          :disabled="!metamodeler.rootPackage.value"
-          @click="exportJsonSchema"
-          v-tooltip.bottom="'Export JSON Schema'"
-        />
-      </div>
     </div>
 
     <!-- Empty state -->
