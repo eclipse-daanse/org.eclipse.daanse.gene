@@ -423,14 +423,6 @@ async function exportJsonSchema() {
 
 <template>
   <div class="metamodeler-tree">
-    <!-- Header -->
-    <div class="tree-header">
-      <span class="header-title">
-        Metamodel
-        <span v-if="metamodeler.dirty.value" class="dirty-indicator">*</span>
-      </span>
-    </div>
-
     <!-- Empty state -->
     <div v-if="!metamodeler.rootPackage.value" class="empty-state">
       <i class="pi pi-box"></i>
