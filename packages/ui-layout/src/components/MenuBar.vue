@@ -119,10 +119,13 @@ onMounted(() => {
     eb.on('gene:menu-changed', () => loadMenu())
   }
 
-  // Also reload on perspective switch
+  // Also reload on perspective switch (+ delayed reload for late module activations)
   const pm = tsm?.getService('ui.registry.perspectives')
   if (pm?.state) {
-    watch(() => pm.state.currentPerspectiveId, () => loadMenu())
+    watch(() => pm.state.currentPerspectiveId, () => {
+      loadMenu()
+      setTimeout(() => loadMenu(), 300)
+    })
   }
 
   loadMenu()

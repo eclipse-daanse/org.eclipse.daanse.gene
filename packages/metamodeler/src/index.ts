@@ -140,6 +140,55 @@ export async function activate(context: ModuleContext): Promise<void> {
   // Register the opener as a service
   context.services.register('ui.metamodeler.open', openMetamodeler)
 
+  // Register menu for metamodeler perspective
+  const menuRegistry = context.services.get<any>('gene.menu.registry')
+  if (menuRegistry) {
+    const eventBus = context.services.get<any>('gene.eventbus')
+    const mm = useSharedMetamodeler()
+    const hasPackage = () => !!mm.rootPackage.value
+
+    menuRegistry.registerMenu('metamodeler', [
+      {
+        id: 'meta.newPackage',
+        icon: 'pi pi-plus',
+        label: 'New Package',
+        disabled: () => hasPackage(),
+        action: () => eventBus?.emit('metamodeler:new-package')
+      },
+      { id: 'meta.sep1', separator: true, icon: '', label: '', action: () => {} },
+      {
+        id: 'meta.showSupertypes',
+        icon: 'pi pi-sitemap',
+        label: 'Show Supertypes',
+        active: () => mm.showSuperTypes.value,
+        action: () => { mm.showSuperTypes.value = !mm.showSuperTypes.value }
+      },
+      { id: 'meta.sep2', separator: true, icon: '', label: '', action: () => {} },
+      {
+        id: 'meta.save',
+        icon: 'pi pi-save',
+        label: 'Save Metamodel',
+        disabled: () => !hasPackage() || !mm.dirty.value,
+        action: () => mm.saveToFile()
+      },
+      {
+        id: 'meta.saveAs',
+        icon: 'pi pi-file-export',
+        label: 'Save As...',
+        disabled: () => !hasPackage(),
+        action: () => mm.saveAsFile()
+      },
+      {
+        id: 'meta.exportJson',
+        icon: 'pi pi-download',
+        label: 'Export JSON Schema',
+        disabled: () => !hasPackage(),
+        action: () => eventBus?.emit('metamodeler:export-json-schema')
+      }
+    ])
+    context.log.info('Metamodeler menu registered')
+  }
+
   // Register commands from ecore
   const commandRegistry = context.services.get<any>('gene.command.registry')
   const keybindingSvc = context.services.get<any>('gene.keybindings')
