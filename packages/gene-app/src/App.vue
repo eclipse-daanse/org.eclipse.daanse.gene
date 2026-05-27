@@ -194,7 +194,7 @@ const workspaceActionsService: WorkspaceActionService = {
   showProblemsPanel: () => handleShowProblems(),
   openSearchDialog: (options) => {
     if (options) {
-      handleReferenceSearch(options.feature, options.resource, options.callback)
+      handleReferenceSearch(options.feature, options.resource, options.callback, options.candidates)
     } else {
       if (instanceTreeComposables.value?.getSharedResource) {
         const resource = instanceTreeComposables.value.getSharedResource()
@@ -283,6 +283,7 @@ const referenceSearchFeature = ref<any>(null)
 const referenceSearchSourceObject = ref<any>(null)
 const referenceSearchOclConstraint = ref<string | null>(null)
 const searchResource = ref<any>(null)
+const referenceSearchCandidates = ref<any[] | null>(null)
 
 /**
  * Extract OCL referenceFilter annotation from an EReference
@@ -924,6 +925,7 @@ function handleSearchNavigate(hit: any) {
     referenceSearchSourceObject.value = null
     referenceSearchOclConstraint.value = null
     searchResource.value = null
+    referenceSearchCandidates.value = null
     showSearchDialog.value = false
     return
   }
@@ -938,11 +940,12 @@ function handleSearchNavigate(hit: any) {
 }
 
 // Handle reference search request from PropertiesPanel
-function handleReferenceSearch(feature: any, resource: any, callback: (obj: any) => void) {
+function handleReferenceSearch(feature: any, resource: any, callback: (obj: any) => void, candidates?: any[]) {
   console.log('[App] Opening search for reference:', feature.getName())
   referenceSearchFeature.value = feature
   referenceSearchCallback.value = callback
   searchResource.value = resource
+  referenceSearchCandidates.value = candidates ? markRaw(candidates) : null
 
   // Get the source object (the object whose reference is being set)
   if (instanceTreeComposables.value) {
@@ -2280,16 +2283,17 @@ onMounted(() => {
 
   <!-- Search Dialog -->
   <SearchDialog
-    v-if="searchResource || instanceTreeComposables?.getSharedResource?.()"
+    v-if="referenceSearchCandidates || searchResource || instanceTreeComposables?.getSharedResource?.()"
     :visible="showSearchDialog"
     :resource="searchResource || instanceTreeComposables?.getSharedResource()"
+    :candidates="referenceSearchCandidates || undefined"
     :referenceOptions="referenceSearchFeature ? {
       sourceObject: referenceSearchSourceObject,
       reference: referenceSearchFeature,
       oclConstraint: referenceSearchOclConstraint
     } : undefined"
     :problemsService="problemsService"
-    @close="showSearchDialog = false; referenceSearchCallback = null; referenceSearchFeature = null; referenceSearchSourceObject = null; referenceSearchOclConstraint = null; searchResource = null"
+    @close="showSearchDialog = false; referenceSearchCallback = null; referenceSearchFeature = null; referenceSearchSourceObject = null; referenceSearchOclConstraint = null; searchResource = null; referenceSearchCandidates = null"
     @select="handleSearchNavigate"
     @navigate="handleSearchNavigate"
   />

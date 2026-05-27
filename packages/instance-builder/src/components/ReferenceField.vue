@@ -304,9 +304,14 @@ const dropdownOptions = computed<(ReferenceOption & { key: string })[]>(() => {
     const eClass = obj.eClass()
     const filterStatus = oclFilteredOptions.value.get(obj)
 
+    // For EStructuralFeature: show "featureName (OwnerClass)" instead of "featureName (EAttribute)"
+    const container = (obj as any).eContainer?.()
+    const ownerName = container && typeof container.getName === 'function' ? container.getName() : null
+    const displayLabel = ownerName ? `${name} (${ownerName})` : `${name} (${eClass.getName()})`
+
     return {
       key: String(idx),
-      label: `${name} (${eClass.getName()})`,
+      label: displayLabel,
       value: obj,
       disabled: filterStatus?.disabled ?? false,
       oclReason: filterStatus?.reason
@@ -432,7 +437,9 @@ function handleAddToList() {
 // Filter available objects to exclude already selected ones
 const availableObjectsFiltered = computed(() => {
   if (!props.availableObjects) return []
-  const currentList = (props.value as EObject[]) || []
+  const raw = props.value
+  const currentList: EObject[] = Array.isArray(raw) ? raw :
+    (raw && typeof (raw as any)[Symbol.iterator] === 'function' ? Array.from(raw as Iterable<EObject>) : [])
   return props.availableObjects.filter(obj => !currentList.includes(obj))
 })
 
@@ -443,8 +450,12 @@ const addDropdownOptions = computed<ReferenceOption[]>(() => {
     const eClass = obj.eClass()
     const filterStatus = oclFilteredOptions.value.get(obj)
 
+    const container = (obj as any).eContainer?.()
+    const ownerName = container && typeof container.getName === 'function' ? container.getName() : null
+    const displayLabel = ownerName ? `${name} (${ownerName})` : `${name} (${eClass.getName()})`
+
     return {
-      label: `${name} (${eClass.getName()})`,
+      label: displayLabel,
       value: obj,
       disabled: filterStatus?.disabled ?? false,
       oclReason: filterStatus?.reason
