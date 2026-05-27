@@ -6,7 +6,7 @@
  * Displays EPackage, EClass, EAttribute, EReference, and OCL constraints.
  */
 
-import { ref, computed, watch, inject } from 'tsm:vue'
+import { ref, computed, watch, inject, onMounted, onUnmounted } from 'tsm:vue'
 import { Tree } from 'tsm:primevue'
 import type { TreeNode } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
@@ -379,6 +379,18 @@ async function handleSaveAs() {
     console.log('[MetamodelerTree] Metamodel saved as new file')
   }
 }
+
+onMounted(() => {
+  const eb = tsm?.getService('gene.eventbus')
+  eb?.on?.('metamodeler:new-package', () => handleCreateInitialPackage())
+  eb?.on?.('metamodeler:export-json-schema', () => exportJsonSchema())
+})
+
+onUnmounted(() => {
+  const eb = tsm?.getService('gene.eventbus')
+  eb?.off?.('metamodeler:new-package', handleCreateInitialPackage)
+  eb?.off?.('metamodeler:export-json-schema', exportJsonSchema)
+})
 
 async function exportJsonSchema() {
   const ePackage = metamodeler.rootPackage.value
