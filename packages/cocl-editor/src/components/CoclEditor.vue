@@ -330,7 +330,7 @@ onMounted(async () => {
 
   filePath = data.filePath || ''
   fileEntry = data.fileEntry || null
-  if (openFileTitle) openFileTitle.value = filePath.split('/').pop() ?? filePath || 'constraints.c-ocl'
+  if (openFileTitle) openFileTitle.value = (filePath.split('/').pop() ?? filePath) || 'constraints.c-ocl'
 
   try {
     const parsed = await loadCoclFromString(data.content, filePath)
