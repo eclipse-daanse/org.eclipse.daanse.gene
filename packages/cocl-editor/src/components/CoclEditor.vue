@@ -16,6 +16,7 @@ import ConstraintForm from './ConstraintForm.vue'
 
 // TSM service access
 const _tsm = inject<any>('tsm')
+const openFileTitle = _tsm?.getService('gene.layout.openFile')
 
 // Components and functions from other TSM modules (via service)
 const SearchDialog = computed(() => _tsm?.getService('ui.search.components')?.SearchDialog)
@@ -329,6 +330,7 @@ onMounted(async () => {
 
   filePath = data.filePath || ''
   fileEntry = data.fileEntry || null
+  if (openFileTitle) openFileTitle.value = filePath.split('/').pop() ?? filePath || 'constraints.c-ocl'
 
   try {
     const parsed = await loadCoclFromString(data.content, filePath)
@@ -366,6 +368,7 @@ onUnmounted(() => {
   eb?.off?.('cocl:upload', handleUploadToServer)
   eb?.off?.('cocl:load', handleLoadFromServer)
   eb?.off?.('cocl:discard', handleDiscard)
+  if (openFileTitle) openFileTitle.value = null
 })
 
 // Register metamodel packages with OCL LSP for autocompletion
@@ -400,6 +403,7 @@ function handleNew() {
   filePath = ''
   isDirty.value = true
   saveStatus.value = 'dirty'
+  if (openFileTitle) openFileTitle.value = 'Neue Constraints'
   registerPackagesWithOcl()
 }
 
@@ -525,6 +529,7 @@ async function handleSave() {
 
     isDirty.value = false
     saveStatus.value = 'saved'
+    if (openFileTitle && filePath) openFileTitle.value = filePath.split('/').pop() ?? filePath
   } catch (e) {
     console.error('[CoclEditor] Save failed:', e)
     saveStatus.value = 'error'
@@ -549,6 +554,7 @@ async function handleSaveAs() {
       await writable.write(xml)
       await writable.close()
       console.log('[CoclEditor] File saved via Save As')
+      if (openFileTitle) openFileTitle.value = handle.name ?? defaultName
     } catch (e: any) {
       if (e.name !== 'AbortError') {
         console.error('[CoclEditor] Save As failed:', e)
