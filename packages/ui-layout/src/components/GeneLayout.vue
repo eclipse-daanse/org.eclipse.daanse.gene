@@ -88,32 +88,16 @@ const mainAreaRef = ref<HTMLElement | null>(null)
 // Computed styles - sidebars show minimized bar when collapsed or empty
 const primarySidebarStyle = computed(() => {
   const hasPanels = layout.primaryPanels.value.length > 0
-  if (!layout.state.visibility.primarySidebar || !hasPanels) {
-    // Minimized or empty: show icon bar (48px) or drop zone (24px)
-    return {
-      width: hasPanels ? '48px' : '24px',
-      display: 'flex'
-    }
-  }
-  return {
-    width: `${layout.state.dimensions.primarySidebarWidth}px`,
-    display: 'flex'
-  }
+  if (!hasPanels) return { width: '0px', display: 'none' }
+  if (!layout.state.visibility.primarySidebar) return { width: '48px', display: 'flex' }
+  return { width: `${layout.state.dimensions.primarySidebarWidth}px`, display: 'flex' }
 })
 
 const secondarySidebarStyle = computed(() => {
   const hasPanels = layout.secondaryPanels.value.length > 0
-  if (!layout.state.visibility.secondarySidebar || !hasPanels) {
-    // Minimized or empty: show icon bar (48px) or drop zone (24px)
-    return {
-      width: hasPanels ? '48px' : '24px',
-      display: 'flex'
-    }
-  }
-  return {
-    width: `${layout.state.dimensions.secondarySidebarWidth}px`,
-    display: 'flex'
-  }
+  if (!hasPanels) return { width: '0px', display: 'none' }
+  if (!layout.state.visibility.secondarySidebar) return { width: '48px', display: 'flex' }
+  return { width: `${layout.state.dimensions.secondarySidebarWidth}px`, display: 'flex' }
 })
 
 // Panel area - show small drop zone even when empty
