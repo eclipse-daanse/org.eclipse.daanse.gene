@@ -281,29 +281,6 @@ function handleEditInstance(node: TreeNode) {
 
 <template>
   <div class="workspace-explorer">
-    <!-- Header -->
-    <div class="explorer-header">
-      <span class="header-title">Explorer</span>
-      <div class="header-actions">
-        <Button
-          icon="pi pi-plus"
-          text
-          rounded
-          size="small"
-          @click="$emit('add-repository')"
-          v-tooltip.bottom="'Add Repository'"
-        />
-        <Button
-          icon="pi pi-refresh"
-          text
-          rounded
-          size="small"
-          @click="workspace.triggerUpdate()"
-          v-tooltip.bottom="'Refresh'"
-        />
-      </div>
-    </div>
-
     <!-- Loading indicator -->
     <div v-if="workspace.loading.value" class="loading-indicator">
       <i class="pi pi-spin pi-spinner"></i>
@@ -378,26 +355,6 @@ function handleEditInstance(node: TreeNode) {
   border-right: 1px solid var(--surface-border);
 }
 
-.explorer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid var(--surface-border);
-  background: var(--surface-section);
-}
-
-.header-title {
-  font-weight: 600;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  color: var(--text-color-secondary);
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.25rem;
-}
 
 .loading-indicator {
   display: flex;

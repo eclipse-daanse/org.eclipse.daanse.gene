@@ -1471,12 +1471,17 @@ function setupFileExplorerPerspective(layout: any) {
   })
 
   // Register file explorer panel
+  const eventBusForExplorer = tsm.getService<any>('gene.eventbus')
   layout.registerPanel({
     id: 'file-explorer',
     title: 'Explorer',
     icon: 'pi pi-folder',
     component: markRaw(FileExplorerWrapper),
-    location: 'primary'
+    location: 'primary',
+    headerActions: [
+      { icon: 'pi pi-plus', tooltip: 'Add Source', onClick: () => eventBusForExplorer?.emit('explorer:add-source') },
+      { icon: 'pi pi-refresh', tooltip: 'Refresh All', onClick: () => eventBusForExplorer?.emit('explorer:refresh-all') }
+    ]
   })
 
   // Register activity for file explorer
