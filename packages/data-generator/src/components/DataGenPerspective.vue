@@ -4,7 +4,7 @@
  * Toolbar + Splitter (left: Tree, right: Editor)
  */
 
-import { ref, computed, onMounted, watch, inject } from 'tsm:vue'
+import { ref, computed, onMounted, onUnmounted, watch, inject } from 'tsm:vue'
 import { Button, InputText, Dialog, Select, Tree, Menu } from 'tsm:primevue'
 import type { DataGenConfig, ClassGenConfig, GenerationResult } from '../types'
 import { createDefaultConfig } from '../types'
@@ -95,6 +95,26 @@ onMounted(() => {
       console.error('[DataGenerator] Failed to parse .datagen file:', e)
     }
   }
+
+  const eb = tsm?.getService('gene.eventbus')
+  eb?.on?.('datagen:new', handleNewConfig)
+  eb?.on?.('datagen:save', handleSave)
+  eb?.on?.('datagen:save-as', handleSaveAs)
+  eb?.on?.('datagen:generate', handleGenerate)
+  eb?.on?.('datagen:upload', handleUploadToServer)
+  eb?.on?.('datagen:load', handleLoadFromServer)
+  eb?.on?.('datagen:add-class', handleAddClass)
+})
+
+onUnmounted(() => {
+  const eb = tsm?.getService('gene.eventbus')
+  eb?.off?.('datagen:new', handleNewConfig)
+  eb?.off?.('datagen:save', handleSave)
+  eb?.off?.('datagen:save-as', handleSaveAs)
+  eb?.off?.('datagen:generate', handleGenerate)
+  eb?.off?.('datagen:upload', handleUploadToServer)
+  eb?.off?.('datagen:load', handleLoadFromServer)
+  eb?.off?.('datagen:add-class', handleAddClass)
 })
 
 // --- Model registry for class picker ---
@@ -707,66 +727,6 @@ function parseDatagenXml(xml: string): DataGenConfig | null {
 
 <template>
   <div class="datagen-perspective">
-    <!-- Toolbar -->
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <Button icon="pi pi-file" label="New" size="small" severity="secondary" text @click="handleNewConfig" />
-        <Button icon="pi pi-save" label="Save" size="small" severity="secondary" text @click="handleSave"
-          :disabled="!dg.config.value || !dg.isDirty.value" />
-        <Button icon="pi pi-file-export" label="Save As" size="small" severity="secondary" text @click="handleSaveAs"
-          :disabled="!dg.config.value" />
-        <span class="toolbar-sep"></span>
-        <Button icon="pi pi-cloud-upload" label="Upload to Server" size="small" severity="secondary" text @click="handleUploadToServer"
-          :disabled="!dg.config.value" :loading="atlas.loading.value" />
-        <Button icon="pi pi-cloud-download" label="Load from Server" size="small" severity="secondary" text @click="handleLoadFromServer" />
-        <span v-if="dg.isDirty.value" class="dirty-badge">Unsaved</span>
-      </div>
-      <div class="toolbar-center">
-        <span v-if="dg.config.value" class="config-name">{{ dg.config.value.name }}</span>
-      </div>
-      <div class="toolbar-right">
-        <div class="toolbar-field" v-if="dg.config.value">
-          <label>Locale</label>
-          <InputText
-            :modelValue="dg.config.value.locale"
-            @update:modelValue="dg.config.value!.locale = $event; dg.markDirty()"
-            size="small"
-            style="width: 50px"
-          />
-        </div>
-        <div class="toolbar-field" v-if="dg.config.value">
-          <label>Seed</label>
-          <InputText
-            :modelValue="String(dg.config.value.seed)"
-            @update:modelValue="dg.config.value!.seed = parseInt($event) || 0; dg.markDirty()"
-            size="small"
-            style="width: 60px"
-            placeholder="0"
-          />
-        </div>
-        <div class="split-button">
-          <Button
-            icon="pi pi-bolt"
-            label="Generate"
-            size="small"
-            severity="success"
-            @click="handleGenerate"
-            :disabled="!dg.config.value || dg.config.value.classConfigs.length === 0"
-            class="split-main"
-          />
-          <Button
-            icon="pi pi-chevron-down"
-            size="small"
-            severity="success"
-            @click="(e: any) => generateMenu?.toggle(e)"
-            :disabled="!dg.config.value || dg.config.value.classConfigs.length === 0"
-            class="split-toggle"
-          />
-          <Menu ref="generateMenu" :model="generateMenuItems" :popup="true" />
-        </div>
-      </div>
-    </div>
-
     <!-- Main content -->
     <div class="main-content" v-if="dg.config.value">
       <div class="left-panel">

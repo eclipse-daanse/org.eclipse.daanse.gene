@@ -475,6 +475,18 @@ const _transformationPollInterval = setInterval(() => {
 }, 500)
 onUnmounted(() => clearInterval(_transformationPollInterval))
 
+const _eb = tsm?.getService('gene.eventbus')
+function _openAutoMap() { showAutoMapDialog.value = true }
+function _togglePreview() { showPreview.value = !showPreview.value }
+_eb?.on?.('transformation:save', handleSave)
+_eb?.on?.('transformation:automap', _openAutoMap)
+_eb?.on?.('transformation:toggle-preview', _togglePreview)
+onUnmounted(() => {
+  _eb?.off?.('transformation:save', handleSave)
+  _eb?.off?.('transformation:automap', _openAutoMap)
+  _eb?.off?.('transformation:toggle-preview', _togglePreview)
+})
+
 // --- Actions ---
 
 function toggleSourceClass(className: string) {
@@ -676,33 +688,6 @@ function isTargetFeatureMapped(featureName: string): boolean {
           v-model="transformationName"
           class="transformation-name-input"
           placeholder="Transformation name"
-        />
-      </div>
-      <div class="header-actions">
-        <Button
-          icon="pi pi-save"
-          text
-          rounded
-          size="small"
-          @click="handleSave"
-          v-tooltip.bottom="'Save as .qvtr'"
-        />
-        <Button
-          icon="pi pi-bolt"
-          text
-          rounded
-          size="small"
-          :disabled="!sourcePackage || !targetPackage"
-          @click="showAutoMapDialog = true"
-          v-tooltip.bottom="'AutoMap'"
-        />
-        <Button
-          :icon="showPreview ? 'pi pi-eye-slash' : 'pi pi-eye'"
-          text
-          rounded
-          size="small"
-          @click="showPreview = !showPreview"
-          v-tooltip.bottom="showPreview ? 'Hide QVT-R' : 'Show QVT-R'"
         />
       </div>
     </div>
