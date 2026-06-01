@@ -32,8 +32,8 @@ const panels = computed(() => layout.primaryPanels.value)
 // Show minimized bar when sidebar is hidden but has panels
 const showMinimized = computed(() => !visible.value && panels.value.length > 0)
 
-// Show empty drop zone when no panels at all
-const showEmptyDropZone = computed(() => panels.value.length === 0)
+// Show empty drop zone only when visible and no panels
+const showEmptyDropZone = computed(() => panels.value.length === 0 && visible.value)
 
 // Drop zone state
 const isDropTarget = computed(() => dragDrop.isDropTarget('primary'))
