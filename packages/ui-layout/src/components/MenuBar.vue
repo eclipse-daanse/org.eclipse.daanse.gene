@@ -133,7 +133,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="hasItems || workspaceLoaded" class="menu-toolbar">
+  <div class="menu-toolbar">
     <template v-for="(item, i) in items" :key="item.id || i">
       <div v-if="item.separator" class="menu-divider"></div>
       <button
@@ -153,7 +153,6 @@ onMounted(() => {
     <div class="menu-spacer"></div>
 
     <button
-      v-if="workspaceLoaded"
       class="menu-btn"
       @click="emit('show-settings')"
       v-tooltip.bottom="'Appearance'"
