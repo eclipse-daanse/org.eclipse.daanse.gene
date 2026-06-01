@@ -69,6 +69,7 @@ export async function activate(context: ModuleContext): Promise<void> {
   const panelRegistry = context.services.get<PanelRegistry>('ui.registry.panels')
   if (panelRegistry) {
     // File explorer sidebar panel
+    const eventBus = context.services.get<any>('gene.eventbus')
     panelRegistry.register({
       id: 'file-explorer',
       title: 'Explorer',
@@ -76,8 +77,12 @@ export async function activate(context: ModuleContext): Promise<void> {
       component: markRaw(components.FileExplorer),
       perspectives: ['explorer'],
       defaultLocation: 'left',
-      defaultOrder: 0
-    })
+      defaultOrder: 0,
+      headerActions: [
+        { icon: 'pi pi-plus', tooltip: 'Add Source', onClick: () => eventBus?.emit('explorer:add-source') },
+        { icon: 'pi pi-refresh', tooltip: 'Refresh All', onClick: () => eventBus?.emit('explorer:refresh-all') }
+      ]
+    } as any)
     context.log.info('File Explorer panel registered')
 
     // Workspace preview panel for center
