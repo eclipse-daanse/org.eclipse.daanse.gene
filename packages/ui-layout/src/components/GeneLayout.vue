@@ -18,7 +18,6 @@ import { useLayoutState } from '../composables/useLayoutState'
 import { usePanelKeyboardShortcuts } from '../composables/usePanelDragDrop'
 import { useGlobalSettings } from '../composables/useGlobalSettings'
 import { useEventBus } from '../composables/useEventBus'
-import { openFileTitle } from '../index'
 import ActivityBar from './ActivityBar.vue'
 import MenuBar from './MenuBar.vue'
 import PrimarySidebar from './PrimarySidebar.vue'
@@ -35,6 +34,7 @@ const panelShortcuts = usePanelKeyboardShortcuts()
 const workspaceState = tsm?.getService('ui.workspace.composables')?.useSharedWorkspace()
 const fileSystem = tsm?.getService('ui.file-explorer.composables')?.useSharedFileSystem()
 const perspective = tsm?.getService('ui.perspectives')?.useSharedPerspective()
+const openFileTitle = computed(() => tsm?.getService('gene.layout.openFile')?.value ?? null)
 const eventBus = useEventBus()
 
 // Initialize global settings (theme, language, colors)

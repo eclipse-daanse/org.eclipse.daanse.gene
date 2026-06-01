@@ -11,7 +11,6 @@
  */
 
 import { ref, computed, onMounted, onUnmounted, nextTick, watch, reactive, inject } from 'tsm:vue'
-import { openFileTitle } from 'ui-layout'
 import { Dropdown, Button, InputText } from 'tsm:primevue'
 import type { ModelPackageInfo, ClassInfo } from 'ui-model-browser'
 import type { EClass } from '@emfts/core'
@@ -66,6 +65,7 @@ interface Connection {
 
 // TSM for service access
 const tsm = inject<any>('tsm')
+const openFileTitle = tsm?.getService('gene.layout.openFile')
 
 // --- Model Registry ---
 
