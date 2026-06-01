@@ -11,6 +11,7 @@
  */
 
 import { ref, computed, onMounted, onUnmounted, nextTick, watch, reactive, inject } from 'tsm:vue'
+import { openFileTitle } from 'ui-layout'
 import { Dropdown, Button, InputText } from 'tsm:primevue'
 import type { ModelPackageInfo, ClassInfo } from 'ui-model-browser'
 import type { EClass } from '@emfts/core'
@@ -82,6 +83,7 @@ const packageOptions = computed(() =>
 const selectedSourceURI = ref<string | null>(null)
 const selectedTargetURI = ref<string | null>(null)
 const transformationName = ref('NewTransformation')
+const isLoaded = ref(false)
 
 const relations = ref<RelationDef[]>([])
 const variables = ref<VariableDef[]>([])
@@ -345,6 +347,8 @@ function loadFromData(data: any) {
   console.log('[TransformationEditor] Loading transformation data:', data.transformationName)
 
   if (data.transformationName) transformationName.value = data.transformationName
+  isLoaded.value = true
+  openFileTitle.value = `${data.transformationName || 'transformation'}.qvtr`
   if (data.sourcePackageURI) selectedSourceURI.value = data.sourcePackageURI
   if (data.targetPackageURI) selectedTargetURI.value = data.targetPackageURI
 
@@ -457,6 +461,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   resizeObserver?.disconnect()
+  openFileTitle.value = null
 })
 
 // Redraw connections when active relation or mappings change
@@ -475,16 +480,29 @@ const _transformationPollInterval = setInterval(() => {
 }, 500)
 onUnmounted(() => clearInterval(_transformationPollInterval))
 
+function handleNew() {
+  transformationName.value = 'NewTransformation'
+  selectedSourceURI.value = null
+  selectedTargetURI.value = null
+  relations.value = []
+  variables.value = []
+  activeRelationId.value = null
+  isLoaded.value = true
+  openFileTitle.value = null
+}
+
 const _eb = tsm?.getService('gene.eventbus')
 function _openAutoMap() { showAutoMapDialog.value = true }
 function _togglePreview() { showPreview.value = !showPreview.value }
 _eb?.on?.('transformation:save', handleSave)
 _eb?.on?.('transformation:automap', _openAutoMap)
 _eb?.on?.('transformation:toggle-preview', _togglePreview)
+_eb?.on?.('transformation:new', handleNew)
 onUnmounted(() => {
   _eb?.off?.('transformation:save', handleSave)
   _eb?.off?.('transformation:automap', _openAutoMap)
   _eb?.off?.('transformation:toggle-preview', _togglePreview)
+  _eb?.off?.('transformation:new', handleNew)
 })
 
 // --- Actions ---
@@ -681,6 +699,23 @@ function isTargetFeatureMapped(featureName: string): boolean {
 
 <template>
   <div class="transformation-root">
+
+    <!-- Empty state -->
+    <div v-if="!isLoaded" class="transformation-empty">
+      <i class="pi pi-arrows-h" style="font-size: 2rem; opacity: 0.3"></i>
+      <span>No transformation loaded</span>
+      <span class="hint">Open a .qvtr file from the Explorer or create a new one.</span>
+      <Button
+        label="New Transformation"
+        icon="pi pi-plus"
+        severity="secondary"
+        size="small"
+        @click="handleNew"
+        style="margin-top: 8px"
+      />
+    </div>
+
+    <template v-else>
     <!-- Toolbar -->
     <div class="toolbar">
       <div class="toolbar-left">
@@ -1030,6 +1065,7 @@ function isTargetFeatureMapped(featureName: string): boolean {
         <span>{{ saveNotification.message }}</span>
       </div>
     </Transition>
+    </template><!-- /v-else isLoaded -->
   </div>
 </template>
 
@@ -1169,6 +1205,22 @@ function isTargetFeatureMapped(featureName: string): boolean {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+}
+
+.transformation-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  color: var(--text-color-secondary);
+  font-size: 0.875rem;
+}
+
+.transformation-empty .hint {
+  font-size: 0.8rem;
+  opacity: 0.7;
 }
 
 .empty-state {

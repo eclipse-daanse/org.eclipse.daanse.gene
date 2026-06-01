@@ -91,6 +91,7 @@ export async function activate(context: ModuleContext): Promise<void> {
   if (menuRegistry) {
     const eb = context.services.get<any>('gene.eventbus')
     menuRegistry.registerMenu('transformation', [
+      { id: 'tr.new', icon: 'pi pi-file', label: 'New Transformation', action: () => eb?.emit('transformation:new') },
       { id: 'tr.save', icon: 'pi pi-save', label: 'Save as .qvtr', action: () => eb?.emit('transformation:save') },
       { id: 'tr.sep1', separator: true, icon: '', label: '', action: () => {} },
       { id: 'tr.automap', icon: 'pi pi-bolt', label: 'AutoMap', action: () => eb?.emit('transformation:automap') },

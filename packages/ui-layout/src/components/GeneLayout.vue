@@ -18,6 +18,7 @@ import { useLayoutState } from '../composables/useLayoutState'
 import { usePanelKeyboardShortcuts } from '../composables/usePanelDragDrop'
 import { useGlobalSettings } from '../composables/useGlobalSettings'
 import { useEventBus } from '../composables/useEventBus'
+import { openFileTitle } from '../index'
 import ActivityBar from './ActivityBar.vue'
 import MenuBar from './MenuBar.vue'
 import PrimarySidebar from './PrimarySidebar.vue'
@@ -229,6 +230,7 @@ onUnmounted(() => {
     <div class="title-bar">
       <div class="title-bar-left">
         <span class="workspace-name">{{ workspaceName }}</span>
+        <span v-if="openFileTitle" class="open-file-title"> — {{ openFileTitle }}</span>
       </div>
       <div class="title-bar-right">
       </div>
@@ -349,6 +351,11 @@ onUnmounted(() => {
   font-weight: 600;
   font-size: 0.875rem;
   color: var(--text-color);
+}
+
+.open-file-title {
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
 }
 
 .title-bar-right {
