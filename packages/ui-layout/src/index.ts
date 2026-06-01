@@ -9,8 +9,12 @@
 import './theme.css'
 
 import type { ModuleContext } from '@eclipse-daanse/tsm'
+import { ref } from 'tsm:vue'
 import { EventBusService, setEventBusInstance, type EventBus } from './composables/useEventBus'
 import { useLayoutState } from './composables/useLayoutState'
+
+// Shared reactive open-file title — perspectives set this to show current file in title bar
+export const openFileTitle = ref<string | null>(null)
 
 // Re-export types
 export * from './types'
@@ -64,6 +68,10 @@ export async function activate(context: ModuleContext): Promise<void> {
 
   // Register menu registry — perspectives register their toolbar items here
   const menusByPerspective = new Map<string, any[]>()
+  // Register open-file title service (perspectives set this to show current file in title bar)
+  context.services.register('gene.layout.openFile', openFileTitle)
+
+  // Register menu registry — perspectives register their toolbar items here
   context.services.register('gene.menu.registry', {
     registerMenu(perspectiveId: string, items: any[]) {
       menusByPerspective.set(perspectiveId, items)
