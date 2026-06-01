@@ -424,6 +424,7 @@ async function handleSave() {
       await fileSystem.writeTextFile(fileEntry, content)
       console.log('[TransformationEditor] Updated existing file:', fileName)
       showSaveNotification(`Saved ${fileName}`)
+      if (openFileTitle) openFileTitle.value = fileName
     } else {
       // Create a new file in the root of the first source
       await fileSystem.createFile(sourceId, '', fileName)
@@ -434,6 +435,7 @@ async function handleSave() {
         await fileSystem.writeTextFile(fileEntry, content)
         console.log('[TransformationEditor] Created and saved new file:', fileName)
         showSaveNotification(`Created ${fileName}`)
+        if (openFileTitle) openFileTitle.value = fileName
       }
     }
   } catch (e: any) {
@@ -488,7 +490,7 @@ function handleNew() {
   variables.value = []
   activeRelationId.value = null
   isLoaded.value = true
-  openFileTitle.value = null
+  if (openFileTitle) openFileTitle.value = 'Neue Transformation'
 }
 
 const _eb = tsm?.getService('gene.eventbus')
