@@ -6,7 +6,7 @@
  * a full-screen editor for .c-ocl constraint files.
  */
 
-import { ref, computed, onMounted, reactive, inject, watch } from 'tsm:vue'
+import { ref, computed, onMounted, onUnmounted, reactive, inject, watch } from 'tsm:vue'
 import { InputText, Button, Dialog, Tree } from 'tsm:primevue'
 import type { CoclConstraint, CoclConstraintSet } from 'ui-problems-panel'
 import { serializeCoclToXml } from '../composables/useCoclSerializer'
@@ -348,6 +348,24 @@ onMounted(async () => {
 
   // Register all loaded metamodel packages with the OCL LSP for autocompletion
   registerPackagesWithOcl()
+
+  const eb = _tsm?.getService('gene.eventbus')
+  eb?.on?.('cocl:new', handleNew)
+  eb?.on?.('cocl:save', handleSave)
+  eb?.on?.('cocl:save-as', handleSaveAs)
+  eb?.on?.('cocl:upload', handleUploadToServer)
+  eb?.on?.('cocl:load', handleLoadFromServer)
+  eb?.on?.('cocl:discard', handleDiscard)
+})
+
+onUnmounted(() => {
+  const eb = _tsm?.getService('gene.eventbus')
+  eb?.off?.('cocl:new', handleNew)
+  eb?.off?.('cocl:save', handleSave)
+  eb?.off?.('cocl:save-as', handleSaveAs)
+  eb?.off?.('cocl:upload', handleUploadToServer)
+  eb?.off?.('cocl:load', handleLoadFromServer)
+  eb?.off?.('cocl:discard', handleDiscard)
 })
 
 // Register metamodel packages with OCL LSP for autocompletion
@@ -649,61 +667,6 @@ async function handleSelectServerConfig(cfg: any) {
             class="header-input"
           />
         </div>
-      </div>
-      <div class="header-actions">
-        <Button
-          icon="pi pi-file"
-          severity="secondary"
-          size="small"
-          @click="handleNew"
-          title="New constraint file"
-          text
-        />
-        <span v-if="isDirty" class="unsaved-badge">Unsaved</span>
-        <Button
-          icon="pi pi-save"
-          severity="secondary"
-          size="small"
-          :disabled="!isDirty || saveStatus === 'saving'"
-          :loading="saveStatus === 'saving'"
-          @click="handleSave"
-          title="Save"
-          text
-        />
-        <Button
-          icon="pi pi-file-export"
-          severity="secondary"
-          size="small"
-          @click="handleSaveAs"
-          title="Save As..."
-          text
-        />
-        <Button
-          icon="pi pi-cloud-upload"
-          severity="secondary"
-          size="small"
-          @click="handleUploadToServer"
-          title="Upload to Server"
-          :loading="atlas.loading.value"
-          text
-        />
-        <Button
-          icon="pi pi-cloud-download"
-          severity="secondary"
-          size="small"
-          @click="handleLoadFromServer"
-          title="Load from Server"
-          text
-        />
-        <Button
-          icon="pi pi-undo"
-          severity="secondary"
-          size="small"
-          :disabled="!isDirty"
-          @click="handleDiscard"
-          title="Discard changes"
-          text
-        />
       </div>
     </div>
 

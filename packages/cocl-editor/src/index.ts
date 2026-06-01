@@ -90,6 +90,23 @@ export async function activate(context: ModuleContext): Promise<void> {
     context.log.info('C-OCL commands registered')
   }
 
+  // Register menu for cocl-editor perspective
+  const menuRegistry = context.services.get<any>('gene.menu.registry')
+  if (menuRegistry) {
+    const eb = context.services.get<any>('gene.eventbus')
+    menuRegistry.registerMenu('cocl-editor', [
+      { id: 'cocl.new', icon: 'pi pi-file', label: 'New', action: () => eb?.emit('cocl:new') },
+      { id: 'cocl.save', icon: 'pi pi-save', label: 'Save', action: () => eb?.emit('cocl:save') },
+      { id: 'cocl.saveAs', icon: 'pi pi-file-export', label: 'Save As...', action: () => eb?.emit('cocl:save-as') },
+      { id: 'cocl.sep1', separator: true, icon: '', label: '', action: () => {} },
+      { id: 'cocl.upload', icon: 'pi pi-cloud-upload', label: 'Upload to Server', action: () => eb?.emit('cocl:upload') },
+      { id: 'cocl.load', icon: 'pi pi-cloud-download', label: 'Load from Server', action: () => eb?.emit('cocl:load') },
+      { id: 'cocl.sep2', separator: true, icon: '', label: '', action: () => {} },
+      { id: 'cocl.discard', icon: 'pi pi-undo', label: 'Discard Changes', action: () => eb?.emit('cocl:discard') },
+    ])
+    context.log.info('C-OCL editor menu registered')
+  }
+
   context.log.info('C-OCL Editor plugin activated')
 }
 

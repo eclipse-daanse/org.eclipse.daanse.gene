@@ -155,6 +155,25 @@ export async function activate(context: ModuleContext): Promise<void> {
     context.log.info('Data generator commands registered')
   }
 
+  // Register menu for data-generator perspective
+  const menuRegistry = context.services.get<any>('gene.menu.registry')
+  if (menuRegistry) {
+    const eb = context.services.get<any>('gene.eventbus')
+    menuRegistry.registerMenu('data-generator', [
+      { id: 'dg.new', icon: 'pi pi-file', label: 'New Config', action: () => eb?.emit('datagen:new') },
+      { id: 'dg.save', icon: 'pi pi-save', label: 'Save', action: () => eb?.emit('datagen:save') },
+      { id: 'dg.saveAs', icon: 'pi pi-file-export', label: 'Save As...', action: () => eb?.emit('datagen:save-as') },
+      { id: 'dg.sep1', separator: true, icon: '', label: '', action: () => {} },
+      { id: 'dg.upload', icon: 'pi pi-cloud-upload', label: 'Upload to Server', action: () => eb?.emit('datagen:upload') },
+      { id: 'dg.load', icon: 'pi pi-cloud-download', label: 'Load from Server', action: () => eb?.emit('datagen:load') },
+      { id: 'dg.sep2', separator: true, icon: '', label: '', action: () => {} },
+      { id: 'dg.addClass', icon: 'pi pi-plus', label: 'Add Class Config', action: () => eb?.emit('datagen:add-class') },
+      { id: 'dg.sep3', separator: true, icon: '', label: '', action: () => {} },
+      { id: 'dg.generate', icon: 'pi pi-bolt', label: 'Generate', action: () => eb?.emit('datagen:generate') },
+    ])
+    context.log.info('Data generator menu registered')
+  }
+
   context.log.info('Data Generator plugin activated')
 }
 
