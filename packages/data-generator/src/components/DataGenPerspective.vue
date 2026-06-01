@@ -22,6 +22,7 @@ import GenerationDialog from './GenerationDialog.vue'
 const dg = useDataGenerator()
 const tsm = inject<any>('tsm')
 setDataGenTsm(tsm)
+const openFileTitle = tsm?.getService('gene.layout.openFile')
 const registry = useGeneratorRegistry()
 const remoteGen = useRemoteDataGen()
 const atlas = useDataGenAtlas()
@@ -90,6 +91,7 @@ onMounted(() => {
       if (parsed) {
         dg.loadConfig(parsed, data.filePath, data.fileEntry)
         console.log('[DataGenerator] Loaded config:', parsed.name)
+        if (openFileTitle) openFileTitle.value = data.filePath?.split('/').pop() ?? parsed.name ?? 'config.datagen'
       }
     } catch (e) {
       console.error('[DataGenerator] Failed to parse .datagen file:', e)
@@ -115,6 +117,7 @@ onUnmounted(() => {
   eb?.off?.('datagen:upload', handleUploadToServer)
   eb?.off?.('datagen:load', handleLoadFromServer)
   eb?.off?.('datagen:add-class', handleAddClass)
+  if (openFileTitle) openFileTitle.value = null
 })
 
 // --- Model registry for class picker ---
@@ -179,6 +182,7 @@ function handleNewConfig() {
 function createNewConfig() {
   dg.newConfig(newConfigName.value || 'New Config')
   showNewConfigDialog.value = false
+  if (openFileTitle) openFileTitle.value = newConfigName.value || 'Neue Konfiguration'
 }
 
 function handleAddClass() {
@@ -271,6 +275,7 @@ async function handleSave() {
     await geneFS.writeTextFile(fileEntry, xml)
     dg.markSaved()
     console.log('[DataGenerator] Saved:', dg.filePath.value)
+    if (openFileTitle) openFileTitle.value = dg.filePath.value?.split('/').pop() ?? dg.config.value?.name ?? 'config.datagen'
   } else {
     // Save As fallback
     handleSaveAs()
@@ -293,6 +298,7 @@ async function handleSaveAs() {
       await writable.write(xml)
       await writable.close()
       dg.markSaved()
+      if (openFileTitle) openFileTitle.value = defaultName
     } catch (e: any) {
       if (e.name !== 'AbortError') console.error('[DataGenerator] Save As failed:', e)
     }
