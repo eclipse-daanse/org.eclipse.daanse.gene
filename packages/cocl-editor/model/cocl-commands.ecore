@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="coclcommands" nsURI="http://gene/commands/cocl/1.0.0"
+    nsPrefix="coclcommands">
+
+  <eClassifiers xsi:type="ecore:EClass" name="CoclCommands"
+      eSuperTypes="command-model.ecore#//CommandInterface">
+
+    <eOperations name="loadConstraints">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="cocl.loadConstraints"/>
+        <details key="label" value="Load Constraints"/>
+        <details key="category" value="TOOLS"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-file-import"/>
+        <details key="when" value="hasWorkspace"/>
+      </eAnnotations>
+      <eParameters name="path" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+    </eOperations>
+
+    <eOperations name="reloadConstraints">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="cocl.reloadConstraints"/>
+        <details key="label" value="Reload Constraints"/>
+        <details key="category" value="TOOLS"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-refresh"/>
+      </eAnnotations>
+    </eOperations>
+
+  </eClassifiers>
+</ecore:EPackage>

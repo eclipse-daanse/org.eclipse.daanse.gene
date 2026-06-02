@@ -84,21 +84,6 @@ function handleSelect(node: any) {
 
 <template>
   <div class="datagen-tree">
-    <div class="tree-header">
-      <span class="header-title">Classes</span>
-      <div class="header-actions">
-        <Button
-          icon="pi pi-plus"
-          text
-          rounded
-          size="small"
-          @click="emit('add-class')"
-          title="Add Class Config"
-          :disabled="!config"
-        />
-      </div>
-    </div>
-
     <div v-if="!config" class="empty-state">
       <i class="pi pi-inbox"></i>
       <span>No config loaded</span>

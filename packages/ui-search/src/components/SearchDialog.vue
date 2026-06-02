@@ -28,6 +28,8 @@ const props = defineProps<{
   }
   /** Browse mode: loads all objects on open, allows empty query (like reference mode but without type filter) */
   browseMode?: boolean
+  /** Pre-collected candidates (bypasses resource search, e.g. for Ecore meta-type references) */
+  candidates?: EObject[]
 }>()
 
 const emit = defineEmits<{
@@ -137,12 +139,16 @@ function onSearchInput() {
         }
       }
 
-      localResults.value = await searchService.search(query, props.resource, {
-        mode: allowsEmptyQuery.value ? 'global' : searchMode.value,
-        filters,
-        maxResults: allowsEmptyQuery.value ? 100 : 50,
-        allowEmptyQuery: allowsEmptyQuery.value
-      })
+      if (props.candidates) {
+        localResults.value = searchCandidates(props.candidates, query)
+      } else {
+        localResults.value = await searchService.search(query, props.resource, {
+          mode: allowsEmptyQuery.value ? 'global' : searchMode.value,
+          filters,
+          maxResults: allowsEmptyQuery.value ? 100 : 50,
+          allowEmptyQuery: allowsEmptyQuery.value
+        })
+      }
     } catch (e) {
       console.error('[SearchDialog] Search error:', e)
       localResults.value = []
@@ -269,6 +275,34 @@ function getIconForHit(hit: SearchHit): string {
   }
 }
 
+// Search within pre-collected candidates (for Ecore meta-type references)
+function searchCandidates(candidates: EObject[], query: string): SearchHit[] {
+  const q = query.toLowerCase()
+  const hits: SearchHit[] = []
+  for (const obj of candidates) {
+    const featureName = getObjectLabel(obj)
+    // For EStructuralFeature: show "featureName (OwnerClass)"
+    const container = (obj as any).eContainer?.()
+    const ownerName = container && typeof container.getName === 'function' ? container.getName() : null
+    const label = ownerName ? `${featureName} (${ownerName})` : featureName
+
+    if (!q || label.toLowerCase().includes(q)) {
+      const idx = label.toLowerCase().indexOf(q)
+      hits.push({
+        object: obj,
+        feature: null as any,
+        value: label,
+        snippet: label,
+        matchStart: q ? idx : 0,
+        matchEnd: q ? idx + q.length : 0,
+        breadcrumb: ownerName ? [{ label: ownerName, eClass: container }] : [],
+        isFilteredByOcl: false
+      })
+    }
+  }
+  return hits
+}
+
 // Focus input when dialog opens, and load initial results in reference mode
 watch(() => props.visible, async (visible) => {
   if (visible) {
@@ -301,12 +335,16 @@ watch(() => props.visible, async (visible) => {
         }
 
         // Search with empty query to get all matching instances
-        localResults.value = await searchService.search('', props.resource, {
-          mode: 'global',
-          filters,
-          maxResults: 100,
-          allowEmptyQuery: true
-        })
+        if (props.candidates) {
+          localResults.value = searchCandidates(props.candidates, '')
+        } else {
+          localResults.value = await searchService.search('', props.resource, {
+            mode: 'global',
+            filters,
+            maxResults: 100,
+            allowEmptyQuery: true
+          })
+        }
       } catch (e) {
         console.error('[SearchDialog] Initial load error:', e)
         localResults.value = []
@@ -415,8 +453,8 @@ function getHitKey(hit: SearchHit, index: number): string {
             >
               <div class="result-header">
                 <i :class="getIconForHit(hit)" class="result-icon" />
-                <span class="object-label">{{ getObjectLabel(hit.object) }}</span>
-                <span class="feature-name">{{ hit.feature.getName() }}</span>
+                <span class="object-label">{{ hit.value || getObjectLabel(hit.object) }}</span>
+                <span v-if="hit.feature" class="feature-name">{{ hit.feature.getName() }}</span>
               </div>
               <div class="result-snippet" v-html="formatSnippet(hit)" />
               <div class="result-breadcrumb">

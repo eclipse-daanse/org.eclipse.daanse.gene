@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="appcommands" nsURI="http://gene/commands/app/1.0.0"
+    nsPrefix="appcommands">
+
+  <eClassifiers xsi:type="ecore:EClass" name="AppCommands"
+      eSuperTypes="command-model.ecore#//CommandInterface">
+
+    <eOperations name="openCommandPalette">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="app.openCommandPalette"/>
+        <details key="label" value="Command Palette"/>
+        <details key="category" value="VIEW"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="keybinding" value="Ctrl+Shift+P"/>
+        <details key="icon" value="pi pi-search"/>
+      </eAnnotations>
+    </eOperations>
+
+    <eOperations name="toggleFullscreen">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="app.toggleFullscreen"/>
+        <details key="label" value="Toggle Fullscreen"/>
+        <details key="category" value="VIEW"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="keybinding" value="F11"/>
+        <details key="icon" value="pi pi-window-maximize"/>
+      </eAnnotations>
+    </eOperations>
+
+  </eClassifiers>
+</ecore:EPackage>

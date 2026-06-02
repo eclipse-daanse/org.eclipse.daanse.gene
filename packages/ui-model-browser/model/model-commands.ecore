@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="modelcommands" nsURI="http://gene/commands/model-browser/1.0.0"
+    nsPrefix="modelcommands">
+
+  <eClassifiers xsi:type="ecore:EClass" name="ModelCommands"
+      eSuperTypes="command-model.ecore#//CommandInterface">
+
+    <eOperations name="loadModel">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="model-browser.loadModel"/>
+        <details key="label" value="Load Model"/>
+        <details key="category" value="MODEL"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-box"/>
+        <details key="when" value="hasWorkspace"/>
+      </eAnnotations>
+      <eParameters name="path" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+    </eOperations>
+
+    <eOperations name="unloadModel">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="model-browser.unloadModel"/>
+        <details key="label" value="Unload Model"/>
+        <details key="category" value="MODEL"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-minus-circle"/>
+      </eAnnotations>
+      <eParameters name="nsUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+    </eOperations>
+
+    <eOperations name="reloadModel">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="model-browser.reloadModel"/>
+        <details key="label" value="Reload Model"/>
+        <details key="category" value="MODEL"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-refresh"/>
+      </eAnnotations>
+      <eParameters name="nsUri" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+    </eOperations>
+
+  </eClassifiers>
+</ecore:EPackage>

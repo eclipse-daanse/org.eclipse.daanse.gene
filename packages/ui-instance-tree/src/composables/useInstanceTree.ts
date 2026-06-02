@@ -311,7 +311,8 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
       eClass,
       leaf: true,
       containmentRef,
-      parent
+      parent,
+      xmiId: getXmiId(rawObj)
     }
 
     // Get containment references and build children

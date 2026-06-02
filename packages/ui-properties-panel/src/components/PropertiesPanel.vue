@@ -169,6 +169,27 @@ const xmiId = computed(() => {
   return getXmiId(selectedObject.value)
 })
 
+// Primary-Key ID (model-level iD="true" attribute or 'id' attribute)
+const primaryKeyId = computed(() => {
+  if (!selectedObject.value || !currentEClass.value) return null
+  const eClass = currentEClass.value
+  // Try EClass ID attribute (marked with iD="true" in ecore)
+  if (typeof eClass.getEIDAttribute === 'function') {
+    const eidAttr = eClass.getEIDAttribute()
+    if (eidAttr) {
+      const val = selectedObject.value.eGet(eidAttr)
+      if (val) return { name: eidAttr.getName(), value: String(val) }
+    }
+  }
+  // Try 'id' attribute by name
+  const idAttr = eClass.getEStructuralFeature('id')
+  if (idAttr) {
+    const val = selectedObject.value.eGet(idAttr)
+    if (val) return { name: 'id', value: String(val) }
+  }
+  return null
+})
+
 // Editing state for XMI ID
 const editingXmiId = ref(false)
 const editXmiIdValue = ref('')
@@ -551,6 +572,14 @@ function setFeatureValue(feature: EStructuralFeature, value: any) {
   }
 }
 
+// Get display name for a feature (camelCase → Title Case)
+function getFeatureDisplayName(feature: EStructuralFeature): string {
+  const name = feature.getName()
+  const display = name.replace(/([A-Z])/g, ' $1').replace(/^./, (s: string) => s.toUpperCase())
+  const required = feature.getLowerBound() > 0
+  return required ? `${display} *` : display
+}
+
 // Get error for feature
 function getFeatureError(feature: EStructuralFeature): string | undefined {
   return editor.value?.errors.value.get(feature.getName())
@@ -577,7 +606,8 @@ function getReferenceType(ref: EReference): EClass | null {
   // Try native getEReferenceType first
   if (typeof ref.getEReferenceType === 'function') {
     try {
-      return ref.getEReferenceType()
+      const result = ref.getEReferenceType()
+      if (result) return result
     } catch {
       // Fall through to alternative
     }
@@ -585,27 +615,96 @@ function getReferenceType(ref: EReference): EClass | null {
   // Fallback: use getEType (more general)
   if (typeof ref.getEType === 'function') {
     const eType = ref.getEType()
-    if (eType && typeof (eType as any).getEAllStructuralFeatures === 'function') {
-      return eType as EClass
-    }
-    // Handle unresolved proxy: resolve via model registry by parsing the proxy URI
-    if (eType && typeof (eType as any).eIsProxy === 'function' && (eType as any).eIsProxy()) {
-      const proxyURI = (eType as any).eProxyURI?.()?.toString?.() || ''
-      const hashIdx = proxyURI.indexOf('#//')
-      if (hashIdx >= 0) {
-        const nsURI = proxyURI.substring(0, hashIdx)
-        const className = proxyURI.substring(hashIdx + 3) // after #//
-        // Look up in model registry
-        const pkg = modelRegistry.allPackages.value.find(p => p.nsURI === nsURI)
-        if (pkg) {
-          const cls = modelRegistry.getAllClasses(pkg).find(c => c.name === className)
-          if (cls?.eClass) {
-            return cls.eClass
+    if (eType) {
+      // Check if it's a proper EClass (native or DynamicEObject with EClass features)
+      if (typeof (eType as any).getEAllStructuralFeatures === 'function') {
+        return eType as EClass
+      }
+      // DynamicEObject EClass: has eClass() that returns Ecore.EClass metaclass
+      // Check by verifying it has EClass-like features via its metaclass
+      try {
+        const metaClass = (eType as any).eClass?.()
+        if (metaClass) {
+          const metaName = metaClass.getName?.()
+          if (metaName === 'EClass') {
+            return eType as EClass
           }
         }
+      } catch { /* ignore */ }
+      // Handle unresolved proxy: resolve via model registry by parsing the proxy URI
+      if (typeof (eType as any).eIsProxy === 'function' && (eType as any).eIsProxy()) {
+        return resolveProxyType(eType)
       }
     }
   }
+  // Last resort: try to resolve via reference name + model registry
+  return resolveTypeByName(ref)
+}
+
+// Resolve proxy EType via model registry
+function resolveProxyType(eType: any): EClass | null {
+  const proxyURI = eType.eProxyURI?.()?.toString?.() || ''
+  // Try #// format: "nsURI#//ClassName"
+  const hashIdx = proxyURI.indexOf('#//')
+  if (hashIdx >= 0) {
+    const nsURI = proxyURI.substring(0, hashIdx)
+    const className = proxyURI.substring(hashIdx + 3)
+    return findClassInRegistry(nsURI, className)
+  }
+  // Try # format: "nsURI#ClassName"
+  const simpleHashIdx = proxyURI.indexOf('#')
+  if (simpleHashIdx >= 0) {
+    const nsURI = proxyURI.substring(0, simpleHashIdx)
+    const className = proxyURI.substring(simpleHashIdx + 1).replace(/^\/\//, '')
+    return findClassInRegistry(nsURI, className)
+  }
+  return null
+}
+
+// Find a class in model registry by nsURI and name
+function findClassInRegistry(nsURI: string, className: string): EClass | null {
+  if (!modelRegistry?.allPackages?.value) return null
+  for (const pkg of modelRegistry.allPackages.value) {
+    if (pkg.nsURI === nsURI) {
+      // Try getAllClasses first (includes abstract)
+      if (modelRegistry.getAllClasses) {
+        const cls = modelRegistry.getAllClasses(pkg).find((c: any) => c.name === className)
+        if (cls?.eClass) return cls.eClass
+      }
+      // Try getConcreteClasses
+      const cls = modelRegistry.getConcreteClasses(pkg).find((c: any) => c.name === className)
+      if (cls?.eClass) return cls.eClass
+      // Try ePackage.getEClassifier
+      const classifier = pkg.ePackage?.getEClassifier?.(className)
+      if (classifier && typeof (classifier as any).getEAllStructuralFeatures === 'function') {
+        return classifier as EClass
+      }
+    }
+  }
+  return null
+}
+
+// Resolve reference type by looking at the reference's name and metadata
+function resolveTypeByName(ref: EReference): EClass | null {
+  try {
+    // DynamicEObject: try to get eType via eGet
+    const refClass = (ref as any).eClass?.()
+    if (refClass) {
+      const eTypeFeature = refClass.getEStructuralFeature?.('eType')
+      if (eTypeFeature) {
+        const eType = (ref as any).eGet?.(eTypeFeature)
+        if (eType) {
+          // Check if it's a proxy
+          if (typeof eType.eIsProxy === 'function' && eType.eIsProxy()) {
+            return resolveProxyType(eType)
+          }
+          // Check if it's a valid EClass
+          const metaName = eType.eClass?.()?.getName?.()
+          if (metaName === 'EClass') return eType as EClass
+        }
+      }
+    }
+  } catch { /* ignore */ }
   return null
 }
 
@@ -658,8 +757,108 @@ function getAvailableObjects(feature: EStructuralFeature): EObject[] {
     return []
   }
 
+  // In metamodel mode, collect candidates from the root package
+  if (ctx.value?.mode === 'metamodel' && rootPackage.value) {
+    return collectObjectsFromPackage(rootPackage.value, refType)
+  }
+
+  // Special handling: Ecore meta-type references (EStructuralFeature, EClass, etc.)
+  // These objects live in the package registry, not in the instance XMI resource
+  if (isEcoreMetaType(refType) && modelRegistry?.allPackages?.value) {
+    return collectEcoreMetaObjects(refType, selectedObject.value)
+  }
+
   // Get all objects of the reference type from the instance tree
   return instanceTree.getAllObjectsOfType(refType)
+}
+
+// Returns true if refType belongs to the Ecore meta-metamodel (nsURI = http://www.eclipse.org/emf/2002/Ecore)
+function isEcoreMetaType(refType: EClass): boolean {
+  try {
+    const uri = (refType as any).getEPackage?.()?.getNsURI?.()
+    return uri === 'http://www.eclipse.org/emf/2002/Ecore'
+  } catch { return false }
+}
+
+// Collect Ecore meta-objects (EStructuralFeature / EClass) from all registered packages.
+// If the current object has targetClasses set, restrict features to those classes.
+function collectEcoreMetaObjects(refType: EClass, currentObj: any): EObject[] {
+  const typeName = (refType as any).getName?.() ?? ''
+  const wantsFeature = typeName === 'EStructuralFeature' || typeName === 'EAttribute' || typeName === 'EReference'
+  const wantsClass = typeName === 'EClass'
+  const result: EObject[] = []
+
+  // Try to get targetClasses from the current object for filtering
+  let targetClasses: any[] = []
+  try {
+    const tcRaw = currentObj?.eGet?.('targetClasses')
+    if (tcRaw) {
+      targetClasses = Array.isArray(tcRaw) ? tcRaw :
+        (typeof tcRaw[Symbol.iterator] === 'function' ? Array.from(tcRaw) : [])
+    }
+  } catch { /* ignore */ }
+
+  for (const pkg of modelRegistry.allPackages.value) {
+    // Skip built-in packages — only user-registered metamodels
+    if ((pkg as any).isBuiltIn) continue
+
+    const classes = modelRegistry.getAllClasses(pkg)
+    for (const classInfo of classes) {
+      const eClass = classInfo.eClass
+      if (wantsClass) {
+        if (!result.includes(eClass)) result.push(eClass)
+      } else if (wantsFeature) {
+        // If targetClasses is set, only return features from those classes
+        if (targetClasses.length > 0 && !targetClasses.includes(eClass)) continue
+        const features = (eClass as any).getEStructuralFeatures?.() ?? []
+        for (const f of features) {
+          if (!result.includes(f)) result.push(f)
+        }
+      }
+    }
+  }
+  return result
+}
+
+// Collect all EObjects of a given type from an EPackage (for metamodel mode)
+function collectObjectsFromPackage(pkg: any, targetType: EClass): EObject[] {
+  const result: EObject[] = []
+  const seen = new Set<any>()
+
+  function matches(obj: EObject): boolean {
+    const objClass = obj.eClass()
+    if (objClass === targetType) return true
+    try {
+      const name = objClass.getName?.()
+      const tName = targetType.getName?.()
+      if (name && tName && name === tName) return true
+      const supers = objClass.getESuperTypes?.() || []
+      for (const s of supers) {
+        if (s === targetType || s.getName?.() === tName) return true
+      }
+    } catch { /* ignore */ }
+    return false
+  }
+
+  function collect(container: any) {
+    if (seen.has(container)) return
+    seen.add(container)
+    const classifiers = container.getEClassifiers?.() || []
+    for (const c of classifiers) {
+      if (!seen.has(c) && matches(c)) {
+        seen.add(c)
+        result.push(c)
+      }
+    }
+    const subPkgs = container.getESubpackages?.() || []
+    for (const sub of subPkgs) {
+      collect(sub)
+    }
+  }
+
+  collect(pkg)
+
+  return result
 }
 
 // Get valid child classes for a containment reference (including subclasses of abstract types)
@@ -732,13 +931,23 @@ function handleNavigate(obj: EObject) {
 
 // Handle search request from ReferenceField
 function handleSearch(feature: EReference, callback: (obj: EObject) => void) {
-  const resource = getSharedResource()
-  if (resource) {
-    const actions = getActions()
-    if (actions) {
-      actions.openSearchDialog({ feature, resource, callback })
-    }
+  const actions = getActions()
+  if (!actions) return
+
+  // For Ecore meta-type references, bypass resource search and pass pre-collected candidates
+  const refType = getReferenceType(feature)
+  if (refType && isEcoreMetaType(refType) && modelRegistry?.allPackages?.value) {
+    const candidates = collectEcoreMetaObjects(refType, selectedObject.value)
+    actions.openSearchDialog({ feature, resource: null as any, callback, candidates })
+    return
   }
+
+  // In metamodel mode, use rootPackage's resource; in instance mode, use shared instance resource
+  const resource = ctx.value?.mode === 'metamodel'
+    ? (rootPackage.value?.eResource?.() ?? null)
+    : (getSharedResource?.() ?? null)
+  if (!resource) return
+  actions.openSearchDialog({ feature, resource, callback })
 }
 
 /**
@@ -856,10 +1065,9 @@ function handleCancelParameterDialog() {
 
 <template>
   <div class="properties-panel">
-    <!-- Header -->
-    <div class="panel-header">
-      <span class="header-title">Properties</span>
-      <div v-if="editor?.isDirty.value" class="header-actions">
+    <!-- Header (only shown when dirty — buttons for reset/save) -->
+    <div v-if="editor?.isDirty.value" class="panel-header">
+      <div class="header-actions">
         <Button
           icon="pi pi-refresh"
           text
@@ -954,6 +1162,12 @@ function handleCancelParameterDialog() {
         </template>
       </div>
 
+      <!-- Primary-Key ID (model-level) -->
+      <div v-if="primaryKeyId" class="xmi-id-row">
+        <label class="xmi-id-label">ID ({{ primaryKeyId.name }}):</label>
+        <span class="xmi-id-value">{{ primaryKeyId.value }}</span>
+      </div>
+
       <!-- Validation errors -->
         <Message v-if="editor?.errors.value.size ?? 0 > 0" severity="error" :closable="false" class="validation-message">
           Please fix the validation errors below.
@@ -966,64 +1180,86 @@ function handleCancelParameterDialog() {
         </div>
 
         <!-- Attributes -->
-        <Fieldset v-if="hasAttributes" legend="Attributes" :toggleable="true" class="properties-fieldset">
-        <div class="fields-grid">
-          <PropertyField
+        <div v-if="hasAttributes" class="section-group">
+          <div class="section-heading">Attributes</div>
+          <Fieldset
             v-for="feature in attributeFeatures"
             :key="feature.getName()"
-            :feature="feature"
-            :eObject="selectedObject!"
-            :value="getFeatureValue(feature)"
-            @update:value="(v) => setFeatureValue(feature, v)"
-            :error="getFeatureError(feature)"
-          />
+            :legend="getFeatureDisplayName(feature)"
+            :toggleable="true"
+            class="property-fieldset"
+          >
+            <PropertyField
+              :feature="feature"
+              :eObject="selectedObject!"
+              :value="getFeatureValue(feature)"
+              @update:value="(v) => setFeatureValue(feature, v)"
+              :error="getFeatureError(feature)"
+            />
+          </Fieldset>
         </div>
-      </Fieldset>
 
-      <!-- References -->
-      <Fieldset v-if="hasReferences" legend="References" :toggleable="true" class="properties-fieldset">
-        <div class="fields-grid">
-          <PropertyField
+        <!-- References -->
+        <div v-if="hasReferences" class="section-group">
+          <div class="section-heading">References</div>
+          <Fieldset
             v-for="feature in referenceFeatures"
             :key="feature.getName()"
-            :feature="feature"
-            :eObject="selectedObject!"
-            :value="getFeatureValue(feature)"
-            @update:value="(v) => setFeatureValue(feature, v)"
-            @create="(eClass) => handleCreate(eClass, feature)"
-            @navigate="handleNavigate"
-            @search="handleSearch"
-            @ocl-blocked="handleOclBlocked"
-            :error="getFeatureError(feature)"
-            :validChildClasses="getValidChildClasses(feature)"
-            :availableObjects="getAvailableObjects(feature)"
-            :rootPackage="rootPackage"
-            :oclFilter="getOclFilter(feature)"
-            :problemsService="problemsService"
-          />
+            :legend="getFeatureDisplayName(feature)"
+            :toggleable="true"
+            class="property-fieldset"
+          >
+            <PropertyField
+              :feature="feature"
+              :eObject="selectedObject!"
+              :value="getFeatureValue(feature)"
+              @update:value="(v) => setFeatureValue(feature, v)"
+              @create="(eClass) => handleCreate(eClass, feature)"
+              @navigate="handleNavigate"
+              @search="handleSearch"
+              @ocl-blocked="handleOclBlocked"
+              :error="getFeatureError(feature)"
+              :validChildClasses="getValidChildClasses(feature)"
+              :availableObjects="getAvailableObjects(feature)"
+              :rootPackage="rootPackage"
+              :oclFilter="getOclFilter(feature)"
+              :problemsService="problemsService"
+            />
+          </Fieldset>
         </div>
-      </Fieldset>
 
-      <!-- Derived Values -->
-      <Fieldset v-if="hasDerivedFeatures" legend="Derived Values" :toggleable="true" class="properties-fieldset">
-        <div class="fields-grid">
+        <!-- Derived Values -->
+        <div v-if="hasDerivedFeatures" class="section-group">
+          <div class="section-heading">Derived Values</div>
           <!-- Ecore-defined derived features -->
-          <DerivedField
+          <Fieldset
             v-for="feature in derivedAttributeFeatures"
             :key="feature.getName()"
-            :feature="feature"
-            :eObject="selectedObject!"
-            :problemsService="problemsService"
-            @navigate="handleNavigate"
-          />
-          <DerivedField
+            :legend="getFeatureDisplayName(feature)"
+            :toggleable="true"
+            class="property-fieldset"
+          >
+            <DerivedField
+              :feature="feature"
+              :eObject="selectedObject!"
+              :problemsService="problemsService"
+              @navigate="handleNavigate"
+            />
+          </Fieldset>
+          <Fieldset
             v-for="feature in derivedReferenceFeatures"
             :key="feature.getName()"
-            :feature="feature"
-            :eObject="selectedObject!"
-            :problemsService="problemsService"
-            @navigate="handleNavigate"
-          />
+            :legend="getFeatureDisplayName(feature)"
+            :toggleable="true"
+            class="property-fieldset"
+          >
+            <DerivedField
+              :feature="feature"
+              :eObject="selectedObject!"
+              :problemsService="problemsService"
+              @navigate="handleNavigate"
+            />
+          </Fieldset>
           <!-- C-OCL-only derived features -->
           <CoclDerivedField
             v-for="constraint in coclDerivedConstraints"
@@ -1034,23 +1270,23 @@ function handleCancelParameterDialog() {
             @navigate="handleNavigate"
           />
         </div>
-      </Fieldset>
 
-      <!-- Operations -->
-      <Fieldset v-if="hasOperations" legend="Operations" :toggleable="true" class="properties-fieldset">
-        <div class="operations-list">
-          <OperationField
-            v-for="(op, idx) in operations"
-            :key="getElementName(op) + '-' + idx"
-            :operation="op"
-            :eObject="selectedObject!"
-            :problemsService="problemsService"
-            :autoExecute="false"
-            @navigate="handleNavigate"
-            @open-parameter-dialog="handleOpenParameterDialog"
-          />
+        <!-- Operations -->
+        <div v-if="hasOperations" class="section-group">
+          <div class="section-heading">Operations</div>
+          <div class="operations-list">
+            <OperationField
+              v-for="(op, idx) in operations"
+              :key="getElementName(op) + '-' + idx"
+              :operation="op"
+              :eObject="selectedObject!"
+              :problemsService="problemsService"
+              :autoExecute="false"
+              @navigate="handleNavigate"
+              @open-parameter-dialog="handleOpenParameterDialog"
+            />
+          </div>
         </div>
-      </Fieldset>
     </div>
 
     <!-- Operation Parameter Dialog -->
@@ -1126,19 +1362,22 @@ function handleCancelParameterDialog() {
 
 .object-info {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.5rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--surface-border);
+  padding: 0.5rem 0;
+  margin-bottom: 0.25rem;
+  border-bottom: 2px solid var(--surface-border);
 }
 
 .class-name {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 1rem;
   color: var(--primary-color);
 }
 
 .instance-name {
   color: var(--text-color-secondary);
+  font-size: 0.875rem;
 }
 
 .dirty-indicator {
@@ -1151,22 +1390,30 @@ function handleCancelParameterDialog() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.25rem 0;
-  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  background: color-mix(in srgb, var(--surface-ground) 50%, transparent);
+  border-radius: 4px;
+  margin-bottom: 0.25rem;
 }
 
 .xmi-id-label {
   color: var(--text-color-secondary);
-  font-weight: 500;
-  min-width: 50px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  min-width: 55px;
 }
 
 .xmi-id-value {
   font-family: monospace;
+  font-size: 0.8rem;
   color: var(--text-color);
   background: var(--surface-ground);
-  padding: 0.15rem 0.4rem;
-  border-radius: var(--border-radius);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid color-mix(in srgb, var(--surface-border) 50%, transparent);
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1226,14 +1473,31 @@ function handleCancelParameterDialog() {
   color: var(--text-color-secondary);
 }
 
-.properties-fieldset {
-  margin: 0;
+.section-group {
+  margin-bottom: 0.5rem;
 }
 
-.fields-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+.section-heading {
+  font-size: 0.7rem;
+  text-align: center;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-color-secondary);
+  padding: 0.75rem 0.5rem 0.25rem;
+  border-bottom: 1px solid transparent;
+  border-image: linear-gradient(
+    to right,
+    transparent,
+    color-mix(in srgb, var(--primary-color, #6366f1) 35%, transparent) 40%,
+    color-mix(in srgb, var(--primary-color, #6366f1) 35%, transparent) 60%,
+    transparent
+  ) 1;
+  margin-bottom: 1.25rem;
+}
+
+.property-fieldset {
+  margin: 1.25rem 0;
 }
 
 .operations-list {
@@ -1245,24 +1509,28 @@ function handleCancelParameterDialog() {
 /* PrimeVue 4 Fieldset Styles */
 :deep(.p-fieldset) {
   background: var(--surface-card);
-  border-radius: var(--border-radius);
+  border-radius: 6px;
   border: 1px solid var(--surface-border);
 }
 
 :deep(.p-fieldset-legend) {
   font-weight: 600;
-  font-size: 0.875rem;
-  padding: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.35rem 0.75rem;
   border: 1px solid var(--surface-border);
-  border-radius: var(--border-radius);
+  border-radius: 6px;
   background: var(--surface-ground);
+  color: var(--text-color-secondary);
 }
 
 :deep(.p-fieldset-content) {
-  padding: 0.75rem;
+  padding: 0.25rem 0.5rem;
 }
 
 :deep(.p-fieldset-toggle-icon) {
   margin-right: 0.5rem;
+  font-size: 0.75rem;
 }
 </style>

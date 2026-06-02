@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="actionapi" nsURI="http://gene/model/action/api/1.0.0"
+    nsPrefix="actionapi">
+
+  <!-- Enums -->
+  <eClassifiers xsi:type="ecore:EEnum" name="AuthMethod">
+    <eLiterals name="NONE"/>
+    <eLiterals name="OAUTH2_PKCE" value="1"/>
+    <eLiterals name="BEARER" value="2"/>
+    <eLiterals name="API_KEY" value="3"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="HttpMethod">
+    <eLiterals name="GET"/>
+    <eLiterals name="POST" value="1"/>
+    <eLiterals name="PUT" value="2"/>
+    <eLiterals name="DELETE" value="3"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="MediaType">
+    <eLiterals name="APPLICATION_XMI"/>
+    <eLiterals name="APPLICATION_JSON" value="1"/>
+    <eLiterals name="TEXT_PLAIN" value="2"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="JobState">
+    <eLiterals name="QUEUED"/>
+    <eLiterals name="RUNNING" value="1"/>
+    <eLiterals name="COMPLETED" value="2"/>
+    <eLiterals name="FAILED" value="3"/>
+    <eLiterals name="CANCELED" value="4"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="ParameterType">
+    <eLiterals name="STRING"/>
+    <eLiterals name="INTEGER" value="1"/>
+    <eLiterals name="BOOLEAN" value="2"/>
+    <eLiterals name="ENUM" value="3"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="LogLevel">
+    <eLiterals name="INFO"/>
+    <eLiterals name="WARN" value="1"/>
+    <eLiterals name="ERROR" value="2"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="ResultStatus">
+    <eLiterals name="SUCCESS"/>
+    <eLiterals name="WARNING" value="1"/>
+    <eLiterals name="ERROR" value="2"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="ArtifactType">
+    <eLiterals name="XMI"/>
+    <eLiterals name="JSON" value="1"/>
+    <eLiterals name="FILE" value="2"/>
+    <eLiterals name="VALIDATION_MESSAGES" value="3"/>
+    <eLiterals name="MARKDOWN" value="4"/>
+  </eClassifiers>
+
+  <!-- ServiceAuthConfig — OAuth2/Auth configuration advertised by the server -->
+  <eClassifiers xsi:type="ecore:EClass" name="ServiceAuthConfig">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="authMethod"
+        eType="#//AuthMethod"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="authorizationEndpoint"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="tokenEndpoint"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="logoutEndpoint"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="clientId"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scopes"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="issuer"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- ServiceCapabilities (Root) -->
+  <eClassifiers xsi:type="ecore:EClass" name="ServiceCapabilities">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="version"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="endpoints" upperBound="-1"
+        eType="#//Endpoint" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="jobManagement"
+        eType="#//JobManagement" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="authConfig"
+        eType="#//ServiceAuthConfig" containment="true"/>
+  </eClassifiers>
+
+  <!-- Endpoint -->
+  <eClassifiers xsi:type="ecore:EClass" name="Endpoint">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="path"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="httpMethod"
+        eType="#//HttpMethod"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="inputType"
+        eType="#//MediaType"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="outputType"
+        eType="#//MediaType"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="asyncSupported"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="parameters" upperBound="-1"
+        eType="#//EndpointParameter" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="category"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- EndpointParameter -->
+  <eClassifiers xsi:type="ecore:EClass" name="EndpointParameter">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="type"
+        eType="#//ParameterType"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="required"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="defaultValue"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- JobManagement -->
+  <eClassifiers xsi:type="ecore:EClass" name="JobManagement">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="statusEndpoint"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="cancelEndpoint"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="resultEndpoint"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="pollIntervalMs"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="maxJobDurationMs"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+  </eClassifiers>
+
+  <!-- JobStatus — used for all job lifecycle responses -->
+  <eClassifiers xsi:type="ecore:EClass" name="JobStatus">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="jobId"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="status"
+        eType="#//JobState"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="progress"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="progressMessage"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="startedAt"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="logs" upperBound="-1"
+        eType="#//JobLogEntry" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="result"
+        eType="#//ActionResult" containment="true"/>
+  </eClassifiers>
+
+  <!-- JobLogEntry -->
+  <eClassifiers xsi:type="ecore:EClass" name="JobLogEntry">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="message"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="level"
+        eType="#//LogLevel"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="timestamp"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- ActionResult — embedded in JobStatus when COMPLETED -->
+  <eClassifiers xsi:type="ecore:EClass" name="ActionResult">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="resultStatus"
+        eType="#//ResultStatus"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="message"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="artifacts" upperBound="-1"
+        eType="#//Artifact" containment="true"/>
+    <!-- Server-proposed follow-up commands (require user approval) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="proposedActions" upperBound="-1"
+        eType="#//ProposedAction" containment="true"/>
+  </eClassifiers>
+
+  <!-- ProposedAction — a follow-up command suggested by the server -->
+  <eClassifiers xsi:type="ecore:EClass" name="ProposedAction">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="commandId"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="label"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="args"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="autoExecute"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+  </eClassifiers>
+
+  <!-- Artifact — a single result item -->
+  <eClassifiers xsi:type="ecore:EClass" name="Artifact">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="artifactType"
+        eType="#//ArtifactType"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="content"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="mimeType"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="validationMessages" upperBound="-1"
+        eType="#//ValidationMessage" containment="true"/>
+  </eClassifiers>
+
+  <!-- ValidationMessage -->
+  <eClassifiers xsi:type="ecore:EClass" name="ValidationMessage">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="severity"
+        eType="#//LogLevel"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="message"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="objectUri"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="className"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="featureName"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+</ecore:EPackage>

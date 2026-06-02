@@ -18,9 +18,9 @@ import { FennecuiPackage } from './FennecuiPackage';
  */
 export class InternalActionImpl extends AbstractActionImpl implements InternalAction {
   // Feature ID Constants (eLiterals)
-  static readonly HANDLER_ID: number = 16;
-  static readonly EXECUTION_ENVIRONMENT: number = 17;
-  static readonly TIMEOUT_MS: number = 18;
+  static readonly HANDLER_ID: number = 19;
+  static readonly EXECUTION_ENVIRONMENT: number = 20;
+  static readonly TIMEOUT_MS: number = 21;
 
   // Private fields
   private _handlerId?: string;

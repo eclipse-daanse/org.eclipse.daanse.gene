@@ -18,6 +18,78 @@ export function isFileSystemAccessSupported(): boolean {
   return 'showDirectoryPicker' in window
 }
 
+// ─── IndexedDB Handle Persistence ─────────────────────────────────
+// FileSystemDirectoryHandle can be stored in IndexedDB and restored
+// across browser sessions. On restore, requestPermission() is needed.
+
+const IDB_NAME = 'gene-fs-handles'
+const IDB_STORE = 'handles'
+const IDB_VERSION = 1
+
+function openHandleDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION)
+    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE)
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+async function persistHandle(key: string, handle: FileSystemDirectoryHandle, name: string): Promise<void> {
+  const db = await openHandleDB()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite')
+    tx.objectStore(IDB_STORE).put({ handle, name }, key)
+    tx.oncomplete = () => { db.close(); resolve() }
+    tx.onerror = () => { db.close(); reject(tx.error) }
+  })
+}
+
+async function loadPersistedHandles(): Promise<Array<{ key: string; handle: FileSystemDirectoryHandle; name: string }>> {
+  try {
+    const db = await openHandleDB()
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readonly')
+      const store = tx.objectStore(IDB_STORE)
+      const req = store.getAllKeys()
+      req.onsuccess = () => {
+        const keys = req.result as string[]
+        const results: Array<{ key: string; handle: FileSystemDirectoryHandle; name: string }> = []
+        let pending = keys.length
+        if (pending === 0) { db.close(); resolve([]); return }
+        for (const key of keys) {
+          const getReq = store.get(key)
+          getReq.onsuccess = () => {
+            if (getReq.result?.handle) {
+              results.push({ key: key as string, handle: getReq.result.handle, name: getReq.result.name || '' })
+            }
+            if (--pending === 0) { db.close(); resolve(results) }
+          }
+          getReq.onerror = () => { if (--pending === 0) { db.close(); resolve(results) } }
+        }
+      }
+      req.onerror = () => { db.close(); reject(req.error) }
+    })
+  } catch { return [] }
+}
+
+export async function loadPersistedHandleNames(): Promise<Array<{ key: string; name: string }>> {
+  const handles = await loadPersistedHandles()
+  return handles.map(h => ({ key: h.key, name: h.name || h.handle.name || 'Unknown' }))
+}
+
+async function removePersistedHandle(key: string): Promise<void> {
+  try {
+    const db = await openHandleDB()
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite')
+      tx.objectStore(IDB_STORE).delete(key)
+      tx.oncomplete = () => { db.close(); resolve() }
+      tx.onerror = () => { db.close(); resolve() }
+    })
+  } catch { /* ignore */ }
+}
+
 /**
  * Composable for unified file system access
  */
@@ -55,9 +127,23 @@ export function useFileSystem() {
 
     try {
       const handle = await window.showDirectoryPicker({ mode: 'readwrite' })
+      const dirName = name || handle.name
+
+      // Check if same directory is already mounted
+      const existing = sources.value.find(s => s.type === 'local' && s.name === dirName)
+      if (existing) {
+        // Update handle and refresh
+        existing.data = { handle }
+        existing.connected = true
+        await refreshSource(existing.id)
+        persistHandle(existing.id, handle, dirName).catch(() => {})
+        return existing
+      }
+
+      const sourceId = `local-${Date.now()}`
       const source: FileSource = {
-        id: `local-${Date.now()}`,
-        name: name || handle.name,
+        id: sourceId,
+        name: dirName,
         type: 'local',
         icon: getSourceIcon('local'),
         connected: true,
@@ -66,6 +152,10 @@ export function useFileSystem() {
 
       sources.value.push(source)
       await refreshSource(source.id)
+
+      // Persist handle for restore on next session
+      persistHandle(sourceId, handle, source.name).catch(() => {})
+
       return source
     } catch (e: any) {
       if (e.name === 'AbortError') {
@@ -142,6 +232,7 @@ export function useFileSystem() {
       sources.value.splice(idx, 1)
       filesBySource.delete(sourceId)
       loadingBySource.delete(sourceId)
+      removePersistedHandle(sourceId).catch(() => {})
       return true
     }
     return false
@@ -698,6 +789,63 @@ export function useFileSystem() {
     return allFiles
   })
 
+  /**
+   * Restore previously opened local directories from IndexedDB.
+   * Requests permission for each stored handle — if denied, the source is skipped.
+   */
+  async function restoreLocalSources(): Promise<number> {
+    if (!isFileSystemAccessSupported()) return 0
+
+    const persisted = await loadPersistedHandles()
+    let restored = 0
+
+    // Deduplicate: keep only the latest entry per handle name
+    const seen = new Map<string, typeof persisted[0]>()
+    for (const entry of persisted) {
+      const existing = seen.get(entry.name)
+      if (existing) {
+        // Remove older duplicate from IndexedDB
+        removePersistedHandle(existing.key).catch(() => {})
+      }
+      seen.set(entry.name, entry)
+    }
+    const deduped = Array.from(seen.values())
+
+    for (const { key, handle, name } of deduped) {
+      try {
+        // Skip if already loaded
+        if (sources.value.some(s => s.id === key || s.name === name)) continue
+
+        // Request permission (may show a browser prompt)
+        const perm = await (handle as any).requestPermission({ mode: 'readwrite' })
+        if (perm !== 'granted') {
+          console.warn(`[FileSystem] Permission denied for "${name}", removing persisted handle`)
+          removePersistedHandle(key).catch(() => {})
+          continue
+        }
+
+        const source: FileSource = {
+          id: key,
+          name: name || handle.name,
+          type: 'local',
+          icon: getSourceIcon('local'),
+          connected: true,
+          data: { handle }
+        }
+
+        sources.value.push(source)
+        await refreshSource(source.id)
+        restored++
+        console.log(`[FileSystem] Restored local source: ${source.name}`)
+      } catch (e) {
+        console.warn(`[FileSystem] Failed to restore "${name}":`, e)
+        removePersistedHandle(key).catch(() => {})
+      }
+    }
+
+    return restored
+  }
+
   async function openDirectory(): Promise<boolean> {
     const source = await addLocalSource()
     return source !== null
@@ -737,6 +885,9 @@ export function useFileSystem() {
 
     // Selected file
     selectedFile,
+
+    // Restore persisted local directories
+    restoreLocalSources,
 
     // Legacy compatibility
     rootHandle,

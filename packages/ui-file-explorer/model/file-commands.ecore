@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="filecommands" nsURI="http://gene/commands/file-explorer/1.0.0"
+    nsPrefix="filecommands">
+
+  <eClassifiers xsi:type="ecore:EClass" name="FileCommands"
+      eSuperTypes="command-model.ecore#//CommandInterface">
+
+    <eOperations name="openFile">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="file-explorer.openFile"/>
+        <details key="label" value="Open File"/>
+        <details key="category" value="FILE"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-file"/>
+      </eAnnotations>
+      <eParameters name="path" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+    </eOperations>
+
+    <eOperations name="saveFile">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="file-explorer.saveFile"/>
+        <details key="label" value="Save File"/>
+        <details key="category" value="FILE"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="keybinding" value="Ctrl+S"/>
+        <details key="icon" value="pi pi-save"/>
+        <details key="when" value="hasWorkspace"/>
+      </eAnnotations>
+    </eOperations>
+
+    <eOperations name="saveAllFiles">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="file-explorer.saveAllFiles"/>
+        <details key="label" value="Save All Files"/>
+        <details key="category" value="FILE"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="keybinding" value="Ctrl+Shift+S"/>
+        <details key="icon" value="pi pi-save"/>
+        <details key="when" value="hasWorkspace"/>
+      </eAnnotations>
+    </eOperations>
+
+  </eClassifiers>
+</ecore:EPackage>

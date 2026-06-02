@@ -86,6 +86,20 @@ export async function activate(context: ModuleContext): Promise<void> {
     context.log.info('Transformation activity registered')
   }
 
+  // Register menu for transformation perspective
+  const menuRegistry = context.services.get<any>('gene.menu.registry')
+  if (menuRegistry) {
+    const eb = context.services.get<any>('gene.eventbus')
+    menuRegistry.registerMenu('transformation', [
+      { id: 'tr.new', icon: 'pi pi-file', label: 'New Transformation', action: () => eb?.emit('transformation:new') },
+      { id: 'tr.save', icon: 'pi pi-save', label: 'Save as .qvtr', action: () => eb?.emit('transformation:save') },
+      { id: 'tr.sep1', separator: true, icon: '', label: '', action: () => {} },
+      { id: 'tr.automap', icon: 'pi pi-bolt', label: 'AutoMap', action: () => eb?.emit('transformation:automap') },
+      { id: 'tr.preview', icon: 'pi pi-eye', label: 'Toggle QVT-R Preview', action: () => eb?.emit('transformation:toggle-preview') },
+    ])
+    context.log.info('Transformation menu registered')
+  }
+
   context.log.info('Transformation plugin activated')
 }
 

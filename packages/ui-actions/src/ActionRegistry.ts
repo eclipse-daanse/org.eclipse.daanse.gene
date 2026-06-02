@@ -14,6 +14,12 @@ export class ActionRegistryImpl {
   private byPerspective = new Map<string, Set<string>>()
   private listeners = new Set<() => void>()
 
+  private keybindingService: any = null
+
+  setKeybindingService(svc: any): void {
+    this.keybindingService = svc
+  }
+
   register(action: RegisteredAction): void {
     const id = action.definition.actionId
     if (!id) {
@@ -23,7 +29,17 @@ export class ActionRegistryImpl {
 
     this.actions.set(id, action)
     this.indexAction(action)
-    console.log(`[ActionRegistry] Registered action: ${id} (${action.source})`)
+
+    // Auto-register keybinding if defined
+    const kb = action.definition.keybinding
+    if (kb && this.keybindingService) {
+      this.keybindingService.register({
+        keys: kb,
+        commandId: action.definition.handlerId || id
+      })
+    }
+
+    console.log(`[ActionRegistry] Registered action: ${id} (${action.source})${kb ? ` [${kb}]` : ''}`)
     this.notifyChange()
   }
 

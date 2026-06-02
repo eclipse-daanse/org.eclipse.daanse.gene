@@ -6,6 +6,7 @@
  */
 
 import type { ModuleContext } from '@eclipse-daanse/tsm'
+import perspectiveCommandsEcore from '../model/perspective-commands.ecore?raw'
 
 // Re-export types (legacy)
 export * from './types'
@@ -97,6 +98,38 @@ export async function activate(context: ModuleContext): Promise<void> {
     activities: context.services.get('gene.registry.activities'),
     perspectives: manager
   })
+
+  // Register commands from ecore (ui-actions loads after ui-perspectives, retry needed)
+  function registerPerspectiveCommands() {
+    const cr = context.services.get<any>('gene.command.registry')
+    const kb = context.services.get<any>('gene.keybindings')
+    if (!cr) return false
+
+    const cmds = cr.registerCommandsFromEcore(perspectiveCommandsEcore, 'ui-perspectives')
+    if (kb) kb.registerFromCommands(cmds)
+
+    cr.registerHandler('perspectives.switchPerspective', async (args: any) => {
+      const id = args?.id as string
+      if (id && manager) manager.switchTo(id)
+    })
+    cr.registerHandler('perspectives.toggleLeftSidebar', async () => {
+      const ls = context.services.get<any>('gene.layout.state')
+      if (ls?.togglePrimarySidebar) ls.togglePrimarySidebar()
+    })
+    cr.registerHandler('perspectives.toggleRightSidebar', async () => {
+      const ls = context.services.get<any>('gene.layout.state')
+      if (ls?.toggleSecondarySidebar) ls.toggleSecondarySidebar()
+    })
+    cr.registerHandler('perspectives.toggleBottomPanel', async () => {
+      const ls = context.services.get<any>('gene.layout.state')
+      if (ls?.togglePanelArea) ls.togglePanelArea()
+    })
+    context.log.info('Perspective commands registered')
+    return true
+  }
+  if (!registerPerspectiveCommands()) {
+    setTimeout(() => registerPerspectiveCommands(), 500)
+  }
 
   context.log.info('Perspectives module activated with DI registries')
 }

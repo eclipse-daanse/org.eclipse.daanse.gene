@@ -10,6 +10,7 @@ import { markRaw, h, render, watch } from 'tsm:vue'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
+import atlasCommandsEcore from '../model/atlas-commands.ecore?raw'
 
 /**
  * TSM lifecycle: activate
@@ -395,13 +396,39 @@ export async function activate(context: ModuleContext): Promise<void> {
         enabled: true,
         perspectiveIds: [],
         parameters: [],
-        returnTypes: ['VALIDATION_MESSAGES']
+        returnTypes: ['VALIDATION_MESSAGES'],
+        perspectiveIds: []
       },
       source: 'plugin',
       moduleId: 'atlas-browser'
     })
 
     context.log.info('Atlas validation action registered')
+
+    // Append Atlas items to model-editor menu
+    const menuRegistry = context.services.get<any>('gene.menu.registry')
+    if (menuRegistry) {
+      menuRegistry.appendMenu('model-editor', [
+        { id: 'sep.atlas', separator: true, icon: '', label: '', action: () => {} },
+        {
+          id: 'atlas.validate.toolbar',
+          icon: 'pi pi-cloud-upload',
+          label: 'Validate on Atlas Server',
+          action: async () => {
+            const actionManager = context.services.get<any>('gene.action.manager')
+            if (actionManager) {
+              await actionManager.execute('atlas.validate', {
+                selectedObject: null,
+                selectedObjects: [],
+                perspectiveId: 'model-editor',
+                timestamp: new Date()
+              })
+            }
+          }
+        }
+      ])
+      context.log.info('Atlas menu items appended to model-editor')
+    }
   }
 
   // Listen for workspace loaded event to auto-connect Atlas connections
@@ -438,6 +465,15 @@ export async function activate(context: ModuleContext): Promise<void> {
       }
     }
   })
+
+  // Register commands from ecore
+  const commandRegistry = context.services.get<any>('gene.command.registry')
+  const keybindingSvc = context.services.get<any>('gene.keybindings')
+  if (commandRegistry) {
+    const cmds = commandRegistry.registerCommandsFromEcore(atlasCommandsEcore, 'atlas-browser')
+    if (keybindingSvc) keybindingSvc.registerFromCommands(cmds)
+    context.log.info('Atlas commands registered')
+  }
 
   context.log.info('Atlas Browser plugin activated')
 }

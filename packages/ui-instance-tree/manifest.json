@@ -17,6 +17,7 @@
   "dependencies": [
     "gene-app",
     "ui-layout",
-    "ui-perspectives"
+    "ui-perspectives",
+    "ui-actions"
   ]
 }

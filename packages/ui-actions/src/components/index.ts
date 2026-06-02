@@ -1,2 +1,6 @@
 export { default as EventMappingEditor } from './EventMappingEditor.vue'
 export { default as ActionEditor } from './ActionEditor.vue'
+export { default as JobsPanel } from './JobsPanel.vue'
+export { default as CommandPalette } from './CommandPalette.vue'
+export { default as ActionApprovalDialog } from './ActionApprovalDialog.vue'
+export { default as XmiImportDialog } from './XmiImportDialog.vue'

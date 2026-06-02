@@ -10,7 +10,7 @@
  * Workspace files (.wsp, .xmi) are highlighted and can be opened.
  */
 
-import { ref, computed, inject } from 'tsm:vue'
+import { ref, computed, inject, onMounted, onUnmounted } from 'tsm:vue'
 import { Tree } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
 import { Menu } from 'tsm:primevue'
@@ -18,6 +18,7 @@ import { Dialog } from 'tsm:primevue'
 import { InputText } from 'tsm:primevue'
 import { Message } from 'tsm:primevue'
 import { useSharedFileSystem } from '../composables/useFileSystem'
+import { addRecentWorkspace } from '../composables/useRecentWorkspaces'
 import type { FileEntry, FileTreeNode, FileSource } from '../types'
 import { isWorkspaceFile } from '../types'
 
@@ -307,6 +308,14 @@ async function handleNodeDoubleClick(node: FileTreeNode) {
       const content = await fileSystem.readTextFile(entry)
       if (content) {
         getActions()?.openWorkspace(entry, content)
+        // Track as recent workspace
+        const source = fileSystem.getSource(entry.sourceId)
+        addRecentWorkspace({
+          name: entry.name,
+          filePath: entry.path,
+          sourceId: entry.sourceId,
+          sourceName: source?.name || ''
+        })
       }
     } catch (e) {
       console.error('[FileExplorer] Failed to read workspace file:', e)
@@ -773,35 +782,22 @@ async function handleLoadDmn() {
 function toggleAddMenu(event: Event) {
   addMenu.value?.toggle(event)
 }
+
+onMounted(() => {
+  const eb = tsm?.getService('gene.eventbus')
+  eb?.on?.('explorer:add-source', toggleAddMenu)
+  eb?.on?.('explorer:refresh-all', handleRefreshAll)
+})
+
+onUnmounted(() => {
+  const eb = tsm?.getService('gene.eventbus')
+  eb?.off?.('explorer:add-source', toggleAddMenu)
+  eb?.off?.('explorer:refresh-all', handleRefreshAll)
+})
 </script>
 
 <template>
   <div class="file-explorer">
-    <!-- Header -->
-    <div class="explorer-header">
-      <span class="header-title">Explorer</span>
-      <div class="header-actions">
-        <Button
-          icon="pi pi-plus"
-          text
-          rounded
-          size="small"
-          @click="toggleAddMenu"
-          v-tooltip.bottom="'Add Source'"
-          aria-haspopup="true"
-        />
-        <Button
-          v-if="hasSources"
-          icon="pi pi-refresh"
-          text
-          rounded
-          size="small"
-          @click="handleRefreshAll"
-          v-tooltip.bottom="'Refresh All'"
-        />
-      </div>
-    </div>
-
     <!-- API not supported message -->
     <Message v-if="!fileSystem.isSupported()" severity="warn" :closable="false" class="api-warning">
       File System Access API is not supported in this browser.
@@ -830,6 +826,7 @@ function toggleAddMenu(event: Event) {
         size="small"
         @click="toggleAddMenu"
       />
+
     </div>
 
     <!-- File tree with sources -->
@@ -1060,26 +1057,6 @@ function toggleAddMenu(event: Event) {
   background: var(--surface-ground);
 }
 
-.explorer-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--surface-border);
-  background: var(--surface-section);
-}
-
-.header-title {
-  font-weight: 600;
-  font-size: 0.875rem;
-  text-transform: uppercase;
-  color: var(--text-color-secondary);
-}
-
-.header-actions {
-  display: flex;
-  gap: 0.25rem;
-}
 
 .header-actions :deep(.p-button) {
   width: 28px;
