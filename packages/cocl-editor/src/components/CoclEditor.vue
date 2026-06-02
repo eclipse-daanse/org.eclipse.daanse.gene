@@ -76,15 +76,16 @@ const showClassSearch = ref(false)
 // Get the metamodel Resource for the SearchDialog
 const metamodelResource = computed(() => {
   const targetURIs = constraintSet.value?.targetModelNsURIs || []
-  // Try to find a package matching the targetNsURIs first
-  for (const pkgInfo of modelRegistry.allPackages.value) {
+  const userPkgs = modelRegistry.userPackages?.value ?? []
+  // Try to find a user package matching the targetNsURIs first
+  for (const pkgInfo of userPkgs) {
     if (targetURIs.includes(pkgInfo.nsURI)) {
       const resource = pkgInfo.ePackage.eResource?.()
       if (resource) return resource
     }
   }
-  // Fallback: first available package's resource
-  for (const pkgInfo of modelRegistry.allPackages.value) {
+  // Fallback: first available user package's resource
+  for (const pkgInfo of userPkgs) {
     const resource = pkgInfo.ePackage.eResource?.()
     if (resource) return resource
   }
