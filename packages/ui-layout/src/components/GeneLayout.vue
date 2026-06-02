@@ -104,17 +104,9 @@ const secondarySidebarStyle = computed(() => {
 // Panel area - show small drop zone even when empty
 const panelAreaStyle = computed(() => {
   const hasTabs = layout.state.panelTabs.length > 0
-  if (!layout.state.visibility.panelArea || !hasTabs) {
-    // Hidden or empty: show thin drop zone (24px)
-    return {
-      height: '24px',
-      display: 'flex'
-    }
-  }
-  return {
-    height: `${layout.state.dimensions.panelAreaHeight}px`,
-    display: 'flex'
-  }
+  if (!hasTabs) return { height: '0px', display: 'none' }
+  if (!layout.state.visibility.panelArea) return { height: '0px', display: 'none' }
+  return { height: `${layout.state.dimensions.panelAreaHeight}px`, display: 'flex' }
 })
 
 // Resize handlers
