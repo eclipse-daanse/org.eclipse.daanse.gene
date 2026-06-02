@@ -72,7 +72,7 @@ const openFileTitle = tsm?.getService('gene.layout.openFile')
 const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
 
 const packageOptions = computed(() =>
-  modelRegistry.allPackages.value.map(pkg => ({
+  modelRegistry.userPackages.value.map(pkg => ({
     label: `${pkg.name} (${pkg.nsPrefix})`,
     value: pkg.nsURI
   }))
@@ -114,12 +114,12 @@ const targetClassInfos = computed(() =>
 
 const sourcePackage = computed<ModelPackageInfo | null>(() => {
   if (!selectedSourceURI.value) return null
-  return modelRegistry.allPackages.value.find(p => p.nsURI === selectedSourceURI.value) ?? null
+  return modelRegistry.userPackages.value.find(p => p.nsURI === selectedSourceURI.value) ?? null
 })
 
 const targetPackage = computed<ModelPackageInfo | null>(() => {
   if (!selectedTargetURI.value) return null
-  return modelRegistry.allPackages.value.find(p => p.nsURI === selectedTargetURI.value) ?? null
+  return modelRegistry.userPackages.value.find(p => p.nsURI === selectedTargetURI.value) ?? null
 })
 
 // --- Computed: Class trees ---
