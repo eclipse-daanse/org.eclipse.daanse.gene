@@ -10,7 +10,6 @@ export { ActionApiPackage } from './ActionApiPackage';
 export { ActionApiFactory } from './ActionApiFactory';
 
 // Interfaces
-export type { ServiceAuthConfig } from './ServiceAuthConfig';
 export type { ServiceCapabilities } from './ServiceCapabilities';
 export type { Endpoint } from './Endpoint';
 export type { EndpointParameter } from './EndpointParameter';
@@ -23,7 +22,6 @@ export type { Artifact } from './Artifact';
 export type { ValidationMessage } from './ValidationMessage';
 
 // Implementations
-export { ServiceAuthConfigImpl } from './ServiceAuthConfigImpl';
 export { ServiceCapabilitiesImpl } from './ServiceCapabilitiesImpl';
 export { EndpointImpl } from './EndpointImpl';
 export { EndpointParameterImpl } from './EndpointParameterImpl';
@@ -36,7 +34,6 @@ export { ArtifactImpl } from './ArtifactImpl';
 export { ValidationMessageImpl } from './ValidationMessageImpl';
 
 // Enums
-export { AuthMethod, getAuthMethod, getAuthMethodByLiteral } from './AuthMethod';
 export { HttpMethod, getHttpMethod, getHttpMethodByLiteral } from './HttpMethod';
 export { MediaType, getMediaType, getMediaTypeByLiteral } from './MediaType';
 export { JobState, getJobState, getJobStateByLiteral } from './JobState';

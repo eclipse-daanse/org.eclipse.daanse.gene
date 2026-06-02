@@ -8,8 +8,6 @@
 import { BasicEFactory } from '@emfts/core';
 import type { EClass, EObject } from '@emfts/core';
 import { ActionApiPackage } from './ActionApiPackage';
-import type { ServiceAuthConfig } from './ServiceAuthConfig';
-import { ServiceAuthConfigImpl } from './ServiceAuthConfigImpl';
 import type { ServiceCapabilities } from './ServiceCapabilities';
 import { ServiceCapabilitiesImpl } from './ServiceCapabilitiesImpl';
 import type { Endpoint } from './Endpoint';
@@ -42,13 +40,6 @@ export class ActionApiFactory extends BasicEFactory {
   private constructor() {
     super();
     this.setEPackage(ActionApiPackage.eINSTANCE);
-  }
-
-  /**
-   * Create a new ServiceAuthConfig instance
-   */
-  createServiceAuthConfig(): ServiceAuthConfig {
-    return new ServiceAuthConfigImpl();
   }
 
   /**
@@ -126,8 +117,6 @@ export class ActionApiFactory extends BasicEFactory {
    */
   override create(eClass: EClass): EObject {
     switch (eClass.getName()) {
-      case 'ServiceAuthConfig':
-        return this.createServiceAuthConfig();
       case 'ServiceCapabilities':
         return this.createServiceCapabilities();
       case 'Endpoint':
