@@ -6,8 +6,12 @@
  */
 import { defineConfig } from 'vite'
 import { resolve } from 'path'
+import { tsmPlugin } from '@eclipse-daanse/tsm/vite'
 
 export default defineConfig({
+  plugins: [
+    tsmPlugin({ sharedModules: ['@eclipse-daanse/tsm'] })
+  ],
   build: {
     target: 'esnext',
     minify: false,
