@@ -474,6 +474,10 @@ export function useModelRegistry() {
     return Array.from(state.packages.values())
   })
 
+  const userPackages = computed((): ModelPackageInfo[] => {
+    return Array.from(state.packages.values()).filter(p => !p.isBuiltIn)
+  })
+
   /**
    * Get concrete (non-abstract, non-interface) classes from a package (including subpackages)
    */
@@ -931,6 +935,7 @@ export function useModelRegistry() {
   return {
     // State
     allPackages,
+    userPackages,
     treeNodes,
     isLoading: isLoadingModel,
     loadingName: loadingModelName,
