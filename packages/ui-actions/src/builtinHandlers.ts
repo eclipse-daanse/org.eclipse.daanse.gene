@@ -3,6 +3,7 @@
  */
 
 import type { ActionHandler, HandlerContext, ActionResult } from './types'
+import { XMIResource } from '@emfts/core'
 
 /** Export selected object as XMI string */
 export const exportXmiHandler: ActionHandler = {
@@ -14,7 +15,6 @@ export const exportXmiHandler: ActionHandler = {
 
     try {
       // Use emfts serializer
-      const { XMIResource } = await import('@emfts/core')
       const resource = new XMIResource()
       resource.getContents().push(obj)
       const xmiContent = resource.saveToString()

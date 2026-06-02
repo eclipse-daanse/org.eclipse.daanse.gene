@@ -23,7 +23,7 @@
 
       <div v-if="filteredCommands.length > 0" class="command-palette-list">
         <div
-          v-for="(group, idx) in groupedCommands"
+          v-for="group in groupedCommands"
           :key="group.category"
         >
           <div class="command-palette-category">{{ group.category }}</div>

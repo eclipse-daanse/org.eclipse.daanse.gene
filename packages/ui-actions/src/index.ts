@@ -10,6 +10,7 @@
  */
 
 import type { ModuleContext } from '@eclipse-daanse/tsm'
+import { EPackageRegistry } from '@emfts/core'
 import { markRaw, watch, defineComponent, h, computed } from 'tsm:vue'
 import { ActionRegistryImpl } from './ActionRegistry'
 import { ActionManagerImpl } from './ActionManager'
@@ -58,8 +59,7 @@ export async function activate(context: ModuleContext): Promise<void> {
   // Register EPackages for XMI parsing
   initActionApiPackage()
   // Register ActionsPluginConfig EPackage so xsi:type resolves in config.xmi
-  const { EPackageRegistry } = await import('@emfts/core')
-  EPackageRegistry.INSTANCE.set(ActionsPluginPackage.eNS_URI, ActionsPluginPackage.eINSTANCE)
+EPackageRegistry.INSTANCE.set(ActionsPluginPackage.eNS_URI, ActionsPluginPackage.eINSTANCE)
 
   // Bind core services via DI
   context.services.bindClass('gene.action.registry', ActionRegistryImpl)

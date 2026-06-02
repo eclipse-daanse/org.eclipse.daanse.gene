@@ -8,7 +8,6 @@
 
 import { ref, computed, onMounted, onUnmounted, reactive, inject, watch } from 'tsm:vue'
 import { InputText, Button, Dialog, Tree } from 'tsm:primevue'
-import { ClassPickerDialog } from 'ui-model-browser'
 import type { CoclConstraint, CoclConstraintSet } from 'ui-problems-panel'
 import { serializeCoclToXml } from '../composables/useCoclSerializer'
 import { useCoclAtlas } from '../composables/useCoclAtlas'
@@ -21,6 +20,7 @@ const openFileTitle = _tsm?.getService('gene.layout.openFile')
 
 // Components and functions from other TSM modules (via service)
 const SearchDialog = computed(() => _tsm?.getService('ui.search.components')?.SearchDialog)
+const ClassPickerDialog = computed(() => _tsm?.getService('ui.model-browser.components')?.ClassPickerDialog)
 const loadCoclFromString = _tsm?.getService('ui.problems-panel.service')?.loadCoclFromString
 const getSharedOclClient = () => _tsm?.getService('ui.transformation.composables')?.getSharedOclClient?.()
 const atlas = useCoclAtlas(_tsm)
@@ -656,7 +656,9 @@ async function handleSelectServerConfig(cfg: any) {
   />
 
   <!-- Class Tree Picker Dialog -->
-  <ClassPickerDialog
+  <component
+    v-if="ClassPickerDialog"
+    :is="ClassPickerDialog"
     v-model:visible="showClassTree"
     header="Select Context Class"
     @select="handleClassTreeSelect"
