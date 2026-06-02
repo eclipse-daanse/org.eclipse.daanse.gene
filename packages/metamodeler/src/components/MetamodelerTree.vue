@@ -6,7 +6,7 @@
  * Displays EPackage, EClass, EAttribute, EReference, and OCL constraints.
  */
 
-import { ref, computed, watch, inject } from 'tsm:vue'
+import { ref, computed, watch, inject, onMounted, onUnmounted } from 'tsm:vue'
 import { Tree } from 'tsm:primevue'
 import type { TreeNode } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
@@ -26,6 +26,7 @@ const emit = defineEmits<{
 }>()
 
 const tsm = inject<any>('tsm')
+const openFileTitle = tsm?.getService('gene.layout.openFile')
 
 function getIconDataUrl(iconClass: string | undefined): string | undefined {
   if (!iconClass || !iconClass.startsWith('custom-icon custom-icon--')) return undefined
@@ -36,6 +37,19 @@ function getIconDataUrl(iconClass: string | undefined): string | undefined {
 }
 
 const metamodeler = useSharedMetamodeler()
+
+// Titel in TitleBar reaktiv aktualisieren
+watch(() => metamodeler.filePath.value, (fp) => {
+  if (openFileTitle) openFileTitle.value = fp ? (fp.split('/').pop() ?? fp) : (metamodeler.rootPackage.value?.getName() ? `${metamodeler.rootPackage.value.getName()}.ecore` : 'Neues Metamodell')
+}, { immediate: true })
+
+watch(() => metamodeler.rootPackage.value, (pkg) => {
+  if (!metamodeler.filePath.value && pkg) {
+    if (openFileTitle) openFileTitle.value = `${pkg.getName?.() ?? 'metamodel'}.ecore`
+  } else if (!pkg) {
+    if (openFileTitle) openFileTitle.value = null
+  }
+})
 
 // Tree state
 const selectedKey = ref<Record<string, boolean>>({})
@@ -380,6 +394,19 @@ async function handleSaveAs() {
   }
 }
 
+onMounted(() => {
+  const eb = tsm?.getService('gene.eventbus')
+  eb?.on?.('metamodeler:new-package', () => handleCreateInitialPackage())
+  eb?.on?.('metamodeler:export-json-schema', () => exportJsonSchema())
+})
+
+onUnmounted(() => {
+  const eb = tsm?.getService('gene.eventbus')
+  eb?.off?.('metamodeler:new-package', handleCreateInitialPackage)
+  eb?.off?.('metamodeler:export-json-schema', exportJsonSchema)
+  if (openFileTitle) openFileTitle.value = null
+})
+
 async function exportJsonSchema() {
   const ePackage = metamodeler.rootPackage.value
   if (!ePackage) return
@@ -411,61 +438,6 @@ async function exportJsonSchema() {
 
 <template>
   <div class="metamodeler-tree">
-    <!-- Header -->
-    <div class="tree-header">
-      <span class="header-title">
-        Metamodel
-        <span v-if="metamodeler.dirty.value" class="dirty-indicator">*</span>
-      </span>
-      <div class="header-actions">
-        <Button
-          v-if="!metamodeler.rootPackage.value"
-          icon="pi pi-plus"
-          text
-          rounded
-          size="small"
-          @click="handleCreateInitialPackage"
-          v-tooltip.bottom="'New Package'"
-        />
-        <Button
-          icon="pi pi-sitemap"
-          text
-          rounded
-          size="small"
-          :class="{ 'toggle-active': metamodeler.showSuperTypes.value }"
-          @click="metamodeler.showSuperTypes.value = !metamodeler.showSuperTypes.value"
-          v-tooltip.bottom="'Show Supertypes'"
-        />
-        <Button
-          icon="pi pi-save"
-          text
-          rounded
-          size="small"
-          :disabled="!metamodeler.rootPackage.value || !metamodeler.dirty.value"
-          @click="handleSave"
-          v-tooltip.bottom="'Save Metamodel'"
-        />
-        <Button
-          icon="pi pi-file-export"
-          text
-          rounded
-          size="small"
-          :disabled="!metamodeler.rootPackage.value"
-          @click="handleSaveAs"
-          v-tooltip.bottom="'Save As...'"
-        />
-        <Button
-          icon="pi pi-download"
-          text
-          rounded
-          size="small"
-          :disabled="!metamodeler.rootPackage.value"
-          @click="exportJsonSchema"
-          v-tooltip.bottom="'Export JSON Schema'"
-        />
-      </div>
-    </div>
-
     <!-- Empty state -->
     <div v-if="!metamodeler.rootPackage.value" class="empty-state">
       <i class="pi pi-box"></i>

@@ -6,8 +6,9 @@
  * a full-screen editor for .c-ocl constraint files.
  */
 
-import { ref, computed, onMounted, reactive, inject, watch } from 'tsm:vue'
+import { ref, computed, onMounted, onUnmounted, reactive, inject, watch } from 'tsm:vue'
 import { InputText, Button, Dialog, Tree } from 'tsm:primevue'
+import { ClassPickerDialog } from 'ui-model-browser'
 import type { CoclConstraint, CoclConstraintSet } from 'ui-problems-panel'
 import { serializeCoclToXml } from '../composables/useCoclSerializer'
 import { useCoclAtlas } from '../composables/useCoclAtlas'
@@ -16,6 +17,7 @@ import ConstraintForm from './ConstraintForm.vue'
 
 // TSM service access
 const _tsm = inject<any>('tsm')
+const openFileTitle = _tsm?.getService('gene.layout.openFile')
 
 // Components and functions from other TSM modules (via service)
 const SearchDialog = computed(() => _tsm?.getService('ui.search.components')?.SearchDialog)
@@ -74,15 +76,16 @@ const showClassSearch = ref(false)
 // Get the metamodel Resource for the SearchDialog
 const metamodelResource = computed(() => {
   const targetURIs = constraintSet.value?.targetModelNsURIs || []
-  // Try to find a package matching the targetNsURIs first
-  for (const pkgInfo of modelRegistry.allPackages.value) {
+  const userPkgs = modelRegistry.userPackages?.value ?? []
+  // Try to find a user package matching the targetNsURIs first
+  for (const pkgInfo of userPkgs) {
     if (targetURIs.includes(pkgInfo.nsURI)) {
       const resource = pkgInfo.ePackage.eResource?.()
       if (resource) return resource
     }
   }
-  // Fallback: first available package's resource
-  for (const pkgInfo of modelRegistry.allPackages.value) {
+  // Fallback: first available user package's resource
+  for (const pkgInfo of userPkgs) {
     const resource = pkgInfo.ePackage.eResource?.()
     if (resource) return resource
   }
@@ -141,83 +144,22 @@ function handleClassSearchSelect(hit: any) {
 
 // --- Class Tree Picker ---
 const showClassTree = ref(false)
-const classTreeExpandedKeys = ref<Record<string, boolean>>({})
-
-// Filter treeNodes to only show packages and classes (no attributes/references/enums)
-const classTreeNodes = computed(() => {
-  return filterClassNodes(modelRegistry.treeNodes.value)
-})
-
-function filterClassNodes(nodes: any[]): any[] {
-  return nodes
-    .map(node => {
-      if (node.type === 'class') {
-        // Class nodes are leaf in this tree (no need to show attributes/refs)
-        return { ...node, children: undefined, leaf: true, selectable: true }
-      }
-      if (node.type === 'package' || node.type === 'subpackage') {
-        const filteredChildren = filterClassNodes(node.children || [])
-        if (filteredChildren.length === 0) return null
-        return { ...node, children: filteredChildren, leaf: false, selectable: false }
-      }
-      return null // Skip attributes, references, enums, constraints
-    })
-    .filter(Boolean)
-}
 
 function handleOpenClassTree() {
-  // Auto-expand all packages
-  const keys: Record<string, boolean> = {}
-  for (const node of modelRegistry.treeNodes.value) {
-    keys[node.key] = true
-    if (node.children) {
-      for (const child of node.children) {
-        if (child.type === 'package' || child.type === 'subpackage') {
-          keys[child.key] = true
-        }
-      }
-    }
-  }
-  classTreeExpandedKeys.value = keys
   showClassTree.value = true
 }
 
-function handleClassTreeSelect(node: any) {
-  if (node.type !== 'class') return
-
-  // Build qualified name from the EClass
-  const eClass = node.data?.eClass
-  if (!eClass) return
-
-  const name = eClass.getName?.()
-  if (!name) return
-
-  // Walk eContainer() chain to find EPackage with nsURI
-  let qualifiedName = name
-  let container = eClass.eContainer?.()
-  while (container) {
-    const nsURI = container.getNsURI?.()
-    if (nsURI) {
-      qualifiedName = `${nsURI}#//${name}`
-      break
-    }
-    const parent = container.eContainer?.()
-    if (!parent || parent === container) break
-    container = parent
-  }
-
-  // Update the selected constraint's contextClass
+function handleClassTreeSelect(selection: { eClass: any; qualifiedName: string }) {
   if (constraintSet.value && selectedConstraintName.value) {
     const idx = constraintSet.value.constraints.findIndex(c => c.name === selectedConstraintName.value)
     if (idx >= 0) {
       constraintSet.value.constraints[idx] = {
         ...constraintSet.value.constraints[idx],
-        contextClass: qualifiedName
+        contextClass: selection.qualifiedName
       }
       markDirty()
     }
   }
-  showClassTree.value = false
 }
 
 // Selected constraint (reactive copy)
@@ -329,6 +271,7 @@ onMounted(async () => {
 
   filePath = data.filePath || ''
   fileEntry = data.fileEntry || null
+  if (openFileTitle) openFileTitle.value = (filePath.split('/').pop() ?? filePath) || 'constraints.c-ocl'
 
   try {
     const parsed = await loadCoclFromString(data.content, filePath)
@@ -348,6 +291,25 @@ onMounted(async () => {
 
   // Register all loaded metamodel packages with the OCL LSP for autocompletion
   registerPackagesWithOcl()
+
+  const eb = _tsm?.getService('gene.eventbus')
+  eb?.on?.('cocl:new', handleNew)
+  eb?.on?.('cocl:save', handleSave)
+  eb?.on?.('cocl:save-as', handleSaveAs)
+  eb?.on?.('cocl:upload', handleUploadToServer)
+  eb?.on?.('cocl:load', handleLoadFromServer)
+  eb?.on?.('cocl:discard', handleDiscard)
+})
+
+onUnmounted(() => {
+  const eb = _tsm?.getService('gene.eventbus')
+  eb?.off?.('cocl:new', handleNew)
+  eb?.off?.('cocl:save', handleSave)
+  eb?.off?.('cocl:save-as', handleSaveAs)
+  eb?.off?.('cocl:upload', handleUploadToServer)
+  eb?.off?.('cocl:load', handleLoadFromServer)
+  eb?.off?.('cocl:discard', handleDiscard)
+  if (openFileTitle) openFileTitle.value = null
 })
 
 // Register metamodel packages with OCL LSP for autocompletion
@@ -382,6 +344,7 @@ function handleNew() {
   filePath = ''
   isDirty.value = true
   saveStatus.value = 'dirty'
+  if (openFileTitle) openFileTitle.value = 'Neue Constraints'
   registerPackagesWithOcl()
 }
 
@@ -507,6 +470,7 @@ async function handleSave() {
 
     isDirty.value = false
     saveStatus.value = 'saved'
+    if (openFileTitle && filePath) openFileTitle.value = filePath.split('/').pop() ?? filePath
   } catch (e) {
     console.error('[CoclEditor] Save failed:', e)
     saveStatus.value = 'error'
@@ -531,6 +495,7 @@ async function handleSaveAs() {
       await writable.write(xml)
       await writable.close()
       console.log('[CoclEditor] File saved via Save As')
+      if (openFileTitle) openFileTitle.value = handle.name ?? defaultName
     } catch (e: any) {
       if (e.name !== 'AbortError') {
         console.error('[CoclEditor] Save As failed:', e)
@@ -650,61 +615,6 @@ async function handleSelectServerConfig(cfg: any) {
           />
         </div>
       </div>
-      <div class="header-actions">
-        <Button
-          icon="pi pi-file"
-          severity="secondary"
-          size="small"
-          @click="handleNew"
-          title="New constraint file"
-          text
-        />
-        <span v-if="isDirty" class="unsaved-badge">Unsaved</span>
-        <Button
-          icon="pi pi-save"
-          severity="secondary"
-          size="small"
-          :disabled="!isDirty || saveStatus === 'saving'"
-          :loading="saveStatus === 'saving'"
-          @click="handleSave"
-          title="Save"
-          text
-        />
-        <Button
-          icon="pi pi-file-export"
-          severity="secondary"
-          size="small"
-          @click="handleSaveAs"
-          title="Save As..."
-          text
-        />
-        <Button
-          icon="pi pi-cloud-upload"
-          severity="secondary"
-          size="small"
-          @click="handleUploadToServer"
-          title="Upload to Server"
-          :loading="atlas.loading.value"
-          text
-        />
-        <Button
-          icon="pi pi-cloud-download"
-          severity="secondary"
-          size="small"
-          @click="handleLoadFromServer"
-          title="Load from Server"
-          text
-        />
-        <Button
-          icon="pi pi-undo"
-          severity="secondary"
-          size="small"
-          :disabled="!isDirty"
-          @click="handleDiscard"
-          title="Discard changes"
-          text
-        />
-      </div>
     </div>
 
     <!-- Main content area -->
@@ -746,40 +656,11 @@ async function handleSelectServerConfig(cfg: any) {
   />
 
   <!-- Class Tree Picker Dialog -->
-  <Dialog
+  <ClassPickerDialog
     v-model:visible="showClassTree"
     header="Select Context Class"
-    :modal="true"
-    :style="{ width: '480px' }"
-    :contentStyle="{ padding: 0 }"
-  >
-    <div class="class-tree-container">
-      <Tree
-        :value="classTreeNodes"
-        v-model:expandedKeys="classTreeExpandedKeys"
-        selectionMode="single"
-        @node-select="handleClassTreeSelect"
-        class="class-tree"
-      >
-        <template #default="{ node }">
-          <div
-            class="class-tree-node"
-            :class="{
-              'is-class': node.type === 'class',
-              'is-abstract': node.type === 'class' && node.data?.isAbstract,
-              'is-package': node.type === 'package' || node.type === 'subpackage'
-            }"
-          >
-            <span class="node-label">{{ node.label }}</span>
-            <span v-if="node.type === 'class' && node.data?.isAbstract" class="abstract-tag">abstract</span>
-          </div>
-        </template>
-      </Tree>
-      <div v-if="classTreeNodes.length === 0" class="class-tree-empty">
-        No metamodels loaded.
-      </div>
-    </div>
-  </Dialog>
+    @select="handleClassTreeSelect"
+  />
 
   <!-- Loading / empty state -->
   <div v-if="!constraintSet" class="cocl-editor-empty">

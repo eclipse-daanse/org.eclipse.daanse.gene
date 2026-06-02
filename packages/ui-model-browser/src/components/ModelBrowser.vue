@@ -44,6 +44,10 @@ const modelRegistry = useSharedModelRegistry()
 // TSM for service access
 const tsm = inject<any>('tsm')
 
+// Listen for events from sidebar header actions
+const eventBus = tsm?.getService('gene.eventbus')
+eventBus?.on?.('show-add-model-dialog', () => handleAddModel())
+
 // Get context: prop > global current context > null
 function getActiveContext(): EditorContext | null {
   if (props.context) return props.context
@@ -227,20 +231,6 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
 
 <template>
   <div class="model-browser">
-    <!-- Header -->
-    <div class="browser-header">
-      <span class="header-title">Models</span>
-      <div class="header-actions">
-        <Button
-          icon="pi pi-plus"
-          text
-          rounded
-          size="small"
-          @click="handleAddModel"
-          v-tooltip.bottom="'Add Model'"
-        />
-      </div>
-    </div>
 
     <!-- Empty state -->
     <div v-if="treeNodes.length === 0" class="empty-state">

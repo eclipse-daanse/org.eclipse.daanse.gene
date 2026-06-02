@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="perspectivecommands" nsURI="http://gene/commands/perspectives/1.0.0"
+    nsPrefix="perspectivecommands">
+
+  <eClassifiers xsi:type="ecore:EClass" name="PerspectiveCommands"
+      eSuperTypes="command-model.ecore#//CommandInterface">
+
+    <eOperations name="switchPerspective">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="perspectives.switchPerspective"/>
+        <details key="label" value="Switch Perspective"/>
+        <details key="category" value="VIEW"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-th-large"/>
+      </eAnnotations>
+      <eParameters name="id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+
+    <eOperations name="toggleLeftSidebar">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="perspectives.toggleLeftSidebar"/>
+        <details key="label" value="Toggle Left Sidebar"/>
+        <details key="category" value="VIEW"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="keybinding" value="Ctrl+B"/>
+        <details key="icon" value="pi pi-arrow-left"/>
+      </eAnnotations>
+    </eOperations>
+
+    <eOperations name="toggleRightSidebar">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="perspectives.toggleRightSidebar"/>
+        <details key="label" value="Toggle Right Sidebar"/>
+        <details key="category" value="VIEW"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-arrow-right"/>
+      </eAnnotations>
+    </eOperations>
+
+    <eOperations name="toggleBottomPanel">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="perspectives.toggleBottomPanel"/>
+        <details key="label" value="Toggle Bottom Panel"/>
+        <details key="category" value="VIEW"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="keybinding" value="Ctrl+J"/>
+        <details key="icon" value="pi pi-arrow-down"/>
+      </eAnnotations>
+    </eOperations>
+
+  </eClassifiers>
+</ecore:EPackage>

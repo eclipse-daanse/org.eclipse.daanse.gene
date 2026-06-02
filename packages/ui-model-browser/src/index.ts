@@ -7,6 +7,7 @@
 import type { ModuleContext } from '@eclipse-daanse/tsm'
 import { markRaw } from 'tsm:vue'
 import type { PanelRegistry, ActivityRegistry } from 'ui-perspectives'
+import modelCommandsEcore from '../model/model-commands.ecore?raw'
 
 // Re-export types
 export * from './types'
@@ -15,7 +16,7 @@ export * from './types'
 export { useModelRegistry, useSharedModelRegistry } from './composables/useModelRegistry'
 
 // Re-export components
-export { ModelBrowser } from './components'
+export { ModelBrowser, ClassPickerDialog } from './components'
 
 // Import for service registration
 import * as components from './components'
@@ -88,6 +89,7 @@ export async function activate(context: ModuleContext): Promise<void> {
   // Register with panel registry
   const panelRegistry = context.services.get<PanelRegistry>('ui.registry.panels')
   if (panelRegistry) {
+    const eventBus = context.services.get<any>('gene.eventbus')
     panelRegistry.register({
       id: 'model-browser',
       title: 'Models',
@@ -95,8 +97,11 @@ export async function activate(context: ModuleContext): Promise<void> {
       component: markRaw(components.ModelBrowser),
       perspectives: ['model-editor', 'metamodeler'],
       defaultLocation: 'right',
-      defaultOrder: 0
-    })
+      defaultOrder: 0,
+      headerActions: [
+        { icon: 'pi pi-plus', tooltip: 'Add Model', onClick: () => eventBus?.emit('show-add-model-dialog') }
+      ]
+    } as any)
     context.log.info('Model Browser panel registered')
   }
 
@@ -113,6 +118,15 @@ export async function activate(context: ModuleContext): Promise<void> {
       perspectives: ['model-editor', 'metamodeler']
     })
     context.log.info('Model Browser activity registered')
+  }
+
+  // Register commands from ecore
+  const commandRegistry = context.services.get<any>('gene.command.registry')
+  const keybindingSvc = context.services.get<any>('gene.keybindings')
+  if (commandRegistry) {
+    const cmds = commandRegistry.registerCommandsFromEcore(modelCommandsEcore, 'ui-model-browser')
+    if (keybindingSvc) keybindingSvc.registerFromCommands(cmds)
+    context.log.info('Model commands registered')
   }
 
   context.log.info('Model Browser module activated')

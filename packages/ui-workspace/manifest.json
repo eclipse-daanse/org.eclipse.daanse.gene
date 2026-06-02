@@ -30,5 +30,5 @@
       "optional": false
     }
   ],
-  "dependencies": ["gene-app", "storage-core"]
+  "dependencies": ["gene-app", "storage-core", "ui-actions"]
 }

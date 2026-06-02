@@ -19,6 +19,7 @@ import { usePanelKeyboardShortcuts } from '../composables/usePanelDragDrop'
 import { useGlobalSettings } from '../composables/useGlobalSettings'
 import { useEventBus } from '../composables/useEventBus'
 import ActivityBar from './ActivityBar.vue'
+import MenuBar from './MenuBar.vue'
 import PrimarySidebar from './PrimarySidebar.vue'
 import EditorArea from './EditorArea.vue'
 import SecondarySidebar from './SecondarySidebar.vue'
@@ -33,6 +34,7 @@ const panelShortcuts = usePanelKeyboardShortcuts()
 const workspaceState = tsm?.getService('ui.workspace.composables')?.useSharedWorkspace()
 const fileSystem = tsm?.getService('ui.file-explorer.composables')?.useSharedFileSystem()
 const perspective = tsm?.getService('ui.perspectives')?.useSharedPerspective()
+const openFileTitle = computed(() => tsm?.getService('gene.layout.openFile')?.value ?? null)
 const eventBus = useEventBus()
 
 // Initialize global settings (theme, language, colors)
@@ -87,48 +89,24 @@ const mainAreaRef = ref<HTMLElement | null>(null)
 // Computed styles - sidebars show minimized bar when collapsed or empty
 const primarySidebarStyle = computed(() => {
   const hasPanels = layout.primaryPanels.value.length > 0
-  if (!layout.state.visibility.primarySidebar || !hasPanels) {
-    // Minimized or empty: show icon bar (48px) or drop zone (24px)
-    return {
-      width: hasPanels ? '48px' : '24px',
-      display: 'flex'
-    }
-  }
-  return {
-    width: `${layout.state.dimensions.primarySidebarWidth}px`,
-    display: 'flex'
-  }
+  if (!hasPanels) return { width: '0px', display: 'none' }
+  if (!layout.state.visibility.primarySidebar) return { width: '48px', display: 'flex' }
+  return { width: `${layout.state.dimensions.primarySidebarWidth}px`, display: 'flex' }
 })
 
 const secondarySidebarStyle = computed(() => {
   const hasPanels = layout.secondaryPanels.value.length > 0
-  if (!layout.state.visibility.secondarySidebar || !hasPanels) {
-    // Minimized or empty: show icon bar (48px) or drop zone (24px)
-    return {
-      width: hasPanels ? '48px' : '24px',
-      display: 'flex'
-    }
-  }
-  return {
-    width: `${layout.state.dimensions.secondarySidebarWidth}px`,
-    display: 'flex'
-  }
+  if (!hasPanels) return { width: '0px', display: 'none' }
+  if (!layout.state.visibility.secondarySidebar) return { width: '48px', display: 'flex' }
+  return { width: `${layout.state.dimensions.secondarySidebarWidth}px`, display: 'flex' }
 })
 
 // Panel area - show small drop zone even when empty
 const panelAreaStyle = computed(() => {
   const hasTabs = layout.state.panelTabs.length > 0
-  if (!layout.state.visibility.panelArea || !hasTabs) {
-    // Hidden or empty: show thin drop zone (24px)
-    return {
-      height: '24px',
-      display: 'flex'
-    }
-  }
-  return {
-    height: `${layout.state.dimensions.panelAreaHeight}px`,
-    display: 'flex'
-  }
+  if (!hasTabs) return { height: '0px', display: 'none' }
+  if (!layout.state.visibility.panelArea) return { height: '0px', display: 'none' }
+  return { height: `${layout.state.dimensions.panelAreaHeight}px`, display: 'flex' }
 })
 
 // Resize handlers
@@ -244,17 +222,9 @@ onUnmounted(() => {
     <div class="title-bar">
       <div class="title-bar-left">
         <span class="workspace-name">{{ workspaceName }}</span>
+        <span v-if="openFileTitle" class="open-file-title"> — {{ openFileTitle }}</span>
       </div>
       <div class="title-bar-right">
-        <!-- Save Instances button moved to InstanceTree header for context-specific placement -->
-        <Button
-          icon="pi pi-palette"
-          text
-          rounded
-          size="small"
-          @click="showWorkspaceSettings = true"
-          v-tooltip.bottom="'Appearance'"
-        />
       </div>
     </div>
 
@@ -264,6 +234,11 @@ onUnmounted(() => {
       <div class="horizontal-layout">
         <!-- Activity Bar -->
         <ActivityBar @perspective-change="handlePerspectiveChange" />
+
+        <!-- Content area (Menu Toolbar + Panels) -->
+        <div class="content-with-menu">
+          <MenuBar @show-settings="showWorkspaceSettings = true" />
+          <div class="content-panels">
 
         <!-- Primary Sidebar with resize handle -->
         <div class="primary-sidebar-container" :style="primarySidebarStyle">
@@ -306,6 +281,9 @@ onUnmounted(() => {
           ></div>
           <SecondarySidebar />
         </div>
+
+          </div><!-- /content-panels -->
+        </div><!-- /content-with-menu -->
       </div>
     </div>
 
@@ -367,6 +345,11 @@ onUnmounted(() => {
   color: var(--text-color);
 }
 
+.open-file-title {
+  font-size: 0.875rem;
+  color: var(--text-color-secondary);
+}
+
 .title-bar-right {
   display: flex;
   align-items: center;
@@ -381,6 +364,19 @@ onUnmounted(() => {
 }
 
 .horizontal-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.content-with-menu {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.content-panels {
   display: flex;
   flex: 1;
   overflow: hidden;

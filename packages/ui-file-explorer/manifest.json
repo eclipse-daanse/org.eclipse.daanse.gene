@@ -14,5 +14,5 @@
       "description": "File system access composables"
     }
   ],
-  "dependencies": ["gene-app", "ui-layout", "ui-perspectives"]
+  "dependencies": ["gene-app", "ui-layout", "ui-perspectives", "ui-actions"]
 }

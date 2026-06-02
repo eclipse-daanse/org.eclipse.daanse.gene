@@ -5,7 +5,7 @@
  * @generated
  */
 
-import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
+import type { EObject } from '@emfts/core';
 import type { AuthType } from './AuthType';
 
 /**
@@ -17,5 +17,9 @@ export interface AuthConfiguration extends EObject {
   credentialRef?: string;
   tokenEndpoint?: string;
   apiKeyHeader?: string;
+  authorizationEndpoint?: string;
+  clientId?: string;
+  scopes?: string;
+  logoutEndpoint?: string;
 
 }

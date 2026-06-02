@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="workspacecommands" nsURI="http://gene/commands/workspace/1.0.0"
+    nsPrefix="workspacecommands">
+
+  <eClassifiers xsi:type="ecore:EClass" name="WorkspaceCommands"
+      eSuperTypes="command-model.ecore#//CommandInterface">
+
+    <eOperations name="openWorkspace">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="workspace.openWorkspace"/>
+        <details key="label" value="Open Workspace"/>
+        <details key="category" value="FILE"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-folder-open"/>
+      </eAnnotations>
+    </eOperations>
+
+    <eOperations name="saveWorkspace">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="workspace.saveWorkspace"/>
+        <details key="label" value="Save Workspace"/>
+        <details key="category" value="FILE"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-save"/>
+        <details key="when" value="hasWorkspace"/>
+      </eAnnotations>
+    </eOperations>
+
+    <eOperations name="closeWorkspace">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="workspace.closeWorkspace"/>
+        <details key="label" value="Close Workspace"/>
+        <details key="category" value="FILE"/>
+        <details key="scope" value="GLOBAL"/>
+        <details key="icon" value="pi pi-times"/>
+        <details key="when" value="hasWorkspace"/>
+      </eAnnotations>
+    </eOperations>
+
+  </eClassifiers>
+</ecore:EPackage>

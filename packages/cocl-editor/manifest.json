@@ -6,7 +6,10 @@
   "entry": "src/index.ts",
   "dependencies": [
     "gene-app",
-    "ui-layout"
+    "ui-layout",
+    "ui-actions",
+    "ui-model-browser",
+    "ui-search"
   ],
   "provides": [
     {
