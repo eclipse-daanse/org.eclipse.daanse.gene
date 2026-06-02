@@ -27,7 +27,7 @@ const props = withDefaults(defineProps<{
   includeAbstract?: boolean
 }>(), {
   header: 'Select Class',
-  viewMode: 'list',
+  viewMode: 'tree',
   includeAbstract: true
 })
 
