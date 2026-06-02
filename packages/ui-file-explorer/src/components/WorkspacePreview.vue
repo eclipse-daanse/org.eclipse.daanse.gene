@@ -12,15 +12,15 @@ import { Card } from 'tsm:primevue'
 import { Message } from 'tsm:primevue'
 import type { FileEntry } from '../types'
 import { useSharedFileSystem } from '../composables/useFileSystem'
+import { useFileViewerRegistry } from 'ui-xmi-viewer'
 const fileSystem = useSharedFileSystem()
+const fileViewerRegistry = useFileViewerRegistry()
 
 // TSM for service access
 const tsm = inject<any>('tsm')
 
 // XMI Viewer via TSM service (avoids static dependency on ui-xmi-viewer)
 const XmiViewer = ref<any>(null)
-const useFileViewerRegistry = () => tsm?.getService('ui.xmi-viewer.registry')?.()
-
 // WorkspaceActionService for direct App-level actions (replaces emits)
 function getActions() {
   return tsm?.getService('gene.workspace.actions')
@@ -34,7 +34,6 @@ const props = defineProps<{
 
 // Resolved selectedFile: prop takes priority, otherwise shared state
 const selectedFile = computed(() => props.selectedFile ?? fileSystem.selectedFile.value)
-const fileViewerRegistry = useFileViewerRegistry()
 
 // Re-resolve XmiViewer on file selection (service may register after us)
 watch(selectedFile, () => {
@@ -80,6 +79,15 @@ const isEcoreFile = computed(() => {
   return ext === '.ecore'
 })
 
+// Check if file has a registered viewer (e.g. .dgen from data-generator plugin)
+const registeredViewer = computed(() => {
+  if (!selectedFile.value) return null
+  const ext = selectedFile.value.extension?.toLowerCase()
+  if (!ext) return null
+  if (WORKSPACE_EXTENSIONS.includes(ext) || XMI_LIKE_EXTENSIONS.includes(ext) || COCL_EXTENSIONS.includes(ext)) return null
+  return fileViewerRegistry.getViewerForExtension(ext, fileContent.value ?? undefined) ?? null
+})
+
 // Check if file is a C-OCL constraint file
 const isCoclFile = computed(() => {
   if (!selectedFile.value) return false
@@ -118,9 +126,10 @@ watch(selectedFile, async (file) => {
     return
   }
 
-  // Only load workspace, XMI-like, and C-OCL files
+  // Check which file types to load
   const ext = file.extension?.toLowerCase()
-  if (!WORKSPACE_EXTENSIONS.includes(ext ?? '') && !XMI_LIKE_EXTENSIONS.includes(ext ?? '') && !COCL_EXTENSIONS.includes(ext ?? '')) {
+  const hasRegisteredViewer = ext ? fileViewerRegistry.isExtensionSupported(ext) : false
+  if (!WORKSPACE_EXTENSIONS.includes(ext ?? '') && !XMI_LIKE_EXTENSIONS.includes(ext ?? '') && !COCL_EXTENSIONS.includes(ext ?? '') && !hasRegisteredViewer) {
     return
   }
 
@@ -316,6 +325,15 @@ function handleLoadCocl() {
         <div class="preview-label">Preview</div>
         <pre class="xmi-content">{{ fileContent?.substring(0, 1000) }}{{ fileContent && fileContent.length > 1000 ? '...' : '' }}</pre>
       </div>
+    </div>
+
+    <!-- Registered file viewer (e.g. DataGen preview from plugin) -->
+    <div v-else-if="registeredViewer && fileContent" class="plugin-preview">
+      <component
+        :is="registeredViewer.component"
+        :content="fileContent"
+        :file-name="selectedFile.name"
+      />
     </div>
 
     <!-- Non-workspace file (checked after loading to allow content inspection) -->
