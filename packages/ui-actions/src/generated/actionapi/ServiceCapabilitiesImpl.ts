@@ -9,7 +9,6 @@ import { BasicEObject } from '@emfts/core';
 import type { EClass, EStructuralFeature } from '@emfts/core';
 import type { Endpoint } from './Endpoint';
 import type { JobManagement } from './JobManagement';
-import type { ServiceAuthConfig } from './ServiceAuthConfig';
 import type { ServiceCapabilities } from './ServiceCapabilities';
 import { ActionApiPackage } from './ActionApiPackage';
 
@@ -23,14 +22,12 @@ export class ServiceCapabilitiesImpl extends BasicEObject implements ServiceCapa
   static readonly VERSION: number = 1;
   static readonly ENDPOINTS: number = 2;
   static readonly JOB_MANAGEMENT: number = 3;
-  static readonly AUTH_CONFIG: number = 4;
 
   // Private fields
   private _name?: string;
   private _version?: string;
   private _endpoints: Endpoint[] = [];
   private _jobManagement?: JobManagement;
-  private _authConfig?: ServiceAuthConfig;
 
   /**
    * Returns the EClass of this object
@@ -136,30 +133,6 @@ export class ServiceCapabilitiesImpl extends BasicEObject implements ServiceCapa
     }
   }
 
-  get authConfig(): ServiceAuthConfig {
-    return this._authConfig!;
-  }
-
-  set authConfig(value: ServiceAuthConfig) {
-    const oldValue = this._authConfig;
-    this._authConfig = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ServiceCapabilitiesImpl.AUTH_CONFIG),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ServiceCapabilitiesImpl.AUTH_CONFIG,
-        merge: () => false
-      });
-    }
-  }
-
   // Reflective API
 
   /**
@@ -176,8 +149,6 @@ export class ServiceCapabilitiesImpl extends BasicEObject implements ServiceCapa
         return this.endpoints;
       case ServiceCapabilitiesImpl.JOB_MANAGEMENT:
         return this.jobManagement;
-      case ServiceCapabilitiesImpl.AUTH_CONFIG:
-        return this.authConfig;
       default:
         return super.eGet(feature);
     }
@@ -205,10 +176,6 @@ export class ServiceCapabilitiesImpl extends BasicEObject implements ServiceCapa
         this.jobManagement = newValue as JobManagement;
         super.eSet(feature, newValue);
         break;
-      case ServiceCapabilitiesImpl.AUTH_CONFIG:
-        this.authConfig = newValue as ServiceAuthConfig;
-        super.eSet(feature, newValue);
-        break;
       default:
         super.eSet(feature, newValue);
     }
@@ -228,8 +195,6 @@ export class ServiceCapabilitiesImpl extends BasicEObject implements ServiceCapa
         return this._endpoints !== undefined && this._endpoints.length > 0;
       case ServiceCapabilitiesImpl.JOB_MANAGEMENT:
         return this._jobManagement !== undefined;
-      case ServiceCapabilitiesImpl.AUTH_CONFIG:
-        return this._authConfig !== undefined;
       default:
         return super.eIsSet(feature);
     }
@@ -252,9 +217,6 @@ export class ServiceCapabilitiesImpl extends BasicEObject implements ServiceCapa
         return;
       case ServiceCapabilitiesImpl.JOB_MANAGEMENT:
         this._jobManagement = undefined;
-        return;
-      case ServiceCapabilitiesImpl.AUTH_CONFIG:
-        this._authConfig = undefined;
         return;
       default:
         super.eUnset(feature);

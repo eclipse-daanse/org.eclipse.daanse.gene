@@ -32,20 +32,11 @@ export class ActionApiPackage extends BasicEPackage {
    * Literals for quick access to metaclasses and features
    */
   static readonly Literals = {
-    SERVICE_AUTH_CONFIG: null as unknown as EClass,
-    SERVICE_AUTH_CONFIG__AUTH_METHOD: null as unknown as EAttribute | EReference,
-    SERVICE_AUTH_CONFIG__AUTHORIZATION_ENDPOINT: null as unknown as EAttribute | EReference,
-    SERVICE_AUTH_CONFIG__TOKEN_ENDPOINT: null as unknown as EAttribute | EReference,
-    SERVICE_AUTH_CONFIG__LOGOUT_ENDPOINT: null as unknown as EAttribute | EReference,
-    SERVICE_AUTH_CONFIG__CLIENT_ID: null as unknown as EAttribute | EReference,
-    SERVICE_AUTH_CONFIG__SCOPES: null as unknown as EAttribute | EReference,
-    SERVICE_AUTH_CONFIG__ISSUER: null as unknown as EAttribute | EReference,
     SERVICE_CAPABILITIES: null as unknown as EClass,
     SERVICE_CAPABILITIES__NAME: null as unknown as EAttribute | EReference,
     SERVICE_CAPABILITIES__VERSION: null as unknown as EAttribute | EReference,
     SERVICE_CAPABILITIES__ENDPOINTS: null as unknown as EAttribute | EReference,
     SERVICE_CAPABILITIES__JOB_MANAGEMENT: null as unknown as EAttribute | EReference,
-    SERVICE_CAPABILITIES__AUTH_CONFIG: null as unknown as EAttribute | EReference,
     ENDPOINT: null as unknown as EClass,
     ENDPOINT__ID: null as unknown as EAttribute | EReference,
     ENDPOINT__NAME: null as unknown as EAttribute | EReference,
@@ -117,71 +108,6 @@ export class ActionApiPackage extends BasicEPackage {
    * Initialize package contents
    */
   private init(): void {
-    // Create ServiceAuthConfig class
-    const serviceAuthConfigClass = new BasicEClass();
-    serviceAuthConfigClass.setName('ServiceAuthConfig');
-    serviceAuthConfigClass.setAbstract(false);
-    serviceAuthConfigClass.setInterface(false);
-    this.getEClassifiers().push(serviceAuthConfigClass);
-    serviceAuthConfigClass.setEPackage(this);
-    ActionApiPackage.Literals.SERVICE_AUTH_CONFIG = serviceAuthConfigClass;
-
-    // Create authMethod feature
-    const serviceAuthConfig_authMethod = new BasicEAttribute();
-    serviceAuthConfig_authMethod.setName('authMethod');
-    serviceAuthConfig_authMethod.setLowerBound(0);
-    serviceAuthConfig_authMethod.setUpperBound(1);
-    serviceAuthConfigClass.getEStructuralFeatures().push(serviceAuthConfig_authMethod);
-    ActionApiPackage.Literals.SERVICE_AUTH_CONFIG__AUTH_METHOD = serviceAuthConfig_authMethod;
-
-    // Create authorizationEndpoint feature
-    const serviceAuthConfig_authorizationEndpoint = new BasicEAttribute();
-    serviceAuthConfig_authorizationEndpoint.setName('authorizationEndpoint');
-    serviceAuthConfig_authorizationEndpoint.setLowerBound(0);
-    serviceAuthConfig_authorizationEndpoint.setUpperBound(1);
-    serviceAuthConfigClass.getEStructuralFeatures().push(serviceAuthConfig_authorizationEndpoint);
-    ActionApiPackage.Literals.SERVICE_AUTH_CONFIG__AUTHORIZATION_ENDPOINT = serviceAuthConfig_authorizationEndpoint;
-
-    // Create tokenEndpoint feature
-    const serviceAuthConfig_tokenEndpoint = new BasicEAttribute();
-    serviceAuthConfig_tokenEndpoint.setName('tokenEndpoint');
-    serviceAuthConfig_tokenEndpoint.setLowerBound(0);
-    serviceAuthConfig_tokenEndpoint.setUpperBound(1);
-    serviceAuthConfigClass.getEStructuralFeatures().push(serviceAuthConfig_tokenEndpoint);
-    ActionApiPackage.Literals.SERVICE_AUTH_CONFIG__TOKEN_ENDPOINT = serviceAuthConfig_tokenEndpoint;
-
-    // Create logoutEndpoint feature
-    const serviceAuthConfig_logoutEndpoint = new BasicEAttribute();
-    serviceAuthConfig_logoutEndpoint.setName('logoutEndpoint');
-    serviceAuthConfig_logoutEndpoint.setLowerBound(0);
-    serviceAuthConfig_logoutEndpoint.setUpperBound(1);
-    serviceAuthConfigClass.getEStructuralFeatures().push(serviceAuthConfig_logoutEndpoint);
-    ActionApiPackage.Literals.SERVICE_AUTH_CONFIG__LOGOUT_ENDPOINT = serviceAuthConfig_logoutEndpoint;
-
-    // Create clientId feature
-    const serviceAuthConfig_clientId = new BasicEAttribute();
-    serviceAuthConfig_clientId.setName('clientId');
-    serviceAuthConfig_clientId.setLowerBound(0);
-    serviceAuthConfig_clientId.setUpperBound(1);
-    serviceAuthConfigClass.getEStructuralFeatures().push(serviceAuthConfig_clientId);
-    ActionApiPackage.Literals.SERVICE_AUTH_CONFIG__CLIENT_ID = serviceAuthConfig_clientId;
-
-    // Create scopes feature
-    const serviceAuthConfig_scopes = new BasicEAttribute();
-    serviceAuthConfig_scopes.setName('scopes');
-    serviceAuthConfig_scopes.setLowerBound(0);
-    serviceAuthConfig_scopes.setUpperBound(1);
-    serviceAuthConfigClass.getEStructuralFeatures().push(serviceAuthConfig_scopes);
-    ActionApiPackage.Literals.SERVICE_AUTH_CONFIG__SCOPES = serviceAuthConfig_scopes;
-
-    // Create issuer feature
-    const serviceAuthConfig_issuer = new BasicEAttribute();
-    serviceAuthConfig_issuer.setName('issuer');
-    serviceAuthConfig_issuer.setLowerBound(0);
-    serviceAuthConfig_issuer.setUpperBound(1);
-    serviceAuthConfigClass.getEStructuralFeatures().push(serviceAuthConfig_issuer);
-    ActionApiPackage.Literals.SERVICE_AUTH_CONFIG__ISSUER = serviceAuthConfig_issuer;
-
     // Create ServiceCapabilities class
     const serviceCapabilitiesClass = new BasicEClass();
     serviceCapabilitiesClass.setName('ServiceCapabilities');
@@ -224,15 +150,6 @@ export class ActionApiPackage extends BasicEPackage {
     serviceCapabilities_jobManagement.setUpperBound(1);
     serviceCapabilitiesClass.getEStructuralFeatures().push(serviceCapabilities_jobManagement);
     ActionApiPackage.Literals.SERVICE_CAPABILITIES__JOB_MANAGEMENT = serviceCapabilities_jobManagement;
-
-    // Create authConfig feature
-    const serviceCapabilities_authConfig = new BasicEReference();
-    serviceCapabilities_authConfig.setContainment(true);
-    serviceCapabilities_authConfig.setName('authConfig');
-    serviceCapabilities_authConfig.setLowerBound(0);
-    serviceCapabilities_authConfig.setUpperBound(1);
-    serviceCapabilitiesClass.getEStructuralFeatures().push(serviceCapabilities_authConfig);
-    ActionApiPackage.Literals.SERVICE_CAPABILITIES__AUTH_CONFIG = serviceCapabilities_authConfig;
 
     // Create Endpoint class
     const endpointClass = new BasicEClass();
@@ -723,7 +640,6 @@ export class ActionApiPackage extends BasicEPackage {
     // ============================================
     (ActionApiPackage.Literals.SERVICE_CAPABILITIES__ENDPOINTS as BasicEReference).setEType(ActionApiPackage.Literals.ENDPOINT);
     (ActionApiPackage.Literals.SERVICE_CAPABILITIES__JOB_MANAGEMENT as BasicEReference).setEType(ActionApiPackage.Literals.JOB_MANAGEMENT);
-    (ActionApiPackage.Literals.SERVICE_CAPABILITIES__AUTH_CONFIG as BasicEReference).setEType(ActionApiPackage.Literals.SERVICE_AUTH_CONFIG);
     (ActionApiPackage.Literals.ENDPOINT__PARAMETERS as BasicEReference).setEType(ActionApiPackage.Literals.ENDPOINT_PARAMETER);
     (ActionApiPackage.Literals.JOB_STATUS__LOGS as BasicEReference).setEType(ActionApiPackage.Literals.JOB_LOG_ENTRY);
     (ActionApiPackage.Literals.JOB_STATUS__RESULT as BasicEReference).setEType(ActionApiPackage.Literals.ACTION_RESULT);

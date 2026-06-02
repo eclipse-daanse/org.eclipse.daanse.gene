@@ -8,7 +8,6 @@
 import type { EObject } from '@emfts/core';
 import type { Endpoint } from './Endpoint';
 import type { JobManagement } from './JobManagement';
-import type { ServiceAuthConfig } from './ServiceAuthConfig';
 
 /**
  * ServiceCapabilities
@@ -19,6 +18,5 @@ export interface ServiceCapabilities extends EObject {
   version?: string;
   endpoints: Endpoint[];
   jobManagement?: JobManagement;
-  authConfig?: ServiceAuthConfig;
 
 }
