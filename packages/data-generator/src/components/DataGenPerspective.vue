@@ -6,7 +6,6 @@
 
 import { ref, computed, onMounted, onUnmounted, watch, inject } from 'tsm:vue'
 import { Button, InputText, Dialog, Select, Tree, Menu } from 'tsm:primevue'
-import { ClassPickerDialog } from 'ui-model-browser'
 import type { DataGenConfig, ClassGenConfig, GenerationResult } from '../types'
 import { createDefaultConfig } from '../types'
 import { useDataGenerator } from '../composables/useDataGenerator'
@@ -24,6 +23,7 @@ const dg = useDataGenerator()
 const tsm = inject<any>('tsm')
 setDataGenTsm(tsm)
 const openFileTitle = tsm?.getService('gene.layout.openFile')
+const ClassPickerDialog = computed(() => tsm?.getService('ui.model-browser.components')?.ClassPickerDialog)
 const registry = useGeneratorRegistry()
 const remoteGen = useRemoteDataGen()
 const atlas = useDataGenAtlas()
@@ -721,7 +721,9 @@ function parseDatagenXml(xml: string): DataGenConfig | null {
     </Dialog>
 
     <!-- Class Picker Dialog -->
-    <ClassPickerDialog
+    <component
+      v-if="ClassPickerDialog"
+      :is="ClassPickerDialog"
       v-model:visible="showClassPicker"
       header="Add Class"
       @select="handleClassPickerSelect"
