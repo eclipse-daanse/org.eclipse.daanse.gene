@@ -124,7 +124,7 @@ onUnmounted(() => {
 const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
 
 const classTreeNodes = computed(() => {
-  const allPkgs = modelRegistry.allPackages?.value || []
+  const allPkgs = modelRegistry.userPackages?.value || []
   return allPkgs.flatMap((pkgInfo: any) => buildClassNodes(pkgInfo.ePackage, ''))
 })
 
@@ -224,7 +224,7 @@ function handleAutoConfigureClass(index: number) {
  * Find EClass by URI (nsURI#//ClassName) or legacy dot-format (pkg.ClassName)
  */
 function findEClass(contextClass: string): any | null {
-  const allPkgs = modelRegistry.allPackages?.value || []
+  const allPkgs = modelRegistry.userPackages?.value || []
 
   // URI format: nsURI#//ClassName
   if (contextClass.includes('#//')) {
@@ -463,7 +463,7 @@ async function handleGenerateRemote(connectionId: string) {
   if (!dg.config.value) return
 
   // Build package name → nsURI map from model registry
-  const allPkgs = modelRegistry.allPackages?.value || []
+  const allPkgs = modelRegistry.userPackages?.value || []
   const pkgMap = new Map<string, string>()
   for (const pkgInfo of allPkgs) {
     const name = pkgInfo.name || pkgInfo.ePackage?.getName?.()
