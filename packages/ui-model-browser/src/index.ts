@@ -16,7 +16,7 @@ export * from './types'
 export { useModelRegistry, useSharedModelRegistry } from './composables/useModelRegistry'
 
 // Re-export components
-export { ModelBrowser } from './components'
+export { ModelBrowser, ClassPickerDialog } from './components'
 
 // Import for service registration
 import * as components from './components'
