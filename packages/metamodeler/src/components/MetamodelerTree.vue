@@ -28,19 +28,6 @@ const emit = defineEmits<{
 const tsm = inject<any>('tsm')
 const openFileTitle = tsm?.getService('gene.layout.openFile')
 
-// Titel in TitleBar reaktiv aktualisieren
-watch(() => metamodeler.filePath.value, (fp) => {
-  if (openFileTitle) openFileTitle.value = fp ? fp.split('/').pop() ?? fp : (metamodeler.rootPackage.value?.getName() ? `${metamodeler.rootPackage.value.getName()}.ecore` : 'Neues Metamodell')
-}, { immediate: true })
-
-watch(() => metamodeler.rootPackage.value, (pkg) => {
-  if (!metamodeler.filePath.value && pkg) {
-    if (openFileTitle) openFileTitle.value = `${pkg.getName?.() ?? 'metamodel'}.ecore`
-  } else if (!pkg) {
-    if (openFileTitle) openFileTitle.value = null
-  }
-})
-
 function getIconDataUrl(iconClass: string | undefined): string | undefined {
   if (!iconClass || !iconClass.startsWith('custom-icon custom-icon--')) return undefined
   const id = iconClass.replace('custom-icon custom-icon--', '')
@@ -50,6 +37,19 @@ function getIconDataUrl(iconClass: string | undefined): string | undefined {
 }
 
 const metamodeler = useSharedMetamodeler()
+
+// Titel in TitleBar reaktiv aktualisieren
+watch(() => metamodeler.filePath.value, (fp) => {
+  if (openFileTitle) openFileTitle.value = fp ? (fp.split('/').pop() ?? fp) : (metamodeler.rootPackage.value?.getName() ? `${metamodeler.rootPackage.value.getName()}.ecore` : 'Neues Metamodell')
+}, { immediate: true })
+
+watch(() => metamodeler.rootPackage.value, (pkg) => {
+  if (!metamodeler.filePath.value && pkg) {
+    if (openFileTitle) openFileTitle.value = `${pkg.getName?.() ?? 'metamodel'}.ecore`
+  } else if (!pkg) {
+    if (openFileTitle) openFileTitle.value = null
+  }
+})
 
 // Tree state
 const selectedKey = ref<Record<string, boolean>>({})
