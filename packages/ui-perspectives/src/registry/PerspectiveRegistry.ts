@@ -68,14 +68,17 @@ export class PerspectiveManagerImpl implements PerspectiveManager {
 
   private panelRegistry: PanelRegistry
   private activityRegistry: ActivityRegistry
+  private eventBus: any = null
   private layoutState: any = null
 
   constructor(
     @inject('gene.registry.panels') panelRegistry: PanelRegistry,
-    @inject('gene.registry.activities') activityRegistry: ActivityRegistry
+    @inject('gene.registry.activities') activityRegistry: ActivityRegistry,
+    @inject('gene.eventbus') eventBus: any
   ) {
     this.panelRegistry = panelRegistry
     this.activityRegistry = activityRegistry
+    this.eventBus = eventBus
   }
 
   setLayoutState(layoutState: any): void {
@@ -139,6 +142,7 @@ export class PerspectiveManagerImpl implements PerspectiveManager {
     }
     this._state.currentPerspectiveId = perspectiveId
     console.log(`[PerspectiveManager] Set perspective ID to: ${perspectiveId}`)
+    this.eventBus?.emit?.('gene:menu-changed')
   }
 
   async switchTo(perspectiveId: string): Promise<void> {
@@ -249,7 +253,8 @@ export class PerspectiveManagerImpl implements PerspectiveManager {
             title: panel.title,
             icon: panel.icon,
             component: panel.component,
-            location: 'primary'
+            location: 'primary',
+            ...((panel as any).headerActions ? { headerActions: (panel as any).headerActions } : {})
           })
         }
       }
@@ -265,7 +270,8 @@ export class PerspectiveManagerImpl implements PerspectiveManager {
             title: panel.title,
             icon: panel.icon,
             component: panel.component,
-            location: 'secondary'
+            location: 'secondary',
+            ...((panel as any).headerActions ? { headerActions: (panel as any).headerActions } : {})
           })
         }
       }

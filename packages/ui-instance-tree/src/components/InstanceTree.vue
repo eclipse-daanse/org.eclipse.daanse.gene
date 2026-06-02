@@ -47,6 +47,10 @@ const ctx = props.context
 const eventBus = tsm?.getService('gene.eventbus') as any
 const sharedTree = useSharedInstanceTree()
 
+// Listen for events from sidebar header actions and central menu
+eventBus?.on?.('show-new-instance-dialog', () => { showNewInstanceDialog.value = true })
+eventBus?.on?.('show-icon-settings', () => { showIconSettings.value = true })
+
 
 // Helper to get name from ENamedElement - handles both native and DynamicEObject
 function getElementName(element: any): string {
@@ -497,13 +501,9 @@ function handleActionArtifact(artifact: any) {
       }
       break
     case 'VALIDATION_MESSAGES':
-      // Route to problems panel via eventbus
-      if (artifact.messages) {
-        const problemsService = tsm?.getService('gene.problems')
-        if (problemsService?.addIssues) {
-          problemsService.addIssues(artifact.messages)
-        }
-      }
+      // Validation results are stored in the job — visible in Jobs panel.
+      // Not auto-applied to Problems panel (user navigates there manually).
+      console.log('[Action] Validation result:', artifact.messages?.length, 'issue(s)')
       break
     case 'MARKDOWN':
       console.log('[Action] Markdown result:', artifact.content)
@@ -633,90 +633,6 @@ watch(ctxSelectedObject, (obj) => {
     @dragleave="handleDragLeave"
     @drop="handleDrop"
   >
-    <!-- Header -->
-    <div class="tree-header">
-      <span class="header-title">Instances</span>
-      <div class="header-actions">
-        <Button
-          icon="pi pi-search"
-          text
-          rounded
-          size="small"
-          :disabled="!hasInstances"
-          @click="eventBus.emit('open-search-dialog')"
-          v-tooltip.bottom="'Search (Ctrl+Shift+F)'"
-        />
-        <Button
-          v-if="isInstanceMode"
-          icon="pi pi-save"
-          text
-          rounded
-          size="small"
-          :disabled="!hasInstances"
-          @click="eventBus.emit('save-instances-request')"
-          v-tooltip.bottom="'Save Instances'"
-        />
-        <Button
-          v-if="isInstanceMode"
-          icon="pi pi-check-circle"
-          text
-          rounded
-          size="small"
-          :disabled="!hasInstances || isValidating"
-          :class="{ 'validate-error': hasValidationErrors }"
-          @click="handleValidateOcl"
-          v-tooltip.bottom="'Validate OCL (local)'"
-        />
-        <Button
-          v-for="action in toolbarActions"
-          :key="action.definition.actionId"
-          :icon="action.definition.icon || 'pi pi-play'"
-          text
-          rounded
-          size="small"
-          :disabled="!hasInstances || executingActions[action.definition.actionId]"
-          :loading="executingActions[action.definition.actionId]"
-          @click="executeToolbarAction(action)"
-          v-tooltip.bottom="action.definition.label"
-        />
-        <Button
-          icon="pi pi-sitemap"
-          text
-          rounded
-          size="small"
-          :class="{ 'toggle-active': sharedTree.showSuperTypes.value }"
-          @click="sharedTree.showSuperTypes.value = !sharedTree.showSuperTypes.value"
-          v-tooltip.bottom="'Show Supertypes'"
-        />
-        <Button
-          :icon="views.activeView.value ? 'pi pi-filter-fill' : 'pi pi-filter'"
-          text
-          rounded
-          size="small"
-          :class="{ 'toggle-active': !!views.activeView.value }"
-          @click="toggleViewFilterMenu"
-          v-tooltip.bottom="views.activeView.value ? `Filter: ${views.activeView.value.name}` : 'View-Filter'"
-        />
-        <Menu ref="viewFilterMenu" :model="viewFilterMenuItems" :popup="true" />
-        <Button
-          icon="pi pi-cog"
-          text
-          rounded
-          size="small"
-          @click="showIconSettings = true"
-          v-tooltip.bottom="'Icon Settings'"
-        />
-        <Button
-          v-if="hasModels"
-          icon="pi pi-plus"
-          text
-          rounded
-          size="small"
-          @click="showNewInstanceDialog = true"
-          v-tooltip.bottom="'New Instance'"
-        />
-      </div>
-    </div>
 
     <!-- No models loaded -->
     <div v-if="!hasModels" class="empty-state">

@@ -39,6 +39,9 @@ export abstract class AbstractActionImpl extends BasicEObject implements Abstrac
   static readonly INPUT_SPEC: number = 13;
   static readonly PARAMETERS: number = 14;
   static readonly RETURN_TYPES: number = 15;
+  static readonly MENU_GROUP: number = 16;
+  static readonly MENU_ORDER: number = 17;
+  static readonly KEYBINDING: number = 18;
 
   // Private fields
   private _actionId?: string;
@@ -57,6 +60,9 @@ export abstract class AbstractActionImpl extends BasicEObject implements Abstrac
   private _inputSpec?: InputSpecification;
   private _parameters: ActionParameter[] = [];
   private _returnTypes: ReturnType[] = [];
+  private _menuGroup?: string;
+  private _menuOrder: number = 0;
+  private _keybinding?: string;
 
   /**
    * Returns the EClass of this object
@@ -450,6 +456,78 @@ export abstract class AbstractActionImpl extends BasicEObject implements Abstrac
     }
   }
 
+  get menuGroup(): string {
+    return this._menuGroup!;
+  }
+
+  set menuGroup(value: string) {
+    const oldValue = this._menuGroup;
+    this._menuGroup = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(AbstractActionImpl.MENU_GROUP),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => AbstractActionImpl.MENU_GROUP,
+        merge: () => false
+      });
+    }
+  }
+
+  get menuOrder(): number {
+    return this._menuOrder!;
+  }
+
+  set menuOrder(value: number) {
+    const oldValue = this._menuOrder;
+    this._menuOrder = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(AbstractActionImpl.MENU_ORDER),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => AbstractActionImpl.MENU_ORDER,
+        merge: () => false
+      });
+    }
+  }
+
+  get keybinding(): string {
+    return this._keybinding!;
+  }
+
+  set keybinding(value: string) {
+    const oldValue = this._keybinding;
+    this._keybinding = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(AbstractActionImpl.KEYBINDING),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => AbstractActionImpl.KEYBINDING,
+        merge: () => false
+      });
+    }
+  }
+
   // Reflective API
 
   /**
@@ -490,6 +568,12 @@ export abstract class AbstractActionImpl extends BasicEObject implements Abstrac
         return this.parameters;
       case AbstractActionImpl.RETURN_TYPES:
         return this.returnTypes;
+      case AbstractActionImpl.MENU_GROUP:
+        return this.menuGroup;
+      case AbstractActionImpl.MENU_ORDER:
+        return this.menuOrder;
+      case AbstractActionImpl.KEYBINDING:
+        return this.keybinding;
       default:
         return super.eGet(feature);
     }
@@ -565,6 +649,18 @@ export abstract class AbstractActionImpl extends BasicEObject implements Abstrac
         this.returnTypes = newValue as ReturnType[];
         super.eSet(feature, newValue);
         break;
+      case AbstractActionImpl.MENU_GROUP:
+        this.menuGroup = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case AbstractActionImpl.MENU_ORDER:
+        this.menuOrder = newValue as number;
+        super.eSet(feature, newValue);
+        break;
+      case AbstractActionImpl.KEYBINDING:
+        this.keybinding = newValue as string;
+        super.eSet(feature, newValue);
+        break;
       default:
         super.eSet(feature, newValue);
     }
@@ -608,6 +704,12 @@ export abstract class AbstractActionImpl extends BasicEObject implements Abstrac
         return this._parameters !== undefined && this._parameters.length > 0;
       case AbstractActionImpl.RETURN_TYPES:
         return this._returnTypes !== undefined && this._returnTypes.length > 0;
+      case AbstractActionImpl.MENU_GROUP:
+        return this._menuGroup !== undefined;
+      case AbstractActionImpl.MENU_ORDER:
+        return this._menuOrder !== 0;
+      case AbstractActionImpl.KEYBINDING:
+        return this._keybinding !== undefined;
       default:
         return super.eIsSet(feature);
     }
@@ -666,6 +768,15 @@ export abstract class AbstractActionImpl extends BasicEObject implements Abstrac
         return;
       case AbstractActionImpl.RETURN_TYPES:
         this._returnTypes = [];
+        return;
+      case AbstractActionImpl.MENU_GROUP:
+        this._menuGroup = undefined;
+        return;
+      case AbstractActionImpl.MENU_ORDER:
+        this._menuOrder = 0;
+        return;
+      case AbstractActionImpl.KEYBINDING:
+        this._keybinding = undefined;
         return;
       default:
         super.eUnset(feature);

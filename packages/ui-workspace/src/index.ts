@@ -7,6 +7,7 @@
 
 import type { ModuleContext } from '@eclipse-daanse/tsm'
 import type { StorageAdapterRegistry } from 'storage-core'
+import workspaceCommandsEcore from '../model/workspace-commands.ecore?raw'
 
 // Components
 export * from './components'
@@ -40,6 +41,15 @@ export async function activate(context: ModuleContext): Promise<void> {
     waitForWorkspaceInit,
     useFileTree
   })
+
+  // Register commands from ecore
+  const commandRegistry = context.services.get<any>('gene.command.registry')
+  const keybindingSvc = context.services.get<any>('gene.keybindings')
+  if (commandRegistry) {
+    const cmds = commandRegistry.registerCommandsFromEcore(workspaceCommandsEcore, 'ui-workspace')
+    if (keybindingSvc) keybindingSvc.registerFromCommands(cmds)
+    context.log.info('Workspace commands registered')
+  }
 
   context.log.info('UI Workspace module activated')
 }

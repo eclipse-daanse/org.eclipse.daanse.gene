@@ -267,6 +267,7 @@
     <eLiterals name="BASIC" value="1" literal="BASIC"/>
     <eLiterals name="BEARER" value="2" literal="BEARER"/>
     <eLiterals name="API_KEY" value="3" literal="API_KEY"/>
+    <eLiterals name="OAUTH2" value="4" literal="OAUTH2"/>
   </eClassifiers>
 
   <eClassifiers xsi:type="ecore:EEnum" name="ExecutionMode">
@@ -1494,6 +1495,24 @@
         <details key="documentation" value="Expected return artifact types. Determines which result handlers are used."/>
       </eAnnotations>
     </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="menuGroup" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Menu group where this action appears in the MenuBar (e.g. 'file', 'edit', 'server', 'tools'). Null means no menu entry."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="menuOrder" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Sort order within the menu group (lower = higher)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="keybinding" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Keyboard shortcut (e.g. 'Ctrl+S', 'Ctrl+Shift+V'). Registered with the KeybindingService automatically."/>
+      </eAnnotations>
+    </eStructuralFeatures>
   </eClassifiers>
 
   <!-- QuickAction kept for backwards compatibility — maps to InternalAction semantics -->
@@ -1737,6 +1756,30 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="apiKeyHeader" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" defaultValueLiteral="X-API-Key">
       <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
         <details key="documentation" value="Custom header name for API key authentication."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="authorizationEndpoint" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="OAuth2 authorization endpoint URL (e.g. Keycloak /auth)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="clientId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="OAuth2 client ID (public client, no secret)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scopes" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" defaultValueLiteral="openid profile email">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Space-separated OAuth2 scopes."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="logoutEndpoint" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="OAuth2 logout endpoint URL."/>
       </eAnnotations>
     </eStructuralFeatures>
   </eClassifiers>

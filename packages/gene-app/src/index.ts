@@ -16,6 +16,7 @@ import appRouter from '@/router'
 import { PrimeVue, Aura, Tooltip } from 'tsm:primevue'
 import { useSharedEditorConfig } from '@/services/useEditorConfig'
 export type { EditorConfigService } from '@/services/useEditorConfig'
+import appCommandsEcore from '../model/app-commands.ecore?raw'
 
 // Vue app instance
 let app: App | null = null
@@ -59,6 +60,29 @@ export async function activate(context: ModuleContext): Promise<void> {
   const editorConfig = useSharedEditorConfig()
   context.services.register('gene.editor.config', editorConfig)
   context.log.info('EditorConfig service ready')
+
+  // Register app commands (will be available after ui-actions activates)
+  setTimeout(() => {
+    const commandRegistry = context.services.get<any>('gene.command.registry')
+    const keybindingService = context.services.get<any>('gene.keybindings')
+    if (commandRegistry) {
+      const cmds = commandRegistry.registerCommandsFromEcore(appCommandsEcore, 'gene-app')
+      if (keybindingService) keybindingService.registerFromCommands(cmds)
+
+      commandRegistry.registerHandler('app.openCommandPalette', async () => {
+        // Dispatch custom event that App.vue listens for
+        document.dispatchEvent(new CustomEvent('gene:openCommandPalette'))
+      })
+      commandRegistry.registerHandler('app.toggleFullscreen', async () => {
+        if (document.fullscreenElement) {
+          document.exitFullscreen()
+        } else {
+          document.documentElement.requestFullscreen()
+        }
+      })
+      context.log.info('App commands registered')
+    }
+  }, 100)
 
   context.log.info('GenE Application mounted')
 }

@@ -4,8 +4,9 @@
  * Toolbar + Splitter (left: Tree, right: Editor)
  */
 
-import { ref, computed, onMounted, watch, inject } from 'tsm:vue'
+import { ref, computed, onMounted, onUnmounted, watch, inject } from 'tsm:vue'
 import { Button, InputText, Dialog, Select, Tree, Menu } from 'tsm:primevue'
+import { ClassPickerDialog } from 'ui-model-browser'
 import type { DataGenConfig, ClassGenConfig, GenerationResult } from '../types'
 import { createDefaultConfig } from '../types'
 import { useDataGenerator } from '../composables/useDataGenerator'
@@ -22,6 +23,7 @@ import GenerationDialog from './GenerationDialog.vue'
 const dg = useDataGenerator()
 const tsm = inject<any>('tsm')
 setDataGenTsm(tsm)
+const openFileTitle = tsm?.getService('gene.layout.openFile')
 const registry = useGeneratorRegistry()
 const remoteGen = useRemoteDataGen()
 const atlas = useDataGenAtlas()
@@ -64,7 +66,6 @@ const genResult = ref<GenerationResult | null>(null)
 
 // Class picker dialog
 const showClassPicker = ref(false)
-const classPickerExpandedKeys = ref<Record<string, boolean>>({})
 
 // Config metadata dialog
 const showNewConfigDialog = ref(false)
@@ -90,65 +91,37 @@ onMounted(() => {
       if (parsed) {
         dg.loadConfig(parsed, data.filePath, data.fileEntry)
         console.log('[DataGenerator] Loaded config:', parsed.name)
+        if (openFileTitle) openFileTitle.value = data.filePath?.split('/').pop() ?? parsed.name ?? 'config.datagen'
       }
     } catch (e) {
       console.error('[DataGenerator] Failed to parse .datagen file:', e)
     }
   }
+
+  const eb = tsm?.getService('gene.eventbus')
+  eb?.on?.('datagen:new', handleNewConfig)
+  eb?.on?.('datagen:save', handleSave)
+  eb?.on?.('datagen:save-as', handleSaveAs)
+  eb?.on?.('datagen:generate', handleGenerate)
+  eb?.on?.('datagen:upload', handleUploadToServer)
+  eb?.on?.('datagen:load', handleLoadFromServer)
+  eb?.on?.('datagen:add-class', handleAddClass)
 })
 
-// --- Model registry for class picker ---
+onUnmounted(() => {
+  const eb = tsm?.getService('gene.eventbus')
+  eb?.off?.('datagen:new', handleNewConfig)
+  eb?.off?.('datagen:save', handleSave)
+  eb?.off?.('datagen:save-as', handleSaveAs)
+  eb?.off?.('datagen:generate', handleGenerate)
+  eb?.off?.('datagen:upload', handleUploadToServer)
+  eb?.off?.('datagen:load', handleLoadFromServer)
+  eb?.off?.('datagen:add-class', handleAddClass)
+  if (openFileTitle) openFileTitle.value = null
+})
+
+// --- Model registry (for other uses) ---
 const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
-
-const classTreeNodes = computed(() => {
-  const allPkgs = modelRegistry.allPackages?.value || []
-  return allPkgs.flatMap((pkgInfo: any) => buildClassNodes(pkgInfo.ePackage, ''))
-})
-
-function buildClassNodes(pkg: any, prefix: string): any[] {
-  const nodes: any[] = []
-  const pkgName = pkg.getName?.() || ''
-  const nsURI = pkg.getNsURI?.() || ''
-  const fullPrefix = prefix ? `${prefix}.${pkgName}` : pkgName
-
-  const classifiers = pkg.getEClassifiers?.() || []
-  for (const cls of Array.from(classifiers) as any[]) {
-    if ('getEAttributes' in cls || 'getEAllAttributes' in cls) {
-      const name = cls.getName?.() || ''
-      if (!name) continue
-      const isAbstract = cls.isAbstract?.() || false
-      // Use full EClass URI: nsURI#//ClassName
-      const classURI = nsURI ? `${nsURI}#//${name}` : `${fullPrefix}.${name}`
-      nodes.push({
-        key: classURI,
-        label: name,
-        icon: isAbstract ? 'pi pi-circle' : 'pi pi-box',
-        type: 'class',
-        leaf: true,
-        data: { qualifiedName: classURI, eClass: cls, isAbstract }
-      })
-    }
-  }
-
-  const subPkgs = pkg.getESubpackages?.() || []
-  for (const sub of Array.from(subPkgs)) {
-    const subNodes = buildClassNodes(sub, fullPrefix)
-    if (subNodes.length > 0) {
-      const subName = (sub as any).getName?.() || ''
-      nodes.push({
-        key: `pkg-${fullPrefix}.${subName}`,
-        label: subName,
-        icon: 'pi pi-folder',
-        type: 'package',
-        children: subNodes,
-        leaf: false,
-        selectable: false
-      })
-    }
-  }
-
-  return nodes
-}
 
 // --- Actions ---
 
@@ -159,31 +132,19 @@ function handleNewConfig() {
 function createNewConfig() {
   dg.newConfig(newConfigName.value || 'New Config')
   showNewConfigDialog.value = false
+  if (openFileTitle) openFileTitle.value = newConfigName.value || 'Neue Konfiguration'
 }
 
 function handleAddClass() {
-  // Open class picker
-  // Auto-expand all
-  const keys: Record<string, boolean> = {}
-  for (const node of classTreeNodes.value) {
-    if (!node.leaf) keys[node.key] = true
-  }
-  classPickerExpandedKeys.value = keys
   showClassPicker.value = true
 }
 
-function handleClassPickerSelect(node: any) {
-  const treeNode = (node as any).node ?? node
-  if (treeNode.type !== 'class') return
-  dg.addClassConfig(treeNode.data.qualifiedName)
-
-  // Auto-configure if we have the eClass
-  if (treeNode.data.eClass) {
+function handleClassPickerSelect(selection: { eClass: any; qualifiedName: string }) {
+  dg.addClassConfig(selection.qualifiedName)
+  if (selection.eClass) {
     const idx = dg.config.value!.classConfigs.length - 1
-    dg.autoConfigureClass(idx, treeNode.data.eClass)
+    dg.autoConfigureClass(idx, selection.eClass)
   }
-
-  showClassPicker.value = false
 }
 
 function handleAutoConfigureClass(index: number) {
@@ -200,7 +161,7 @@ function handleAutoConfigureClass(index: number) {
  * Find EClass by URI (nsURI#//ClassName) or legacy dot-format (pkg.ClassName)
  */
 function findEClass(contextClass: string): any | null {
-  const allPkgs = modelRegistry.allPackages?.value || []
+  const allPkgs = modelRegistry.userPackages?.value || []
 
   // URI format: nsURI#//ClassName
   if (contextClass.includes('#//')) {
@@ -251,6 +212,7 @@ async function handleSave() {
     await geneFS.writeTextFile(fileEntry, xml)
     dg.markSaved()
     console.log('[DataGenerator] Saved:', dg.filePath.value)
+    if (openFileTitle) openFileTitle.value = dg.filePath.value?.split('/').pop() ?? dg.config.value?.name ?? 'config.datagen'
   } else {
     // Save As fallback
     handleSaveAs()
@@ -273,6 +235,7 @@ async function handleSaveAs() {
       await writable.write(xml)
       await writable.close()
       dg.markSaved()
+      if (openFileTitle) openFileTitle.value = defaultName
     } catch (e: any) {
       if (e.name !== 'AbortError') console.error('[DataGenerator] Save As failed:', e)
     }
@@ -437,7 +400,7 @@ async function handleGenerateRemote(connectionId: string) {
   if (!dg.config.value) return
 
   // Build package name → nsURI map from model registry
-  const allPkgs = modelRegistry.allPackages?.value || []
+  const allPkgs = modelRegistry.userPackages?.value || []
   const pkgMap = new Map<string, string>()
   for (const pkgInfo of allPkgs) {
     const name = pkgInfo.name || pkgInfo.ePackage?.getName?.()
@@ -707,66 +670,6 @@ function parseDatagenXml(xml: string): DataGenConfig | null {
 
 <template>
   <div class="datagen-perspective">
-    <!-- Toolbar -->
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <Button icon="pi pi-file" label="New" size="small" severity="secondary" text @click="handleNewConfig" />
-        <Button icon="pi pi-save" label="Save" size="small" severity="secondary" text @click="handleSave"
-          :disabled="!dg.config.value || !dg.isDirty.value" />
-        <Button icon="pi pi-file-export" label="Save As" size="small" severity="secondary" text @click="handleSaveAs"
-          :disabled="!dg.config.value" />
-        <span class="toolbar-sep"></span>
-        <Button icon="pi pi-cloud-upload" label="Upload to Server" size="small" severity="secondary" text @click="handleUploadToServer"
-          :disabled="!dg.config.value" :loading="atlas.loading.value" />
-        <Button icon="pi pi-cloud-download" label="Load from Server" size="small" severity="secondary" text @click="handleLoadFromServer" />
-        <span v-if="dg.isDirty.value" class="dirty-badge">Unsaved</span>
-      </div>
-      <div class="toolbar-center">
-        <span v-if="dg.config.value" class="config-name">{{ dg.config.value.name }}</span>
-      </div>
-      <div class="toolbar-right">
-        <div class="toolbar-field" v-if="dg.config.value">
-          <label>Locale</label>
-          <InputText
-            :modelValue="dg.config.value.locale"
-            @update:modelValue="dg.config.value!.locale = $event; dg.markDirty()"
-            size="small"
-            style="width: 50px"
-          />
-        </div>
-        <div class="toolbar-field" v-if="dg.config.value">
-          <label>Seed</label>
-          <InputText
-            :modelValue="String(dg.config.value.seed)"
-            @update:modelValue="dg.config.value!.seed = parseInt($event) || 0; dg.markDirty()"
-            size="small"
-            style="width: 60px"
-            placeholder="0"
-          />
-        </div>
-        <div class="split-button">
-          <Button
-            icon="pi pi-bolt"
-            label="Generate"
-            size="small"
-            severity="success"
-            @click="handleGenerate"
-            :disabled="!dg.config.value || dg.config.value.classConfigs.length === 0"
-            class="split-main"
-          />
-          <Button
-            icon="pi pi-chevron-down"
-            size="small"
-            severity="success"
-            @click="(e: any) => generateMenu?.toggle(e)"
-            :disabled="!dg.config.value || dg.config.value.classConfigs.length === 0"
-            class="split-toggle"
-          />
-          <Menu ref="generateMenu" :model="generateMenuItems" :popup="true" />
-        </div>
-      </div>
-    </div>
-
     <!-- Main content -->
     <div class="main-content" v-if="dg.config.value">
       <div class="left-panel">
@@ -818,29 +721,11 @@ function parseDatagenXml(xml: string): DataGenConfig | null {
     </Dialog>
 
     <!-- Class Picker Dialog -->
-    <Dialog v-model:visible="showClassPicker" header="Add Class" :modal="true" :style="{ width: '420px' }" :contentStyle="{ padding: 0 }">
-      <div class="class-picker-content">
-        <Tree
-          v-if="classTreeNodes.length > 0"
-          :value="classTreeNodes"
-          v-model:expandedKeys="classPickerExpandedKeys"
-          selectionMode="single"
-          @node-select="handleClassPickerSelect"
-          class="class-picker-tree"
-        >
-          <template #default="{ node }">
-            <div class="picker-node" :class="{ 'is-abstract': node.data?.isAbstract }">
-              <span>{{ node.label }}</span>
-              <span v-if="node.data?.isAbstract" class="abstract-tag">abstract</span>
-            </div>
-          </template>
-        </Tree>
-        <div v-else class="picker-empty">
-          <p>No metamodels loaded in workspace.</p>
-          <p class="hint">Load a .ecore model first.</p>
-        </div>
-      </div>
-    </Dialog>
+    <ClassPickerDialog
+      v-model:visible="showClassPicker"
+      header="Add Class"
+      @select="handleClassPickerSelect"
+    />
 
     <!-- Generation Dialog -->
     <GenerationDialog

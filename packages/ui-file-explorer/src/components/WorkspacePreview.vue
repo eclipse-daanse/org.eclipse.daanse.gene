@@ -12,15 +12,17 @@ import { Card } from 'tsm:primevue'
 import { Message } from 'tsm:primevue'
 import type { FileEntry } from '../types'
 import { useSharedFileSystem } from '../composables/useFileSystem'
+import { useFileViewerRegistry } from 'ui-xmi-viewer'
+import { useRecentWorkspaces, removeRecentWorkspace, addRecentWorkspace } from '../composables/useRecentWorkspaces'
 const fileSystem = useSharedFileSystem()
+const fileViewerRegistry = useFileViewerRegistry()
+const { recentWorkspaces, clearRecentWorkspaces } = useRecentWorkspaces()
 
 // TSM for service access
 const tsm = inject<any>('tsm')
 
 // XMI Viewer via TSM service (avoids static dependency on ui-xmi-viewer)
 const XmiViewer = ref<any>(null)
-const useFileViewerRegistry = () => tsm?.getService('ui.xmi-viewer.registry')?.()
-
 // WorkspaceActionService for direct App-level actions (replaces emits)
 function getActions() {
   return tsm?.getService('gene.workspace.actions')
@@ -34,7 +36,6 @@ const props = defineProps<{
 
 // Resolved selectedFile: prop takes priority, otherwise shared state
 const selectedFile = computed(() => props.selectedFile ?? fileSystem.selectedFile.value)
-const fileViewerRegistry = useFileViewerRegistry()
 
 // Re-resolve XmiViewer on file selection (service may register after us)
 watch(selectedFile, () => {
@@ -80,6 +81,15 @@ const isEcoreFile = computed(() => {
   return ext === '.ecore'
 })
 
+// Check if file has a registered viewer (e.g. .dgen from data-generator plugin)
+const registeredViewer = computed(() => {
+  if (!selectedFile.value) return null
+  const ext = selectedFile.value.extension?.toLowerCase()
+  if (!ext) return null
+  if (WORKSPACE_EXTENSIONS.includes(ext) || XMI_LIKE_EXTENSIONS.includes(ext) || COCL_EXTENSIONS.includes(ext)) return null
+  return fileViewerRegistry.getViewerForExtension(ext, fileContent.value ?? undefined) ?? null
+})
+
 // Check if file is a C-OCL constraint file
 const isCoclFile = computed(() => {
   if (!selectedFile.value) return false
@@ -118,9 +128,10 @@ watch(selectedFile, async (file) => {
     return
   }
 
-  // Only load workspace, XMI-like, and C-OCL files
+  // Check which file types to load
   const ext = file.extension?.toLowerCase()
-  if (!WORKSPACE_EXTENSIONS.includes(ext ?? '') && !XMI_LIKE_EXTENSIONS.includes(ext ?? '') && !COCL_EXTENSIONS.includes(ext ?? '')) {
+  const hasRegisteredViewer = ext ? fileViewerRegistry.isExtensionSupported(ext) : false
+  if (!WORKSPACE_EXTENSIONS.includes(ext ?? '') && !XMI_LIKE_EXTENSIONS.includes(ext ?? '') && !COCL_EXTENSIONS.includes(ext ?? '') && !hasRegisteredViewer) {
     return
   }
 
@@ -225,6 +236,14 @@ function parseCoclInfo(content: string, fileName: string): { name: string; versi
 function handleOpenWorkspace() {
   if (selectedFile.value && fileContent.value) {
     getActions()?.openWorkspace(selectedFile.value, fileContent.value)
+    // Track as recent workspace
+    const source = fileSystem.getSource(selectedFile.value.sourceId)
+    addRecentWorkspace({
+      name: selectedFile.value.name,
+      filePath: selectedFile.value.path,
+      sourceId: selectedFile.value.sourceId,
+      sourceName: source?.name || ''
+    })
   }
 }
 
@@ -237,15 +256,84 @@ function handleLoadCocl() {
   }
 }
 
+// Open a recent workspace — restore source if needed
+async function handleOpenRecentWorkspace(ws: { name: string; filePath: string; sourceId: string; sourceName: string }) {
+  let source = fileSystem.getSource(ws.sourceId)
+
+  if (!source) {
+    // Try to restore persisted handles (user gesture from click)
+    await fileSystem.restoreLocalSources()
+    source = fileSystem.getSource(ws.sourceId)
+
+    if (!source) {
+      // Ask user to re-pick the folder
+      const newSource = await fileSystem.addLocalSource(ws.sourceName)
+      if (!newSource) return
+      source = newSource
+    }
+  }
+
+  const entry = fileSystem.getFileByPath(source.id, ws.filePath)
+  if (!entry) {
+    console.warn('[WorkspacePreview] Workspace file not found:', ws.filePath)
+    return
+  }
+
+  try {
+    const content = await fileSystem.readTextFile(entry)
+    if (content) getActions()?.openWorkspace(entry, content)
+  } catch (e) {
+    console.error('[WorkspacePreview] Failed to open recent workspace:', e)
+  }
+}
+
+
 </script>
 
 <template>
   <div class="workspace-preview">
-    <!-- No selection -->
-    <div v-if="!selectedFile" class="empty-state">
-      <i class="pi pi-file"></i>
-      <p>Select a file to preview</p>
-      <p class="hint">Select a .wsp file to open as workspace</p>
+    <!-- No selection — show recent workspaces -->
+    <div v-if="!selectedFile" class="recent-panel">
+      <div class="recent-section">
+        <div class="recent-header">
+          <i class="pi pi-history recent-header-icon"></i>
+          <span class="recent-title">Letzte Workspaces</span>
+          <button v-if="recentWorkspaces.length > 0" class="recent-clear" @click="clearRecentWorkspaces" title="Liste leeren">
+            <i class="pi pi-trash"></i>
+          </button>
+        </div>
+
+        <template v-if="recentWorkspaces.length > 0">
+          <div
+            v-for="ws in recentWorkspaces"
+            :key="ws.filePath + ws.sourceId"
+            class="recent-item"
+            @click="handleOpenRecentWorkspace(ws)"
+          >
+            <div class="recent-item-badge">
+              <i class="pi pi-cog"></i>
+            </div>
+            <div class="recent-item-info">
+              <span class="recent-item-name">{{ ws.name.replace(/\.wsp$/, '') }}</span>
+              <span class="recent-item-path">
+                <i class="pi pi-folder"></i>
+                {{ ws.sourceName }}
+              </span>
+            </div>
+            <button class="recent-item-remove" @click.stop="removeRecentWorkspace(ws.filePath, ws.sourceId)" title="Entfernen">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+        </template>
+
+        <div v-else class="recent-empty">
+          <div class="recent-empty-icon">
+            <i class="pi pi-folder-open"></i>
+          </div>
+          <p>Noch keine Workspaces geoeffnet</p>
+          <p class="hint">Oeffne einen Ordner und doppelklicke eine .wsp Datei</p>
+        </div>
+      </div>
     </div>
 
     <!-- Directory selected -->
@@ -316,6 +404,15 @@ function handleLoadCocl() {
         <div class="preview-label">Preview</div>
         <pre class="xmi-content">{{ fileContent?.substring(0, 1000) }}{{ fileContent && fileContent.length > 1000 ? '...' : '' }}</pre>
       </div>
+    </div>
+
+    <!-- Registered file viewer (e.g. DataGen preview from plugin) -->
+    <div v-else-if="registeredViewer && fileContent" class="plugin-preview">
+      <component
+        :is="registeredViewer.component"
+        :content="fileContent"
+        :file-name="selectedFile.name"
+      />
     </div>
 
     <!-- Non-workspace file (checked after loading to allow content inspection) -->
@@ -507,5 +604,186 @@ function handleLoadCocl() {
   display: flex;
   flex-direction: column;
   height: 100%;
+}
+/* Recent Workspaces Panel */
+.recent-panel {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  height: 100%;
+  padding-top: 10%;
+}
+
+.recent-section {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface-card, var(--surface-ground));
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.recent-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.recent-header-icon {
+  font-size: 0.8rem;
+  color: var(--primary-color);
+}
+
+.recent-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-color);
+  flex: 1;
+}
+
+.recent-clear {
+  background: none;
+  border: none;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+  font-size: 0.65rem;
+  padding: 3px 5px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all 0.15s;
+}
+
+.recent-section:hover .recent-clear {
+  opacity: 0.35;
+}
+
+.recent-clear:hover {
+  opacity: 1 !important;
+  background: var(--surface-hover);
+  color: var(--red-400);
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.5rem 0.55rem;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 2px;
+}
+
+.recent-item:hover {
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+}
+
+.recent-item-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.recent-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.recent-item-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-item-path {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.7rem;
+  color: var(--text-color-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-item-path i {
+  font-size: 0.6rem;
+  opacity: 0.6;
+}
+
+.recent-item-remove {
+  background: none;
+  border: none;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+  font-size: 0.6rem;
+  padding: 4px;
+  border-radius: 4px;
+  opacity: 0;
+  transition: all 0.15s;
+}
+
+.recent-item:hover .recent-item-remove {
+  opacity: 0.35;
+}
+
+.recent-item-remove:hover {
+  opacity: 1 !important;
+  background: var(--surface-hover);
+  color: var(--red-400);
+}
+
+.recent-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem;
+  color: var(--text-color-secondary);
+  text-align: center;
+}
+
+.recent-empty-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.recent-empty-icon i {
+  font-size: 1.3rem;
+  color: var(--primary-color);
+  opacity: 0.5;
+}
+
+.recent-empty p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.recent-empty .hint {
+  font-size: 0.72rem;
+  opacity: 0.5;
+  margin-top: 0.2rem;
 }
 </style>

@@ -65,13 +65,14 @@ interface Connection {
 
 // TSM for service access
 const tsm = inject<any>('tsm')
+const openFileTitle = tsm?.getService('gene.layout.openFile')
 
 // --- Model Registry ---
 
 const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
 
 const packageOptions = computed(() =>
-  modelRegistry.allPackages.value.map(pkg => ({
+  modelRegistry.userPackages.value.map(pkg => ({
     label: `${pkg.name} (${pkg.nsPrefix})`,
     value: pkg.nsURI
   }))
@@ -82,6 +83,7 @@ const packageOptions = computed(() =>
 const selectedSourceURI = ref<string | null>(null)
 const selectedTargetURI = ref<string | null>(null)
 const transformationName = ref('NewTransformation')
+const isLoaded = ref(false)
 
 const relations = ref<RelationDef[]>([])
 const variables = ref<VariableDef[]>([])
@@ -112,12 +114,12 @@ const targetClassInfos = computed(() =>
 
 const sourcePackage = computed<ModelPackageInfo | null>(() => {
   if (!selectedSourceURI.value) return null
-  return modelRegistry.allPackages.value.find(p => p.nsURI === selectedSourceURI.value) ?? null
+  return modelRegistry.userPackages.value.find(p => p.nsURI === selectedSourceURI.value) ?? null
 })
 
 const targetPackage = computed<ModelPackageInfo | null>(() => {
   if (!selectedTargetURI.value) return null
-  return modelRegistry.allPackages.value.find(p => p.nsURI === selectedTargetURI.value) ?? null
+  return modelRegistry.userPackages.value.find(p => p.nsURI === selectedTargetURI.value) ?? null
 })
 
 // --- Computed: Class trees ---
@@ -345,6 +347,8 @@ function loadFromData(data: any) {
   console.log('[TransformationEditor] Loading transformation data:', data.transformationName)
 
   if (data.transformationName) transformationName.value = data.transformationName
+  isLoaded.value = true
+  openFileTitle.value = `${data.transformationName || 'transformation'}.qvtr`
   if (data.sourcePackageURI) selectedSourceURI.value = data.sourcePackageURI
   if (data.targetPackageURI) selectedTargetURI.value = data.targetPackageURI
 
@@ -420,6 +424,7 @@ async function handleSave() {
       await fileSystem.writeTextFile(fileEntry, content)
       console.log('[TransformationEditor] Updated existing file:', fileName)
       showSaveNotification(`Saved ${fileName}`)
+      if (openFileTitle) openFileTitle.value = fileName
     } else {
       // Create a new file in the root of the first source
       await fileSystem.createFile(sourceId, '', fileName)
@@ -430,6 +435,7 @@ async function handleSave() {
         await fileSystem.writeTextFile(fileEntry, content)
         console.log('[TransformationEditor] Created and saved new file:', fileName)
         showSaveNotification(`Created ${fileName}`)
+        if (openFileTitle) openFileTitle.value = fileName
       }
     }
   } catch (e: any) {
@@ -457,6 +463,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   resizeObserver?.disconnect()
+  openFileTitle.value = null
 })
 
 // Redraw connections when active relation or mappings change
@@ -474,6 +481,31 @@ const _transformationPollInterval = setInterval(() => {
   }
 }, 500)
 onUnmounted(() => clearInterval(_transformationPollInterval))
+
+function handleNew() {
+  transformationName.value = 'NewTransformation'
+  selectedSourceURI.value = null
+  selectedTargetURI.value = null
+  relations.value = []
+  variables.value = []
+  activeRelationId.value = null
+  isLoaded.value = true
+  if (openFileTitle) openFileTitle.value = 'Neue Transformation'
+}
+
+const _eb = tsm?.getService('gene.eventbus')
+function _openAutoMap() { showAutoMapDialog.value = true }
+function _togglePreview() { showPreview.value = !showPreview.value }
+_eb?.on?.('transformation:save', handleSave)
+_eb?.on?.('transformation:automap', _openAutoMap)
+_eb?.on?.('transformation:toggle-preview', _togglePreview)
+_eb?.on?.('transformation:new', handleNew)
+onUnmounted(() => {
+  _eb?.off?.('transformation:save', handleSave)
+  _eb?.off?.('transformation:automap', _openAutoMap)
+  _eb?.off?.('transformation:toggle-preview', _togglePreview)
+  _eb?.off?.('transformation:new', handleNew)
+})
 
 // --- Actions ---
 
@@ -669,6 +701,23 @@ function isTargetFeatureMapped(featureName: string): boolean {
 
 <template>
   <div class="transformation-root">
+
+    <!-- Empty state -->
+    <div v-if="!isLoaded" class="transformation-empty">
+      <i class="pi pi-arrows-h" style="font-size: 2rem; opacity: 0.3"></i>
+      <span>No transformation loaded</span>
+      <span class="hint">Open a .qvtr file from the Explorer or create a new one.</span>
+      <Button
+        label="New Transformation"
+        icon="pi pi-plus"
+        severity="secondary"
+        size="small"
+        @click="handleNew"
+        style="margin-top: 8px"
+      />
+    </div>
+
+    <template v-else>
     <!-- Toolbar -->
     <div class="toolbar">
       <div class="toolbar-left">
@@ -676,33 +725,6 @@ function isTargetFeatureMapped(featureName: string): boolean {
           v-model="transformationName"
           class="transformation-name-input"
           placeholder="Transformation name"
-        />
-      </div>
-      <div class="header-actions">
-        <Button
-          icon="pi pi-save"
-          text
-          rounded
-          size="small"
-          @click="handleSave"
-          v-tooltip.bottom="'Save as .qvtr'"
-        />
-        <Button
-          icon="pi pi-bolt"
-          text
-          rounded
-          size="small"
-          :disabled="!sourcePackage || !targetPackage"
-          @click="showAutoMapDialog = true"
-          v-tooltip.bottom="'AutoMap'"
-        />
-        <Button
-          :icon="showPreview ? 'pi pi-eye-slash' : 'pi pi-eye'"
-          text
-          rounded
-          size="small"
-          @click="showPreview = !showPreview"
-          v-tooltip.bottom="showPreview ? 'Hide QVT-R' : 'Show QVT-R'"
         />
       </div>
     </div>
@@ -1045,6 +1067,7 @@ function isTargetFeatureMapped(featureName: string): boolean {
         <span>{{ saveNotification.message }}</span>
       </div>
     </Transition>
+    </template><!-- /v-else isLoaded -->
   </div>
 </template>
 
@@ -1184,6 +1207,22 @@ function isTargetFeatureMapped(featureName: string): boolean {
   flex: 1;
   overflow-y: auto;
   min-height: 0;
+}
+
+.transformation-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+  color: var(--text-color-secondary);
+  font-size: 0.875rem;
+}
+
+.transformation-empty .hint {
+  font-size: 0.8rem;
+  opacity: 0.7;
 }
 
 .empty-state {

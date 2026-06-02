@@ -304,9 +304,14 @@ const dropdownOptions = computed<(ReferenceOption & { key: string })[]>(() => {
     const eClass = obj.eClass()
     const filterStatus = oclFilteredOptions.value.get(obj)
 
+    // For EStructuralFeature: show "featureName (OwnerClass)" instead of "featureName (EAttribute)"
+    const container = (obj as any).eContainer?.()
+    const ownerName = container && typeof container.getName === 'function' ? container.getName() : null
+    const displayLabel = ownerName ? `${name} (${ownerName})` : `${name} (${eClass.getName()})`
+
     return {
       key: String(idx),
-      label: `${name} (${eClass.getName()})`,
+      label: displayLabel,
       value: obj,
       disabled: filterStatus?.disabled ?? false,
       oclReason: filterStatus?.reason
@@ -432,7 +437,9 @@ function handleAddToList() {
 // Filter available objects to exclude already selected ones
 const availableObjectsFiltered = computed(() => {
   if (!props.availableObjects) return []
-  const currentList = (props.value as EObject[]) || []
+  const raw = props.value
+  const currentList: EObject[] = Array.isArray(raw) ? raw :
+    (raw && typeof (raw as any)[Symbol.iterator] === 'function' ? Array.from(raw as Iterable<EObject>) : [])
   return props.availableObjects.filter(obj => !currentList.includes(obj))
 })
 
@@ -443,8 +450,12 @@ const addDropdownOptions = computed<ReferenceOption[]>(() => {
     const eClass = obj.eClass()
     const filterStatus = oclFilteredOptions.value.get(obj)
 
+    const container = (obj as any).eContainer?.()
+    const ownerName = container && typeof container.getName === 'function' ? container.getName() : null
+    const displayLabel = ownerName ? `${name} (${ownerName})` : `${name} (${eClass.getName()})`
+
     return {
-      label: `${name} (${eClass.getName()})`,
+      label: displayLabel,
       value: obj,
       disabled: filterStatus?.disabled ?? false,
       oclReason: filterStatus?.reason
@@ -452,16 +463,25 @@ const addDropdownOptions = computed<ReferenceOption[]>(() => {
   })
 })
 
-// Currently selected option for the add dropdown (wrapper for the EObject)
-const selectedAddOption = computed({
-  get() {
-    if (!selectedObjectToAdd.value) return null
-    // Find matching option by reference
-    return addDropdownOptions.value.find(opt => opt.value === selectedObjectToAdd.value) || null
-  },
-  set(option: { label: string; value: EObject } | null) {
-    selectedObjectToAdd.value = option?.value ?? null
-  }
+// Menu ref for non-containment add
+const addMenu = ref<InstanceType<typeof Menu> | null>(null)
+
+// Menu items for non-containment add popup
+const addMenuItems = computed(() => {
+  return addDropdownOptions.value.map(opt => ({
+    label: opt.label,
+    disabled: opt.disabled,
+    command: () => {
+      if (opt.disabled) {
+        emit('ocl-blocked', opt.value, opt.oclReason || 'OCL constraint not satisfied')
+        return
+      }
+      const currentList = (props.value as EObject[]) || []
+      if (!currentList.includes(opt.value)) {
+        emit('update:value', [...currentList, opt.value])
+      }
+    }
+  }))
 })
 </script>
 
@@ -567,46 +587,27 @@ const selectedAddOption = computed({
           :label="concreteClasses.length > 1 ? 'Add...' : 'Add'"
           severity="secondary"
           size="small"
+          outlined
           @click="handleCreate($event)"
         />
-        <!-- Non-containment: Select from available -->
-        <template v-if="!isContainment && !readonly && availableObjects && availableObjects.length > 0">
-          <Dropdown
-            v-model="selectedAddOption"
-            :options="addDropdownOptions"
-            optionLabel="label"
-            optionDisabled="disabled"
-            placeholder="Select to add..."
-            class="add-dropdown"
-            showClear
-          >
-            <template #option="{ option }">
-              <div
-                class="dropdown-option"
-                :class="{ 'ocl-disabled': option.disabled }"
-                :title="option.oclReason"
-              >
-                <span>{{ option.label }}</span>
-                <i v-if="option.disabled" class="pi pi-ban ocl-icon" />
-              </div>
-            </template>
-          </Dropdown>
-          <Button
-            icon="pi pi-plus"
-            severity="secondary"
-            size="small"
-            @click="handleAddToList"
-            :disabled="!selectedObjectToAdd"
-            title="Add to list"
-          />
-          <Button
-            icon="pi pi-search"
-            severity="secondary"
-            size="small"
-            @click="handleSearch"
-            title="Search for reference target"
-          />
-        </template>
+        <!-- Non-containment: Select from available via popup menu -->
+        <Button
+          v-if="!isContainment && !readonly && availableObjects && availableObjects.length > 0"
+          icon="pi pi-plus"
+          label="Add"
+          severity="secondary"
+          size="small"
+          @click="(e) => addMenu?.toggle(e)"
+        />
+        <Button
+          v-if="!isContainment && !readonly"
+          icon="pi pi-search"
+          severity="secondary"
+          size="small"
+          text
+          @click="handleSearch"
+          title="Search"
+        />
       </div>
     </div>
 
@@ -615,6 +616,7 @@ const selectedAddOption = computed({
 
     <!-- Subclass selection menu -->
     <Menu ref="createMenu" :model="createMenuItems" :popup="true" />
+    <Menu ref="addMenu" :model="addMenuItems" :popup="true" class="add-ref-menu" />
   </div>
 </template>
 
@@ -622,29 +624,32 @@ const selectedAddOption = computed({
 .reference-field {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.25rem;
 }
 
 .field-label {
   font-weight: 500;
-  font-size: 0.875rem;
-  color: var(--text-color);
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .required-indicator {
-  color: var(--red-500);
+  color: var(--p-red-500, #ef4444);
 }
 
 .containment-badge,
 .opposite-badge {
   font-size: 0.625rem;
   padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
-  background: var(--surface-200);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--primary-color) 15%, transparent);
   color: var(--text-color-secondary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-weight: 600;
 }
 
 .single-reference {
@@ -660,26 +665,24 @@ const selectedAddOption = computed({
 .reference-value {
   flex: 1;
   padding: 0.5rem 0.75rem;
-  background: var(--surface-100);
-  border-radius: var(--border-radius);
-  border: 1px solid var(--surface-300);
+  background: var(--surface-ground);
+  border-radius: 6px;
+  border: 1px solid var(--surface-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .reference-value:hover {
-  background: var(--surface-200);
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+  border-color: var(--primary-color);
 }
 
 .value-text {
   color: var(--text-color);
-}
-
-.navigate-icon {
-  font-size: 0.75rem;
-  color: var(--text-color-secondary);
+  font-size: 0.875rem;
 }
 
 .multi-reference {
@@ -689,53 +692,75 @@ const selectedAddOption = computed({
 }
 
 .reference-list {
-  border: 1px solid var(--surface-300);
-  border-radius: var(--border-radius);
-  background: var(--surface-50);
-  max-height: 150px;
-  overflow-y: auto;
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
 }
 
 .reference-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--surface-200);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
 }
 
-.reference-item:last-child {
-  border-bottom: none;
+.reference-item:nth-child(odd) {
+  background: color-mix(in srgb, var(--surface-ground) 20%, transparent);
+}
+
+.reference-item:hover {
+  background: color-mix(in srgb, var(--primary-color) 6%, transparent);
 }
 
 .item-text {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
   cursor: pointer;
   color: var(--text-color);
+  font-size: 0.8125rem;
 }
 
 .item-text:hover {
   color: var(--primary-color);
 }
 
+.navigate-icon {
+  font-size: 0.625rem;
+  opacity: 0.3;
+}
+
+.item-text:hover .navigate-icon {
+  opacity: 1;
+}
+
 .empty-list {
-  padding: 1rem;
+  padding: 0.5rem;
   text-align: center;
   color: var(--text-color-secondary);
   font-style: italic;
+  font-size: 0.75rem;
 }
 
 .reference-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.35rem;
   align-items: center;
+  padding-top: 0.25rem;
 }
 
-.add-dropdown {
-  flex: 1;
-  min-width: 150px;
+.reference-actions :deep(.p-button-outlined) {
+  font-size: 0.8125rem;
+}
+
+.add-ref-menu :deep(.p-menu-list) {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.add-ref-menu :deep(.p-menuitem-link) {
+  font-size: 0.8125rem;
+  padding: 0.35rem 0.75rem;
 }
 
 .field-error {

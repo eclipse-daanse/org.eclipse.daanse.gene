@@ -15,6 +15,7 @@ import type { File, Repository } from 'storage-core'
 import { getGlobalEditorConfig } from '@/services/useEditorConfig'
 import { ProblemsPanel, useSharedProblemsService } from 'ui-problems-panel'
 import { SearchDialog, setViewsService } from 'ui-search'
+import type { CommandRegistryImpl } from 'ui-actions'
 
 const OCL_SOURCES = ['http://www.eclipse.org/fennec/m2x/ocl/1.0', 'http://www.eclipse.org/emf/2002/Ecore/OCL', 'http://www.eclipse.org/OCL/Pivot']
 function isOclSource(s: string | null | undefined): boolean { return !!s && OCL_SOURCES.includes(s) }
@@ -193,7 +194,7 @@ const workspaceActionsService: WorkspaceActionService = {
   showProblemsPanel: () => handleShowProblems(),
   openSearchDialog: (options) => {
     if (options) {
-      handleReferenceSearch(options.feature, options.resource, options.callback)
+      handleReferenceSearch(options.feature, options.resource, options.callback, options.candidates)
     } else {
       if (instanceTreeComposables.value?.getSharedResource) {
         const resource = instanceTreeComposables.value.getSharedResource()
@@ -213,6 +214,66 @@ const workspaceActionsService: WorkspaceActionService = {
 }
 registerWorkspaceActions(workspaceActionsService, tsm)
 
+// Command Palette
+const commandPaletteRef = ref<any>(null)
+const commandRegistryRef = shallowRef<CommandRegistryImpl | null>(null)
+
+// Action Approval Dialog
+const approvalDialogRef = ref<any>(null)
+const approvalDialogProps = ref<{
+  resultStatus: string
+  resultMessage: string
+  actions: Array<{ commandId: string; label: string; description?: string; args?: string; autoExecute?: boolean }>
+}>({ resultStatus: '', resultMessage: '', actions: [] })
+const pendingArtifacts = ref<any[]>([])
+
+// XMI Import Dialog
+const xmiImportDialogRef = ref<any>(null)
+const xmiImportProps = ref<{ xmiContent: string; name: string }>({ xmiContent: '', name: '' })
+
+function getCommandContext() {
+  const pm = perspectiveManager.value
+  return {
+    perspectiveId: pm?.state?.currentPerspectiveId || 'explorer',
+    hasWorkspace: !!pm?.state?.workspace,
+    hasSelection: false,
+    editorMode: 'instance'
+  }
+}
+
+// Listen for gene:openCommandPalette event
+onMounted(() => {
+  document.addEventListener('gene:openCommandPalette', () => {
+    commandPaletteRef.value?.open()
+  })
+})
+
+function handleProposedActions(data: any) {
+  approvalDialogProps.value = {
+    resultStatus: data.resultStatus || 'SUCCESS',
+    resultMessage: data.resultMessage || 'Action completed',
+    actions: data.proposedActions || []
+  }
+  pendingArtifacts.value = data.artifacts || []
+  setTimeout(() => approvalDialogRef.value?.open(), 50)
+}
+
+function handleShowImportDialog(data: any) {
+  xmiImportProps.value = {
+    xmiContent: data.xmiContent || '',
+    name: data.name || 'Action Result'
+  }
+  setTimeout(() => xmiImportDialogRef.value?.open(), 50)
+}
+
+// Poll for commandRegistry
+watchEffect(() => {
+  if (!commandRegistryRef.value) {
+    const cr = tsm.getService<any>('gene.command.registry')
+    if (cr) commandRegistryRef.value = cr
+  }
+})
+
 // Search dialog visibility
 const showSearchDialog = ref(false)
 
@@ -222,6 +283,7 @@ const referenceSearchFeature = ref<any>(null)
 const referenceSearchSourceObject = ref<any>(null)
 const referenceSearchOclConstraint = ref<string | null>(null)
 const searchResource = ref<any>(null)
+const referenceSearchCandidates = ref<any[] | null>(null)
 
 /**
  * Extract OCL referenceFilter annotation from an EReference
@@ -863,6 +925,7 @@ function handleSearchNavigate(hit: any) {
     referenceSearchSourceObject.value = null
     referenceSearchOclConstraint.value = null
     searchResource.value = null
+    referenceSearchCandidates.value = null
     showSearchDialog.value = false
     return
   }
@@ -877,11 +940,12 @@ function handleSearchNavigate(hit: any) {
 }
 
 // Handle reference search request from PropertiesPanel
-function handleReferenceSearch(feature: any, resource: any, callback: (obj: any) => void) {
+function handleReferenceSearch(feature: any, resource: any, callback: (obj: any) => void, candidates?: any[]) {
   console.log('[App] Opening search for reference:', feature.getName())
   referenceSearchFeature.value = feature
   referenceSearchCallback.value = callback
   searchResource.value = resource
+  referenceSearchCandidates.value = candidates ? markRaw(candidates) : null
 
   // Get the source object (the object whose reference is being set)
   if (instanceTreeComposables.value) {
@@ -1605,6 +1669,24 @@ function setupModelEditorPerspective(layout: any) {
     component: markRaw(ProblemsPanelWrapper)
   })
 
+  // Register additional bottom panels from PanelRegistry (e.g. Jobs panel from ui-actions)
+  const panelRegistry = tsm.getService('ui.registry.panels') as any
+  if (panelRegistry) {
+    const bottomPanels = panelRegistry.getForLocation?.('model-editor', 'bottom') || []
+    for (const panel of bottomPanels) {
+      if (panel.id === 'ocl-problems') continue // already registered above
+      const existingTabs = layout.state.panelTabs || []
+      if (!existingTabs.some((t: any) => t.id === panel.id)) {
+        layout.registerPanelTab({
+          id: panel.id,
+          title: panel.title,
+          icon: panel.icon,
+          component: markRaw(panel.component)
+        })
+      }
+    }
+  }
+
   // Watch problems count and update badge
   watchEffect(() => {
     const count = problemsService.stats.value.totalCount
@@ -1926,6 +2008,33 @@ onMounted(() => {
   }
   eventBus.on('open-search-dialog', handleOpenSearchDialog)
   eventBus.on('show-problems', handleShowProblems)
+  eventBus.on('action:proposedActions', handleProposedActions)
+  eventBus.on('instance:showImportDialog', handleShowImportDialog)
+
+  // Approval dialog callbacks via EventBus (Vue emit doesn't work with dynamic <component :is>)
+  eventBus.on('approval:execute', async (selected: any[]) => {
+    // Process pending artifacts
+    for (const artifact of pendingArtifacts.value) {
+      if (artifact.type === 'VALIDATION_MESSAGES' && artifact.messages) {
+        const problemsService = tsm.getService<any>('gene.problems')
+        if (problemsService?.addIssues) problemsService.addIssues(artifact.messages)
+      }
+    }
+    pendingArtifacts.value = []
+    // Execute selected commands
+    const cr = tsm.getService<any>('gene.command.registry')
+    if (cr) {
+      for (const action of selected) {
+        const args = action.args ? JSON.parse(action.args) : undefined
+        await cr.execute(action.commandId, args)
+      }
+    }
+  })
+
+  eventBus.on('xmiImport:execute', async (data: any) => {
+    const cr = tsm.getService<any>('gene.command.registry')
+    if (cr) await cr.execute('instance.importXmi', { xmiContent: data.xmiContent, mode: data.mode })
+  })
 
   // Helper to open search dialog if resource is available
   function openSearchDialogIfPossible() {
@@ -2174,16 +2283,17 @@ onMounted(() => {
 
   <!-- Search Dialog -->
   <SearchDialog
-    v-if="searchResource || instanceTreeComposables?.getSharedResource?.()"
+    v-if="referenceSearchCandidates || searchResource || instanceTreeComposables?.getSharedResource?.()"
     :visible="showSearchDialog"
     :resource="searchResource || instanceTreeComposables?.getSharedResource()"
+    :candidates="referenceSearchCandidates || undefined"
     :referenceOptions="referenceSearchFeature ? {
       sourceObject: referenceSearchSourceObject,
       reference: referenceSearchFeature,
       oclConstraint: referenceSearchOclConstraint
     } : undefined"
     :problemsService="problemsService"
-    @close="showSearchDialog = false; referenceSearchCallback = null; referenceSearchFeature = null; referenceSearchSourceObject = null; referenceSearchOclConstraint = null; searchResource = null"
+    @close="showSearchDialog = false; referenceSearchCallback = null; referenceSearchFeature = null; referenceSearchSourceObject = null; referenceSearchOclConstraint = null; searchResource = null; referenceSearchCandidates = null"
     @select="handleSearchNavigate"
     @navigate="handleSearchNavigate"
   />
@@ -2239,6 +2349,34 @@ onMounted(() => {
     :filename="atlasUploadFilename"
   />
 
+  <!-- Command Palette -->
+  <component
+    v-if="commandRegistryRef"
+    :is="tsm.getService('gene.action.components')?.CommandPalette"
+    ref="commandPaletteRef"
+    :commandRegistry="commandRegistryRef"
+    :contextProvider="getCommandContext"
+  />
+
+  <!-- Action Approval Dialog (ProposedActions from server) -->
+  <component
+    v-if="tsm.getService('gene.action.components')?.ActionApprovalDialog"
+    :is="tsm.getService('gene.action.components').ActionApprovalDialog"
+    ref="approvalDialogRef"
+    :resultStatus="approvalDialogProps.resultStatus"
+    :resultMessage="approvalDialogProps.resultMessage"
+    :actions="approvalDialogProps.actions"
+  />
+
+  <!-- XMI Import Dialog (UC-ACT-006) -->
+  <component
+    v-if="tsm.getService('gene.action.components')?.XmiImportDialog"
+    :is="tsm.getService('gene.action.components').XmiImportDialog"
+    ref="xmiImportDialogRef"
+    :xmiContent="xmiImportProps.xmiContent"
+    :name="xmiImportProps.name"
+  />
+
   <!-- Central Loading Overlay with Blur -->
   <div v-if="isLoading" class="loading-overlay">
     <div class="loading-content">
@@ -2279,6 +2417,11 @@ onMounted(() => {
 
   /* Border radius */
   --border-radius: 6px;
+}
+
+/* Dark theme overrides */
+.dark-theme {
+  --surface-border: #3f3f3f7a;
 }
 
 *,
