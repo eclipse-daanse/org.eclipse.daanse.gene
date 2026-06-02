@@ -8,6 +8,7 @@
 
 import { ref, computed, onMounted, onUnmounted, reactive, inject, watch } from 'tsm:vue'
 import { InputText, Button, Dialog, Tree } from 'tsm:primevue'
+import { ClassPickerDialog } from 'ui-model-browser'
 import type { CoclConstraint, CoclConstraintSet } from 'ui-problems-panel'
 import { serializeCoclToXml } from '../composables/useCoclSerializer'
 import { useCoclAtlas } from '../composables/useCoclAtlas'
@@ -142,83 +143,22 @@ function handleClassSearchSelect(hit: any) {
 
 // --- Class Tree Picker ---
 const showClassTree = ref(false)
-const classTreeExpandedKeys = ref<Record<string, boolean>>({})
-
-// Filter treeNodes to only show packages and classes (no attributes/references/enums)
-const classTreeNodes = computed(() => {
-  return filterClassNodes(modelRegistry.treeNodes.value)
-})
-
-function filterClassNodes(nodes: any[]): any[] {
-  return nodes
-    .map(node => {
-      if (node.type === 'class') {
-        // Class nodes are leaf in this tree (no need to show attributes/refs)
-        return { ...node, children: undefined, leaf: true, selectable: true }
-      }
-      if (node.type === 'package' || node.type === 'subpackage') {
-        const filteredChildren = filterClassNodes(node.children || [])
-        if (filteredChildren.length === 0) return null
-        return { ...node, children: filteredChildren, leaf: false, selectable: false }
-      }
-      return null // Skip attributes, references, enums, constraints
-    })
-    .filter(Boolean)
-}
 
 function handleOpenClassTree() {
-  // Auto-expand all packages
-  const keys: Record<string, boolean> = {}
-  for (const node of modelRegistry.treeNodes.value) {
-    keys[node.key] = true
-    if (node.children) {
-      for (const child of node.children) {
-        if (child.type === 'package' || child.type === 'subpackage') {
-          keys[child.key] = true
-        }
-      }
-    }
-  }
-  classTreeExpandedKeys.value = keys
   showClassTree.value = true
 }
 
-function handleClassTreeSelect(node: any) {
-  if (node.type !== 'class') return
-
-  // Build qualified name from the EClass
-  const eClass = node.data?.eClass
-  if (!eClass) return
-
-  const name = eClass.getName?.()
-  if (!name) return
-
-  // Walk eContainer() chain to find EPackage with nsURI
-  let qualifiedName = name
-  let container = eClass.eContainer?.()
-  while (container) {
-    const nsURI = container.getNsURI?.()
-    if (nsURI) {
-      qualifiedName = `${nsURI}#//${name}`
-      break
-    }
-    const parent = container.eContainer?.()
-    if (!parent || parent === container) break
-    container = parent
-  }
-
-  // Update the selected constraint's contextClass
+function handleClassTreeSelect(selection: { eClass: any; qualifiedName: string }) {
   if (constraintSet.value && selectedConstraintName.value) {
     const idx = constraintSet.value.constraints.findIndex(c => c.name === selectedConstraintName.value)
     if (idx >= 0) {
       constraintSet.value.constraints[idx] = {
         ...constraintSet.value.constraints[idx],
-        contextClass: qualifiedName
+        contextClass: selection.qualifiedName
       }
       markDirty()
     }
   }
-  showClassTree.value = false
 }
 
 // Selected constraint (reactive copy)
@@ -715,40 +655,11 @@ async function handleSelectServerConfig(cfg: any) {
   />
 
   <!-- Class Tree Picker Dialog -->
-  <Dialog
+  <ClassPickerDialog
     v-model:visible="showClassTree"
     header="Select Context Class"
-    :modal="true"
-    :style="{ width: '480px' }"
-    :contentStyle="{ padding: 0 }"
-  >
-    <div class="class-tree-container">
-      <Tree
-        :value="classTreeNodes"
-        v-model:expandedKeys="classTreeExpandedKeys"
-        selectionMode="single"
-        @node-select="handleClassTreeSelect"
-        class="class-tree"
-      >
-        <template #default="{ node }">
-          <div
-            class="class-tree-node"
-            :class="{
-              'is-class': node.type === 'class',
-              'is-abstract': node.type === 'class' && node.data?.isAbstract,
-              'is-package': node.type === 'package' || node.type === 'subpackage'
-            }"
-          >
-            <span class="node-label">{{ node.label }}</span>
-            <span v-if="node.type === 'class' && node.data?.isAbstract" class="abstract-tag">abstract</span>
-          </div>
-        </template>
-      </Tree>
-      <div v-if="classTreeNodes.length === 0" class="class-tree-empty">
-        No metamodels loaded.
-      </div>
-    </div>
-  </Dialog>
+    @select="handleClassTreeSelect"
+  />
 
   <!-- Loading / empty state -->
   <div v-if="!constraintSet" class="cocl-editor-empty">

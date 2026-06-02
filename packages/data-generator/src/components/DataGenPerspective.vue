@@ -6,6 +6,7 @@
 
 import { ref, computed, onMounted, onUnmounted, watch, inject } from 'tsm:vue'
 import { Button, InputText, Dialog, Select, Tree, Menu } from 'tsm:primevue'
+import { ClassPickerDialog } from 'ui-model-browser'
 import type { DataGenConfig, ClassGenConfig, GenerationResult } from '../types'
 import { createDefaultConfig } from '../types'
 import { useDataGenerator } from '../composables/useDataGenerator'
@@ -65,7 +66,6 @@ const genResult = ref<GenerationResult | null>(null)
 
 // Class picker dialog
 const showClassPicker = ref(false)
-const classPickerExpandedKeys = ref<Record<string, boolean>>({})
 
 // Config metadata dialog
 const showNewConfigDialog = ref(false)
@@ -120,58 +120,8 @@ onUnmounted(() => {
   if (openFileTitle) openFileTitle.value = null
 })
 
-// --- Model registry for class picker ---
+// --- Model registry (for other uses) ---
 const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
-
-const classTreeNodes = computed(() => {
-  const allPkgs = modelRegistry.userPackages?.value || []
-  return allPkgs.flatMap((pkgInfo: any) => buildClassNodes(pkgInfo.ePackage, ''))
-})
-
-function buildClassNodes(pkg: any, prefix: string): any[] {
-  const nodes: any[] = []
-  const pkgName = pkg.getName?.() || ''
-  const nsURI = pkg.getNsURI?.() || ''
-  const fullPrefix = prefix ? `${prefix}.${pkgName}` : pkgName
-
-  const classifiers = pkg.getEClassifiers?.() || []
-  for (const cls of Array.from(classifiers) as any[]) {
-    if ('getEAttributes' in cls || 'getEAllAttributes' in cls) {
-      const name = cls.getName?.() || ''
-      if (!name) continue
-      const isAbstract = cls.isAbstract?.() || false
-      // Use full EClass URI: nsURI#//ClassName
-      const classURI = nsURI ? `${nsURI}#//${name}` : `${fullPrefix}.${name}`
-      nodes.push({
-        key: classURI,
-        label: name,
-        icon: isAbstract ? 'pi pi-circle' : 'pi pi-box',
-        type: 'class',
-        leaf: true,
-        data: { qualifiedName: classURI, eClass: cls, isAbstract }
-      })
-    }
-  }
-
-  const subPkgs = pkg.getESubpackages?.() || []
-  for (const sub of Array.from(subPkgs)) {
-    const subNodes = buildClassNodes(sub, fullPrefix)
-    if (subNodes.length > 0) {
-      const subName = (sub as any).getName?.() || ''
-      nodes.push({
-        key: `pkg-${fullPrefix}.${subName}`,
-        label: subName,
-        icon: 'pi pi-folder',
-        type: 'package',
-        children: subNodes,
-        leaf: false,
-        selectable: false
-      })
-    }
-  }
-
-  return nodes
-}
 
 // --- Actions ---
 
@@ -186,28 +136,15 @@ function createNewConfig() {
 }
 
 function handleAddClass() {
-  // Open class picker
-  // Auto-expand all
-  const keys: Record<string, boolean> = {}
-  for (const node of classTreeNodes.value) {
-    if (!node.leaf) keys[node.key] = true
-  }
-  classPickerExpandedKeys.value = keys
   showClassPicker.value = true
 }
 
-function handleClassPickerSelect(node: any) {
-  const treeNode = (node as any).node ?? node
-  if (treeNode.type !== 'class') return
-  dg.addClassConfig(treeNode.data.qualifiedName)
-
-  // Auto-configure if we have the eClass
-  if (treeNode.data.eClass) {
+function handleClassPickerSelect(selection: { eClass: any; qualifiedName: string }) {
+  dg.addClassConfig(selection.qualifiedName)
+  if (selection.eClass) {
     const idx = dg.config.value!.classConfigs.length - 1
-    dg.autoConfigureClass(idx, treeNode.data.eClass)
+    dg.autoConfigureClass(idx, selection.eClass)
   }
-
-  showClassPicker.value = false
 }
 
 function handleAutoConfigureClass(index: number) {
@@ -784,29 +721,11 @@ function parseDatagenXml(xml: string): DataGenConfig | null {
     </Dialog>
 
     <!-- Class Picker Dialog -->
-    <Dialog v-model:visible="showClassPicker" header="Add Class" :modal="true" :style="{ width: '420px' }" :contentStyle="{ padding: 0 }">
-      <div class="class-picker-content">
-        <Tree
-          v-if="classTreeNodes.length > 0"
-          :value="classTreeNodes"
-          v-model:expandedKeys="classPickerExpandedKeys"
-          selectionMode="single"
-          @node-select="handleClassPickerSelect"
-          class="class-picker-tree"
-        >
-          <template #default="{ node }">
-            <div class="picker-node" :class="{ 'is-abstract': node.data?.isAbstract }">
-              <span>{{ node.label }}</span>
-              <span v-if="node.data?.isAbstract" class="abstract-tag">abstract</span>
-            </div>
-          </template>
-        </Tree>
-        <div v-else class="picker-empty">
-          <p>No metamodels loaded in workspace.</p>
-          <p class="hint">Load a .ecore model first.</p>
-        </div>
-      </div>
-    </Dialog>
+    <ClassPickerDialog
+      v-model:visible="showClassPicker"
+      header="Add Class"
+      @select="handleClassPickerSelect"
+    />
 
     <!-- Generation Dialog -->
     <GenerationDialog
