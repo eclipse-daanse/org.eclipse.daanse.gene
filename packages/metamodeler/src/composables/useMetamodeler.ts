@@ -1656,6 +1656,7 @@ export function useMetamodeler() {
     // State
     resource,
     rootPackage,
+    version, // bumped on every model mutation; depend on it to react to edits
     selectedElement,
     dirty,
     filePath,

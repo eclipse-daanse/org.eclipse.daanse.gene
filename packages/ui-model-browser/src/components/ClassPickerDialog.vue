@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'tsm:vue'
 import { Dialog, Tree } from 'tsm:primevue'
 import { useSharedModelRegistry } from '../composables/useModelRegistry'
+import { deriveRootEPackages, collectClassesDeep, type PickerClass } from './classPickerSource'
 
 interface ClassSelection {
   eClass: any
@@ -10,14 +11,7 @@ interface ClassSelection {
   packageNsURI: string
 }
 
-interface FlatItem {
-  eClass: any
-  qualifiedName: string
-  className: string
-  packageNsURI: string
-  packageName: string
-  isAbstract: boolean
-}
+type FlatItem = PickerClass
 
 const props = withDefaults(defineProps<{
   visible: boolean
@@ -25,6 +19,13 @@ const props = withDefaults(defineProps<{
   /** 'list' = flache Liste (default), 'tree' = Paket-Baum mit Expand/Collapse */
   viewMode?: 'list' | 'tree'
   includeAbstract?: boolean
+  /**
+   * Root EPackage(s) to pick from. When provided, the dialog reads classes from
+   * these (and their subpackages) instead of the shared ModelRegistry. Callers
+   * that edit a live model (e.g. the Metamodeler) pass their working model here
+   * so unsaved/newly added classes are visible. Omit to use the registry.
+   */
+  sourcePackages?: any[]
 }>(), {
   header: 'Select Class',
   viewMode: 'tree',
@@ -41,33 +42,14 @@ const expandedKeys = ref<Record<string, boolean>>({})
 
 // ── Flat list ──────────────────────────────────────────────────────────────
 
-function collectClasses(pkg: any, pkgLabel: string): FlatItem[] {
-  const nsURI = pkg.getNsURI?.() || ''
-  const result: FlatItem[] = []
-  for (const cls of Array.from(pkg.getEClassifiers?.() ?? []) as any[]) {
-    if (!('getEAllAttributes' in cls || 'getEAttributes' in cls)) continue
-    const name = cls.getName?.() || ''
-    if (!name) continue
-    const isAbstract = cls.isAbstract?.() || false
-    if (!props.includeAbstract && isAbstract) continue
-    result.push({
-      eClass: cls,
-      qualifiedName: nsURI ? `${nsURI}#//${name}` : `${pkgLabel}.${name}`,
-      className: name,
-      packageNsURI: nsURI,
-      packageName: pkgLabel,
-      isAbstract
-    })
-  }
-  for (const sub of Array.from(pkg.getESubpackages?.() ?? []) as any[]) {
-    result.push(...collectClasses(sub, `${pkgLabel}.${sub.getName?.() || ''}`))
-  }
-  return result
-}
+// Root EPackages to render (sourcePackages override / registry dedup). See
+// classPickerSource for the rationale; kept pure there so it is unit-testable.
+const rootEPackages = computed<any[]>(() =>
+  deriveRootEPackages(modelRegistry.userPackages?.value, props.sourcePackages)
+)
 
 const flatItems = computed<FlatItem[]>(() =>
-  (modelRegistry.userPackages?.value ?? [])
-    .flatMap((p: any) => collectClasses(p.ePackage, p.ePackage.getName?.() || ''))
+  collectClassesDeep(rootEPackages.value, props.includeAbstract)
 )
 
 // ── Tree nodes (Package als expandierbarer Elternknoten) ───────────────────
@@ -115,8 +97,8 @@ function buildPackageNode(pkg: any, parentPrefix: string): any | null {
 }
 
 const treeNodes = computed(() =>
-  (modelRegistry.userPackages?.value ?? [])
-    .map((p: any) => buildPackageNode(p.ePackage, ''))
+  rootEPackages.value
+    .map((pkg: any) => buildPackageNode(pkg, ''))
     .filter(Boolean)
 )
 
