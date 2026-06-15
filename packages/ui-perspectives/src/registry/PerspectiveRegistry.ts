@@ -183,6 +183,11 @@ export class PerspectiveManagerImpl implements PerspectiveManager {
       }
     }
 
+    // Notify perspective-aware UI (e.g. the MenuBar toolbar) to reload its menu.
+    // Mirrors setCurrentPerspectiveId(); without this, switches routed through
+    // switchTo() (workspace open, composable, "Edit Metamodel") left the toolbar stale.
+    this.eventBus?.emit?.('gene:menu-changed')
+
     console.log(`[PerspectiveManager] Switched to perspective: ${perspectiveId}`)
   }
 
