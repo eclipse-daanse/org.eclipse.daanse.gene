@@ -1069,6 +1069,14 @@ async function handleModelAdd(entry: any, content: string) {
 async function handleMetamodelEdit(entry: any, content: string) {
   console.log('[App] Opening metamodel in editor:', entry.name)
 
+  // Composables are otherwise only fetched lazily when the Metamodeler perspective
+  // is first activated (setupMetamodelerPerspective). Editing a model happens before
+  // that switch, so fetch on demand here instead of bailing on first use.
+  if (!metamodelerComposables.value) {
+    const mmc = tsm.getService<any>('ui.metamodeler.composables')
+    if (mmc) metamodelerComposables.value = mmc
+  }
+
   if (!metamodelerComposables.value?.useSharedMetamodeler) {
     console.warn('[App] Metamodeler composables not available')
     return

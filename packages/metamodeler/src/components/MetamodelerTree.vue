@@ -6,7 +6,7 @@
  * Displays EPackage, EClass, EAttribute, EReference, and OCL constraints.
  */
 
-import { ref, computed, watch, inject, onMounted, onUnmounted } from 'tsm:vue'
+import { ref, computed, watch, inject, onMounted, onUnmounted, shallowRef } from 'tsm:vue'
 import { Tree } from 'tsm:primevue'
 import type { TreeNode } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
@@ -102,20 +102,54 @@ const newReferenceName = ref('')
 const newReferenceContainment = ref(false)
 const newReferenceTargetType = ref<EClass | null>(null)
 
-// Available classes for reference target type
-const availableClasses = computed<EClass[]>(() => {
-  const pkg = metamodeler.rootPackage.value
-  if (!pkg) return []
+// Reference target type is chosen via the shared ClassPickerDialog. Resolved from
+// the TSM service registry (ui-model-browser is a manifest dependency, so it is
+// activated first) rather than a static import, to keep plugin modularity intact.
+const showReferenceClassPicker = ref(false)
+const ClassPickerDialog = shallowRef<any>(
+  tsm?.getService?.('ui.model-browser.components')?.ClassPickerDialog ?? null
+)
 
-  const classes: EClass[] = []
-  const classifiers = pkg.getEClassifiers()
-  for (const classifier of classifiers) {
-    if ('isAbstract' in classifier && 'isInterface' in classifier) {
-      classes.push(classifier as EClass)
-    }
-  }
-  return classes
+// Feed the picker our LIVE model (not the shared ModelRegistry, which is a stale
+// separate load) so classes added/edited in this session are selectable.
+// rootPackage keeps the same EPackage instance across edits, so Vue would not
+// notify dependents on mutation — depend on `version` (bumped on every change)
+// to force the picker to re-read newly added classes.
+const metamodelerRootPackages = computed(() => {
+  void metamodeler.version.value
+  return metamodeler.rootPackage.value ? [metamodeler.rootPackage.value] : []
 })
+
+/**
+ * The picker emits an EClass instance from the shared ModelRegistry, which is a
+ * separate load from the metamodel currently being edited here. Map the selection
+ * back to this model's own instance (by package nsURI + class name) so the new
+ * reference's eType points into the edited resource. Fall back to the registry
+ * instance for classes that genuinely live in an external package.
+ */
+function resolveLocalClass(packageNsURI: string, className: string): EClass | null {
+  const root = metamodeler.rootPackage.value
+  if (!root) return null
+  let byName: EClass | null = null
+  let byNsAndName: EClass | null = null
+  const walk = (pkg: EPackage) => {
+    const nsMatch = pkg.getNsURI?.() === packageNsURI
+    for (const c of pkg.getEClassifiers()) {
+      if (c.getName?.() !== className) continue
+      if (!('isAbstract' in c && 'isInterface' in c)) continue
+      byName = byName ?? (c as EClass)
+      if (nsMatch) byNsAndName = c as EClass
+    }
+    for (const sub of pkg.getESubpackages()) walk(sub)
+  }
+  walk(root)
+  return byNsAndName ?? byName
+}
+
+function handleReferenceTargetSelect(selection: { eClass: any; className: string; packageNsURI: string }) {
+  newReferenceTargetType.value = resolveLocalClass(selection.packageNsURI, selection.className) ?? selection.eClass
+  showReferenceClassPicker.value = false
+}
 
 // Context menu items based on selected node type
 const contextMenuItems = computed(() => {
@@ -595,22 +629,17 @@ async function exportJsonSchema() {
         </div>
         <div class="field">
           <label for="refTargetType">Target Type</label>
-          <Select
-            id="refTargetType"
-            v-model="newReferenceTargetType"
-            :options="availableClasses"
-            optionLabel="getName"
-            placeholder="Select target class"
-            class="w-full"
-          >
-            <template #value="slotProps">
-              <span v-if="slotProps.value">{{ slotProps.value.getName() }}</span>
-              <span v-else>{{ slotProps.placeholder }}</span>
-            </template>
-            <template #option="slotProps">
-              {{ slotProps.option.getName() }}
-            </template>
-          </Select>
+          <div class="target-type-picker">
+            <span class="target-type-value" :class="{ placeholder: !newReferenceTargetType }">
+              {{ newReferenceTargetType ? newReferenceTargetType.getName() : 'No class selected' }}
+            </span>
+            <Button
+              label="Select…"
+              size="small"
+              severity="secondary"
+              @click="showReferenceClassPicker = true"
+            />
+          </div>
         </div>
         <div class="field-checkbox">
           <Checkbox v-model="newReferenceContainment" inputId="refContainment" :binary="true" />
@@ -622,6 +651,16 @@ async function exportJsonSchema() {
         <Button label="Create" @click="createNewReference" :disabled="!newReferenceName || !newReferenceTargetType" />
       </template>
     </Dialog>
+
+    <!-- Target class picker for the New Reference dialog (shared component via TSM service) -->
+    <component
+      :is="ClassPickerDialog"
+      v-if="ClassPickerDialog"
+      v-model:visible="showReferenceClassPicker"
+      header="Select Target Class"
+      :source-packages="metamodelerRootPackages"
+      @select="handleReferenceTargetSelect"
+    />
 
     <!-- New Enum Literal Dialog -->
     <Dialog
@@ -715,6 +754,8 @@ async function exportJsonSchema() {
   align-items: center;
   gap: 0.5rem;
   padding: 0.25rem 0;
+  /* Fill the row so right-clicks anywhere in the line open the context menu. */
+  width: 100%;
 }
 
 .tree-node.is-abstract .node-label,
@@ -803,6 +844,27 @@ async function exportJsonSchema() {
   gap: 0.5rem;
 }
 
+.target-type-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--p-inputtext-border-color, var(--surface-border));
+  border-radius: var(--p-inputtext-border-radius, 4px);
+}
+
+.target-type-value {
+  color: var(--text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.target-type-value.placeholder {
+  color: var(--text-color-secondary, #888);
+}
+
 .w-full {
   width: 100%;
 }
@@ -886,5 +948,9 @@ async function exportJsonSchema() {
 
 :deep(.p-tree-node-label) {
   font-size: 0.875rem;
+  /* Stretch the label wrapper across the row so the .tree-node context-menu
+     target covers the full width, not just the icon + text. */
+  flex: 1 1 auto;
+  min-width: 0;
 }
 </style>

@@ -517,26 +517,35 @@ export function useModelRegistry() {
   }
 
   /**
-   * Get all classes (including abstract) from a package
+   * Get all classes (including abstract) from a package and its subpackages.
+   * Recurses into nested subpackages so callers that select a parent package
+   * (e.g. the Transformation editor) still see classes that live deeper in the
+   * hierarchy. qualifiedName uses each class's own containing-package prefix.
    */
   function getAllClasses(packageInfo: ModelPackageInfo): ClassInfo[] {
-    const classifiers = packageInfo.ePackage.getEClassifiers()
     const result: ClassInfo[] = []
 
-    for (const classifier of classifiers) {
-      if (isEClass(classifier)) {
-        const eClass = classifier as EClass
-        result.push({
-          qualifiedName: `${packageInfo.nsPrefix}:${eClass.getName()}`,
-          name: eClass.getName(),
-          isAbstract: eClass.isAbstract(),
-          isInterface: eClass.isInterface(),
-          eClass,
-          packageInfo
-        })
+    const visit = (ePackage: EPackage) => {
+      const nsPrefix = ePackage.getNsPrefix?.() || packageInfo.nsPrefix
+      for (const classifier of ePackage.getEClassifiers?.() ?? []) {
+        if (isEClass(classifier)) {
+          const eClass = classifier as EClass
+          result.push({
+            qualifiedName: `${nsPrefix}:${eClass.getName()}`,
+            name: eClass.getName(),
+            isAbstract: eClass.isAbstract(),
+            isInterface: eClass.isInterface(),
+            eClass,
+            packageInfo
+          })
+        }
+      }
+      for (const subPkg of ePackage.getESubpackages?.() ?? []) {
+        visit(subPkg)
       }
     }
 
+    visit(packageInfo.ePackage)
     return result.sort((a, b) => a.name.localeCompare(b.name))
   }
 
