@@ -41,6 +41,14 @@ export interface MetaTreeNode {
   draggable?: boolean
 }
 
+/** Severity / loglevel of a constraint — aligned with C-OCL definitions. */
+export type ConstraintSeverity = 'TRACE' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL'
+/** Role / purpose of an OCL expression — aligned with C-OCL definitions. */
+export type ConstraintRole = 'VALIDATION' | 'DERIVED' | 'REFERENCE_FILTER'
+
+export const DEFAULT_CONSTRAINT_SEVERITY: ConstraintSeverity = 'ERROR'
+export const DEFAULT_CONSTRAINT_ROLE: ConstraintRole = 'VALIDATION'
+
 /**
  * OCL Constraint info extracted from EAnnotation
  */
@@ -51,6 +59,12 @@ export interface OclConstraintInfo {
   expression: string
   /** Context class name */
   contextClassName: string
+  /** Human-readable description */
+  description?: string
+  /** Severity / loglevel when the constraint fails (default ERROR) */
+  severity?: ConstraintSeverity
+  /** Role / purpose of the OCL expression (default VALIDATION) */
+  role?: ConstraintRole
   /** Source annotation */
   annotation: EAnnotation
 }

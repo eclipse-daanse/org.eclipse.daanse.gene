@@ -79,7 +79,7 @@ export async function activate(context: ModuleContext): Promise<void> {
       defaultLocation: 'left',
       defaultOrder: 0,
       headerActions: [
-        { icon: 'pi pi-plus', tooltip: 'Add Source', onClick: () => eventBus?.emit('explorer:add-source') },
+        { icon: 'pi pi-plus', tooltip: 'Add Source', onClick: (e: Event) => eventBus?.emit('explorer:add-source', e) },
         { icon: 'pi pi-refresh', tooltip: 'Refresh All', onClick: () => eventBus?.emit('explorer:refresh-all') }
       ]
     } as any)

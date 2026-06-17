@@ -7,22 +7,60 @@
  */
 
 import { ref, computed, shallowRef, triggerRef, toRaw, type Ref } from 'tsm:vue'
-import type { EObject, EPackage, EClass, EAttribute, EReference, ENamedElement, EAnnotation, EEnum, Resource } from '@emfts/core'
+import type { EObject, EPackage, EClass, EAttribute, EReference, ENamedElement, EAnnotation, EEnum, EDataType, Resource } from '@emfts/core'
 import {
   BasicEPackage, BasicEClass, BasicEAttribute, BasicEReference, BasicEFactory,
-  BasicEEnum, BasicEEnumLiteral,
+  BasicEEnum, BasicEEnumLiteral, BasicEDataType,
   EContentAdapter, XMIResource, URI, BasicResourceSet,
   getEcorePackage,
-  type Notification
+  Diagnostician, EcoreValidator, EValidatorRegistry,
+  type Notification, type Diagnostic
 } from '@emfts/core'
-import type { MetamodelerState, MetaTreeNode, OclConstraintInfo } from '../types'
-import { META_ICONS, OCL_ANNOTATION_SOURCES, getClassifierIcon } from '../types'
+import type { MetamodelerState, MetaTreeNode, OclConstraintInfo, ConstraintSeverity, ConstraintRole } from '../types'
+import { META_ICONS, OCL_ANNOTATION_SOURCES, getClassifierIcon, DEFAULT_CONSTRAINT_SEVERITY, DEFAULT_CONSTRAINT_ROLE } from '../types'
+
+/**
+ * Per-constraint metadata is stored as sibling detail keys in the same OCL
+ * EAnnotation, using suffixes that mirror the C-OCL field names:
+ *   "<name>"             → OCL expression (constraint body)
+ *   "<name>.severity"    → severity / loglevel (TRACE|INFO|WARN|ERROR|FATAL)
+ *   "<name>.role"        → role (VALIDATION|DERIVED|REFERENCE_FILTER)
+ *   "<name>.description" → human-readable description
+ */
+const CONSTRAINT_META_SUFFIXES = ['.severity', '.role', '.description'] as const
+
+interface OclConstraintOptions {
+  description?: string
+  severity?: ConstraintSeverity
+  role?: ConstraintRole
+}
 
 // Icon registry reference (set externally via setIconRegistry)
 let _iconRegistry: { getIconForClass: (eClass: EClass) => string } | null = null
 
 export function setMetamodelerIconRegistry(registry: any): void {
   _iconRegistry = registry
+}
+
+// Problems service accessor (set externally via setMetamodelerProblemsService).
+// A getter is used (not the service itself) so the service is resolved lazily at
+// save time — by then ui-problems-panel is loaded, avoiding plugin load-order issues.
+let _problemsServiceGetter: (() => any) | null = null
+
+export function setMetamodelerProblemsService(getter: () => any): void {
+  _problemsServiceGetter = getter
+}
+
+// Save-confirm handler (set externally, e.g. by App.vue to show a styled dialog).
+// Receives the validation error/total counts and resolves true to proceed with
+// the save, false to abort. If unset, saveToFile falls back to a native confirm().
+export type SaveConfirmInfo = { errorCount: number; totalCount: number }
+let _confirmSaveHandler: ((info: SaveConfirmInfo) => Promise<boolean>) | null = null
+
+export function setMetamodelerConfirmSaveHandler(
+  handler: ((info: SaveConfirmInfo) => Promise<boolean>) | null
+): void {
+  _confirmSaveHandler = handler
 }
 
 // Reactive version counter for icon changes
@@ -431,6 +469,23 @@ export function useMetamodeler() {
    * Build a tree node for an EObject (generic approach like Instance Tree)
    * Works with any Ecore element: EPackage, EClass, EAttribute, EReference, etc.
    */
+  /**
+   * Detects EStringToStringMapEntry detail entries that hold per-constraint
+   * metadata (keys ending in .severity/.role/.description) so the tree can hide
+   * them — they belong to a constraint's properties, not the structure tree.
+   */
+  function isConstraintMetaEntry(obj: any): boolean {
+    try {
+      if (obj?.eClass?.()?.getName?.() !== 'EStringToStringMapEntry') return false
+      const key = typeof obj.getKey === 'function'
+        ? obj.getKey()
+        : obj.eGet?.(obj.eClass().getEStructuralFeature('key'))
+      return typeof key === 'string' && CONSTRAINT_META_SUFFIXES.some(s => key.endsWith(s))
+    } catch {
+      return false
+    }
+  }
+
   function buildTreeNode(obj: EObject, parent?: MetaTreeNode, containmentRef?: EReference): MetaTreeNode {
     const rawObj = toRaw(obj)
     const eClass = rawObj.eClass()
@@ -481,6 +536,9 @@ export function useMetamodeler() {
           const items = Array.from(value as Iterable<any>)
           for (const child of items) {
             if (child && typeof child.eClass === 'function') {
+              // Hide per-constraint metadata entries (<name>.severity/.role/.description)
+              // — they are edited via the constraint properties, not shown as nodes.
+              if (isConstraintMetaEntry(child)) continue
               children.push(buildTreeNode(child, node, ref))
             }
           }
@@ -815,6 +873,142 @@ export function useMetamodeler() {
     }
   }
 
+  // ── Validation ─────────────────────────────────────────────────────────────
+
+  const ECORE_NS_URI = 'http://www.eclipse.org/emf/2002/Ecore'
+  let _ecoreValidatorRegistered = false
+
+  interface ValidationIssue {
+    severity: 'error' | 'warning' | 'info'
+    message: string
+    object: EObject | null
+    objectLabel: string
+    eClassName: string
+  }
+
+  function severityToString(severity: number): 'error' | 'warning' | 'info' {
+    // DiagnosticSeverity: OK=0, INFO=1, WARNING=2, ERROR=4
+    if (severity >= 4) return 'error'
+    if (severity === 2) return 'warning'
+    return 'info'
+  }
+
+  function describeObject(obj: EObject | null): { objectLabel: string; eClassName: string } {
+    if (!obj) return { objectLabel: '(model)', eClassName: '' }
+    const eClass = (obj as any).eClass?.()
+    const eClassName = eClass?.getName?.() || ''
+    let name = ''
+    if (typeof (obj as any).getName === 'function') {
+      name = (obj as any).getName() || ''
+    }
+    const objectLabel = name ? (eClassName ? `${eClassName} '${name}'` : name) : (eClassName || '(model)')
+    return { objectLabel, eClassName }
+  }
+
+  // Walk the diagnostic tree and collect the real (leaf) problems. Container nodes
+  // ("Diagnosis of …") are OK-severity wrappers; the actual errors/warnings are
+  // leaf BasicDiagnostics added by EcoreValidator with a message and data=[obj].
+  function collectLeafDiagnostics(diag: Diagnostic, out: ValidationIssue[]): void {
+    const children = diag.getChildren?.() ?? []
+    if (children.length === 0) {
+      const sev = diag.getSeverity?.() ?? 0
+      if (sev !== 0) {
+        const obj = (diag.getData?.() ?? [])[0] ?? null
+        out.push({
+          severity: severityToString(sev),
+          message: diag.getMessage?.() ?? '',
+          object: obj,
+          ...describeObject(obj)
+        })
+      }
+      return
+    }
+    for (const child of children) collectLeafDiagnostics(child, out)
+  }
+
+  /**
+   * Validate the current metamodel using the Ecore structural validator.
+   * Returns a flat list of issues (empty if the model is valid). Non-throwing.
+   */
+  function validate(): ValidationIssue[] {
+    const root = rootPackage.value
+    if (!root) return []
+    try {
+      if (!_ecoreValidatorRegistered) {
+        EValidatorRegistry.INSTANCE.setValidator(ECORE_NS_URI, EcoreValidator.INSTANCE)
+        _ecoreValidatorRegistered = true
+      }
+      const diagnostic = Diagnostician.INSTANCE.validate(toRaw(root) as any)
+      const issues: ValidationIssue[] = []
+      collectLeafDiagnostics(diagnostic, issues)
+      return issues
+    } catch (error) {
+      // Non-blocking: validation must never prevent a save. Some EcoreValidator
+      // checks can throw on certain models (e.g. eOpposite proxies — see
+      // eclipse-fennec/emf.ts#43); we just skip validation in that case.
+      console.warn('[Metamodeler] Validation skipped (validator error, non-blocking):', error)
+      return []
+    }
+  }
+
+  /**
+   * Validate and publish issues to the Problems panel (replacing previous
+   * Ecore-validation issues). Non-blocking: never prevents a save.
+   */
+  function validateAndPublish(): ValidationIssue[] {
+    const issues = validate()
+    const problems = _problemsServiceGetter?.()
+    if (problems?.clearIssuesBySource) {
+      try {
+        problems.clearIssuesBySource('ecore-validation')
+        if (issues.length > 0 && problems.addIssues) {
+          problems.addIssues(issues.map((i) => ({
+            severity: i.severity,
+            message: i.message,
+            source: 'ecore-validation',
+            object: i.object ?? undefined,
+            objectLabel: i.objectLabel,
+            eClassName: i.eClassName,
+            filePath: filePath.value ?? undefined
+          })))
+        }
+      } catch (error) {
+        console.error('[Metamodeler] Failed to publish validation issues:', error)
+      }
+    }
+    if (issues.length > 0) {
+      console.warn(`[Metamodeler] Validation found ${issues.length} issue(s) before save`)
+    }
+    return issues
+  }
+
+  /**
+   * Validate, publish issues to the Problems panel, and — if there are errors —
+   * ask the user whether to save anyway. Returns true if the save may proceed.
+   */
+  async function confirmSaveAfterValidation(): Promise<boolean> {
+    const issues = validateAndPublish()
+    const errorCount = issues.filter((i) => i.severity === 'error').length
+    if (errorCount === 0) return true
+    // Prefer an injected (styled) confirm dialog; fall back to native confirm.
+    if (_confirmSaveHandler) {
+      try {
+        return await _confirmSaveHandler({ errorCount, totalCount: issues.length })
+      } catch {
+        return false
+      }
+    }
+    const others = issues.length - errorCount
+    const msg =
+      `Das Metamodell hat ${errorCount} Validierungsfehler` +
+      (others > 0 ? ` und ${others} weitere Probleme` : '') +
+      `.\n\nTrotzdem speichern?`
+    if (typeof confirm === 'function') {
+      return confirm(msg)
+    }
+    return true
+  }
+
   /**
    * Save the current metamodel to an .ecore XMI string
    */
@@ -872,6 +1066,12 @@ export function useMetamodeler() {
    * Uses the stored file handle if available, otherwise prompts for Save As
    */
   async function saveToFile(): Promise<boolean> {
+    // Validate first; on errors, surface them and confirm before saving.
+    if (!(await confirmSaveAfterValidation())) {
+      console.log('[Metamodeler] Save abgebrochen wegen Validierungsfehlern')
+      return false
+    }
+
     const content = await saveToEcoreString()
     if (!content) {
       return false
@@ -913,6 +1113,12 @@ export function useMetamodeler() {
    * Save As - always prompts for a new file location
    */
   async function saveAsFile(): Promise<boolean> {
+    // Validate first; on errors, surface them and confirm before saving.
+    if (!(await confirmSaveAfterValidation())) {
+      console.log('[Metamodeler] Save abgebrochen wegen Validierungsfehlern')
+      return false
+    }
+
     const content = await saveToEcoreString()
     if (!content) {
       return false
@@ -1090,6 +1296,37 @@ export function useMetamodeler() {
     triggerUpdate()
 
     return eClass
+  }
+
+  /**
+   * Add a new EDataType to a package
+   */
+  function addDataType(pkg: EPackage, name: string, instanceClassName?: string): EDataType {
+    const eDataType = new BasicEDataType()
+    eDataType.setName(name)
+    if (instanceClassName) eDataType.setInstanceClassName(instanceClassName)
+
+    console.log('[Metamodeler] addDataType:', name, 'to package:', pkg.getName())
+    pkg.getEClassifiers().add(eDataType)
+
+    dirty.value = true
+    triggerUpdate()
+    return eDataType
+  }
+
+  /**
+   * Add a new EEnum to a package
+   */
+  function addEnum(pkg: EPackage, name: string): EEnum {
+    const eEnum = new BasicEEnum()
+    eEnum.setName(name)
+
+    console.log('[Metamodeler] addEnum:', name, 'to package:', pkg.getName())
+    pkg.getEClassifiers().add(eEnum)
+
+    dirty.value = true
+    triggerUpdate()
+    return eEnum
   }
 
   /**
@@ -1298,10 +1535,26 @@ export function useMetamodeler() {
 
   // ============ OCL Constraint Operations ============
 
+  // EMap access helpers — @emfts EMap exposes getByKey/putByKey/removeByKey/toMap
+  // (set/get are index-based EList methods!), while the hand-rolled
+  // createSimpleAnnotation details is a plain JS Map. These work with both.
+  function emapPut(map: any, key: string, value: string): void {
+    if (typeof map?.putByKey === 'function') map.putByKey(key, value)
+    else map?.set?.(key, value)
+  }
+  function emapRemove(map: any, key: string): void {
+    if (typeof map?.removeByKey === 'function') map.removeByKey(key)
+    else map?.delete?.(key)
+  }
+  function emapEntries(map: any): Iterable<[string, string]> {
+    if (typeof map?.toMap === 'function') return map.toMap() // real EMap → Map<K,V>
+    return map // plain JS Map is already [key,value]-iterable
+  }
+
   /**
    * Add an OCL constraint to a class
    */
-  function addOclConstraint(eClass: EClass, name: string, expression: string): EAnnotation | null {
+  function addOclConstraint(eClass: EClass, name: string, expression: string, options?: OclConstraintOptions): EAnnotation | null {
     let annotation = eClass.getEAnnotation(OCL_ANNOTATION_SOURCES.EMF_OCL)
 
     if (!annotation) {
@@ -1312,7 +1565,13 @@ export function useMetamodeler() {
     }
 
     const details = annotation.getDetails()
-    details.set(name, expression)
+    emapPut(details, name, expression)
+    // Metadata keys aligned with the C-OCL field names
+    emapPut(details, `${name}.severity`, options?.severity ?? DEFAULT_CONSTRAINT_SEVERITY)
+    emapPut(details, `${name}.role`, options?.role ?? DEFAULT_CONSTRAINT_ROLE)
+    if (options?.description) {
+      emapPut(details, `${name}.description`, options.description)
+    }
 
     dirty.value = true
     triggerUpdate()
@@ -1442,16 +1701,24 @@ export function useMetamodeler() {
   /**
    * Update an OCL constraint
    */
-  function updateOclConstraint(eClass: EClass, oldName: string, newName: string, expression: string): void {
+  function updateOclConstraint(eClass: EClass, oldName: string, newName: string, expression: string, options?: OclConstraintOptions): void {
     const annotation = eClass.getEAnnotation(OCL_ANNOTATION_SOURCES.EMF_OCL)
     if (!annotation) return
 
     const details = annotation.getDetails()
 
     if (oldName !== newName) {
-      details.delete(oldName)
+      emapRemove(details, oldName)
+      for (const suffix of CONSTRAINT_META_SUFFIXES) emapRemove(details, `${oldName}${suffix}`)
     }
-    details.set(newName, expression)
+    emapPut(details, newName, expression)
+    emapPut(details, `${newName}.severity`, options?.severity ?? DEFAULT_CONSTRAINT_SEVERITY)
+    emapPut(details, `${newName}.role`, options?.role ?? DEFAULT_CONSTRAINT_ROLE)
+    if (options?.description) {
+      emapPut(details, `${newName}.description`, options.description)
+    } else {
+      emapRemove(details, `${newName}.description`)
+    }
 
     dirty.value = true
     triggerUpdate()
@@ -1465,7 +1732,8 @@ export function useMetamodeler() {
     if (!annotation) return
 
     const details = annotation.getDetails()
-    details.delete(name)
+    emapRemove(details, name)
+    for (const suffix of CONSTRAINT_META_SUFFIXES) emapRemove(details, `${name}${suffix}`)
 
     dirty.value = true
     triggerUpdate()
@@ -1479,16 +1747,25 @@ export function useMetamodeler() {
     const annotation = eClass.getEAnnotation(OCL_ANNOTATION_SOURCES.EMF_OCL)
 
     if (annotation) {
-      const details = annotation.getDetails()
-      for (const [name, expression] of details) {
-        if (!['body', 'derivation', 'documentation', '_body'].includes(name)) {
-          constraints.push({
-            name,
-            expression,
-            contextClassName: eClass.getName() || '',
-            annotation
-          })
-        }
+      // Snapshot into a plain map so metadata siblings can be looked up by key.
+      // emapEntries is EMap-safe (real EMaps don't yield [k,v] on for..of).
+      const map = new Map<string, string>()
+      for (const [k, v] of emapEntries(annotation.getDetails())) map.set(k, v)
+
+      const reserved = ['body', 'derivation', 'documentation', '_body']
+      for (const [name, expression] of map) {
+        if (reserved.includes(name)) continue
+        // Skip metadata sibling entries (<name>.severity / .role / .description)
+        if (CONSTRAINT_META_SUFFIXES.some(suffix => name.endsWith(suffix))) continue
+        constraints.push({
+          name,
+          expression,
+          contextClassName: eClass.getName() || '',
+          description: map.get(`${name}.description`) || undefined,
+          severity: (map.get(`${name}.severity`) as ConstraintSeverity) || DEFAULT_CONSTRAINT_SEVERITY,
+          role: (map.get(`${name}.role`) as ConstraintRole) || DEFAULT_CONSTRAINT_ROLE,
+          annotation
+        })
       }
     }
 
@@ -1686,6 +1963,7 @@ export function useMetamodeler() {
     saveToEcoreString,
     saveToFile,
     saveAsFile,
+    validate,
     addRootObject,
 
     // Generic child creation (Instance Tree pattern)
@@ -1695,6 +1973,8 @@ export function useMetamodeler() {
 
     // Class operations
     addClass,
+    addDataType,
+    addEnum,
     updateClass,
     addSuperType,
     removeSuperType,

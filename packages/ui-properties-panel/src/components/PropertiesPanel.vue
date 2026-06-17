@@ -8,12 +8,14 @@
  * Accepts an optional context prop to support both Instance Editor and Metamodeler.
  */
 
-import { computed, watch, ref, onMounted, provide, inject } from 'tsm:vue'
+import { computed, watch, ref, reactive, onMounted, provide, inject } from 'tsm:vue'
 import { Fieldset } from 'tsm:primevue'
 import { Message } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
 import { Breadcrumb } from 'tsm:primevue'
 import { InputText } from 'tsm:primevue'
+import { Select } from 'tsm:primevue'
+import { Textarea } from 'tsm:primevue'
 import type { EObject, EStructuralFeature, EClass, EReference, EOperation, Resource } from '@emfts/core'
 
 const OCL_SOURCES = ['http://www.eclipse.org/fennec/m2x/ocl/1.0', 'http://www.eclipse.org/emf/2002/Ecore/OCL', 'http://www.eclipse.org/OCL/Pivot']
@@ -430,10 +432,10 @@ function getAnnotationDetailValue(annotation: any, targetKey: string): string | 
   }
   if (!details) return undefined
 
-  // Try EMap.get() method
-  if (typeof details.get === 'function' && typeof details.size === 'function') {
+  // Real EMaps expose key lookup as getByKey (get() is EList index access).
+  if (typeof details.getByKey === 'function') {
     try {
-      const val = details.get(targetKey)
+      const val = details.getByKey(targetKey)
       if (val !== undefined && val !== null) return String(val)
     } catch { /* fall through */ }
   }
@@ -457,6 +459,112 @@ function getAnnotationDetailValue(annotation: any, targetKey: string): string | 
   }
 
   return undefined
+}
+
+// ── OCL constraint editor (metamodel mode) ─────────────────────────────────
+// When an OCL constraint detail entry is selected, the panel shows a proper
+// constraint form (Name / OCL / Severity / Role / Description) instead of the
+// raw EStringToStringMapEntry key/value. Metadata is stored as sibling detail
+// keys "<name>.severity" / ".role" / ".description" (aligned with C-OCL).
+const CONSTRAINT_META_SUFFIXES = ['.severity', '.role', '.description']
+const CONSTRAINT_SEVERITIES = ['TRACE', 'INFO', 'WARN', 'ERROR', 'FATAL']
+const CONSTRAINT_ROLES = ['VALIDATION', 'DERIVED', 'REFERENCE_FILTER']
+
+function getDetailsEMap(annotation: any): any {
+  const ec = annotation?.eClass?.()
+  const sf = ec?.getEStructuralFeature?.('details')
+  return (sf && annotation.eGet?.(sf)) || annotation?.getDetails?.() || null
+}
+
+// EMap-safe key/value access. Real EMaps (from loaded .ecore) expose the
+// Map-style API as putByKey/removeByKey/getByKey — their set/get/delete are
+// EList index operations and would corrupt the map. Hand-rolled annotations
+// (createSimpleAnnotation) expose a JS-Map with key/value set/delete instead.
+function emapPutByKey(map: any, key: string, value: string): void {
+  if (!map) return
+  if (typeof map.putByKey === 'function') map.putByKey(key, value)
+  else if (typeof map.set === 'function') map.set(key, value)
+}
+function emapRemoveByKey(map: any, key: string): void {
+  if (!map) return
+  if (typeof map.removeByKey === 'function') map.removeByKey(key)
+  else if (typeof map.delete === 'function') map.delete(key)
+}
+
+// The OCL annotation containing the selected constraint entry (or null)
+const selectedConstraint = computed(() => {
+  const obj: any = selectedObject.value
+  if (!obj || obj.eClass?.()?.getName?.() !== 'EStringToStringMapEntry') return null
+  const annotation = obj.eContainer?.()
+  if (!annotation || !isOclSource(getAnnotationSource(annotation))) return null
+  const name = getMapEntryKey(obj)
+  if (!name || CONSTRAINT_META_SUFFIXES.some(s => name.endsWith(s))) return null
+  return {
+    annotation,
+    name,
+    expression: getMapEntryValue(obj) ?? '',
+    severity: getAnnotationDetailValue(annotation, `${name}.severity`) ?? 'ERROR',
+    role: getAnnotationDetailValue(annotation, `${name}.role`) ?? 'VALIDATION',
+    description: getAnnotationDetailValue(annotation, `${name}.description`) ?? ''
+  }
+})
+
+const constraintForm = reactive({ name: '', expression: '', severity: 'ERROR', role: 'VALIDATION', description: '' })
+watch(selectedConstraint, (c) => {
+  if (c) {
+    constraintForm.name = c.name
+    constraintForm.expression = c.expression
+    constraintForm.severity = c.severity
+    constraintForm.role = c.role
+    constraintForm.description = c.description
+  }
+}, { immediate: true })
+
+// Find the EStringToStringMapEntry EObject with the given key (to re-select after rename)
+function findDetailEntry(annotation: any, key: string): any {
+  const details = getDetailsEMap(annotation)
+  if (!details) return null
+  const entries: any[] = []
+  if (Array.isArray(details.data)) entries.push(...details.data)
+  else if (Array.isArray(details)) entries.push(...details)
+  else if (typeof details.size === 'function') {
+    for (let i = 0; i < details.size(); i++) entries.push(details.get(i))
+  }
+  return entries.find(e => getMapEntryKey(e) === key) ?? null
+}
+
+function commitConstraint() {
+  const c = selectedConstraint.value
+  if (!c) return
+  // Use getDetails() (the key/value container) rather than eGet, which returns
+  // the entry array for hand-rolled annotations. emapPut/RemoveByKey pick the
+  // correct API (putByKey for real EMaps, set/delete for JS-Map fallback).
+  const details = c.annotation?.getDetails?.()
+  if (!details) return
+
+  const oldName = c.name
+  const newName = (constraintForm.name || '').trim() || oldName
+
+  // Rename: drop the old body + metadata keys before writing the new ones.
+  if (newName !== oldName) {
+    emapRemoveByKey(details, oldName)
+    for (const suffix of CONSTRAINT_META_SUFFIXES) emapRemoveByKey(details, `${oldName}${suffix}`)
+  }
+
+  emapPutByKey(details, newName, constraintForm.expression)
+  emapPutByKey(details, `${newName}.severity`, constraintForm.severity)
+  emapPutByKey(details, `${newName}.role`, constraintForm.role)
+  if (constraintForm.description) emapPutByKey(details, `${newName}.description`, constraintForm.description)
+  else emapRemoveByKey(details, `${newName}.description`)
+
+  ctx.value?.markDirty?.()
+  ctx.value?.triggerUpdate?.()
+
+  // On rename, the previously selected map entry no longer exists — select the new one.
+  if (newName !== oldName) {
+    const newEntry = findDetailEntry(c.annotation, newName)
+    if (newEntry && ctx.value?.selectObject) ctx.value.selectObject(newEntry)
+  }
 }
 
 // Get operations with OCL bodies
@@ -554,8 +662,15 @@ const hasDerivedFeatures = computed(() =>
 const hasOperations = computed(() => operations.value.length > 0)
 const hasFeatures = computed(() => hasAttributes.value || hasReferences.value || hasDerivedFeatures.value || hasOperations.value)
 
+// Model version — bumped on every model change (EMF content adapter →
+// triggerUpdate). Read it where values are computed so the panel re-reads
+// model-derived data (e.g. an EEnum's literals) after mutations, without
+// recreating the editor (which would drop focus while typing).
+const modelVersion = computed(() => ctx.value?.version?.value ?? 0)
+
 // Get value for feature
 function getFeatureValue(feature: EStructuralFeature): any {
+  void modelVersion.value // re-read when the model changes
   return editor.value?.getValue(feature)
 }
 
@@ -1173,6 +1288,27 @@ function handleCancelParameterDialog() {
           Please fix the validation errors below.
         </Message>
 
+        <!-- OCL Constraint editor -->
+        <div v-if="selectedConstraint" class="section-group">
+          <div class="section-heading">Constraint</div>
+          <Fieldset legend="Name" :toggleable="true" class="property-fieldset">
+            <InputText v-model="constraintForm.name" class="w-full" @blur="commitConstraint" @keyup.enter="commitConstraint" />
+          </Fieldset>
+          <Fieldset legend="OCL Expression" :toggleable="true" class="property-fieldset">
+            <Textarea v-model="constraintForm.expression" rows="3" autoResize class="w-full" @blur="commitConstraint" />
+          </Fieldset>
+          <Fieldset legend="Severity" :toggleable="true" class="property-fieldset">
+            <Select v-model="constraintForm.severity" :options="CONSTRAINT_SEVERITIES" class="w-full" @change="commitConstraint" />
+          </Fieldset>
+          <Fieldset legend="Role" :toggleable="true" class="property-fieldset">
+            <Select v-model="constraintForm.role" :options="CONSTRAINT_ROLES" class="w-full" @change="commitConstraint" />
+          </Fieldset>
+          <Fieldset legend="Description" :toggleable="true" class="property-fieldset">
+            <Textarea v-model="constraintForm.description" rows="2" autoResize class="w-full" @blur="commitConstraint" />
+          </Fieldset>
+        </div>
+
+        <template v-if="!selectedConstraint">
         <!-- No features -->
         <div v-if="!hasFeatures" class="empty-features">
           <i class="pi pi-info-circle"></i>
@@ -1287,6 +1423,7 @@ function handleCancelParameterDialog() {
             />
           </div>
         </div>
+        </template>
     </div>
 
     <!-- Operation Parameter Dialog -->

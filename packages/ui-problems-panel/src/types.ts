@@ -14,7 +14,7 @@ export type IssueSeverity = 'error' | 'warning' | 'info'
 /**
  * Issue source type
  */
-export type IssueSource = 'ocl' | 'ocl-live' | 'xmi-parser' | 'general' | 'unresolved-proxy' | 'cocl-loader'
+export type IssueSource = 'ocl' | 'ocl-live' | 'xmi-parser' | 'general' | 'unresolved-proxy' | 'cocl-loader' | 'ecore-validation'
 
 /**
  * A single validation/parser issue

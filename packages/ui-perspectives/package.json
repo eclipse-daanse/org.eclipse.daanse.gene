@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "storage-model": "*",
-    "@emfts/core": "^0.1.1-next.2",
+    "@emfts/core": "^0.1.1-next.12",
     "vue": "^3.5.26"
   },
   "devDependencies": {

@@ -20,7 +20,7 @@ export * from './components'
 
 // Import for service registration
 import { MetamodelerPerspective, MetamodelerTree, MetamodelerEditor } from './components'
-import { useMetamodeler, useSharedMetamodeler, setMetamodelerIconRegistry, refreshMetamodelerIcons } from './composables/useMetamodeler'
+import { useMetamodeler, useSharedMetamodeler, setMetamodelerIconRegistry, refreshMetamodelerIcons, setMetamodelerProblemsService, setMetamodelerConfirmSaveHandler } from './composables/useMetamodeler'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
@@ -56,6 +56,10 @@ export async function activate(context: ModuleContext): Promise<void> {
     }, 500)
   }
 
+  // Provide a lazy accessor to the Problems panel so the metamodeler can publish
+  // pre-save validation issues. Resolved on demand (ui-problems-panel may load later).
+  setMetamodelerProblemsService(() => context.services.get<any>('gene.problems') ?? null)
+
   // Register components as service
   context.services.register('ui.metamodeler.components', {
     MetamodelerPerspective,
@@ -66,7 +70,8 @@ export async function activate(context: ModuleContext): Promise<void> {
   // Register composables as service
   context.services.register('ui.metamodeler.composables', {
     useMetamodeler,
-    useSharedMetamodeler
+    useSharedMetamodeler,
+    setMetamodelerConfirmSaveHandler
   })
 
   // Register metamodeler perspective
@@ -82,7 +87,7 @@ export async function activate(context: ModuleContext): Promise<void> {
         left: ['metamodeler-tree'],
         center: ['properties'],
         right: ['model-browser'],
-        bottom: []
+        bottom: ['ocl-problems']
       },
       defaultVisibility: { left: true, right: true, bottom: false },
       onActivate: () => {

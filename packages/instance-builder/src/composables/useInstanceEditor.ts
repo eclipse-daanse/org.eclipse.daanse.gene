@@ -171,13 +171,26 @@ export function useInstanceEditor(options: UseInstanceEditorOptions): UseInstanc
 
   // Get value for a feature
   function getValue(feature: EStructuralFeature): any {
-    const value = values.value.get(feature.getName())
-    // Return a copy of arrays to ensure Vue reactivity
     const info = analyzeFeature(feature)
-    if (info.isMany && value) {
-      return Array.isArray(value) ? [...value] : Array.from(value as Iterable<any>)
+    // Many-valued features: read live from the model so external mutations
+    // (e.g. adding an EEnum literal via the tree context menu) are reflected
+    // without recreating the editor. setValue auto-persists to the model, so the
+    // live list is also consistent with in-panel edits. Single-valued features
+    // keep using the editable cache (needed for two-way binding while typing).
+    if (info.isMany) {
+      if (eObject) {
+        try {
+          const live = eObject.eGet(feature)
+          if (live != null) {
+            return Array.isArray(live) ? [...live] : Array.from(live as Iterable<any>)
+          }
+        } catch { /* fall back to cache below */ }
+      }
+      const cached = values.value.get(feature.getName())
+      if (cached == null) return cached
+      return Array.isArray(cached) ? [...cached] : Array.from(cached as Iterable<any>)
     }
-    return value
+    return values.value.get(feature.getName())
   }
 
   // Get derived value for a feature (evaluated via OCL if available)

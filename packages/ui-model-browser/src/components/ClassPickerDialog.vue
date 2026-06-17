@@ -1,8 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'tsm:vue'
 import { Dialog, Tree } from 'tsm:primevue'
+import { getEcorePackage } from '@emfts/core'
 import { useSharedModelRegistry } from '../composables/useModelRegistry'
 import { deriveRootEPackages, collectClassesDeep, type PickerClass } from './classPickerSource'
+import { getClassifierIcon, getIconForClassViaRegistry } from '../types'
+
+// Use the same icon source as the model tree (custom registry icon, else the
+// classifier-default icon) so a class looks identical here and in the tree.
+function iconFor(eClass: any): string {
+  return (eClass && getIconForClassViaRegistry(eClass)) || getClassifierIcon(eClass)
+}
 
 interface ClassSelection {
   eClass: any
@@ -26,6 +34,14 @@ const props = withDefaults(defineProps<{
    * so unsaved/newly added classes are visible. Omit to use the registry.
    */
   sourcePackages?: any[]
+  /**
+   * When true, also offer the Ecore meta-classes from ecore.ecore (EObject,
+   * EClassifier, EClass, ENamedElement, …) as selectable EClass targets — useful
+   * for EReference eTypes that point at Ecore types. EDataTypes (EString, EInt, …)
+   * are excluded automatically (only EClasses are listed). Default off, so other
+   * pickers (instance creation, OCL context) stay unaffected.
+   */
+  includeEcoreClasses?: boolean
 }>(), {
   header: 'Select Class',
   viewMode: 'tree',
@@ -42,11 +58,20 @@ const expandedKeys = ref<Record<string, boolean>>({})
 
 // ── Flat list ──────────────────────────────────────────────────────────────
 
-// Root EPackages to render (sourcePackages override / registry dedup). See
-// classPickerSource for the rationale; kept pure there so it is unit-testable.
-const rootEPackages = computed<any[]>(() =>
-  deriveRootEPackages(modelRegistry.userPackages?.value, props.sourcePackages)
-)
+// Root EPackages to render (sourcePackages override / registry dedup). When
+// includeEcoreClasses is set, also append the Ecore package so its meta-classes
+// (EObject, EClassifier, …) become selectable; collectClassesDeep filters to
+// EClasses, so EDataTypes (EString, EInt, …) are excluded automatically.
+const rootEPackages = computed<any[]>(() => {
+  const roots = deriveRootEPackages(modelRegistry.userPackages?.value, props.sourcePackages)
+  if (props.includeEcoreClasses) {
+    try {
+      const ecore = getEcorePackage()
+      if (ecore) return [...roots, ecore]
+    } catch { /* ignore */ }
+  }
+  return roots
+})
 
 const flatItems = computed<FlatItem[]>(() =>
   collectClassesDeep(rootEPackages.value, props.includeAbstract)
@@ -70,7 +95,7 @@ function buildPackageNode(pkg: any, parentPrefix: string): any | null {
     children.push({
       key: qualifiedName,
       label: name,
-      icon: isAbstract ? 'pi pi-circle' : 'pi pi-box',
+      icon: iconFor(cls),
       type: 'class',
       leaf: true,
       selectable: true,
@@ -151,7 +176,7 @@ function close() { emit('update:visible', false) }
           :class="{ 'ccp-abstract': item.isAbstract }"
           @click="selectFlat(item)"
         >
-          <i :class="item.isAbstract ? 'pi pi-circle' : 'pi pi-box'" class="ccp-list-icon"></i>
+          <i :class="iconFor(item.eClass)" class="ccp-list-icon"></i>
           <span class="ccp-list-name">{{ item.className }}</span>
           <span class="ccp-list-pkg">{{ item.packageName }}</span>
         </div>
