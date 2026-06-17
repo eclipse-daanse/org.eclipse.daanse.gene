@@ -13,7 +13,7 @@
     "ui-model-browser": "*",
     "ui-model-view": "*",
     "ui-perspectives": "*",
-    "@emfts/core": "^0.1.1-next.2",
+    "@emfts/core": "^0.1.1-next.12",
     "vue": "^3.5.26",
     "primevue": "^4.3.3",
     "primeicons": "^7.0.0"

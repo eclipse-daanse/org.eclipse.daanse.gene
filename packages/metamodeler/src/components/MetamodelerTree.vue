@@ -17,9 +17,14 @@ import { Checkbox } from 'tsm:primevue'
 import type { EPackage, EClass, ENamedElement, EClassifier, EDataType, EEnum } from '@emfts/core'
 import { getEcorePackage } from '@emfts/core'
 import { Select } from 'tsm:primevue'
+import { Textarea } from 'tsm:primevue'
 import { useSharedMetamodeler } from '../composables/useMetamodeler'
 import { EPackageToJsonSchemaConverter } from '@emfts/codec.jsonschema'
-import type { MetaTreeNode } from '../types'
+import type { MetaTreeNode, ConstraintSeverity, ConstraintRole } from '../types'
+import { DEFAULT_CONSTRAINT_SEVERITY, DEFAULT_CONSTRAINT_ROLE } from '../types'
+
+const CONSTRAINT_SEVERITIES: ConstraintSeverity[] = ['TRACE', 'INFO', 'WARN', 'ERROR', 'FATAL']
+const CONSTRAINT_ROLES: ConstraintRole[] = ['VALIDATION', 'DERIVED', 'REFERENCE_FILTER']
 
 const emit = defineEmits<{
   'element-select': [element: ENamedElement]
@@ -65,6 +70,18 @@ const showNewClassDialog = ref(false)
 const showNewAttributeDialog = ref(false)
 const showNewReferenceDialog = ref(false)
 const showNewLiteralDialog = ref(false)
+const showNewDataTypeDialog = ref(false)
+const showNewEnumDialog = ref(false)
+const showConstraintDialog = ref(false)
+
+// Constraint dialog form data (shared by Add + Edit)
+const constraintTargetClass = ref<EClass | null>(null)
+const constraintOldName = ref<string | null>(null) // null = add mode
+const constraintName = ref('')
+const constraintExpression = ref('')
+const constraintSeverity = ref<ConstraintSeverity>(DEFAULT_CONSTRAINT_SEVERITY)
+const constraintRole = ref<ConstraintRole>(DEFAULT_CONSTRAINT_ROLE)
+const constraintDescription = ref('')
 
 // New element form data
 const newPackageName = ref('')
@@ -74,6 +91,10 @@ const newPackageNsPrefix = ref('')
 const newClassName = ref('')
 const newClassAbstract = ref(false)
 const newClassInterface = ref(false)
+
+const newDataTypeName = ref('')
+const newDataTypeInstanceClass = ref('')
+const newEnumName = ref('')
 
 const newAttributeName = ref('')
 const newAttributeType = ref<EDataType | null>(null)
@@ -168,6 +189,16 @@ const contextMenuItems = computed(() => {
         label: 'Add Subpackage',
         icon: 'pi pi-folder-plus',
         command: () => openNewPackageDialog()
+      },
+      {
+        label: 'Add Datatype',
+        icon: 'pi pi-tag',
+        command: () => openNewDataTypeDialog()
+      },
+      {
+        label: 'Add Enum',
+        icon: 'pi pi-list',
+        command: () => openNewEnumDialog()
       },
       { separator: true },
       {
@@ -311,6 +342,33 @@ function createNewClass() {
   showNewClassDialog.value = false
 }
 
+// New Datatype Dialog
+function openNewDataTypeDialog() {
+  newDataTypeName.value = ''
+  newDataTypeInstanceClass.value = ''
+  showNewDataTypeDialog.value = true
+}
+
+function createNewDataType() {
+  if (!newDataTypeName.value || !selectedNode.value) return
+  const pkg = selectedNode.value.data as EPackage
+  metamodeler.addDataType(pkg, newDataTypeName.value, newDataTypeInstanceClass.value || undefined)
+  showNewDataTypeDialog.value = false
+}
+
+// New Enum Dialog
+function openNewEnumDialog() {
+  newEnumName.value = ''
+  showNewEnumDialog.value = true
+}
+
+function createNewEnum() {
+  if (!newEnumName.value || !selectedNode.value) return
+  const pkg = selectedNode.value.data as EPackage
+  metamodeler.addEnum(pkg, newEnumName.value)
+  showNewEnumDialog.value = false
+}
+
 // New Attribute Dialog
 function openNewAttributeDialog() {
   newAttributeName.value = ''
@@ -391,13 +449,33 @@ watch(() => metamodeler.pendingLiteralDialog.value, (pending) => {
   }
 })
 
-// Add Constraint
+// Add Constraint — open the dialog in "add" mode for the selected class
 function handleAddConstraint() {
   if (!selectedNode.value || selectedNode.value.type !== 'class') return
+  constraintTargetClass.value = selectedNode.value.data as EClass
+  constraintOldName.value = null
+  constraintName.value = `constraint${Date.now()}`
+  constraintExpression.value = 'self.name.size() > 0'
+  constraintSeverity.value = DEFAULT_CONSTRAINT_SEVERITY
+  constraintRole.value = DEFAULT_CONSTRAINT_ROLE
+  constraintDescription.value = ''
+  showConstraintDialog.value = true
+}
 
-  const eClass = selectedNode.value.data as EClass
-  const constraintName = `constraint${Date.now()}`
-  metamodeler.addOclConstraint(eClass, constraintName, 'self.name.size() > 0')
+function saveConstraint() {
+  const eClass = constraintTargetClass.value
+  if (!eClass || !constraintName.value) return
+  const options = {
+    severity: constraintSeverity.value,
+    role: constraintRole.value,
+    description: constraintDescription.value || undefined
+  }
+  if (constraintOldName.value) {
+    metamodeler.updateOclConstraint(eClass, constraintOldName.value, constraintName.value, constraintExpression.value, options)
+  } else {
+    metamodeler.addOclConstraint(eClass, constraintName.value, constraintExpression.value, options)
+  }
+  showConstraintDialog.value = false
 }
 
 // Delete
@@ -577,6 +655,48 @@ async function exportJsonSchema() {
       </template>
     </Dialog>
 
+    <!-- New Datatype Dialog -->
+    <Dialog
+      v-model:visible="showNewDataTypeDialog"
+      header="New Datatype"
+      :modal="true"
+      :style="{ width: '400px' }"
+    >
+      <div class="dialog-content">
+        <div class="field">
+          <label for="dtName">Name</label>
+          <InputText id="dtName" v-model="newDataTypeName" class="w-full" placeholder="MyType" />
+        </div>
+        <div class="field">
+          <label for="dtInstance">Instance Class Name (optional)</label>
+          <InputText id="dtInstance" v-model="newDataTypeInstanceClass" class="w-full" placeholder="java.lang.String" />
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Cancel" severity="secondary" @click="showNewDataTypeDialog = false" />
+        <Button label="Create" @click="createNewDataType" :disabled="!newDataTypeName" />
+      </template>
+    </Dialog>
+
+    <!-- New Enum Dialog -->
+    <Dialog
+      v-model:visible="showNewEnumDialog"
+      header="New Enum"
+      :modal="true"
+      :style="{ width: '400px' }"
+    >
+      <div class="dialog-content">
+        <div class="field">
+          <label for="enumName">Name</label>
+          <InputText id="enumName" v-model="newEnumName" class="w-full" placeholder="MyEnum" />
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Cancel" severity="secondary" @click="showNewEnumDialog = false" />
+        <Button label="Create" @click="createNewEnum" :disabled="!newEnumName" />
+      </template>
+    </Dialog>
+
     <!-- New Attribute Dialog -->
     <Dialog
       v-model:visible="showNewAttributeDialog"
@@ -659,6 +779,7 @@ async function exportJsonSchema() {
       v-model:visible="showReferenceClassPicker"
       header="Select Target Class"
       :source-packages="metamodelerRootPackages"
+      :include-ecore-classes="true"
       @select="handleReferenceTargetSelect"
     />
 
@@ -682,6 +803,41 @@ async function exportJsonSchema() {
       <template #footer>
         <Button label="Cancel" severity="secondary" @click="showNewLiteralDialog = false; metamodeler.clearPendingLiteralDialog()" />
         <Button label="Create" @click="createNewLiteral" :disabled="!newLiteralName" />
+      </template>
+    </Dialog>
+
+    <!-- Constraint Dialog (Add / Edit) -->
+    <Dialog
+      v-model:visible="showConstraintDialog"
+      :header="constraintOldName ? 'Edit Constraint' : 'New Constraint'"
+      :modal="true"
+      :style="{ width: '480px' }"
+    >
+      <div class="dialog-content">
+        <div class="field">
+          <label for="cName">Name</label>
+          <InputText id="cName" v-model="constraintName" class="w-full" placeholder="myConstraint" />
+        </div>
+        <div class="field">
+          <label for="cExpr">OCL Expression</label>
+          <Textarea id="cExpr" v-model="constraintExpression" class="w-full" rows="3" autoResize placeholder="self.name.size() > 0" />
+        </div>
+        <div class="field">
+          <label for="cSeverity">Severity</label>
+          <Select id="cSeverity" v-model="constraintSeverity" :options="CONSTRAINT_SEVERITIES" class="w-full" />
+        </div>
+        <div class="field">
+          <label for="cRole">Role</label>
+          <Select id="cRole" v-model="constraintRole" :options="CONSTRAINT_ROLES" class="w-full" />
+        </div>
+        <div class="field">
+          <label for="cDesc">Description</label>
+          <Textarea id="cDesc" v-model="constraintDescription" class="w-full" rows="2" autoResize placeholder="(optional)" />
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Cancel" severity="secondary" @click="showConstraintDialog = false" />
+        <Button label="Save" @click="saveConstraint" :disabled="!constraintName || !constraintExpression" />
       </template>
     </Dialog>
   </div>

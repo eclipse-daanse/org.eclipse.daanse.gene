@@ -28,5 +28,5 @@
       "description": "Component registry for custom property editors"
     }
   ],
-  "dependencies": ["gene-app", "ui-layout"]
+  "dependencies": ["gene-app", "ui-layout", "ui-model-browser"]
 }

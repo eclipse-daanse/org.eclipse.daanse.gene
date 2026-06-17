@@ -16,7 +16,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@emfts/core": "^0.1.1-next.2",
+    "@emfts/core": "^0.1.1-next.12",
     "vue": "^3.4.0"
   },
   "peerDependencies": {

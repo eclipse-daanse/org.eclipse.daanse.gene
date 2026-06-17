@@ -92,7 +92,7 @@ export async function activate(context: ModuleContext): Promise<void> {
       title: 'Problems',
       icon: 'pi pi-exclamation-triangle',
       component: markRaw(ProblemsPanel),
-      perspectives: ['model-editor'],
+      perspectives: ['model-editor', 'metamodeler'],
       defaultLocation: 'bottom',
       defaultOrder: 0
     })

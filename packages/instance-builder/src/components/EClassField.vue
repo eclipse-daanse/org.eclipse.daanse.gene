@@ -2,15 +2,16 @@
 /**
  * EClassField Component
  *
- * Special field for selecting EClass type for EReference.eType.
- * Shows a dropdown with available EClasses from Ecore (like EObject)
- * and from the current package being edited.
+ * Field for selecting the EClass type of an EReference.eType.
+ *
+ * Uses the shared ClassPickerDialog (resolved via the TSM service registry) so
+ * class selection, subpackage recursion, icons and EObject handling stay
+ * consistent with the rest of the app instead of being re-implemented here.
  */
 
-import { ref, computed, watch } from 'tsm:vue'
-import { Dropdown } from 'tsm:primevue'
+import { ref, computed, inject, shallowRef } from 'tsm:vue'
+import { Button } from 'tsm:primevue'
 import type { EReference, EClass, EPackage, EObject } from '@emfts/core'
-import { getEcorePackage } from '@emfts/core'
 
 const props = defineProps<{
   feature: EReference
@@ -27,83 +28,68 @@ const emit = defineEmits<{
   'update:value': [value: EClass | null]
 }>()
 
-// Get available EClasses as flat list with group info in label
-const availableClasses = computed(() => {
-  const classes: { label: string; value: EClass }[] = []
+const tsm = inject<any>('tsm')
+// Resolve the shared class picker via the service registry (no static
+// ui-model-browser import → keeps plugin modularity intact).
+const ClassPickerDialog = shallowRef<any>(
+  tsm?.getService?.('ui.model-browser.components')?.ClassPickerDialog ?? null
+)
 
-  // 1. Add EClasses from the root package (user-defined)
-  if (props.rootPackage) {
-    const pkgName = props.rootPackage.getName() || 'Package'
-    const pkgClassifiers = props.rootPackage.getEClassifiers?.() || []
-    for (const classifier of pkgClassifiers) {
-      if (typeof (classifier as any).isAbstract === 'function') {
-        const eClass = classifier as EClass
-        const name = eClass.getName() || 'Unknown'
-        classes.push({
-          label: `${name} (${pkgName})`,
-          value: eClass
-        })
-      }
-    }
-  }
+const showPicker = ref(false)
 
-  // 2. Add EClasses from Ecore package (EObject, etc.)
-  const ecorePkg = getEcorePackage()
-  const ecoreClassifiers = ecorePkg.getEClassifiers?.() || []
+// Feed the picker the live model so newly added / nested classes are selectable;
+// falls back to the shared registry when no root package is in context.
+const sourcePackages = computed(() => (props.rootPackage ? [props.rootPackage] : []))
+const currentName = computed(() => (props.value as any)?.getName?.() ?? null)
 
-  for (const classifier of ecoreClassifiers) {
-    // Check if it's an EClass (has isAbstract method)
-    if (typeof (classifier as any).isAbstract === 'function') {
-      const eClass = classifier as EClass
-      const name = eClass.getName() || 'Unknown'
-      classes.push({
-        label: `${name} (Ecore)`,
-        value: eClass
-      })
-    }
-  }
+function handleSelect(selection: { eClass: any }) {
+  emit('update:value', selection?.eClass ?? null)
+  showPicker.value = false
+}
 
-  console.log('[EClassField] availableClasses:', classes.length, classes.map(c => c.label))
-  return classes
-})
-
-// Find matching option for current value
-const selectedOption = computed({
-  get() {
-    if (!props.value) return null
-    // Find by object reference or by name match
-    const found = availableClasses.value.find(opt => {
-      if (opt.value === props.value) return true
-      // Fallback: match by name
-      const optName = opt.value.getName?.()
-      const valName = (props.value as any)?.getName?.()
-      return optName && valName && optName === valName
-    })
-    console.log('[EClassField] selectedOption get:', found?.label, 'for value:', props.value)
-    return found || null
-  },
-  set(option: { label: string; value: EClass } | null) {
-    console.log('[EClassField] selectedOption set:', option?.label)
-    emit('update:value', option?.value ?? null)
-  }
-})
+function clear() {
+  emit('update:value', null)
+}
 </script>
 
 <template>
   <div class="eclass-field">
     <label class="field-label">{{ feature.getName() }}</label>
-    <Dropdown
-      v-model="selectedOption"
-      :options="availableClasses"
-      optionLabel="label"
-      dataKey="label"
-      placeholder="Select class..."
-      :disabled="readonly"
-      :class="{ 'p-invalid': error }"
-      class="w-full"
-      showClear
-    />
+    <div class="eclass-field-value" :class="{ 'p-invalid': error }">
+      <span class="eclass-name" :class="{ placeholder: !currentName }">
+        {{ currentName || 'Select class…' }}
+      </span>
+      <div class="eclass-actions">
+        <Button
+          v-if="!readonly && currentName"
+          icon="pi pi-times"
+          text
+          rounded
+          size="small"
+          v-tooltip.bottom="'Clear'"
+          @click="clear"
+        />
+        <Button
+          v-if="!readonly"
+          label="Select…"
+          size="small"
+          severity="secondary"
+          @click="showPicker = true"
+        />
+      </div>
+    </div>
     <small v-if="error" class="p-error">{{ error }}</small>
+
+    <!-- Shared class picker (via TSM service) -->
+    <component
+      :is="ClassPickerDialog"
+      v-if="ClassPickerDialog"
+      v-model:visible="showPicker"
+      header="Select Type"
+      :source-packages="sourcePackages"
+      :include-ecore-classes="true"
+      @select="handleSelect"
+    />
   </div>
 </template>
 
@@ -120,23 +106,39 @@ const selectedOption = computed({
   color: var(--text-color-secondary);
 }
 
-.w-full {
-  width: 100%;
+.eclass-field-value {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--p-inputtext-border-color, var(--surface-border));
+  border-radius: var(--p-inputtext-border-radius, 4px);
+}
+
+.eclass-field-value.p-invalid {
+  border-color: var(--red-500);
+}
+
+.eclass-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eclass-name.placeholder {
+  color: var(--text-color-secondary);
+}
+
+.eclass-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
 }
 
 .p-error {
   color: var(--red-500);
   font-size: 0.75rem;
-}
-
-.class-option {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.class-group {
-  font-size: 0.75rem;
-  color: var(--text-color-secondary);
 }
 </style>

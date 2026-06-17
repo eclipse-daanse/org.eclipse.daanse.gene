@@ -779,8 +779,18 @@ async function handleLoadDmn() {
 }
 
 // Toggle add menu
-function toggleAddMenu(event: Event) {
-  addMenu.value?.toggle(event)
+function toggleAddMenu(event?: Event) {
+  // PrimeVue Menu.toggle needs an event with currentTarget for positioning.
+  // When triggered via EventBus the event may be missing → synthesize one
+  // anchored to the explorer header action so the overlay can still position itself.
+  if (event?.currentTarget) {
+    addMenu.value?.toggle(event)
+    return
+  }
+  const anchor = document.querySelector('.sidebar-header-actions .sidebar-action-btn')
+    || document.querySelector('.activity-bar')
+    || document.body
+  addMenu.value?.toggle({ currentTarget: anchor } as unknown as Event)
 }
 
 onMounted(() => {

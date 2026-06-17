@@ -213,6 +213,11 @@ export interface EditorContext {
 
   // Trigger update
   triggerUpdate: () => void
+
+  // Monotonic model version, bumped on every model change (driven by the EMF
+  // content adapter / triggerUpdate). Consumers can depend on it to re-read
+  // model-derived data (e.g. containment children) after mutations.
+  version?: Ref<number>
 }
 
 /**

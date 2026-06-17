@@ -149,6 +149,10 @@ export function createMetamodelContext(metamodeler: any): EditorContext {
     // Root package (the package being edited in metamodeler)
     rootPackage: metamodeler.rootPackage,
 
+    // Model version (bumped by the metamodeler's EMF content adapter on every
+    // change) — lets the properties panel re-read containment children, etc.
+    version: metamodeler.version,
+
     // Dirty state
     dirty: metamodeler.dirty,
 

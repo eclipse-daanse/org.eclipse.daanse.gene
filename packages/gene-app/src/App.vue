@@ -231,6 +231,35 @@ const pendingArtifacts = ref<any[]>([])
 const xmiImportDialogRef = ref<any>(null)
 const xmiImportProps = ref<{ xmiContent: string; name: string }>({ xmiContent: '', name: '' })
 
+// Save-validation confirm dialog (Metamodeler): shown when saving with errors
+const saveConfirmVisible = ref(false)
+const saveConfirmInfo = ref<{ errorCount: number; totalCount: number }>({ errorCount: 0, totalCount: 0 })
+let saveConfirmResolve: ((proceed: boolean) => void) | null = null
+
+function resolveSaveConfirm(proceed: boolean) {
+  saveConfirmVisible.value = false
+  const resolve = saveConfirmResolve
+  saveConfirmResolve = null
+  resolve?.(proceed)
+}
+
+// Registers the styled confirm handler on the metamodeler composable so that
+// saving a metamodel with validation errors prompts the user instead of using
+// the native confirm(). Safe to call repeatedly.
+function registerMetamodelerSaveConfirm() {
+  const comp = metamodelerComposables.value as any
+  if (!comp?.setMetamodelerConfirmSaveHandler) return
+  comp.setMetamodelerConfirmSaveHandler((info: { errorCount: number; totalCount: number }) => {
+    return new Promise<boolean>((resolve) => {
+      // Resolve any previous pending prompt as cancelled
+      saveConfirmResolve?.(false)
+      saveConfirmInfo.value = info
+      saveConfirmResolve = resolve
+      saveConfirmVisible.value = true
+    })
+  })
+}
+
 function getCommandContext() {
   const pm = perspectiveManager.value
   return {
@@ -272,6 +301,13 @@ watchEffect(() => {
     const cr = tsm.getService<any>('gene.command.registry')
     if (cr) commandRegistryRef.value = cr
   }
+})
+
+// Register the styled metamodeler save-confirm handler as soon as the
+// composables are available (earlier than perspective setup) so even a
+// restore-time save shows the dialog instead of the native fallback.
+watchEffect(() => {
+  if (metamodelerComposables.value) registerMetamodelerSaveConfirm()
 })
 
 // Search dialog visibility
@@ -1840,6 +1876,9 @@ function setupMetamodelerPerspective(layout: any) {
   // All prerequisites met — now clear and set up the layout
   layout.clearAll()
 
+  // Wire the styled save-confirm dialog for validation errors
+  registerMetamodelerSaveConfirm()
+
   // Get or create metamodel context for ModelBrowser
   let context = metamodelEditorContext.value
   if (!context && metamodelerService && contextService?.createMetamodelContext) {
@@ -1940,12 +1979,68 @@ function setupMetamodelerPerspective(layout: any) {
     closable: false
   })
 
+  // Register Ecore/OCL Problems panel in the bottom area (validation issues on save)
+  const ProblemsPanelWrapper = defineComponent({
+    setup() {
+      return () => h(ProblemsPanel, {
+        onSelectObject: (obj: any) => {
+          // Navigate to the offending element in the metamodel tree if possible
+          try { metamodelerService?.useSharedMetamodeler?.().selectElement?.(obj) } catch { /* no-op */ }
+        }
+      })
+    }
+  })
+
+  layout.registerPanelTab({
+    id: 'ocl-problems',
+    title: 'Problems',
+    icon: 'pi pi-exclamation-triangle',
+    component: markRaw(ProblemsPanelWrapper)
+  })
+
+  // Register additional bottom panels registered for this perspective (e.g. Jobs)
+  const mmPanelRegistry = tsm.getService('ui.registry.panels') as any
+  if (mmPanelRegistry) {
+    const bottomPanels = mmPanelRegistry.getForLocation?.('metamodeler', 'bottom') || []
+    for (const panel of bottomPanels) {
+      if (panel.id === 'ocl-problems') continue // already registered above
+      const existingTabs = layout.state.panelTabs || []
+      if (!existingTabs.some((t: any) => t.id === panel.id)) {
+        layout.registerPanelTab({
+          id: panel.id,
+          title: panel.title,
+          icon: panel.icon,
+          component: markRaw(panel.component)
+        })
+      }
+    }
+  }
+
+  // Keep the Problems badge in sync with the validation issue count
+  watchEffect(() => {
+    const count = problemsService.stats.value.totalCount
+    layout.updateBadge('ocl-problems', count > 0 ? count : undefined)
+  })
+
+  // Auto-open the bottom panel when new problems appear (e.g. validation before save)
+  watch(
+    () => problemsService.stats.value.totalCount,
+    (newCount, oldCount) => {
+      if (newCount > (oldCount ?? 0)) {
+        layout.setPanelAreaVisible(true)
+        layout.selectPanel('ocl-problems', 'panel')
+      }
+    }
+  )
+
   // Show both sidebars
   layout.setPrimarySidebarVisible(true)
   layout.setSecondarySidebarVisible(true)
-  layout.setPanelAreaVisible(false)
   layout.selectPanel('metamodeler-tree', 'primary')
   layout.selectPanel('model-browser', 'secondary')
+
+  // Show panel area if there are already validation errors
+  layout.setPanelAreaVisible(problemsService.hasErrors.value)
 
   console.log('Metamodeler perspective setup complete')
 }
@@ -2385,6 +2480,33 @@ onMounted(() => {
     :name="xmiImportProps.name"
   />
 
+  <!-- Save-validation confirm dialog (Metamodeler) -->
+  <Dialog
+    v-model:visible="saveConfirmVisible"
+    header="Validierungsfehler"
+    :modal="true"
+    :closable="false"
+    :style="{ width: '440px' }"
+  >
+    <div class="save-confirm-body">
+      <i class="pi pi-exclamation-triangle save-confirm-icon"></i>
+      <div class="save-confirm-text">
+        <p class="save-confirm-lead">
+          Das Metamodell hat
+          <strong>{{ saveConfirmInfo.errorCount }} Validierungsfehler</strong><template
+            v-if="saveConfirmInfo.totalCount > saveConfirmInfo.errorCount"
+          > und {{ saveConfirmInfo.totalCount - saveConfirmInfo.errorCount }} weitere
+            {{ (saveConfirmInfo.totalCount - saveConfirmInfo.errorCount) === 1 ? 'Warnung' : 'Probleme' }}</template>.
+        </p>
+        <p class="save-confirm-hint">Details findest du im Problems-Panel. Trotzdem speichern?</p>
+      </div>
+    </div>
+    <template #footer>
+      <Button label="Abbrechen" severity="secondary" icon="pi pi-times" @click="resolveSaveConfirm(false)" />
+      <Button label="Trotzdem speichern" severity="warning" icon="pi pi-save" @click="resolveSaveConfirm(true)" />
+    </template>
+  </Dialog>
+
   <!-- Central Loading Overlay with Blur -->
   <div v-if="isLoading" class="loading-overlay">
     <div class="loading-content">
@@ -2467,6 +2589,38 @@ html, body, #app {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.save-confirm-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.25rem 0;
+}
+
+.save-confirm-icon {
+  font-size: 1.6rem;
+  color: var(--red-500, #ef4444);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.save-confirm-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.save-confirm-lead {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.save-confirm-hint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
 }
 
 .field {
