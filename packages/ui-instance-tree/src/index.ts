@@ -47,6 +47,7 @@ export {
   loadInstancesFromXMI,
   getObjectSourcePath,
   setObjectSourcePath,
+  setCanonicalPackageRegistry,
   // XMI ID functions
   getXmiId,
   setXmiId,
@@ -130,7 +131,8 @@ import {
   generateMissingXmiIds,
   assignXmiId,
   updateXmiIdFromAttribute,
-  assignXmiIdsRecursive
+  assignXmiIdsRecursive,
+  setCanonicalPackageRegistry
 } from './composables/useInstanceTree'
 import {
   useViews,
@@ -231,6 +233,13 @@ function checkDanglingReferences(): Array<{ className: string; featureName: stri
  */
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Instance Tree module...')
+
+  // Inject canonical package registry from main bundle
+  const canonicalRegistry = context.services.get('gene.package.registry')
+  if (canonicalRegistry) {
+    setCanonicalPackageRegistry(canonicalRegistry)
+    context.log.info('Canonical package registry set')
+  }
 
   // Register built-in icon providers
   const primeIconsProvider = new PrimeIconsProvider()

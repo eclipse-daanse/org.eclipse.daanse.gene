@@ -13,6 +13,7 @@ import { EPackageRegistry } from '@emfts/core'
 import { ManagementPackage } from './generated/management'
 import { WorkflowApiPackage } from './generated/workflowapi'
 import { RestPackage } from './generated/rest'
+import { setCanonicalPackageRegistry } from './AtlasResourceSet'
 
 // Re-export adapter and client
 export { ModelAtlasAdapter, type AtlasConnectionOptions } from './ModelAtlasAdapter'
@@ -50,10 +51,21 @@ let adapter: ModelAtlasAdapter | null = null
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Model Atlas Storage adapter...')
 
+  // Inject canonical package registry from main bundle
+  const canonicalRegistry = context.services.get('gene.package.registry')
+  if (canonicalRegistry) {
+    setCanonicalPackageRegistry(canonicalRegistry)
+  }
+
   // Register Atlas EPackages in global registry for XMI parsing
   EPackageRegistry.INSTANCE.set(ManagementPackage.eNS_URI, ManagementPackage.eINSTANCE)
   EPackageRegistry.INSTANCE.set(WorkflowApiPackage.eNS_URI, WorkflowApiPackage.eINSTANCE)
   EPackageRegistry.INSTANCE.set(RestPackage.eNS_URI, RestPackage.eINSTANCE)
+  if (canonicalRegistry && canonicalRegistry !== EPackageRegistry.INSTANCE) {
+    (canonicalRegistry as any).set(ManagementPackage.eNS_URI, ManagementPackage.eINSTANCE)
+    ;(canonicalRegistry as any).set(WorkflowApiPackage.eNS_URI, WorkflowApiPackage.eINSTANCE)
+    ;(canonicalRegistry as any).set(RestPackage.eNS_URI, RestPackage.eINSTANCE)
+  }
 
   const registry = context.services.getRequired<StorageAdapterRegistry>('storage.registry')
   adapter = new ModelAtlasAdapter()

@@ -83,9 +83,18 @@ function getIconForClassViaRegistry(eClass: EClass): string | null {
 // Shared resource set for creating new resources
 let resourceSet: BasicResourceSet | null = null
 
+// Canonical package registry from TSM service (shared across all plugins)
+let _canonicalRegistry: any = null
+
+export function setCanonicalPackageRegistry(registry: any) {
+  _canonicalRegistry = registry
+}
+
 function getResourceSet(): BasicResourceSet {
   if (!resourceSet) {
-    resourceSet = new BasicResourceSet()
+    resourceSet = _canonicalRegistry
+      ? new BasicResourceSet(_canonicalRegistry)
+      : new BasicResourceSet()
   }
   return resourceSet
 }

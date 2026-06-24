@@ -20,7 +20,7 @@ export { ModelBrowser, ClassPickerDialog } from './components'
 
 // Import for service registration
 import * as components from './components'
-import { useModelRegistry, useSharedModelRegistry, setViewsService } from './composables/useModelRegistry'
+import { useModelRegistry, useSharedModelRegistry, setViewsService, setCanonicalPackageRegistry } from './composables/useModelRegistry'
 import { setIconRegistry } from './types'
 
 /**
@@ -29,6 +29,13 @@ import { setIconRegistry } from './types'
  */
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Model Browser module...')
+
+  // Inject canonical package registry from main bundle
+  const canonicalRegistry = context.services.get('gene.package.registry')
+  if (canonicalRegistry) {
+    setCanonicalPackageRegistry(canonicalRegistry)
+    context.log.info('Canonical package registry set')
+  }
 
   // Register components as service (legacy)
   context.services.register('ui.model-browser.components', components)

@@ -41,7 +41,7 @@ export { useXMILoader, loadXMI, saveToXMI } from './composables/useXMILoader'
 
 // Import for service registration
 import { usePerspective, useSharedPerspective } from './composables/usePerspective'
-import { useXMILoader, loadXMI, saveToXMI } from './composables/useXMILoader'
+import { useXMILoader, loadXMI, saveToXMI, setCanonicalPackageRegistry } from './composables/useXMILoader'
 import {
   PanelRegistryImpl,
   ActivityRegistryImpl,
@@ -56,6 +56,12 @@ import {
  */
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Perspectives module...')
+
+  // Inject canonical package registry from main bundle
+  const canonicalRegistry = context.services.get('gene.package.registry')
+  if (canonicalRegistry) {
+    setCanonicalPackageRegistry(canonicalRegistry)
+  }
 
   // Bind registries via DI (singleton, lazy instantiation)
   context.services.bindClass('gene.registry.panels', PanelRegistryImpl)

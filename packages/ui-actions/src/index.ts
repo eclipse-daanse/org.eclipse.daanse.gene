@@ -21,7 +21,7 @@ import { exportXmiHandler, copyUriHandler, copyJsonHandler } from './builtinHand
 import { EventMappingEditor, ActionEditor, JobsPanel, CommandPalette, ActionApprovalDialog, XmiImportDialog } from './components'
 import { useJobStore } from './composables/useJobStore'
 import { fetchCapabilities, autoRegisterActions } from './composables/useCapabilities'
-import { initActionApiPackage } from './ActionApiResourceSet'
+import { initActionApiPackage, setCanonicalPackageRegistry } from './ActionApiResourceSet'
 import { CommandRegistryImpl } from './CommandRegistry'
 import { KeybindingServiceImpl } from './KeybindingService'
 import * as OAuth2Service from './OAuth2Service'
@@ -56,10 +56,19 @@ export type { KeybindingEntry } from './KeybindingService'
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Action System module...')
 
+  // Inject canonical package registry from main bundle
+  const canonicalRegistry = context.services.get('gene.package.registry')
+  if (canonicalRegistry) {
+    setCanonicalPackageRegistry(canonicalRegistry)
+  }
+
   // Register EPackages for XMI parsing
   initActionApiPackage()
   // Register ActionsPluginConfig EPackage so xsi:type resolves in config.xmi
-EPackageRegistry.INSTANCE.set(ActionsPluginPackage.eNS_URI, ActionsPluginPackage.eINSTANCE)
+  EPackageRegistry.INSTANCE.set(ActionsPluginPackage.eNS_URI, ActionsPluginPackage.eINSTANCE)
+  if (canonicalRegistry && canonicalRegistry !== EPackageRegistry.INSTANCE) {
+    (canonicalRegistry as any).set(ActionsPluginPackage.eNS_URI, ActionsPluginPackage.eINSTANCE)
+  }
 
   // Bind core services via DI
   context.services.bindClass('gene.action.registry', ActionRegistryImpl)

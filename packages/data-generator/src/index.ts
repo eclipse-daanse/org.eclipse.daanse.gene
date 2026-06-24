@@ -48,6 +48,10 @@ export async function activate(context: ModuleContext): Promise<void> {
   const nsURI = pkg.getNsURI()
   if (nsURI) {
     EPackageRegistry.INSTANCE.set(nsURI, pkg)
+    const canonicalRegistry = context.services.get('gene.package.registry')
+    if (canonicalRegistry && canonicalRegistry !== EPackageRegistry.INSTANCE) {
+      (canonicalRegistry as any).set(nsURI, pkg)
+    }
     context.log.info(`Registered DatagenPackage: ${nsURI}`)
   }
 
