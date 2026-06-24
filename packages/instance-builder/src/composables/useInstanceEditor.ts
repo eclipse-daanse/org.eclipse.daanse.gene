@@ -9,6 +9,19 @@ import { ref, computed, type Ref } from 'tsm:vue'
 import type { EObject, EClass, EStructuralFeature } from '@emfts/core'
 import { analyzeFeature, isEAttribute, isEReference } from '../types'
 
+// Lazy import to avoid circular dependencies
+let instanceTreeModule: any = null
+async function getUpdateXmiIdFromAttribute() {
+  if (!instanceTreeModule) {
+    try {
+      instanceTreeModule = await import('ui-instance-tree')
+    } catch {
+      instanceTreeModule = {}
+    }
+  }
+  return instanceTreeModule.updateXmiIdFromAttribute as ((obj: EObject, value: any) => void) | undefined
+}
+
 // Optional Problems service import (lazy loaded to avoid circular dependencies)
 let problemsServiceModule: any = null
 async function getProblemsService() {
@@ -260,6 +273,11 @@ export function useInstanceEditor(options: UseInstanceEditorOptions): UseInstanc
         } else {
           // Single-valued feature - use eSet
           eObject.eSet(feature, value)
+        }
+
+        // If this is an iD-attribute, sync the xmi:id
+        if ('isID' in feature && typeof (feature as any).isID === 'function' && (feature as any).isID()) {
+          getUpdateXmiIdFromAttribute().then(fn => fn?.(eObject!, value))
         }
 
         // Update original value since we auto-save
