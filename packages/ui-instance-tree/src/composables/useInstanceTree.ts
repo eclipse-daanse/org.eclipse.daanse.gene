@@ -461,6 +461,9 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
       parent.eSet(containmentRef, newObj)
     }
 
+    // Assign xmi:id after adding to resource (needs eResource() for setID)
+    assignXmiId(newObj)
+
     // Fallback: manually trigger if notifications don't fire
     triggerUpdate()
 
@@ -679,6 +682,9 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
       contents.push(obj)
     }
 
+    // Assign xmi:id after adding to resource (needs eResource() for setID)
+    assignXmiId(obj)
+
     // Fallback: manually trigger if notifications don't fire
     triggerUpdate()
 
@@ -793,6 +799,18 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
   }
 
   /**
+   * Recursively copy xmi:ids from one resource to another for all contained children
+   */
+  function copyChildIds(obj: EObject, from: any, to: any): void {
+    if (!from || typeof from.getID !== 'function') return
+    for (const child of obj.eContents()) {
+      const id = from.getID(child)
+      if (id) to.setID(child, id)
+      copyChildIds(child, from, to)
+    }
+  }
+
+  /**
    * Serialize multiple objects to a single XMI string
    * Used when saving multiple objects that belong to the same source file
    */
@@ -805,10 +823,20 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
     const tempResource = new XMIResource(uri)
     tempResource.setResourceSet(rs)
 
-    // Add all objects
+    // Add all objects and transfer their xmi:ids from the original resource
     const rawObjects = objects.map(obj => toRaw(obj))
+    const origResource = resource.value
     for (const rawObj of rawObjects) {
       tempResource.getContents().push(rawObj)
+      // Copy xmi:id from original resource to temp resource
+      if (origResource && typeof (origResource as any).getID === 'function') {
+        const id = (origResource as any).getID(rawObj)
+        if (id) {
+          (tempResource as any).setID(rawObj, id)
+        }
+      }
+      // Also copy IDs for all children recursively
+      copyChildIds(rawObj, origResource as any, tempResource as any)
     }
 
     const xmiString = await tempResource.saveToString()
@@ -1060,6 +1088,9 @@ export async function loadInstancesFromXMI(xmiContent: string, filePath: string)
       }
     }
 
+    // Assign xmi:id to all loaded objects (and their children) that don't have one yet
+    assignXmiIdsRecursive(state.resource.value)
+
     // Trigger tree update to reflect the new objects
     state.instance.triggerUpdate()
 
@@ -1134,6 +1165,69 @@ export function generateXmiId(obj: EObject): string | null {
  */
 export function hasXmiId(obj: EObject): boolean {
   return getXmiId(obj) !== null
+}
+
+/**
+ * Assign an xmi:id to an EObject using the following priority:
+ * 1. Already has a manually set xmi:id → keep it
+ * 2. EClass has an EAttribute with isID()=true and value is set → use that value
+ * 3. Otherwise → generate a UUID
+ *
+ * Also sets the ID in the resource's ID map for cross-reference resolution.
+ */
+export function assignXmiId(obj: EObject): string | null {
+  const rawObj = toRaw(obj)
+
+  // 1. Already has an ID
+  const existing = getXmiId(rawObj)
+  if (existing) return existing
+
+  // 2. Check for iD-attribute value
+  try {
+    const eClass = rawObj.eClass()
+    if (eClass) {
+      for (const feature of eClass.getEAllStructuralFeatures()) {
+        if ('isID' in feature && typeof (feature as any).isID === 'function' && (feature as any).isID()) {
+          const val = rawObj.eGet(feature)
+          if (val !== null && val !== undefined && val !== '') {
+            const id = String(val)
+            setXmiId(rawObj, id)
+            return id
+          }
+          break
+        }
+      }
+    }
+  } catch { /* ignore */ }
+
+  // 3. Generate UUID
+  return generateXmiId(rawObj)
+}
+
+/**
+ * Update the xmi:id when an iD-attribute value changes.
+ * Call this from the editor when a feature with isID()=true is modified.
+ */
+export function updateXmiIdFromAttribute(obj: EObject, newValue: any): void {
+  if (newValue !== null && newValue !== undefined && newValue !== '') {
+    setXmiId(toRaw(obj), String(newValue))
+  }
+}
+
+/**
+ * Recursively assign xmi:id to all objects in a resource that don't have one yet.
+ * Uses assignXmiId logic (iD-attribute → UUID fallback).
+ */
+export function assignXmiIdsRecursive(resource: Resource): void {
+  function visit(obj: EObject) {
+    assignXmiId(obj)
+    for (const child of obj.eContents()) {
+      visit(child)
+    }
+  }
+  for (const root of resource.getContents()) {
+    visit(root)
+  }
 }
 
 /**

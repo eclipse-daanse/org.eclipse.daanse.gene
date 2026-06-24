@@ -54,6 +54,9 @@ export {
   hasXmiId,
   getObjectByXmiId,
   generateMissingXmiIds,
+  assignXmiId,
+  updateXmiIdFromAttribute,
+  assignXmiIdsRecursive,
   type XMILoadResult
 } from './composables/useInstanceTree'
 
@@ -124,7 +127,10 @@ import {
   generateXmiId,
   hasXmiId,
   getObjectByXmiId,
-  generateMissingXmiIds
+  generateMissingXmiIds,
+  assignXmiId,
+  updateXmiIdFromAttribute,
+  assignXmiIdsRecursive
 } from './composables/useInstanceTree'
 import {
   useViews,
@@ -280,7 +286,10 @@ export async function activate(context: ModuleContext): Promise<void> {
     generateXmiId,
     hasXmiId,
     getObjectByXmiId,
-    generateMissingXmiIds
+    generateMissingXmiIds,
+    assignXmiId,
+    updateXmiIdFromAttribute,
+    assignXmiIdsRecursive
   })
 
   // Register icon registries as TSM services

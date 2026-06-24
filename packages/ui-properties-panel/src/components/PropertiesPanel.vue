@@ -166,8 +166,11 @@ const instanceName = computed(() => {
 })
 
 // XMI ID for the selected object
+// Also depend on treeNodes to re-evaluate when triggerUpdate() fires (e.g. after assignXmiId)
 const xmiId = computed(() => {
   if (!selectedObject.value) return null
+  // eslint-disable-next-line no-unused-expressions
+  instanceTree?.treeNodes?.value
   return getXmiId(selectedObject.value)
 })
 
@@ -677,6 +680,13 @@ function getFeatureValue(feature: EStructuralFeature): any {
 // Set value for feature
 function setFeatureValue(feature: EStructuralFeature, value: any) {
   editor.value?.setValue(feature, value)
+  // Sync xmi:id when an iD-attribute is changed
+  if (selectedObject.value && 'isID' in feature && typeof (feature as any).isID === 'function' && (feature as any).isID()) {
+    if (value !== null && value !== undefined && value !== '') {
+      setXmiId?.(selectedObject.value, String(value))
+    }
+    instanceTree?.triggerUpdate()
+  }
   // Notify context that data changed (for dirty tracking)
   if (ctx.value?.markDirty) {
     ctx.value.markDirty()
@@ -1277,8 +1287,8 @@ function handleCancelParameterDialog() {
         </template>
       </div>
 
-      <!-- Primary-Key ID (model-level) -->
-      <div v-if="primaryKeyId" class="xmi-id-row">
+      <!-- Primary-Key ID (model-level) - only show if different from xmi:id -->
+      <div v-if="primaryKeyId && primaryKeyId.value !== xmiId" class="xmi-id-row">
         <label class="xmi-id-label">ID ({{ primaryKeyId.name }}):</label>
         <span class="xmi-id-value">{{ primaryKeyId.value }}</span>
       </div>
