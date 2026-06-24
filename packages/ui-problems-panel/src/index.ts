@@ -46,7 +46,7 @@ export { OclPanel } from './components'
 
 // Import for registration
 import { ProblemsPanel } from './components'
-import { useProblemsService, useSharedProblemsService, loadCoclFromString } from './composables'
+import { useProblemsService, useSharedProblemsService, loadCoclFromString, setCanonicalPackageRegistry } from './composables'
 import { setEventBus } from './composables/useProblemsService'
 
 /**
@@ -56,6 +56,11 @@ import { setEventBus } from './composables/useProblemsService'
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Problems Panel module...')
 
+  // Inject canonical package registry from main bundle
+  const canonicalRegistry = context.services.get('gene.package.registry')
+  if (canonicalRegistry) {
+    setCanonicalPackageRegistry(canonicalRegistry)
+  }
 
   // Wire up event bus from TSM
   const eventBus = context.services.get<any>('gene.eventbus')

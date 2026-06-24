@@ -17,19 +17,31 @@ import { StoragePackage } from 'storage-model'
 // Singleton ResourceSet
 let resourceSet: BasicResourceSet | null = null
 
+// Canonical package registry from TSM service (shared across all plugins)
+let _canonicalRegistry: any = null
+
+export function setCanonicalPackageRegistry(registry: any) {
+  _canonicalRegistry = registry
+}
+
 /**
  * Initialize the ResourceSet with required packages
  */
 function getResourceSet(): BasicResourceSet {
   if (!resourceSet) {
-    resourceSet = new BasicResourceSet()
+    resourceSet = _canonicalRegistry
+      ? new BasicResourceSet(_canonicalRegistry)
+      : new BasicResourceSet()
 
-    // Register StoragePackage
+    // Register StoragePackage in this ResourceSet's local registry
     const registry = resourceSet.getPackageRegistry()
     registry.set(StoragePackage.eNS_URI, StoragePackage.eINSTANCE)
 
     // Also register in global registry as fallback
     EPackageRegistry.INSTANCE.set(StoragePackage.eNS_URI, StoragePackage.eINSTANCE)
+    if (_canonicalRegistry && _canonicalRegistry !== EPackageRegistry.INSTANCE) {
+      _canonicalRegistry.set(StoragePackage.eNS_URI, StoragePackage.eINSTANCE)
+    }
 
     console.log('ResourceSet initialized with StoragePackage:', StoragePackage.eNS_URI)
   }

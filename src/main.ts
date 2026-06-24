@@ -108,6 +108,7 @@ async function bootstrap(): Promise<void> {
     // 5. Register TSM system and AppConfig as services
     tsm.registerService('tsm.system', tsm)
     tsm.registerService('gene.app.config', appConfig)
+    tsm.registerService('gene.package.registry', emfts.EPackageRegistry.INSTANCE)
 
     // 6. Listen for module events
     tsm.onModuleEvent({

@@ -15,9 +15,18 @@ import type { JobStatusImpl } from './generated/actionapi/JobStatusImpl'
 let resourceSet: BasicResourceSet | null = null
 let resourceCounter = 0
 
+// Canonical package registry from TSM service (shared across all plugins)
+let _canonicalRegistry: any = null
+
+export function setCanonicalPackageRegistry(registry: any) {
+  _canonicalRegistry = registry
+}
+
 function getResourceSet(): BasicResourceSet {
   if (!resourceSet) {
-    resourceSet = new BasicResourceSet()
+    resourceSet = _canonicalRegistry
+      ? new BasicResourceSet(_canonicalRegistry)
+      : new BasicResourceSet()
     const pkg = ActionApiPackage.eINSTANCE
     // Wire factory to package (deferred to avoid circular init)
     if (!pkg.getEFactoryInstance()) {
@@ -26,6 +35,9 @@ function getResourceSet(): BasicResourceSet {
     const registry = resourceSet.getPackageRegistry()
     registry.set(ActionApiPackage.eNS_URI, pkg)
     EPackageRegistry.INSTANCE.set(ActionApiPackage.eNS_URI, pkg)
+    if (_canonicalRegistry && _canonicalRegistry !== EPackageRegistry.INSTANCE) {
+      _canonicalRegistry.set(ActionApiPackage.eNS_URI, pkg)
+    }
   }
   return resourceSet
 }

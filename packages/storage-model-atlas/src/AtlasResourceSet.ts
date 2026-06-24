@@ -17,12 +17,21 @@ import type { Scope, ScopeListResponse } from './generated/workflowapi'
 let resourceSet: BasicResourceSet | null = null
 let resourceCounter = 0
 
+// Canonical package registry from TSM service (shared across all plugins)
+let _canonicalRegistry: any = null
+
+export function setCanonicalPackageRegistry(registry: any) {
+  _canonicalRegistry = registry
+}
+
 /**
  * Get or create the singleton ResourceSet with Atlas packages registered
  */
 function getResourceSet(): BasicResourceSet {
   if (!resourceSet) {
-    resourceSet = new BasicResourceSet()
+    resourceSet = _canonicalRegistry
+      ? new BasicResourceSet(_canonicalRegistry)
+      : new BasicResourceSet()
     const registry = resourceSet.getPackageRegistry()
 
     // Register all Atlas packages
@@ -34,6 +43,11 @@ function getResourceSet(): BasicResourceSet {
     EPackageRegistry.INSTANCE.set(ManagementPackage.eNS_URI, ManagementPackage.eINSTANCE)
     EPackageRegistry.INSTANCE.set(WorkflowApiPackage.eNS_URI, WorkflowApiPackage.eINSTANCE)
     EPackageRegistry.INSTANCE.set(RestPackage.eNS_URI, RestPackage.eINSTANCE)
+    if (_canonicalRegistry && _canonicalRegistry !== EPackageRegistry.INSTANCE) {
+      _canonicalRegistry.set(ManagementPackage.eNS_URI, ManagementPackage.eINSTANCE)
+      _canonicalRegistry.set(WorkflowApiPackage.eNS_URI, WorkflowApiPackage.eINSTANCE)
+      _canonicalRegistry.set(RestPackage.eNS_URI, RestPackage.eINSTANCE)
+    }
   }
   return resourceSet
 }

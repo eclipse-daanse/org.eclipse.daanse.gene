@@ -18,6 +18,7 @@ export {
   getDerivedConstraint,
   constraintSetAppliesTo,
   clearAllConstraintSets,
+  setCanonicalPackageRegistry,
   type CoclSeverity,
   type CoclRole,
   type CoclConstraint,

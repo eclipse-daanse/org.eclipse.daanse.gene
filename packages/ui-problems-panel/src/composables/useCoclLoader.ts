@@ -85,6 +85,13 @@ const COCL_NS_URI = 'http://www.gme.org/cocl/1.0'
 // Cache of loaded constraint sets
 const loadedConstraintSets: Map<string, CoclConstraintSet> = new Map()
 
+// Canonical package registry from TSM service (shared across all plugins)
+let _canonicalRegistry: any = null
+
+export function setCanonicalPackageRegistry(registry: any) {
+  _canonicalRegistry = registry
+}
+
 // Singleton ResourceSet for C-OCL loading
 let coclResourceSet: ResourceSet | null = null
 let coclPackage: EPackage | null = null
@@ -115,9 +122,14 @@ async function initializeCoclMetamodel(): Promise<boolean> {
 
       // Register in global registry
       EPackageRegistry.INSTANCE.set(nsURI, coclPackage)
+      if (_canonicalRegistry && _canonicalRegistry !== EPackageRegistry.INSTANCE) {
+        _canonicalRegistry.set(nsURI, coclPackage)
+      }
 
       // Create ResourceSet for loading .c-ocl files
-      coclResourceSet = new BasicResourceSet()
+      coclResourceSet = _canonicalRegistry
+        ? new BasicResourceSet(_canonicalRegistry)
+        : new BasicResourceSet()
 
       console.log('[CoclLoader] C-OCL metamodel initialized successfully')
       return true

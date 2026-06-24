@@ -15,6 +15,20 @@ import {
 } from '@emfts/core'
 import type { ModelPackageInfo, ClassInfo, EnumInfo, ModelTreeNode, AttributeInfo, ReferenceInfo, ConstraintInfo } from '../types'
 import { getClassifierIcon, MODEL_ICONS, getIconForClassViaRegistry } from '../types'
+// Canonical package registry from TSM service (shared across all plugins)
+let _canonicalRegistry: any = null
+
+export function setCanonicalPackageRegistry(registry: any) {
+  _canonicalRegistry = registry
+}
+
+function registerInGlobalRegistry(nsURI: string, pkg: any) {
+  EPackageRegistry.INSTANCE.set(nsURI, pkg)
+  if (_canonicalRegistry && _canonicalRegistry !== EPackageRegistry.INSTANCE) {
+    _canonicalRegistry.set(nsURI, pkg)
+  }
+}
+
 // Views service injected via setViewsService() from plugin activate
 const _viewsServiceRef = shallowRef<any>(null)
 
@@ -382,7 +396,7 @@ export function useModelRegistry() {
       resolveInternalReferences(ePackage, ecoreContent)
 
       // Register in global package registry (for XMI loading)
-      EPackageRegistry.INSTANCE.set(ePackage.getNsURI(), ePackage)
+      registerInGlobalRegistry(ePackage.getNsURI(), ePackage)
 
       // Register in our local registry
       const info = registerLoadedPackage(ePackage, sourceFile)
@@ -444,7 +458,7 @@ export function useModelRegistry() {
           isBuiltIn: false
         }
         state.packages.set(nsURI, info)
-        EPackageRegistry.INSTANCE.set(nsURI, subPkg)
+        registerInGlobalRegistry(nsURI, subPkg)
         console.log('[ModelRegistry] Registered subpackage:', info.name, info.nsURI, 'prefix:', nsPrefix)
       }
 

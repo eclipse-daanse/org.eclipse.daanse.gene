@@ -20,7 +20,7 @@ export * from './components'
 
 // Import for service registration
 import { MetamodelerPerspective, MetamodelerTree, MetamodelerEditor } from './components'
-import { useMetamodeler, useSharedMetamodeler, setMetamodelerIconRegistry, refreshMetamodelerIcons, setMetamodelerProblemsService, setMetamodelerConfirmSaveHandler } from './composables/useMetamodeler'
+import { useMetamodeler, useSharedMetamodeler, setMetamodelerIconRegistry, refreshMetamodelerIcons, setMetamodelerProblemsService, setMetamodelerConfirmSaveHandler, setCanonicalPackageRegistry } from './composables/useMetamodeler'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
@@ -31,6 +31,12 @@ import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-per
  */
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Metamodeler plugin...')
+
+  // Inject canonical package registry from main bundle
+  const canonicalRegistry = context.services.get('gene.package.registry')
+  if (canonicalRegistry) {
+    setCanonicalPackageRegistry(canonicalRegistry)
+  }
 
   // Set icon registry reference for custom icons in metamodeler tree
   // ui-instance-tree may load after metamodeler, so retry if not available yet
