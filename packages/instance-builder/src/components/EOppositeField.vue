@@ -5,11 +5,17 @@
  * Special field for selecting EOpposite for an EReference.
  * Shows a dropdown with available EReferences from the target EClass
  * that can serve as the opposite reference.
+ *
+ * IMPORTANT: The target EClass (from getEReferenceType) may point to a
+ * foreign instance (resolved via EPackageRegistry) instead of the live
+ * model in the same Resource. We must resolve references back to the
+ * live Resource tree so the serializer writes intra-document #// fragments
+ * instead of nsURI hrefs.
  */
 
 import { computed } from 'tsm:vue'
 import { Dropdown } from 'tsm:primevue'
-import type { EReference, EClass, EObject } from '@emfts/core'
+import type { EReference, EClass, EObject, EPackage } from '@emfts/core'
 
 const props = defineProps<{
   feature: EReference
@@ -24,13 +30,73 @@ const emit = defineEmits<{
   'update:value': [value: EReference | null]
 }>()
 
-// Get the target EClass of the current reference
+/**
+ * Walk the live Resource tree to find a classifier by nsURI + name.
+ * Returns the live instance from the same Resource, avoiding foreign
+ * registry instances that would cause nsURI-href serialization.
+ */
+function resolveInLiveResource(nsURI: string | null, className: string): EClass | null {
+  if (!props.eObject) return null
+  const resource = props.eObject.eResource?.()
+  if (!resource) return null
+
+  const contents = resource.getContents()
+  for (let i = 0; i < contents.size(); i++) {
+    const root = contents.get(i)
+    const found = walkPackageForClass(root as any, nsURI, className)
+    if (found) return found
+  }
+  return null
+}
+
+function walkPackageForClass(pkg: any, nsURI: string | null, className: string): EClass | null {
+  if (!pkg || typeof pkg.getEClassifiers !== 'function') return null
+  const pkgNsURI = pkg.getNsURI?.()
+
+  for (const c of pkg.getEClassifiers()) {
+    if (c.getName?.() === className && (!nsURI || pkgNsURI === nsURI)) {
+      if ('isAbstract' in c && 'isInterface' in c) return c as EClass
+    }
+  }
+  for (const sub of pkg.getESubpackages?.() || []) {
+    const found = walkPackageForClass(sub, nsURI, className)
+    if (found) return found
+  }
+  return null
+}
+
+/**
+ * Resolve a reference from a (potentially foreign) EClass to the
+ * corresponding reference in the live Resource tree.
+ */
+function resolveRefInLiveResource(foreignRef: EReference, liveTargetClass: EClass): EReference | null {
+  const refName = foreignRef.getName?.()
+  if (!refName) return null
+
+  const allRefs = liveTargetClass.getEAllReferences?.() || []
+  for (const ref of allRefs) {
+    if (ref.getName?.() === refName) return ref
+  }
+  return null
+}
+
+// Get the target EClass of the current reference — resolved to the live Resource
 const targetEClass = computed<EClass | null>(() => {
   if (!props.eObject) return null
-  // The eObject is an EReference, get its eType (which is the target EClass)
   try {
     const eRef = props.eObject as EReference
-    return eRef.getEReferenceType?.() || null
+    const rawTarget = eRef.getEReferenceType?.()
+    if (!rawTarget) return null
+
+    // Try to resolve to the live Resource tree
+    const targetName = rawTarget.getName?.()
+    const targetPkg = rawTarget.getEPackage?.()
+    const targetNsURI = targetPkg?.getNsURI?.() || null
+    if (targetName) {
+      const liveTarget = resolveInLiveResource(targetNsURI, targetName)
+      if (liveTarget) return liveTarget
+    }
+    return rawTarget
   } catch {
     return null
   }
@@ -38,18 +104,14 @@ const targetEClass = computed<EClass | null>(() => {
 
 // Get the containing EClass of the current reference
 const containingEClass = computed<EClass | null>(() => {
-  if (!props.eObject) {
-    console.log('[EOppositeField] No eObject')
-    return null
-  }
+  if (!props.eObject) return null
   try {
     const container = props.eObject.eContainer?.()
-    console.log('[EOppositeField] eContainer:', container, 'eObject:', props.eObject)
     if (container && typeof (container as any).isAbstract === 'function') {
       return container as EClass
     }
-  } catch (e) {
-    console.log('[EOppositeField] Error getting container:', e)
+  } catch {
+    // ignore
   }
   return null
 })
@@ -61,31 +123,19 @@ const availableOpposites = computed(() => {
   const target = targetEClass.value
   const containing = containingEClass.value
 
-  if (!target) {
-    console.log('[EOppositeField] No target EClass')
-    return opposites
-  }
+  if (!target) return opposites
 
-  console.log('[EOppositeField] Target EClass:', target.getName())
-  console.log('[EOppositeField] Containing EClass:', containing?.getName())
-
-  // Get all references from the target EClass
+  // Get all references from the (live) target EClass
   try {
     const allRefs = target.getEAllReferences?.() || []
-    console.log('[EOppositeField] Target has refs:', allRefs.length)
 
     for (const ref of allRefs) {
-      // The opposite must point back to our containing class (or a supertype)
       try {
         const refTarget = ref.getEReferenceType?.()
         if (refTarget && containing) {
-          // Check if refTarget is the same as containing or a supertype
           const refTargetName = refTarget.getName()
           const containingName = containing.getName()
 
-          console.log('[EOppositeField] Checking ref:', ref.getName(), 'target:', refTargetName, 'vs containing:', containingName)
-
-          // Simple check: names match (could be enhanced with supertype checking)
           if (refTargetName === containingName || isSuperTypeOf(refTarget, containing)) {
             opposites.push({
               label: ref.getName() || 'Unknown',
@@ -93,7 +143,7 @@ const availableOpposites = computed(() => {
             })
           }
         }
-      } catch (e) {
+      } catch {
         // Reference type not set, skip
       }
     }
@@ -101,7 +151,6 @@ const availableOpposites = computed(() => {
     console.warn('[EOppositeField] Failed to get references:', e)
   }
 
-  console.log('[EOppositeField] Available opposites:', opposites.map(o => o.label))
   return opposites
 })
 

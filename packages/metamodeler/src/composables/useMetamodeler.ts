@@ -812,6 +812,142 @@ export function useMetamodeler() {
   }
 
   /**
+   * Build a lookup map: "nsURI::classifierName" → live EClassifier
+   * for all classifiers in the package tree.
+   */
+  function buildClassifierMap(root: EPackage): Map<string, any> {
+    const map = new Map<string, any>()
+    function walk(pkg: EPackage) {
+      const nsURI = pkg.getNsURI?.() || ''
+      for (const c of pkg.getEClassifiers()) {
+        const name = c.getName?.()
+        if (name) {
+          map.set(`${nsURI}::${name}`, c)
+          // Also register without nsURI for fallback matching
+          if (!map.has(`::${name}`)) map.set(`::${name}`, c)
+        }
+      }
+      for (const sub of pkg.getESubpackages()) walk(sub)
+    }
+    walk(root)
+    return map
+  }
+
+  /**
+   * Check if an object belongs to the live Resource tree.
+   * Foreign instances (from EPackageRegistry) have eResource()===null
+   * or a different resource.
+   */
+  function isLiveObject(obj: any, liveResource: any): boolean {
+    if (!obj) return true // null is fine
+    try {
+      const res = obj.eResource?.()
+      return res === liveResource
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Resolve a foreign classifier to the live-Resource equivalent.
+   */
+  function resolveLive(foreign: any, classifierMap: Map<string, any>): any {
+    if (!foreign) return null
+    const name = foreign.getName?.()
+    if (!name) return null
+    const pkg = foreign.getEPackage?.()
+    const nsURI = pkg?.getNsURI?.() || ''
+    return classifierMap.get(`${nsURI}::${name}`) ?? classifierMap.get(`::${name}`) ?? null
+  }
+
+  /**
+   * After loading an .ecore file, rebind eType/eSuperTypes/eOpposite that
+   * point to foreign EPackageRegistry instances back to the live Resource tree.
+   * This ensures the serializer writes intra-document #// fragment URIs.
+   */
+  function rebindForeignReferences(rootPkg: EPackage): void {
+    const res = rootPkg.eResource?.()
+    if (!res) return
+    const classifierMap = buildClassifierMap(rootPkg)
+    let reboundCount = 0
+
+    function visitPackage(pkg: EPackage) {
+      for (const classifier of pkg.getEClassifiers()) {
+        // Only process EClasses (not EDataType/EEnum)
+        if (!('isAbstract' in classifier && 'isInterface' in classifier)) continue
+        const eClass = classifier as EClass
+
+        // Rebind eSuperTypes
+        try {
+          const superTypes = eClass.getESuperTypes?.()
+          if (superTypes) {
+            for (let i = 0; i < superTypes.length; i++) {
+              const st = superTypes[i]
+              if (!isLiveObject(st, res)) {
+                const live = resolveLive(st, classifierMap)
+                if (live && live !== st) {
+                  superTypes[i] = live
+                  reboundCount++
+                }
+              }
+            }
+          }
+        } catch { /* ignore */ }
+
+        // Rebind features (eType, eOpposite)
+        try {
+          const features = eClass.getEStructuralFeatures?.() || []
+          for (const feature of features) {
+            // Rebind eType
+            try {
+              const eType = feature.getEType?.()
+              if (eType && !isLiveObject(eType, res)) {
+                const live = resolveLive(eType, classifierMap)
+                if (live && live !== eType) {
+                  feature.setEType(live)
+                  reboundCount++
+                }
+              }
+            } catch { /* ignore */ }
+
+            // Rebind eOpposite (only for EReferences)
+            if ('isContainment' in feature && typeof (feature as any).getEOpposite === 'function') {
+              try {
+                const opposite = (feature as any).getEOpposite?.()
+                if (opposite && !isLiveObject(opposite, res)) {
+                  // Find the live target class, then the live reference by name
+                  const oppName = opposite.getName?.()
+                  const oppContainer = opposite.eContainer?.()
+                  if (oppName && oppContainer) {
+                    const liveContainer = resolveLive(oppContainer, classifierMap)
+                    if (liveContainer) {
+                      const liveRefs = liveContainer.getEStructuralFeatures?.() || []
+                      for (const lr of liveRefs) {
+                        if (lr.getName?.() === oppName) {
+                          ;(feature as any).setEOpposite(lr)
+                          reboundCount++
+                          break
+                        }
+                      }
+                    }
+                  }
+                }
+              } catch { /* ignore */ }
+            }
+          }
+        } catch { /* ignore */ }
+      }
+
+      for (const sub of pkg.getESubpackages()) visitPackage(sub)
+    }
+
+    visitPackage(rootPkg)
+    if (reboundCount > 0) {
+      console.log(`[Metamodeler] Rebound ${reboundCount} foreign cross-references to live Resource`)
+    }
+  }
+
+  /**
    * Load a metamodel from an .ecore string for editing
    * This parses the XMI content and sets it as the root package
    * @param ecoreContent The XMI content to parse
@@ -860,6 +996,12 @@ export function useMetamodeler() {
 
       const name = ePackage.getName() || 'unnamed'
       const nsURI = ePackage.getNsURI() || ''
+
+      // Repair cross-references that point to foreign registry instances.
+      // After XMI parsing, eType/eSuperTypes/eOpposite may reference objects
+      // resolved via EPackageRegistry (separate identity) instead of the live
+      // Resource tree. Re-bind them so the serializer writes #// fragments.
+      rebindForeignReferences(ePackage)
 
       // Set as the current resource for editing
       resource.value = newResource
