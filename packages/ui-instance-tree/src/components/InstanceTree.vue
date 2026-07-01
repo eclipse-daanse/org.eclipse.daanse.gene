@@ -885,7 +885,7 @@ watch(ctxSelectedObject, (obj) => {
 :deep(.p-tree-node-content) {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
   padding: 0.25rem 0.5rem;
   border-radius: var(--border-radius);
   cursor: pointer;
@@ -900,9 +900,10 @@ watch(ctxSelectedObject, (obj) => {
 }
 
 :deep(.p-tree-node-toggle-button) {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1rem;
+  height: 1rem;
   margin-right: 0;
+  padding: 0;
   border: none;
   background: transparent;
   color: var(--text-color-secondary);
@@ -912,14 +913,18 @@ watch(ctxSelectedObject, (obj) => {
   justify-content: center;
 }
 
+:deep(.p-tree-node-toggle-button .p-icon) {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
 :deep(.p-tree-node-toggle-button:hover) {
   background: var(--surface-hover);
   border-radius: var(--border-radius);
 }
 
 :deep(.p-tree-node-icon) {
-  color: var(--text-color-secondary);
-  margin-right: 0.5rem;
+  display: none;
 }
 
 :deep(.p-tree-node-label) {
