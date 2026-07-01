@@ -507,7 +507,6 @@ const addMenuItems = computed(() => {
         :invalid="!!error"
         placeholder="Select..."
         showClear
-        class="flex-1"
       >
         <template #option="{ option }">
           <div
@@ -520,14 +519,15 @@ const addMenuItems = computed(() => {
           </div>
         </template>
       </Dropdown>
-      <Button
-        v-if="!readonly"
-        icon="pi pi-search"
-        severity="secondary"
-        size="small"
-        @click="handleSearch"
-        title="Search for reference target"
-      />
+      <div v-if="!readonly" class="reference-actions">
+        <Button
+          icon="pi pi-list-check"
+          text
+          size="small"
+          @click="handleSearch"
+          title="Search for reference target"
+        />
+      </div>
     </div>
 
     <!-- Single containment or without options - show current value -->
@@ -536,22 +536,25 @@ const addMenuItems = computed(() => {
         <span class="value-text">{{ displayValue }}</span>
         <i v-if="value" class="pi pi-external-link navigate-icon" />
       </div>
-      <Button
-        v-if="isContainment && !readonly && canCreate"
-        icon="pi pi-plus"
-        severity="secondary"
-        size="small"
-        @click="handleCreate($event)"
-        :title="concreteClasses.length > 1 ? 'Create new (click to select type)' : `Create new ${concreteClasses[0]?.getName()}`"
-      />
-      <Button
-        v-if="value && !readonly && !hasOpposite"
-        icon="pi pi-times"
-        severity="danger"
-        size="small"
-        @click="handleRemove(-1)"
-        title="Clear"
-      />
+      <div class="reference-actions">
+        <Button
+          v-if="isContainment && !readonly && canCreate"
+          icon="pi pi-plus"
+          severity="secondary"
+          size="small"
+          @click="handleCreate($event)"
+          :title="concreteClasses.length > 1 ? 'Create new (click to select type)' : `Create new ${concreteClasses[0]?.getName()}`"
+        />
+        <Button
+          v-if="value && !readonly && !hasOpposite"
+          icon="pi pi-times"
+          severity="danger"
+          size="small"
+          text
+          @click="handleRemove(-1)"
+          title="Clear"
+        />
+      </div>
     </div>
 
     <!-- Many-valued reference -->
@@ -590,18 +593,10 @@ const addMenuItems = computed(() => {
           outlined
           @click="handleCreate($event)"
         />
-        <!-- Non-containment: Select from available via popup menu -->
-        <Button
-          v-if="!isContainment && !readonly && availableObjects && availableObjects.length > 0"
-          icon="pi pi-plus"
-          label="Add"
-          severity="secondary"
-          size="small"
-          @click="(e) => addMenu?.toggle(e)"
-        />
+        <!-- Non-containment: Select from available via search only -->
         <Button
           v-if="!isContainment && !readonly"
-          icon="pi pi-search"
+          icon="pi pi-list-check"
           severity="secondary"
           size="small"
           text
@@ -628,7 +623,7 @@ const addMenuItems = computed(() => {
 }
 
 .field-label {
-  font-weight: 500;
+  font-weight: 600;
   font-size: 0.8125rem;
   color: var(--text-color-secondary);
   display: flex;
@@ -654,8 +649,17 @@ const addMenuItems = computed(() => {
 
 .single-reference {
   display: flex;
-  gap: 0.5rem;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.single-reference :deep(.p-button) {
+  color: var(--primary-color);
+}
+
+.single-reference :deep(.p-button-secondary) {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
 }
 
 .flex-1 {
@@ -746,11 +750,29 @@ const addMenuItems = computed(() => {
   display: flex;
   gap: 0.35rem;
   align-items: center;
-  padding-top: 0.25rem;
+  padding: 0;
 }
 
 .reference-actions :deep(.p-button-outlined) {
   font-size: 0.8125rem;
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.reference-actions :deep(.p-button-text) {
+  color: var(--primary-color);
+}
+
+.reference-actions :deep(.p-button-icon-only) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.single-reference :deep(.p-button-icon-only) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .add-ref-menu :deep(.p-menu-list) {
