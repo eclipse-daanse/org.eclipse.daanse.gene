@@ -473,7 +473,7 @@ watch(() => props.problemsService, (newService) => {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-color-secondary);
   font-size: 0.875rem;
 }

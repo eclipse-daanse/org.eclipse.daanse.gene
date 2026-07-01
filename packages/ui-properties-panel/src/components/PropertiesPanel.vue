@@ -1328,12 +1328,10 @@ function handleCancelParameterDialog() {
         <!-- Attributes -->
         <div v-if="hasAttributes" class="section-group">
           <div class="section-heading">Attributes</div>
-          <Fieldset
+          <div
             v-for="feature in attributeFeatures"
             :key="feature.getName()"
-            :legend="getFeatureDisplayName(feature)"
-            :toggleable="true"
-            class="property-fieldset"
+            class="property-row"
           >
             <PropertyField
               :feature="feature"
@@ -1342,18 +1340,16 @@ function handleCancelParameterDialog() {
               @update:value="(v) => setFeatureValue(feature, v)"
               :error="getFeatureError(feature)"
             />
-          </Fieldset>
+          </div>
         </div>
 
         <!-- References -->
         <div v-if="hasReferences" class="section-group">
           <div class="section-heading">References</div>
-          <Fieldset
+          <div
             v-for="feature in referenceFeatures"
             :key="feature.getName()"
-            :legend="getFeatureDisplayName(feature)"
-            :toggleable="true"
-            class="property-fieldset"
+            class="property-row"
           >
             <PropertyField
               :feature="feature"
@@ -1371,19 +1367,16 @@ function handleCancelParameterDialog() {
               :oclFilter="getOclFilter(feature)"
               :problemsService="problemsService"
             />
-          </Fieldset>
+          </div>
         </div>
 
         <!-- Derived Values -->
         <div v-if="hasDerivedFeatures" class="section-group">
           <div class="section-heading">Derived Values</div>
-          <!-- Ecore-defined derived features -->
-          <Fieldset
+          <div
             v-for="feature in derivedAttributeFeatures"
             :key="feature.getName()"
-            :legend="getFeatureDisplayName(feature)"
-            :toggleable="true"
-            class="property-fieldset"
+            class="property-row"
           >
             <DerivedField
               :feature="feature"
@@ -1391,13 +1384,11 @@ function handleCancelParameterDialog() {
               :problemsService="problemsService"
               @navigate="handleNavigate"
             />
-          </Fieldset>
-          <Fieldset
+          </div>
+          <div
             v-for="feature in derivedReferenceFeatures"
             :key="feature.getName()"
-            :legend="getFeatureDisplayName(feature)"
-            :toggleable="true"
-            class="property-fieldset"
+            class="property-row"
           >
             <DerivedField
               :feature="feature"
@@ -1405,7 +1396,7 @@ function handleCancelParameterDialog() {
               :problemsService="problemsService"
               @navigate="handleNavigate"
             />
-          </Fieldset>
+          </div>
           <!-- C-OCL-only derived features -->
           <CoclDerivedField
             v-for="constraint in coclDerivedConstraints"
@@ -1501,19 +1492,23 @@ function handleCancelParameterDialog() {
 .panel-content {
   flex: 1;
   overflow-y: auto;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .object-info {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
-  padding: 0.5rem 0;
+  padding: 0.4rem 0.5rem;
   margin-bottom: 0.25rem;
-  border-bottom: 2px solid var(--surface-border);
+  background: color-mix(in srgb, var(--primary-color, #6366f1) 8%, var(--surface-ground));
+  border-radius: 6px;
+  border-left: 4px solid var(--primary-color, #6366f1);
 }
 
 .class-name {
@@ -1621,30 +1616,49 @@ function handleCancelParameterDialog() {
 }
 
 .section-group {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
 .section-heading {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-align: center;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
+  color: var(--primary-color, #6366f1);
+  padding: 0.5rem 0.75rem 0.35rem;
+  margin-bottom: 0.4rem;
+  background: color-mix(in srgb, var(--primary-color, #6366f1) 6%, transparent);
+  border-radius: 4px;
+  border-bottom: 2px solid color-mix(in srgb, var(--primary-color, #6366f1) 25%, transparent);
+}
+
+.property-row {
+  padding: 0.4rem 0.6rem 0.5rem;
+  border-radius: 6px;
+  margin-bottom: 0;
+  background: color-mix(in srgb, var(--surface-card) 60%, transparent);
+  border-left: 3px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.property-row:hover {
+  background: var(--surface-hover, color-mix(in srgb, var(--surface-card) 90%, transparent));
+  border-left-color: color-mix(in srgb, var(--primary-color, #6366f1) 50%, transparent);
+}
+
+.property-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   color: var(--text-color-secondary);
-  padding: 0.75rem 0.5rem 0.25rem;
-  border-bottom: 1px solid transparent;
-  border-image: linear-gradient(
-    to right,
-    transparent,
-    color-mix(in srgb, var(--primary-color, #6366f1) 35%, transparent) 40%,
-    color-mix(in srgb, var(--primary-color, #6366f1) 35%, transparent) 60%,
-    transparent
-  ) 1;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.15rem;
 }
 
 .property-fieldset {
-  margin: 1.25rem 0;
+  margin: 0.5rem 0;
 }
 
 .operations-list {
