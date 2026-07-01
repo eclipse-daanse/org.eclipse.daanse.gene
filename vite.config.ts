@@ -199,6 +199,7 @@ export default defineConfig({
       { find: 'ui-problems-panel', replacement: fileURLToPath(new URL('./packages/ui-problems-panel/src/index.ts', import.meta.url)) },
       { find: 'ui-search', replacement: fileURLToPath(new URL('./packages/ui-search/src/index.ts', import.meta.url)) },
     ],
+    dedupe: ['@emfts/core'],
   },
   optimizeDeps: {
     // Exclude @emfts/core from pre-bundling to avoid module duplication.

@@ -829,41 +829,21 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
   async function serializeInstances(objects: EObject[]): Promise<string> {
     if (objects.length === 0) return ''
 
-    // Create a temporary resource for serialization
-    const rs = getResourceSet()
-    const uri = URI.createURI('temp-instance.xmi')
-    const tempResource = new XMIResource(uri)
-    tempResource.setResourceSet(rs)
-
-    // Add all objects and transfer their xmi:ids from the original resource
-    const rawObjects = objects.map(obj => toRaw(obj))
     const origResource = resource.value
-    for (const rawObj of rawObjects) {
-      tempResource.getContents().push(rawObj)
-      // Copy xmi:id from original resource to temp resource
-      if (origResource && typeof (origResource as any).getID === 'function') {
-        const id = (origResource as any).getID(rawObj)
-        if (id) {
-          (tempResource as any).setID(rawObj, id)
-        }
-      }
-      // Also copy IDs for all children recursively
-      copyChildIds(rawObj, origResource as any, tempResource as any)
+    const rawObjects = objects.map(obj => toRaw(obj))
+
+    // Use saveContents() which serializes the given subset using the
+    // original resource's context (IDs, URI, reference resolution).
+    // No temp resource needed — cross-references stay as fragment-only (#id).
+    if (origResource && typeof (origResource as any).saveContents === 'function') {
+      return (origResource as any).saveContents(rawObjects)
     }
 
-    const xmiString = await tempResource.saveToString()
-
-    // Remove from temp resource (don't leave dangling)
-    const tempContents = tempResource.getContents()
-    for (let i = rawObjects.length - 1; i >= 0; i--) {
-      if (typeof (tempContents as any).removeAt === 'function') {
-        (tempContents as any).removeAt(i)
-      } else if (typeof (tempContents as any).remove === 'function') {
-        (tempContents as any).remove(rawObjects[i])
-      }
+    // Fallback: serialize full resource
+    if (origResource) {
+      return origResource.saveToString()
     }
-
-    return xmiString
+    return ''
   }
 
   /**
