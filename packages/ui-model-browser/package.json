@@ -11,6 +11,7 @@
   "dependencies": {
     "storage-model": "*",
     "ui-file-explorer": "*",
+    "ui-search": "*",
     "@emfts/core": "^0.1.1-next.12",
     "vue": "^3.5.26",
     "primevue": "^4.3.3",

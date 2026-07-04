@@ -1059,8 +1059,18 @@ function handleSearch(feature: EReference, callback: (obj: EObject) => void) {
   const actions = getActions()
   if (!actions) return
 
-  // For Ecore meta-type references, bypass resource search and pass pre-collected candidates
   const refType = getReferenceType(feature)
+
+  // In metamodel mode, collect candidates from the LIVE rootPackage — the model
+  // registry is a frozen copy and misses classes created in the current session
+  // (e.g. a new class not yet available as a supertype).
+  if (refType && ctx.value?.mode === 'metamodel' && rootPackage.value) {
+    const candidates = collectObjectsFromPackage(rootPackage.value, refType)
+    actions.openSearchDialog({ feature, resource: null as any, callback, candidates })
+    return
+  }
+
+  // For Ecore meta-type references, bypass resource search and pass pre-collected candidates
   if (refType && isEcoreMetaType(refType) && modelRegistry?.allPackages?.value) {
     const candidates = collectEcoreMetaObjects(refType, selectedObject.value)
     actions.openSearchDialog({ feature, resource: null as any, callback, candidates })

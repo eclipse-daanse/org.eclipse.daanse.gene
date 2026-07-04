@@ -13,7 +13,10 @@ export type {
   SearchOptions,
   ReferenceSelectionOptions,
   SearchState,
-  NavigationBehavior
+  NavigationBehavior,
+  PickerItem,
+  PickerGroup,
+  PickerDataSource
 } from './types'
 
 // Composables
@@ -30,12 +33,18 @@ export {
 
 // Components
 export { default as SearchDialog } from './components/SearchDialog.vue'
+export { default as PickerDialog } from './components/PickerDialog.vue'
+
+// Data sources
+export { createSearchDataSource } from './dataSources/searchDataSource'
+export type { SearchDataSourceOptions } from './dataSources/searchDataSource'
 
 import type { ModuleContext } from '@eclipse-daanse/tsm'
 import SearchDialog from './components/SearchDialog.vue'
+import PickerDialog from './components/PickerDialog.vue'
 
 export async function activate(context: ModuleContext): Promise<void> {
-  context.services.register('ui.search.components', { SearchDialog })
+  context.services.register('ui.search.components', { SearchDialog, PickerDialog })
 }
 
 export async function deactivate(context: ModuleContext): Promise<void> {

@@ -117,3 +117,48 @@ export interface SearchState {
  * Navigation behavior when selecting a hit outside current view
  */
 export type NavigationBehavior = 'navigate_only' | 'switch_view' | 'ask_user'
+
+// ── PickerDialog types ─────────────────────────────────────────────────────
+
+/**
+ * A single item in the PickerDialog — the unified data format that all
+ * data-source adapters must produce.
+ */
+export interface PickerItem {
+  key: string
+  label: string
+  secondaryLabel?: string
+  icon: string
+  breadcrumb?: string
+  snippetHtml?: string
+  disabled?: boolean
+  disabledReason?: string
+  styleHints?: { italic?: boolean; tag?: string }
+  groupKey?: string
+  groupLabel?: string
+  groupIcon?: string
+  payload: unknown
+}
+
+/**
+ * A group header derived from PickerItems that share the same groupKey.
+ */
+export interface PickerGroup {
+  key: string
+  label: string
+  icon?: string
+  items: PickerItem[]
+  expanded: boolean
+}
+
+/**
+ * Data-source adapter for the PickerDialog.
+ */
+export interface PickerDataSource {
+  /** Items to show before the user types anything. */
+  loadInitial(): Promise<PickerItem[]> | PickerItem[]
+  /** Items matching `query`. */
+  search(query: string): Promise<PickerItem[]> | PickerItem[]
+  /** Minimum characters before `search` is called (default 0). */
+  minQueryLength?: number
+}

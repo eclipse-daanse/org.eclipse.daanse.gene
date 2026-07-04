@@ -1,6 +1,6 @@
 {
   "name": "gene",
-  "version": "0.0.1-next.10",
+  "version": "0.0.1-next.11",
   "private": true,
   "type": "module",
   "workspaces": [
