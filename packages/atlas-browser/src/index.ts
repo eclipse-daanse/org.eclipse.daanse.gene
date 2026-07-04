@@ -396,8 +396,7 @@ export async function activate(context: ModuleContext): Promise<void> {
         enabled: true,
         perspectiveIds: [],
         parameters: [],
-        returnTypes: ['VALIDATION_MESSAGES'],
-        perspectiveIds: []
+        returnTypes: ['VALIDATION_MESSAGES']
       },
       source: 'plugin',
       moduleId: 'atlas-browser'

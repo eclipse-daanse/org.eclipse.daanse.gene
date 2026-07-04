@@ -119,8 +119,7 @@ export async function activate(context: ModuleContext): Promise<void> {
       enabled: true,
       perspectiveIds: [],
       parameters: [],
-      returnTypes: ['FILE'],
-      perspectiveIds: []
+      returnTypes: ['FILE']
     },
     source: 'plugin',
     moduleId: 'ui-actions'

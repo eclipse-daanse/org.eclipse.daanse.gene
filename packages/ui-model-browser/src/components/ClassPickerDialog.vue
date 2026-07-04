@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'tsm:vue'
-import { Dialog, Tree } from 'tsm:primevue'
-import { getEcorePackage } from '@emfts/core'
-import { useSharedModelRegistry } from '../composables/useModelRegistry'
-import { deriveRootEPackages, collectClassesDeep, type PickerClass } from './classPickerSource'
-import { getClassifierIcon, getIconForClassViaRegistry } from '../types'
+/**
+ * ClassPickerDialog - EClass selection from package tree/list
+ *
+ * Wrapper around PickerDialog that delegates to a class picker data source.
+ * Preserves the original API surface so callers don't need to change.
+ */
 
-// Use the same icon source as the model tree (custom registry icon, else the
-// classifier-default icon) so a class looks identical here and in the tree.
-function iconFor(eClass: any): string {
-  return (eClass && getIconForClassViaRegistry(eClass)) || getClassifierIcon(eClass)
-}
+import { computed } from 'tsm:vue'
+import { PickerDialog } from 'ui-search'
+import type { PickerItem, PickerDataSource } from 'ui-search'
+import { useSharedModelRegistry } from '../composables/useModelRegistry'
+import { createClassPickerDataSource } from '../composables/classPickerDataSource'
 
 interface ClassSelection {
   eClass: any
@@ -19,28 +19,12 @@ interface ClassSelection {
   packageNsURI: string
 }
 
-type FlatItem = PickerClass
-
 const props = withDefaults(defineProps<{
   visible: boolean
   header?: string
-  /** 'list' = flache Liste (default), 'tree' = Paket-Baum mit Expand/Collapse */
   viewMode?: 'list' | 'tree'
   includeAbstract?: boolean
-  /**
-   * Root EPackage(s) to pick from. When provided, the dialog reads classes from
-   * these (and their subpackages) instead of the shared ModelRegistry. Callers
-   * that edit a live model (e.g. the Metamodeler) pass their working model here
-   * so unsaved/newly added classes are visible. Omit to use the registry.
-   */
   sourcePackages?: any[]
-  /**
-   * When true, also offer the Ecore meta-classes from ecore.ecore (EObject,
-   * EClassifier, EClass, ENamedElement, …) as selectable EClass targets — useful
-   * for EReference eTypes that point at Ecore types. EDataTypes (EString, EInt, …)
-   * are excluded automatically (only EClasses are listed). Default off, so other
-   * pickers (instance creation, OCL context) stay unaffected.
-   */
   includeEcoreClasses?: boolean
 }>(), {
   header: 'Select Class',
@@ -54,209 +38,40 @@ const emit = defineEmits<{
 }>()
 
 const modelRegistry = useSharedModelRegistry()
-const expandedKeys = ref<Record<string, boolean>>({})
 
-// ── Flat list ──────────────────────────────────────────────────────────────
+const displayMode = computed(() => props.viewMode === 'list' ? 'flat' as const : 'grouped' as const)
 
-// Root EPackages to render (sourcePackages override / registry dedup). When
-// includeEcoreClasses is set, also append the Ecore package so its meta-classes
-// (EObject, EClassifier, …) become selectable; collectClassesDeep filters to
-// EClasses, so EDataTypes (EString, EInt, …) are excluded automatically.
-const rootEPackages = computed<any[]>(() => {
-  const roots = deriveRootEPackages(modelRegistry.userPackages?.value, props.sourcePackages)
-  if (props.includeEcoreClasses) {
-    try {
-      const ecore = getEcorePackage()
-      if (ecore) return [...roots, ecore]
-    } catch { /* ignore */ }
-  }
-  return roots
-})
-
-const flatItems = computed<FlatItem[]>(() =>
-  collectClassesDeep(rootEPackages.value, props.includeAbstract)
+const dataSource = computed<PickerDataSource>(() =>
+  createClassPickerDataSource({
+    registryPackages: () => modelRegistry.userPackages?.value,
+    sourcePackages: () => props.sourcePackages,
+    includeAbstract: props.includeAbstract,
+    includeEcoreClasses: props.includeEcoreClasses,
+    grouped: displayMode.value === 'grouped'
+  })
 )
 
-// ── Tree nodes (Package als expandierbarer Elternknoten) ───────────────────
-
-function buildPackageNode(pkg: any, parentPrefix: string): any | null {
-  const pkgName = pkg.getName?.() || ''
-  const nsURI = pkg.getNsURI?.() || ''
-  const prefix = parentPrefix ? `${parentPrefix}.${pkgName}` : pkgName
-  const children: any[] = []
-
-  for (const cls of Array.from(pkg.getEClassifiers?.() ?? []) as any[]) {
-    if (!('getEAllAttributes' in cls || 'getEAttributes' in cls)) continue
-    const name = cls.getName?.() || ''
-    if (!name) continue
-    const isAbstract = cls.isAbstract?.() || false
-    if (!props.includeAbstract && isAbstract) continue
-    const qualifiedName = nsURI ? `${nsURI}#//${name}` : `${prefix}.${name}`
-    children.push({
-      key: qualifiedName,
-      label: name,
-      icon: iconFor(cls),
-      type: 'class',
-      leaf: true,
-      selectable: true,
-      data: { eClass: cls, qualifiedName, className: name, packageNsURI: nsURI, isAbstract }
-    })
-  }
-
-  for (const sub of Array.from(pkg.getESubpackages?.() ?? []) as any[]) {
-    const subNode = buildPackageNode(sub, prefix)
-    if (subNode) children.push(subNode)
-  }
-
-  if (children.length === 0) return null
-
-  return {
-    key: `pkg:${prefix}`,
-    label: pkgName,
-    icon: 'pi pi-folder',
-    type: 'package',
-    leaf: false,
-    selectable: false,
-    children
-  }
-}
-
-const treeNodes = computed(() =>
-  rootEPackages.value
-    .map((pkg: any) => buildPackageNode(pkg, ''))
-    .filter(Boolean)
-)
-
-function expandAll() {
-  const keys: Record<string, boolean> = {}
-  function walk(nodes: any[]) {
-    for (const n of nodes) {
-      if (!n.leaf) { keys[n.key] = true; walk(n.children ?? []) }
-    }
-  }
-  walk(treeNodes.value)
-  expandedKeys.value = keys
-}
-
-watch(() => props.visible, (v) => { if (v) expandAll() })
-
-// ── Selection ──────────────────────────────────────────────────────────────
-
-function selectFlat(item: FlatItem) {
-  emit('select', { eClass: item.eClass, qualifiedName: item.qualifiedName, className: item.className, packageNsURI: item.packageNsURI })
+function onSelect(item: PickerItem) {
+  const selection = item.payload as ClassSelection
+  emit('select', selection)
   emit('update:visible', false)
 }
 
-function onNodeSelect(node: any) {
-  if (node.type !== 'class') return
-  emit('select', node.data as ClassSelection)
+function onClose() {
   emit('update:visible', false)
 }
-
-function close() { emit('update:visible', false) }
 </script>
 
 <template>
-  <Dialog
+  <PickerDialog
     :visible="visible"
-    @update:visible="close"
     :header="header"
-    :modal="true"
-    :style="{ width: '440px' }"
-    :contentStyle="{ padding: 0 }"
-  >
-    <div class="ccp-body">
-
-      <!-- Flache Liste -->
-      <template v-if="viewMode === 'list'">
-        <div
-          v-for="item in flatItems"
-          :key="item.qualifiedName"
-          class="ccp-list-item"
-          :class="{ 'ccp-abstract': item.isAbstract }"
-          @click="selectFlat(item)"
-        >
-          <i :class="iconFor(item.eClass)" class="ccp-list-icon"></i>
-          <span class="ccp-list-name">{{ item.className }}</span>
-          <span class="ccp-list-pkg">{{ item.packageName }}</span>
-        </div>
-        <div v-if="flatItems.length === 0" class="ccp-empty">No user metamodels loaded.</div>
-      </template>
-
-      <!-- Paket-Baum -->
-      <template v-else>
-        <Tree
-          v-if="treeNodes.length > 0"
-          :value="treeNodes"
-          v-model:expandedKeys="expandedKeys"
-          selectionMode="single"
-          @node-select="onNodeSelect"
-          class="ccp-tree"
-        >
-          <template #default="{ node }">
-            <span class="ccp-node" :class="{ 'ccp-abstract': node.data?.isAbstract, 'ccp-package': node.type === 'package' }">
-              {{ node.label }}
-              <span v-if="node.data?.isAbstract" class="ccp-tag">abstract</span>
-            </span>
-          </template>
-        </Tree>
-        <div v-else class="ccp-empty">No user metamodels loaded.</div>
-      </template>
-
-    </div>
-  </Dialog>
+    placeholder="Search classes..."
+    :display-mode="displayMode"
+    :data-source="dataSource"
+    :show-search="true"
+    :show-keyboard-hints="true"
+    @close="onClose"
+    @select="onSelect"
+  />
 </template>
-
-<style scoped>
-.ccp-body {
-  max-height: 420px;
-  overflow-y: auto;
-}
-
-/* Flat list */
-.ccp-list-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 14px;
-  cursor: pointer;
-  font-size: 0.8125rem;
-  transition: background 0.12s;
-}
-
-.ccp-list-item:hover { background: var(--surface-hover); }
-.ccp-list-item.ccp-abstract { font-style: italic; opacity: 0.8; }
-
-.ccp-list-icon { font-size: 0.75rem; color: var(--text-color-secondary); flex-shrink: 0; }
-.ccp-list-name { flex: 1; }
-.ccp-list-pkg { font-size: 0.6875rem; color: var(--text-color-secondary); flex-shrink: 0; }
-
-/* Tree */
-.ccp-tree { border: none; padding: 0; }
-.ccp-tree :deep(.p-tree-node-content) { padding: 4px 8px; }
-
-.ccp-node {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.8125rem;
-}
-
-.ccp-abstract { font-style: italic; opacity: 0.75; }
-.ccp-package { color: var(--text-color-secondary); font-weight: 600; }
-
-.ccp-tag {
-  font-size: 0.5625rem;
-  padding: 1px 4px;
-  border-radius: 3px;
-  background: var(--surface-hover);
-  color: var(--text-color-secondary);
-}
-
-.ccp-empty {
-  padding: 32px 16px;
-  text-align: center;
-  color: var(--text-color-secondary);
-  font-size: 0.8125rem;
-}
-</style>
