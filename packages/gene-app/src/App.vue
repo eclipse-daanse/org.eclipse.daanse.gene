@@ -243,6 +243,48 @@ function resolveSaveConfirm(proceed: boolean) {
   resolve?.(proceed)
 }
 
+// Metamodel load-error feedback + legacy-ecore repair prompt
+const repairPromptVisible = ref(false)
+const repairPromptName = ref('')
+let repairPending: { entry: any; content: string; fileHandle?: any } | null = null
+const metamodelLoadErrorVisible = ref(false)
+const metamodelLoadError = ref<{ name: string; message: string }>({ name: '', message: '' })
+
+// User chose to repair a legacy .ecore (absolute self-hrefs) and reload it.
+async function resolveRepairPrompt(doRepair: boolean) {
+  repairPromptVisible.value = false
+  const pending = repairPending
+  repairPending = null
+  if (!doRepair || !pending) return
+
+  const mb = modelBrowserComposables.value as any
+  const mm = metamodelerComposables.value as any
+  try {
+    const repaired = mb.repairLegacyEcoreHrefs(pending.content)
+    // Clear stale registrations (local + global) for this file first, so the
+    // fresh parse of the repaired content builds a fully-local object graph
+    // instead of reusing the old (foreign) package instances — otherwise the
+    // re-serialized model would still emit absolute nsURI hrefs.
+    try { mb.unregisterModelBySourceFile?.(pending.entry.path) } catch { /* no-op */ }
+    const metamodeler = mm.useSharedMetamodeler()
+    const info = await metamodeler.loadFromEcoreString(repaired, pending.entry.path, pending.fileHandle)
+    if (info) {
+      // Repaired only in memory — mark dirty so the user can persist the clean form.
+      try { metamodeler.dirty.value = true } catch { /* no-op */ }
+      perspectiveManager.value?.switchTo('metamodeler')
+    } else {
+      showMetamodelLoadError(pending.entry, 'Reparatur hat das Laden nicht ermöglicht.')
+    }
+  } catch (e: any) {
+    showMetamodelLoadError(pending.entry, String(e?.message ?? e))
+  }
+}
+
+function showMetamodelLoadError(entry: any, message: string) {
+  metamodelLoadError.value = { name: entry?.name || entry?.path || 'Metamodell', message }
+  metamodelLoadErrorVisible.value = true
+}
+
 // Registers the styled confirm handler on the metamodeler composable so that
 // saving a metamodel with validation errors prompts the user instead of using
 // the native confirm(). Safe to call repeatedly.
@@ -1118,31 +1160,43 @@ async function handleMetamodelEdit(entry: any, content: string) {
     return
   }
 
-  try {
-    const metamodeler = metamodelerComposables.value.useSharedMetamodeler()
+  const fileHandle = entry.handle as FileSystemFileHandle | undefined
 
-    // Get file handle for saving (if available from File System Access API)
-    const fileHandle = entry.handle as FileSystemFileHandle | undefined
-
-    // Load the .ecore file into the metamodeler
-    const packageInfo = await metamodeler.loadFromEcoreString(content, entry.path, fileHandle)
-
-    if (packageInfo) {
-      console.log('[App] Metamodel loaded:', packageInfo.name, packageInfo.nsURI)
-
-      // Switch to Metamodeler perspective using perspectiveManager
-      if (perspectiveManager.value) {
-        perspectiveManager.value.switchTo('metamodeler')
-        console.log('[App] Switched to Metamodeler perspective')
-      } else {
-        console.warn('[App] PerspectiveManager not available')
-      }
-    } else {
-      console.error('[App] Failed to load metamodel')
-    }
-  } catch (e: any) {
-    console.error('[App] Failed to open metamodel:', e)
+  // Legacy file with absolute self-nsURI hrefs → offer repair BEFORE loading.
+  // Loading the dirty content either crashes the XMI loader or silently resolves
+  // references to foreign registry instances (→ cross-resource nsURI hrefs on
+  // save), so this must be content-driven, not gated on a load error.
+  // The repair util lives with the loader (ui-model-browser), not the metamodeler.
+  const mb = (modelBrowserComposables.value as any) ?? tsm.getService<any>('ui.model-browser.composables')
+  if (mb?.needsLegacyHrefRepair?.(content)) {
+    repairPending = { entry, content, fileHandle }
+    repairPromptName.value = entry.name || entry.path || 'Metamodell'
+    repairPromptVisible.value = true
+    return
   }
+
+  const metamodeler = metamodelerComposables.value.useSharedMetamodeler()
+  let packageInfo: { name: string; nsURI: string } | null = null
+  let loadError: any = null
+  try {
+    packageInfo = await metamodeler.loadFromEcoreString(content, entry.path, fileHandle)
+  } catch (e: any) {
+    loadError = e
+    console.error('[App] Metamodel load failed:', e)
+  }
+
+  if (packageInfo) {
+    console.log('[App] Metamodel loaded:', packageInfo.name, packageInfo.nsURI)
+    if (perspectiveManager.value) {
+      perspectiveManager.value.switchTo('metamodeler')
+    } else {
+      console.warn('[App] PerspectiveManager not available')
+    }
+    return
+  }
+
+  // Load failed for a non-legacy reason — surface it (no longer a silent log).
+  showMetamodelLoadError(entry, String(loadError?.message ?? loadError ?? 'Unbekannter Fehler'))
 }
 
 // Handle publishing .ecore file to Atlas from FileExplorer
@@ -2504,6 +2558,53 @@ onMounted(() => {
     <template #footer>
       <Button label="Abbrechen" severity="secondary" icon="pi pi-times" @click="resolveSaveConfirm(false)" />
       <Button label="Trotzdem speichern" severity="warning" icon="pi pi-save" @click="resolveSaveConfirm(true)" />
+    </template>
+  </Dialog>
+
+  <!-- Legacy .ecore repair prompt: shown when a metamodel fails to load due to
+       absolute self-nsURI hrefs (old serialization). Offers repair & reload. -->
+  <Dialog
+    v-model:visible="repairPromptVisible"
+    header="Metamodell konnte nicht geladen werden"
+    :modal="true"
+    :closable="false"
+    :style="{ width: '460px' }"
+  >
+    <div class="save-confirm-body">
+      <i class="pi pi-wrench save-confirm-icon"></i>
+      <div class="save-confirm-text">
+        <p class="save-confirm-lead">
+          <strong>{{ repairPromptName }}</strong> verwendet ein veraltetes Referenzformat
+          (absolute nsURI-Verweise) und lässt sich so nicht laden.
+        </p>
+        <p class="save-confirm-hint">
+          Es kann automatisch repariert werden (interne <code>#//</code>-Verweise) und neu geladen
+          werden. Speichere danach, um die reparierte Datei zu sichern.
+        </p>
+      </div>
+    </div>
+    <template #footer>
+      <Button label="Abbrechen" severity="secondary" icon="pi pi-times" @click="resolveRepairPrompt(false)" />
+      <Button label="Reparieren & neu laden" severity="primary" icon="pi pi-wrench" @click="resolveRepairPrompt(true)" />
+    </template>
+  </Dialog>
+
+  <!-- Generic metamodel load error (no automatic repair applicable) -->
+  <Dialog
+    v-model:visible="metamodelLoadErrorVisible"
+    header="Metamodell konnte nicht geladen werden"
+    :modal="true"
+    :style="{ width: '460px' }"
+  >
+    <div class="save-confirm-body">
+      <i class="pi pi-times-circle save-confirm-icon"></i>
+      <div class="save-confirm-text">
+        <p class="save-confirm-lead"><strong>{{ metamodelLoadError.name }}</strong></p>
+        <p class="save-confirm-hint">{{ metamodelLoadError.message }}</p>
+      </div>
+    </div>
+    <template #footer>
+      <Button label="Schließen" severity="secondary" icon="pi pi-times" @click="metamodelLoadErrorVisible = false" />
     </template>
   </Dialog>
 
