@@ -14,6 +14,7 @@ export * from './types'
 
 // Re-export composables
 export { useModelRegistry, useSharedModelRegistry } from './composables/useModelRegistry'
+export { repairLegacyEcoreHrefs, needsLegacyHrefRepair } from './composables/repairEcore'
 
 // Re-export components
 export { ModelBrowser, ClassPickerDialog } from './components'
@@ -21,6 +22,7 @@ export { ModelBrowser, ClassPickerDialog } from './components'
 // Import for service registration
 import * as components from './components'
 import { useModelRegistry, useSharedModelRegistry, setViewsService, setCanonicalPackageRegistry } from './composables/useModelRegistry'
+import { repairLegacyEcoreHrefs, needsLegacyHrefRepair } from './composables/repairEcore'
 import { setIconRegistry } from './types'
 
 /**
@@ -90,7 +92,12 @@ export async function activate(context: ModuleContext): Promise<void> {
     useSharedModelRegistry,
     loadEcoreFile: registry.loadEcoreFile,
     refreshIcons: registry.refreshIcons,
-    getEcoreResourceSet: registry.getEcoreResourceSet
+    getEcoreResourceSet: registry.getEcoreResourceSet,
+    unregisterModelBySourceFile: registry.unregisterModelBySourceFile,
+    // Legacy .ecore repair — lives with the loader so every load path can offer
+    // "repair & reload" for old files with absolute self-nsURI hrefs.
+    repairLegacyEcoreHrefs,
+    needsLegacyHrefRepair
   })
 
   // Register with panel registry

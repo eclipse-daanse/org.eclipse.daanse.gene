@@ -43,20 +43,28 @@ describe('useMetamodeler.loadFromEcoreString — one-resource invariant', () => 
     expect(mm.resource.value).toBe(res)
   })
 
-  it('fails hard when a registered model has no editable resource (no silent divergent parse)', async () => {
+  it('parses fresh when a registered model has no editable resource (nothing to adopt)', async () => {
     const orphan = new BasicEPackage()
     orphan.setName('orphan')
-    orphan.setNsURI('http://orphan')
-    // orphan was never added to a resource → eResource() is null
+    orphan.setNsURI('http://test.local/orphan')
+    // orphan was never added to a resource → eResource() is null (e.g. a legacy
+    // file the registry could not load). There is nothing to adopt, so the
+    // metamodeler must parse fresh rather than fail.
 
     setMetamodelerModelRegistry(() =>
-      fakeRegistry([{ sourceFile: 'model/orphan.ecore', ePackage: orphan, nsURI: 'http://orphan', name: 'orphan' }])
+      fakeRegistry([{ sourceFile: 'model/orphan.ecore', ePackage: orphan, nsURI: 'http://test.local/orphan', name: 'orphan' }])
     )
 
+    const ORPHAN_ECORE = MM_ECORE
+      .replace('http://test.local/mmfresh', 'http://test.local/orphanfresh')
+      .replace('name="mmfresh"', 'name="orphanfresh"')
+      .replace('nsPrefix="mmfresh"', 'nsPrefix="orphanfresh"')
+
     const mm = useMetamodeler()
-    await expect(mm.loadFromEcoreString('<ignored/>', 'model/orphan.ecore')).rejects.toThrow(
-      /one-resource invariant/
-    )
+    const info = await mm.loadFromEcoreString(ORPHAN_ECORE, 'model/orphan.ecore')
+
+    expect(info?.name).toBe('orphanfresh')
+    expect(mm.rootPackage.value?.getName?.()).toBe('orphanfresh')
   })
 
   it('parses fresh when the model is not registered (it is the only copy)', async () => {

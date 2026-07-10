@@ -493,6 +493,31 @@ export function useModelRegistry() {
   }
 
   /**
+   * Fully unregister a model (root + all subpackages) loaded from a given source
+   * file — from BOTH the local registry state AND the global/canonical
+   * EPackageRegistry. Needed before re-loading a repaired copy so the fresh parse
+   * builds a clean, fully-local object graph instead of reusing stale (foreign)
+   * package instances left over from an earlier (broken) registration.
+   */
+  function unregisterModelBySourceFile(sourceFile: string): number {
+    let removed = 0
+    for (const [nsURI, info] of Array.from(state.packages.entries())) {
+      if (info.sourceFile === sourceFile) {
+        state.packages.delete(nsURI)
+        try { (EPackageRegistry.INSTANCE as any)?.delete?.(nsURI) } catch { /* ignore */ }
+        try {
+          if (_canonicalRegistry && _canonicalRegistry !== EPackageRegistry.INSTANCE) {
+            _canonicalRegistry.delete?.(nsURI)
+          }
+        } catch { /* ignore */ }
+        removed++
+      }
+    }
+    console.log('[ModelRegistry] Unregistered', removed, 'package(s) for', sourceFile)
+    return removed
+  }
+
+  /**
    * Get package by namespace URI
    */
   function getPackage(nsURI: string): ModelPackageInfo | undefined {
@@ -986,6 +1011,7 @@ export function useModelRegistry() {
     loadEcoreFile,
     registerLoadedPackage,
     unregisterPackage,
+    unregisterModelBySourceFile,
     getPackage,
     getConcreteClasses,
     getAllClasses,

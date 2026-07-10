@@ -976,14 +976,9 @@ export function useMetamodeler() {
     const registered = _getModelRegistry?.()?.userPackages?.value?.find(
       (p: any) => p.sourceFile === sourceFile
     )
-    if (registered) {
-      const adoptedRes: Resource | null = registered.ePackage?.eResource?.() ?? null
-      if (!adoptedRes) {
-        throw new Error(
-          `[Metamodeler] Model '${sourceFile}' is registered but has no editable resource — ` +
-          `refusing to parse a divergent copy (one-resource invariant)`
-        )
-      }
+    const adoptedRes: Resource | null = registered ? (registered.ePackage?.eResource?.() ?? null) : null
+    if (registered && adoptedRes) {
+      // A live registered resource exists → edit exactly that one (never a copy).
       const oldResource = resource.value
       resource.value = adoptedRes
       filePath.value = sourceFile
@@ -996,6 +991,13 @@ export function useMetamodeler() {
       const rp = adoptedRes.getContents().get(0) as EPackage
       console.log('[Metamodeler] Editing shared registered resource:', sourceFile, rp?.getName?.())
       return { name: rp?.getName?.() || 'unnamed', nsURI: rp?.getNsURI?.() || '' }
+    }
+    if (registered) {
+      // Registered but WITHOUT an editable resource (e.g. a legacy file the
+      // registry failed to load, or a package-only registration). There is no
+      // good resource to diverge from, so parse fresh below — this also lets the
+      // "repair & reload" flow re-load repaired content.
+      console.warn('[Metamodeler] Registered model has no editable resource; parsing fresh:', sourceFile)
     }
 
     try {
