@@ -341,6 +341,22 @@ export function useModelRegistry() {
    * @returns The registered ModelPackageInfo or null if loading failed
    */
   async function loadEcoreFile(ecoreContent: string, sourceFile: string): Promise<ModelPackageInfo | null> {
+    // Dedup FIRST (before touching loading state or parsing): if this source is
+    // already loaded into a live resource, reuse it instead of parsing a second,
+    // divergent copy that would orphan any resource the metamodeler has adopted
+    // for editing (one-resource invariant). A genuine content change requires an
+    // explicit unregister+reload rather than a silent re-parse here.
+    if (sourceFile) {
+      const existing = Array.from(state.packages.values()).find(
+        (p) => p.sourceFile === sourceFile && !p.isBuiltIn && !!p.ePackage?.eResource?.()
+      )
+      if (existing) {
+        console.log('[ModelRegistry] Reusing already-loaded resource for:', sourceFile)
+        registerInGlobalRegistry(existing.ePackage.getNsURI(), existing.ePackage)
+        return existing
+      }
+    }
+
     // Set loading state
     const fileName = sourceFile.split('/').pop() || sourceFile
     loadingModelName.value = fileName
@@ -355,11 +371,13 @@ export function useModelRegistry() {
       console.log('[ModelRegistry] Loading .ecore file:', sourceFile)
 
       const rs = getEcoreResourceSet()
-      const uri = URI.createURI(sourceFile)
+      // Use the real source path as the resource URI so the resource is
+      // identifiable/shareable (e.g. the metamodeler can adopt this exact
+      // resource for editing instead of parsing a second, divergent copy).
+      // Fall back to a synthetic URI only when no path is available.
+      const uri = URI.createURI(sourceFile || 'file://temp.ecore')
 
-      // Parse XMI content via temporary resource
-      const tempUri = URI.createURI('file://temp.ecore')
-      const resource = new XMIResource(tempUri)
+      const resource = new XMIResource(uri)
       resource.setResourceSet(rs)
       resource.loadFromString(ecoreContent)
 

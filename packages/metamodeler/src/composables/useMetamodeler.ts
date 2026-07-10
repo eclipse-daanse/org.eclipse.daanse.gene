@@ -90,6 +90,15 @@ export function setCanonicalPackageRegistry(registry: any) {
   _canonicalRegistry = registry
 }
 
+// Getter for the ui-model-browser ModelRegistry, injected by the metamodeler
+// plugin (activate). Enforces the one-resource invariant in loadFromEcoreString:
+// if a model is already registered, the metamodeler edits THAT resource.
+let _getModelRegistry: (() => any) | null = null
+
+export function setMetamodelerModelRegistry(getter: () => any): void {
+  _getModelRegistry = getter
+}
+
 function getResourceSet(): BasicResourceSet {
   if (!resourceSet) {
     resourceSet = _canonicalRegistry
@@ -959,6 +968,36 @@ export function useMetamodeler() {
     sourceFile: string,
     handle?: FileSystemFileHandle
   ): Promise<{ name: string; nsURI: string } | null> {
+    // One-resource invariant (strict): if this model is already registered in the
+    // ModelRegistry, edit THAT exact resource. Parsing a second copy would create a
+    // divergent object graph and cross-resource (nsURI-href) references on save.
+    // Deliberately outside the try/catch below: an invariant violation must fail
+    // hard rather than silently fall back to a divergent parse.
+    const registered = _getModelRegistry?.()?.userPackages?.value?.find(
+      (p: any) => p.sourceFile === sourceFile
+    )
+    if (registered) {
+      const adoptedRes: Resource | null = registered.ePackage?.eResource?.() ?? null
+      if (!adoptedRes) {
+        throw new Error(
+          `[Metamodeler] Model '${sourceFile}' is registered but has no editable resource — ` +
+          `refusing to parse a divergent copy (one-resource invariant)`
+        )
+      }
+      const oldResource = resource.value
+      resource.value = adoptedRes
+      filePath.value = sourceFile
+      fileHandle.value = handle ?? null
+      dirty.value = false
+      selectedElement.value = null
+      expandedKeys.value = {}
+      setupAdapter(adoptedRes, oldResource)
+      triggerUpdate()
+      const rp = adoptedRes.getContents().get(0) as EPackage
+      console.log('[Metamodeler] Editing shared registered resource:', sourceFile, rp?.getName?.())
+      return { name: rp?.getName?.() || 'unnamed', nsURI: rp?.getNsURI?.() || '' }
+    }
+
     try {
       console.log('[Metamodeler] Loading .ecore for editing from:', sourceFile)
       const oldResource = resource.value

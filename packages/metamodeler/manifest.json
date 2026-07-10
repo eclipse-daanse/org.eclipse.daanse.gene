@@ -8,7 +8,8 @@
     "gene-app",
     "ui-layout",
     "ui-actions",
-    "ui-model-browser"
+    "ui-model-browser",
+    "ui-instance-tree"
   ],
   "provides": [
     {

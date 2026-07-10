@@ -1879,14 +1879,17 @@ function setupMetamodelerPerspective(layout: any) {
   // Wire the styled save-confirm dialog for validation errors
   registerMetamodelerSaveConfirm()
 
-  // Get or create metamodel context for ModelBrowser
-  let context = metamodelEditorContext.value
+  // Get the metamodel context for ModelBrowser. The metamodeler plugin registers
+  // the factory, so prefer the shared context via getMetamodelContext() — this way
+  // ModelBrowser and the Properties panel operate on the exact same instance.
+  let context = contextService?.getMetamodelContext?.() ?? metamodelEditorContext.value
   if (!context && metamodelerService && contextService?.createMetamodelContext) {
+    // Fallback only (factory not yet registered): build once.
     const metamodeler = metamodelerService.useSharedMetamodeler()
     context = contextService.createMetamodelContext(metamodeler)
-    metamodelEditorContext.value = context
-    console.log('[App] Created Metamodel Editor context on-demand')
+    console.log('[App] Created Metamodel Editor context on-demand (fallback)')
   }
+  metamodelEditorContext.value = context
 
   // Create metamodeler-specific handler that uses the context
   const handleMetamodelCreateInstance = (classInfo: any) => {
@@ -1960,11 +1963,14 @@ function setupMetamodelerPerspective(layout: any) {
     panel: 'model-browser'
   })
 
-  // Create wrapper for properties panel with metamodel context
+  // Create wrapper for properties panel with metamodel context.
+  // Resolve the context at render time from the registered factory so we always
+  // hand over the live metamodel context (correct rootPackage ref + version),
+  // not a snapshot captured before the metamodeler finished loading.
   const PropertiesPanelWrapper = defineComponent({
     setup() {
       return () => h(PropertiesPanel, {
-        context: context,
+        context: contextService?.getMetamodelContext?.() ?? context,
         onShowProblems: handleShowProblems
       })
     }
@@ -2290,16 +2296,10 @@ onMounted(() => {
       console.log('[App] Instance Editor context created')
     }
 
-    // Create Metamodel Editor context (once, when both services are available)
-    if (!metamodelEditorContext.value && editorContextService.value?.createMetamodelContext && metamodelerComposables.value) {
-      const metamodeler = metamodelerComposables.value.useSharedMetamodeler()
-      metamodelEditorContext.value = editorContextService.value.createMetamodelContext(metamodeler)
-      // Register factory for getCurrentContext() support
-      if (editorContextService.value.registerMetamodelContextFactory) {
-        editorContextService.value.registerMetamodelContextFactory(() => metamodelEditorContext.value)
-      }
-      console.log('[App] Metamodel Editor context created')
-    }
+    // Note: the metamodel editor context factory is registered by the metamodeler
+    // plugin itself (packages/metamodeler activate). gene-app must not depend on a
+    // lazily-loaded plugin's composables here — that coupling made context creation
+    // race the service-poll teardown and usually never happened.
 
     // Check for workspace components (legacy)
     if (!workspaceComponentsService.value) {

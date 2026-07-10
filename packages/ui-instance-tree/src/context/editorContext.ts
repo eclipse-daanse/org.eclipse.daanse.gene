@@ -17,6 +17,12 @@ export type EditorMode = 'instance' | 'metamodel'
 // Global reactive mode state
 const currentMode = ref<EditorMode>('instance')
 
+// Reactive epoch bumped whenever a context factory (re)registers. getCurrentContext()
+// reads it so that consumer computeds re-resolve once a lazily-loaded plugin (e.g. the
+// metamodeler) registers its factory AFTER the consumer first evaluated — otherwise the
+// consumer would cache the null it saw before the factory existed and never recover.
+const factoryEpoch = ref(0)
+
 // Context factories - registered at runtime
 let instanceContextFactory: (() => EditorContext) | null = null
 let metamodelContextFactory: (() => EditorContext) | null = null
@@ -41,6 +47,8 @@ export function getEditorMode(): Ref<EditorMode> {
  */
 export function registerInstanceContextFactory(factory: () => EditorContext): void {
   instanceContextFactory = factory
+  cachedInstanceContext = null
+  factoryEpoch.value++
 }
 
 /**
@@ -48,6 +56,8 @@ export function registerInstanceContextFactory(factory: () => EditorContext): vo
  */
 export function registerMetamodelContextFactory(factory: () => EditorContext): void {
   metamodelContextFactory = factory
+  cachedMetamodelContext = null
+  factoryEpoch.value++
 }
 
 // Cached context instances
@@ -58,6 +68,9 @@ let cachedMetamodelContext: EditorContext | null = null
  * Get the current context based on mode (non-reactive, for one-time access)
  */
 export function getCurrentContext(): EditorContext | null {
+  // Track the factory epoch so callers evaluating this inside a computed re-run
+  // when a context factory registers later (see factoryEpoch above).
+  void factoryEpoch.value
   const mode = currentMode.value
 
   if (mode === 'instance') {
