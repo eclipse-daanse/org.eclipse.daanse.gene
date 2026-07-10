@@ -20,7 +20,7 @@ export * from './components'
 
 // Import for service registration
 import { MetamodelerPerspective, MetamodelerTree, MetamodelerEditor } from './components'
-import { useMetamodeler, useSharedMetamodeler, setMetamodelerIconRegistry, refreshMetamodelerIcons, setMetamodelerProblemsService, setMetamodelerConfirmSaveHandler, setCanonicalPackageRegistry } from './composables/useMetamodeler'
+import { useMetamodeler, useSharedMetamodeler, setMetamodelerIconRegistry, refreshMetamodelerIcons, setMetamodelerProblemsService, setMetamodelerConfirmSaveHandler, setCanonicalPackageRegistry, setMetamodelerModelRegistry } from './composables/useMetamodeler'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
@@ -37,6 +37,12 @@ export async function activate(context: ModuleContext): Promise<void> {
   if (canonicalRegistry) {
     setCanonicalPackageRegistry(canonicalRegistry)
   }
+
+  // Inject the ModelRegistry so loadFromEcoreString can edit an already-registered
+  // resource instead of parsing a divergent copy (one-resource invariant).
+  setMetamodelerModelRegistry(() =>
+    context.services.get<any>('ui.model-browser.composables')?.useSharedModelRegistry?.() ?? null
+  )
 
   // Set icon registry reference for custom icons in metamodeler tree
   // ui-instance-tree may load after metamodeler, so retry if not available yet
@@ -79,6 +85,22 @@ export async function activate(context: ModuleContext): Promise<void> {
     useSharedMetamodeler,
     setMetamodelerConfirmSaveHandler
   })
+
+  // Register the metamodel editor context factory. Context-aware components
+  // (Properties panel, reference/supertype search pickers) resolve `mode` and
+  // the live `rootPackage` through getCurrentContext(); without this factory
+  // they fall back to the stale registry and show an empty candidate list.
+  // The metamodeler owns useSharedMetamodeler, so it — not gene-app — is the
+  // right place to wire this. The 'ui-instance-tree' manifest dependency
+  // guarantees the context service is registered before we activate, so no
+  // polling/retry is needed.
+  const ctxSvc = context.services.get<any>('ui.instance-tree.context')
+  if (ctxSvc?.registerMetamodelContextFactory && ctxSvc.createMetamodelContext) {
+    ctxSvc.registerMetamodelContextFactory(() => ctxSvc.createMetamodelContext(useSharedMetamodeler()))
+    context.log.info('Registered metamodel editor context factory')
+  } else {
+    context.log.warn('ui.instance-tree.context unavailable — metamodel editor context not registered')
+  }
 
   // Register metamodeler perspective
   const perspectiveManager = context.services.get<PerspectiveManager>('ui.registry.perspectives')

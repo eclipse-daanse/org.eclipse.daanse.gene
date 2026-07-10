@@ -127,8 +127,13 @@ const selectedObject = computed(() => {
   return instanceTree.selectedObject.value
 })
 
-// Get root package from context (for metamodel mode - user's classes)
+// Get root package from context (for metamodel mode - user's classes).
+// Read `version` first: the metamodeler keeps a stable rootPackage identity and a
+// computed reading only rootPackage.value would stay cached at its first value
+// (e.g. null, evaluated before the model finished loading) and never invalidate.
+// version is bumped on load and on every mutation, so this keeps us in sync.
 const rootPackage = computed(() => {
+  void ctx.value?.version?.value
   return ctx.value?.rootPackage?.value ?? null
 })
 

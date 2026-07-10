@@ -186,6 +186,9 @@ function flatIndex(item: PickerItem): number {
 
 // ── Visibility watcher ───────────────────────────────────────────────────────
 
+// immediate: the dialog is often mounted (via v-if) already visible, so the
+// transition false→true never happens — without immediate, loadInitial() would
+// never run and the picker would show "No results".
 watch(() => props.visible, async (visible) => {
   if (visible) {
     await loadInitial()
@@ -195,7 +198,7 @@ watch(() => props.visible, async (visible) => {
     allItems.value = []
     selectedIndex.value = 0
   }
-})
+}, { immediate: true })
 </script>
 
 <template>
