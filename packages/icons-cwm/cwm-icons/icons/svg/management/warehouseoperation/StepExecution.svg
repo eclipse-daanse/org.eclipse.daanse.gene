@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">management.warehouseoperation.StepExecution</title>
+<style>:root{--stroke:#EA580C}@media(prefers-color-scheme:dark){:root{--stroke:#FB923C}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x='8.8' y='6.6' width='6.4' height='6.4' rx='1.1'/><path d='M6.4 9.8h2.4M15.2 9.8h2.4' opacity='.7'/><path d='M8.6 15.4l1.6 1.7 3.6-4' stroke-width='1.7'/></g>
+</svg>
