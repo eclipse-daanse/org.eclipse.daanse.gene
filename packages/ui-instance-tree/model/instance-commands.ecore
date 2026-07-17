@@ -42,6 +42,18 @@
       <eParameters name="className" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
     </eOperations>
 
+    <eOperations name="setIcon">
+      <eAnnotations source="http://gene/model/command/Command">
+        <details key="commandId" value="instance.setIcon"/>
+        <details key="label" value="Set Icon..."/>
+        <details key="category" value="MODEL"/>
+        <details key="scope" value="OBJECT"/>
+        <details key="icon" value="pi pi-palette"/>
+        <details key="when" value="hasSelection"/>
+      </eAnnotations>
+      <eParameters name="targetType" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+
     <eOperations name="deleteSelected">
       <eAnnotations source="http://gene/model/command/Command">
         <details key="commandId" value="instance.deleteSelected"/>

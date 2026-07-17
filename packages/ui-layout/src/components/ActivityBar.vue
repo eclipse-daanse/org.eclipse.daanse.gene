@@ -32,6 +32,29 @@ const hasWorkspace = ref(false)
 
 // Settings dialog
 const showSettings = ref(false)
+const settingsSection = ref<string | undefined>(undefined)
+const settingsTargetType = ref<string | undefined>(undefined)
+
+function openSettings(section?: string, targetType?: string) {
+  settingsSection.value = section
+  settingsTargetType.value = targetType
+  showSettings.value = true
+}
+
+function closeSettings() {
+  showSettings.value = false
+  settingsSection.value = undefined
+  settingsTargetType.value = undefined
+}
+
+// Other modules (e.g. the instance tree's "Set Icon") request the settings
+// dialog via the event bus, optionally targeting a section and class.
+onMounted(() => {
+  const eventBus = tsm?.getService('gene.eventbus')
+  eventBus?.on?.('show-workspace-settings', (payload: any) => {
+    openSettings(payload?.section, payload?.targetType)
+  })
+})
 
 // All perspective definitions from registry
 const allPerspectives = ref<Array<{
@@ -224,13 +247,19 @@ async function handlePerspectiveClick(perspectiveId: string) {
         v-tid="'open-workspace-settings'"
         class="activity-item"
         title="Workspace Settings"
-        @click="showSettings = true"
+        @click="openSettings()"
       >
         <i class="pi pi-cog"></i>
       </button>
     </div>
 
-    <WorkspaceSettingsDialog v-if="showSettings" :visible="showSettings" @close="showSettings = false" />
+    <WorkspaceSettingsDialog
+      v-if="showSettings"
+      :visible="showSettings"
+      :initial-section="settingsSection"
+      :initial-target-type="settingsTargetType"
+      @close="closeSettings"
+    />
   </div>
 </template>
 
