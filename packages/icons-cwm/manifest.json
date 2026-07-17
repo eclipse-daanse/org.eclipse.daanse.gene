@@ -1,0 +1,16 @@
+{
+  "id": "icons-cwm",
+  "name": "CWM Icons",
+  "version": "0.1.0",
+  "description": "Common Warehouse Metamodel (CWM 1.1) class icon provider for GenE",
+  "entry": "src/index.ts",
+  "dependencies": [
+    "ui-instance-tree"
+  ],
+  "provides": [
+    {
+      "id": "icons.cwm",
+      "description": "CWM 1.1 class icon provider (143 hand-drawn SVG icons)"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">management.warehouseprocess.events.IntervalEvent</title>
+<style>:root{--stroke:#C2410C}@media(prefers-color-scheme:dark){:root{--stroke:#FDBA74}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx='12' cy='12' r='5.9'/><path d='M12 12 9.6 9.6M12 12l3.4 1.8'/><path d='M12 6.9a5.1 5.1 0 0 1 4.4 2.6' stroke-width='2.2'/></g>
+</svg>

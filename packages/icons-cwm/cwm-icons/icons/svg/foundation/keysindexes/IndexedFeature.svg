@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">foundation.keysindexes.IndexedFeature</title>
+<style>:root{--stroke:#0891B2}@media(prefers-color-scheme:dark){:root{--stroke:#22D3EE}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M6.4 7.4h11.2M6.4 16.6h11.2' opacity='.3'/><rect x='6.4' y='10.2' width='7.4' height='3.6' rx='.8'/><path d='M17.6 12h-2.4'/><path d='M16.4 10.8 15.2 12l1.2 1.2'/></g>
+</svg>

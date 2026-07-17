@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">foundation.softwaredeployment.PackageUsage</title>
+<style>:root{--stroke:#0E7490}@media(prefers-color-scheme:dark){:root{--stroke:#67E8F9}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M6 15.4V8.6a.8.8 0 0 1 .8-.8h2.2l1.1 1.4h2.5a.8.8 0 0 1 .8.8v5.4a.8.8 0 0 1-.8.8H6.8a.8.8 0 0 1-.8-.8z'/><path d='M14.8 12h2.2' stroke-dasharray='1.4 1.1'/><path d='M16.2 10.6 17.6 12l-1.4 1.4'/></g>
+</svg>

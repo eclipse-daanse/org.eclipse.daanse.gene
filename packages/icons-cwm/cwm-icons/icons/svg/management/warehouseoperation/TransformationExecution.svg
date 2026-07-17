@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">management.warehouseoperation.TransformationExecution</title>
+<style>:root{--stroke:#EA580C}@media(prefers-color-scheme:dark){:root{--stroke:#FB923C}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M6.4 6.8h9.2l-3.5 4.3v4.3l-2.2 1.1v-5.4z' stroke-linejoin='round'/><circle cx='15.4' cy='14.8' r='2.6'/><path d='M15.4 13.4v1.4l1 .7'/></g>
+</svg>
