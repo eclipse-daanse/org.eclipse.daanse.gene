@@ -696,7 +696,25 @@ export function useModelRegistry() {
     const children: ModelTreeNode[] = []
 
     try {
-      const classes = getAllClasses(pkg)
+      // Only this package's OWN direct classes. Subpackage classes belong under
+      // their subpackage node (added below), not flattened into the parent.
+      // getAllClasses recurses into subpackages (needed by the Transformation
+      // editor since b5276a6) — using it here listed every subpackage class twice.
+      const classes: ClassInfo[] = []
+      for (const classifier of (pkg.ePackage.getEClassifiers?.() ?? [])) {
+        if (isEClass(classifier)) {
+          const eClass = classifier as EClass
+          classes.push({
+            qualifiedName: `${pkg.nsPrefix}:${eClass.getName()}`,
+            name: eClass.getName(),
+            isAbstract: eClass.isAbstract(),
+            isInterface: eClass.isInterface(),
+            eClass,
+            packageInfo: pkg
+          })
+        }
+      }
+      classes.sort((a, b) => a.name.localeCompare(b.name))
 
       // Add subpackages first
       const subPackages = pkg.ePackage.getESubpackages ? pkg.ePackage.getESubpackages() : []
