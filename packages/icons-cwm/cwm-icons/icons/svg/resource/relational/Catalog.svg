@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">resource.relational.Catalog</title>
+<style>:root{--stroke:#115E59}@media(prefers-color-scheme:dark){:root{--stroke:#99F6E4}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><ellipse cx='12' cy='8' rx='5.6' ry='2.1'/><path d='M6.4 8v8c0 1.16 2.51 2.1 5.6 2.1s5.6-.94 5.6-2.1V8'/><path d='M17.6 11.9c0 1.16-2.51 2.1-5.6 2.1s-5.6-.94-5.6-2.1'/></g>
+</svg>

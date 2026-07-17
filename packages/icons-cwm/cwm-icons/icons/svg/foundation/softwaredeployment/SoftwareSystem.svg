@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">foundation.softwaredeployment.SoftwareSystem</title>
+<style>:root{--stroke:#0E7490}@media(prefers-color-scheme:dark){:root{--stroke:#67E8F9}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x='6' y='6.6' width='12' height='10.8' rx='1.4'/><rect x='8.2' y='8.9' width='3.2' height='2.8' rx='.5'/><rect x='12.6' y='8.9' width='3.2' height='2.8' rx='.5'/><path d='M8.2 14.6h7.6'/></g>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">objectmodel.behavioral.BehavioralFeature</title>
+<style>:root{--stroke:#4338CA}@media(prefers-color-scheme:dark){:root{--stroke:#A5B4FC}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-dasharray="3 2"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M12 6.2 17.2 9.1v5.8L12 17.8 6.8 14.9V9.1z'/></g>
+</svg>

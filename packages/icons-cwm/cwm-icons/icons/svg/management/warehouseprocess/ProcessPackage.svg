@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">management.warehouseprocess.ProcessPackage</title>
+<style>:root{--stroke:#9A3412}@media(prefers-color-scheme:dark){:root{--stroke:#FED7AA}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M6 16.5V7.5a1 1 0 0 1 1-1h3.1l1.6 2H17a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z'/><rect x='8.8' y='11.8' width='2.8' height='3.2' rx='.5'/><path d='M11.6 13.4h1.8'/><path d='M12.8 12.6 13.8 13.4l-1 .8'/></g>
+</svg>

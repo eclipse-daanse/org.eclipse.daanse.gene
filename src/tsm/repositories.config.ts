@@ -77,6 +77,7 @@ export const startupModules = [
   'ui-problems-panel',  // OCL validation problems panel
   'ui-workspace',       // Workspace UI (workspace.xmi management)
   'instance-builder',   // EMF instance editor components
+  'icons-cwm',          // CWM 1.1 class icon provider
   'tsm-devtools',       // Browser console DevTools
   'ui-model-view',      // Model View system (unified editor)
   'metamodeler',        // Ecore metamodel editor

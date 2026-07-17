@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">objectmodel.core.Multiplicity</title>
+<style>:root{--stroke:#3730A3}@media(prefers-color-scheme:dark){:root{--stroke:#C7D2FE}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M8.6 6.6h-2v10.8h2M15.4 6.6h2v10.8h-2'/><circle cx='9.9' cy='12' r='1.1' fill='currentColor' stroke='none'/><circle cx='14.1' cy='12' r='1.1' fill='currentColor' stroke='none'/><path d='M11.4 12h1.2'/></g>
+</svg>

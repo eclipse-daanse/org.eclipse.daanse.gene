@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">analysis.businessnomenclature.BusinessDomain</title>
+<style>:root{--stroke:#6D28D9}@media(prefers-color-scheme:dark){:root{--stroke:#C4B5FD}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M6 16.5V7.5a1 1 0 0 1 1-1h3.1l1.6 2H17a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1z'/><path d='M9.6 15.4v-3.2h4.8v3.2'/><path d='M12 12.2v3.2'/></g>
+</svg>
