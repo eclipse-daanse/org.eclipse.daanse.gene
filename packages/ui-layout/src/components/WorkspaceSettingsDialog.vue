@@ -17,6 +17,10 @@ import type { EditorConfigService } from 'gene-app'
 
 const props = defineProps<{
   visible: boolean
+  /** Preselect a settings tab when opening (e.g. 'icons') */
+  initialSection?: string
+  /** For the icon section: preselect a target class typeUri in the add-mapping form */
+  initialTargetType?: string
 }>()
 
 const emit = defineEmits<{
@@ -40,7 +44,9 @@ const categories: { id: SettingsCategory; label: string; icon: string }[] = [
   { id: 'resolvers', label: 'Package Resolvers', icon: 'pi pi-link' }
 ]
 
-const selectedCategory = ref<SettingsCategory>('icons')
+const selectedCategory = ref<SettingsCategory>(
+  (props.initialSection as SettingsCategory) || 'icons'
+)
 
 // === Deferred rendering ===
 // Every category switch defers content rendering so the spinner paints first.
@@ -75,10 +81,6 @@ const IconPickerComponent = computed(() => tsm?.getService('ui.instance-tree.com
 const actionComponents = computed(() => tsm?.getService('gene.action.components') || null)
 const EventMappingEditor = computed(() => actionComponents.value?.EventMappingEditor || null)
 const ActionEditor = computed(() => actionComponents.value?.ActionEditor || null)
-
-const modelRegistry = computed(() => {
-  return tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry() || null
-})
 
 // === Storage Strategy ===
 const storageStrategies: { value: StorageStrategy; label: string; description: string; icon: string }[] = [
@@ -186,27 +188,20 @@ function mapToFennecLibrary(lib: any): string {
   }
 }
 
-const availableClasses = computed(() => {
-  const classes: { label: string; value: string; package: string }[] = []
-  const reg = modelRegistry.value
-  if (!reg?.allPackages) return classes
-  for (const pkg of reg.allPackages.value) {
-    const pkgName = pkg.ePackage.getName()
-    const nsUri = pkg.ePackage.getNsURI()
-    for (const classifier of pkg.ePackage.getEClassifiers()) {
-      if ('getEAllStructuralFeatures' in classifier) {
-        const eClass = classifier as any
-        const className = eClass.getName()
-        const typeUri = `${nsUri}#${className}`
-        classes.push({ label: className, value: typeUri, package: pkgName })
-      }
-    }
-  }
-  return classes.sort((a, b) => a.label.localeCompare(b.label))
-})
+// Class selection uses the shared ClassPickerDialog (via TSM service) instead of
+// a bespoke dropdown, so it matches the picker used across the app.
+const ClassPickerDialog = computed(() => tsm?.getService('ui.model-browser.components')?.ClassPickerDialog || null)
+const classPickerVisible = ref(false)
+
+function handleClassSelect(selection: any) {
+  const nsUri = selection?.packageNsURI || ''
+  const className = selection?.className || ''
+  newMapping.value.targetType = `${nsUri}#${className}`
+  classPickerVisible.value = false
+}
 
 const newMapping = ref({
-  targetType: '',
+  targetType: props.initialTargetType || '',
   icon: '',
   iconCssClass: '',
   scope: 'TYPE_ONLY',
@@ -483,24 +478,16 @@ function formatKind(kind: string): string {
                 <div class="form-row">
                   <div class="field">
                     <label>Class</label>
-                    <Dropdown
-                      v-tid="'class-dropdown'"
-                      v-model="newMapping.targetType"
-                      :options="availableClasses"
-                      optionLabel="label"
-                      optionValue="value"
-                      placeholder="Select class..."
-                      filter
-                      showClear
-                      :emptyMessage="availableClasses.length === 0 ? 'No model loaded' : 'No class found'"
-                    >
-                      <template #option="{ option }">
-                        <div class="class-option">
-                          <span class="class-name">{{ option.label }}</span>
-                          <span class="package-name">{{ option.package }}</span>
-                        </div>
-                      </template>
-                    </Dropdown>
+                    <Button
+                      v-tid="'class-picker-btn'"
+                      :label="newMapping.targetType ? formatTargetType(newMapping.targetType) : 'Select class...'"
+                      icon="pi pi-sitemap"
+                      severity="secondary"
+                      outlined
+                      size="small"
+                      class="class-picker-trigger"
+                      @click="classPickerVisible = true"
+                    />
                   </div>
                   <div class="field field-icon">
                     <label>Icon</label>
@@ -799,6 +786,15 @@ function formatKind(kind: string): string {
             @select="handleIconSelect"
           />
         </Dialog>
+
+        <!-- Class Picker Dialog (shared component via TSM service) -->
+        <component
+          v-if="ClassPickerDialog"
+          :is="ClassPickerDialog"
+          v-model:visible="classPickerVisible"
+          header="Select Class"
+          @select="handleClassSelect"
+        />
 
         <!-- Footer with Save button -->
         <div class="settings-footer">

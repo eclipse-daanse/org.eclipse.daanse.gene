@@ -524,6 +524,15 @@ context.log.info('ViewsPanel available as component (integrated in InstanceTree)
       }
     })
 
+    // Set Icon: open the (workspace) icon settings prefilled with the class of
+    // the selected object. Bridges to the ui-layout dialog via the event bus
+    // (same pattern as instance.importXmi -> instance:showImportDialog).
+    commandRegistry.registerHandler('instance.setIcon', async (args: any) => {
+      const targetType = args?.targetType as string | undefined
+      const eb = context.services.get<any>('gene.eventbus')
+      eb?.emit('show-workspace-settings', { section: 'icons', targetType })
+    })
+
     context.log.info('Instance commands registered')
   }
 
@@ -572,7 +581,8 @@ context.log.info('ViewsPanel available as component (integrated in InstanceTree)
         id: 'instance.iconSettings',
         icon: 'pi pi-cog',
         label: 'Icon Settings',
-        action: () => eventBus?.emit('show-icon-settings')
+        // Opens the general (workspace) icon settings on the Icon Mappings tab
+        action: () => eventBus?.emit('show-workspace-settings', { section: 'icons' })
       }
     ])
     context.log.info('Model-editor menu registered')

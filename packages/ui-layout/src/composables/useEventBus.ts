@@ -15,6 +15,11 @@ export interface EventBusEvents {
   'metamodel-dirty-change': boolean
   'open-search-dialog': void
   'show-problems': void
+  /**
+   * Open the workspace settings dialog, optionally on a specific section/tab
+   * and (for the icon section) prefilled with a target class typeUri.
+   */
+  'show-workspace-settings': { section?: string; targetType?: string }
   // Add more events as needed
 }
 

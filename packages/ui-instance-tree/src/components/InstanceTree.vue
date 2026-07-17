@@ -23,7 +23,6 @@ import { useSharedInstanceTree } from '../composables/useInstanceTree'
 import { useSharedViews, getTypeUri, getElementUri } from '../composables/useViews'
 import type { InstanceTreeNode } from '../types'
 import type { EObject, EClass, EReference } from '@emfts/core'
-import IconSettings from './IconSettings.vue'
 import ViewsEditorDialog from './ViewsEditorDialog.vue'
 
 // Props - context can be provided by parent (for different perspectives)
@@ -49,7 +48,6 @@ const sharedTree = useSharedInstanceTree()
 
 // Listen for events from sidebar header actions and central menu
 eventBus?.on?.('show-new-instance-dialog', () => { showNewInstanceDialog.value = true })
-eventBus?.on?.('show-icon-settings', () => { showIconSettings.value = true })
 
 
 // Helper to get name from ENamedElement - handles both native and DynamicEObject
@@ -104,9 +102,6 @@ const isDragOver = ref(false)
 // New root instance dialog
 const showNewInstanceDialog = ref(false)
 const selectedClass = ref<any>(null)
-
-// Icon settings dialog
-const showIconSettings = ref(false)
 
 // Views editor dialog
 const showViewsEditor = ref(false)
@@ -394,6 +389,23 @@ const contextMenuItems = computed(() => {
     disabled: false,
     command: handleDelete
   })
+
+  // Set Icon — opens the icon settings prefilled with this object's class.
+  // Routed through the command framework (instance.setIcon, scope OBJECT).
+  const setIconData = ctxSelectedNode.value?.data
+  const setIconEClass = typeof setIconData?.eClass === 'function' ? setIconData.eClass() : null
+  if (setIconEClass) {
+    items.push({
+      label: 'Set Icon…',
+      icon: 'pi pi-palette',
+      command: () => {
+        const nsUri = setIconEClass.getEPackage?.()?.getNsURI?.() || ''
+        const targetType = `${nsUri}#${setIconEClass.getName()}`
+        const commandRegistry = tsm?.getService('gene.command.registry')
+        commandRegistry?.execute('instance.setIcon', { targetType })
+      }
+    })
+  }
 
   // Quick Actions from ActionRegistry
   const selectedData = ctxSelectedNode.value?.data
@@ -726,9 +738,6 @@ watch(ctxSelectedObject, (obj) => {
         <Button label="Create" @click="handleCreateRootInstance" :disabled="!selectedClass" />
       </template>
     </Dialog>
-
-    <!-- Icon Settings Dialog -->
-    <IconSettings v-model:visible="showIconSettings" />
 
     <!-- Views Editor Dialog -->
     <ViewsEditorDialog
