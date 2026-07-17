@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">resource.relational.SQLIndex</title>
+<style>:root{--stroke:#115E59}@media(prefers-color-scheme:dark){:root{--stroke:#99F6E4}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M6.4 7.4h7.2M6.4 11h5.2M6.4 14.6h3.2'/><path d='M15.6 7.4v9.2'/><path d='M13.6 14.6l2 2 2-2'/></g>
+</svg>

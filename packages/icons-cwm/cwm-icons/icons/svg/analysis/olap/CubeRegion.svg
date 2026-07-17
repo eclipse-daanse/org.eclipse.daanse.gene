@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">analysis.olap.CubeRegion</title>
+<style>:root{--stroke:#5B21B6}@media(prefers-color-scheme:dark){:root{--stroke:#DDD6FE}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M12 12.1 18 8.8v6.4L12 18.4z' fill='currentColor' stroke='none' opacity='.3'/><path d='M12 5.6 18 8.8v6.4L12 18.4 6 15.2V8.8z' stroke-linejoin='round'/><path d='M6 8.8 12 12.1l6-3.3M12 12.1v6.3'/></g>
+</svg>

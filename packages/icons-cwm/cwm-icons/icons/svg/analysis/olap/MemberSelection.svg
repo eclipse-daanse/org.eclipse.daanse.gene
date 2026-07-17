@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">analysis.olap.MemberSelection</title>
+<style>:root{--stroke:#5B21B6}@media(prefers-color-scheme:dark){:root{--stroke:#DDD6FE}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x='6.2' y='6.2' width='11.6' height='11.6' rx='2' opacity='.45'/><circle cx='9.4' cy='9.4' r='1.5'/><circle cx='14.6' cy='9.4' r='1.5' fill='currentColor' stroke='none'/><circle cx='9.4' cy='14.6' r='1.5' fill='currentColor' stroke='none'/><circle cx='14.6' cy='14.6' r='1.5'/></g>
+</svg>
