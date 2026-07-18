@@ -786,11 +786,16 @@ export function useInstanceTree(
     return raw
   }
 
-  /** Create a new empty resource with the given name; makes it active */
-  function createResource(name: string): Resource {
+  /**
+   * Create a new empty resource with the given name and optional folder.
+   * The resource URI (name + folder → path) determines the target file.
+   */
+  function createResource(name: string, folder?: string): Resource {
     const rs = getResourceSet()
-    const fileName = sanitizeFilename(name) + '.xmi'
-    const res = new XMIResource(URI.createURI(fileName))
+    const base = sanitizeFilename(name) + '.xmi'
+    const cleanFolder = (folder || '').trim().replace(/^\/+|\/+$/g, '')
+    const path = cleanFolder ? `${cleanFolder}/${base}` : base
+    const res = new XMIResource(URI.createURI(path))
     res.setResourceSet(rs)
     return addResource(res)
   }

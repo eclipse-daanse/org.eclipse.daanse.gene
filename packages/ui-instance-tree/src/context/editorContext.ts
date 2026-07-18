@@ -259,7 +259,7 @@ export interface EditorContext {
   resources?: ComputedRef<ResourceInfo[]>
   activeResource?: Ref<Resource | null>
   setActiveResource?: (res: Resource) => void
-  createResource?: (name: string) => Resource
+  createResource?: (name: string, folder?: string) => Resource
   renameResource?: (res: Resource, newName: string) => void
   deleteResource?: (res: Resource) => void
   moveToResource?: (obj: EObject, target: Resource) => boolean

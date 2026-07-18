@@ -17,6 +17,7 @@ import { ContextMenu } from 'tsm:primevue'
 import { Menu } from 'tsm:primevue'
 import { Dialog } from 'tsm:primevue'
 import { Dropdown } from 'tsm:primevue'
+import { InputText } from 'tsm:primevue'
 import type { EditorContext } from '../context/editorContext'
 import { createInstanceContext } from '../context/instanceContext'
 import { useSharedInstanceTree } from '../composables/useInstanceTree'
@@ -105,9 +106,29 @@ function onNodeContextMenu(node: any, event: MouseEvent) {
   handleContextMenu(event)
 }
 
+// New Resource dialog (name + path)
+const showNewResourceDialog = ref(false)
+const newResourceName = ref('new-resource')
+const newResourcePath = ref('instances')
+
+const newResourcePreview = computed(() => {
+  const folder = newResourcePath.value.trim().replace(/^\/+|\/+$/g, '')
+  const base = (newResourceName.value.trim() || 'resource')
+    .toLowerCase().replace(/[^a-z0-9äöüß_-]/gi, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || 'resource'
+  return (folder ? `${folder}/` : '') + base + '.xmi'
+})
+
 function createResourcePrompt() {
-  const name = window.prompt('New resource name:', 'new-resource')
-  if (name && name.trim()) (ctx as any).createResource?.(name.trim())
+  newResourceName.value = 'new-resource'
+  newResourcePath.value = 'instances'
+  showNewResourceDialog.value = true
+}
+
+function confirmNewResource() {
+  const name = newResourceName.value.trim()
+  if (!name) return
+  ;(ctx as any).createResource?.(name, newResourcePath.value.trim())
+  showNewResourceDialog.value = false
 }
 
 function renameResourcePrompt(res: any) {
@@ -822,6 +843,33 @@ watch(ctxSelectedObject, (obj) => {
       </template>
     </Dialog>
 
+    <!-- New Resource Dialog -->
+    <Dialog
+      v-model:visible="showNewResourceDialog"
+      header="New Resource"
+      :modal="true"
+      :style="{ width: '440px' }"
+    >
+      <div class="dialog-content">
+        <div class="field">
+          <label>Name</label>
+          <InputText v-model="newResourceName" placeholder="my-instances" class="w-full" @keyup.enter="confirmNewResource" />
+        </div>
+        <div class="field">
+          <label>Path (folder, relative to workspace)</label>
+          <InputText v-model="newResourcePath" placeholder="instances" class="w-full" @keyup.enter="confirmNewResource" />
+        </div>
+        <p class="new-resource-preview">
+          <i class="pi pi-box"></i>
+          <span>{{ newResourcePreview }}</span>
+        </p>
+      </div>
+      <template #footer>
+        <Button label="Cancel" severity="secondary" @click="showNewResourceDialog = false" />
+        <Button label="Create" icon="pi pi-plus" @click="confirmNewResource" :disabled="!newResourceName.trim()" />
+      </template>
+    </Dialog>
+
     <!-- Views Editor Dialog -->
     <ViewsEditorDialog
       v-model:visible="showViewsEditor"
@@ -952,6 +1000,23 @@ watch(ctxSelectedObject, (obj) => {
   font-size: 0.7rem;
   line-height: 1;
   margin-left: 0.25rem;
+}
+
+.new-resource-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 6px 10px;
+  background: var(--surface-ground, rgba(127, 127, 127, 0.08));
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+}
+
+.new-resource-preview i {
+  color: var(--primary-color, #6366f1);
 }
 
 .drag-overlay {
