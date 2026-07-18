@@ -758,7 +758,7 @@ watch(ctxSelectedObject, (obj) => {
             @contextmenu.prevent="(event) => onNodeContextMenu(node, event)"
           >
             <template v-if="node.kind === 'resource'">
-              <i class="node-icon pi pi-folder"></i>
+              <i class="node-icon node-icon--resource pi pi-box"></i>
               <span class="node-label node-label--resource" :title="node.uri">{{ node.label }}</span>
               <span v-if="node.dirty" class="resource-dirty" title="Ungespeicherte Änderungen">●</span>
             </template>
@@ -929,12 +929,22 @@ watch(ctxSelectedObject, (obj) => {
   font-size: 0.875rem;
 }
 
-.node-label--resource {
-  font-weight: 600;
+/* Resource nodes: distinct from folders — box icon, bolder row, subtle band */
+.tree-node--resource {
+  background: var(--surface-ground, rgba(127, 127, 127, 0.08));
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin: 1px 0;
 }
 
-.tree-node--resource .node-icon {
-  color: var(--text-color-secondary);
+.node-label--resource {
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+
+.node-icon--resource {
+  color: var(--primary-color, #6366f1);
 }
 
 .resource-dirty {
