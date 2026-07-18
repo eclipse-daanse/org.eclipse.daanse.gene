@@ -531,9 +531,10 @@ function handleActionArtifact(artifact: any) {
 /**
  * Handle tree node selection
  */
-function handleNodeSelect(node: InstanceTreeNode) {
+function handleNodeSelect(node: any) {
   ctx.selectNode(node as any)
-  emit('object-select', node.data)
+  // Resource nodes have no EObject payload — clear the object selection
+  emit('object-select', node?.kind === 'resource' ? null : node.data)
 }
 
 /**
@@ -679,11 +680,19 @@ watch(ctxSelectedObject, (obj) => {
         <template #default="{ node }">
           <div
             class="tree-node"
+            :class="{ 'tree-node--resource': node.kind === 'resource' }"
             @contextmenu.prevent="(event) => { ctx.selectNode(node); handleContextMenu(event) }"
           >
-            <img v-if="node.iconDataUrl" :src="node.iconDataUrl" class="node-icon node-icon--img" alt="" />
-            <i v-else-if="node.iconClass" :class="node.iconClass" class="node-icon" />
-            <span class="node-label" :title="node.xmiId ? `XMI-ID: ${node.xmiId}` : undefined">{{ node.label }}</span>
+            <template v-if="node.kind === 'resource'">
+              <i class="node-icon pi pi-folder"></i>
+              <span class="node-label node-label--resource" :title="node.uri">{{ node.label }}</span>
+              <span v-if="node.dirty" class="resource-dirty" title="Ungespeicherte Änderungen">●</span>
+            </template>
+            <template v-else>
+              <img v-if="node.iconDataUrl" :src="node.iconDataUrl" class="node-icon node-icon--img" alt="" />
+              <i v-else-if="node.iconClass" :class="node.iconClass" class="node-icon" />
+              <span class="node-label" :title="node.xmiId ? `XMI-ID: ${node.xmiId}` : undefined">{{ node.label }}</span>
+            </template>
           </div>
         </template>
       </Tree>
@@ -844,6 +853,21 @@ watch(ctxSelectedObject, (obj) => {
 
 .node-label {
   font-size: 0.875rem;
+}
+
+.node-label--resource {
+  font-weight: 600;
+}
+
+.tree-node--resource .node-icon {
+  color: var(--text-color-secondary);
+}
+
+.resource-dirty {
+  color: var(--primary-color, #6366f1);
+  font-size: 0.7rem;
+  line-height: 1;
+  margin-left: 0.25rem;
 }
 
 .drag-overlay {

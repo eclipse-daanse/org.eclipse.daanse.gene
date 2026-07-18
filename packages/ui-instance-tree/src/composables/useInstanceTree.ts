@@ -5,10 +5,10 @@
  * Uses EMF notifications (EContentAdapter) to automatically react to model changes.
  */
 
-import { ref, computed, watch, triggerRef, toRaw, type Ref } from 'tsm:vue'
+import { ref, computed, triggerRef, toRaw, type Ref } from 'tsm:vue'
 import type { EObject, EClass, EReference, Resource } from '@emfts/core'
 import { XMIResource, URI, BasicResourceSet, EContentAdapter, type Notification } from '@emfts/core'
-import type { InstanceTreeNode, TreeSelection } from '../types'
+import type { InstanceTreeNode, TreeSelection, AnyTreeNode } from '../types'
 import { getObjectId, getObjectLabel, getObjectIcon, getObjectIconInfo } from '../types'
 import { useSharedViews } from './useViews'
 
@@ -107,56 +107,61 @@ function generateUUID(): string {
   })
 }
 
-// Track source file paths for objects (object -> source file path)
-const objectSourceMap = new WeakMap<EObject, string>()
-
 /**
- * Get the source file path for an object
- * Uses toRaw to handle Vue proxies
+ * Get the source file path for an object.
+ * Provenance is now the object's own containing Resource (multi-resource model),
+ * so this derives from `eObject.eResource().getURI()` — no external bookkeeping.
  */
 export function getObjectSourcePath(obj: EObject): string | undefined {
-  const rawObj = toRaw(obj)
-  return objectSourceMap.get(rawObj)
+  const res = toRaw(obj).eResource?.()
+  return res?.getURI?.()?.toString?.() || undefined
 }
 
 /**
- * Set the source file path for an object
- * Uses toRaw to handle Vue proxies
+ * @deprecated Provenance now derives from `eObject.eResource()`. Kept as a no-op
+ * so existing imports/callers keep compiling.
  */
-export function setObjectSourcePath(obj: EObject, path: string): void {
-  const rawObj = toRaw(obj)
-  objectSourceMap.set(rawObj, path)
+export function setObjectSourcePath(_obj: EObject, _path: string): void {
+  /* no-op */
+}
+
+/** Derive a display name from a resource URI (last segment, without extension) */
+function resourceDisplayName(res: any): string {
+  const uri = res?.getURI?.()?.toString?.() || ''
+  const last = uri.split(/[\\/]/).pop() || uri || 'resource'
+  return last.replace(/\.[^.]+$/, '') || last || 'resource'
 }
 
 /**
  * Content adapter that triggers Vue reactivity on EMF model changes
  */
 class TreeContentAdapter extends EContentAdapter {
-  private resourceRef: Ref<Resource | null>
-  private onChanged: () => void
+  private onChanged: (notification: Notification) => void
 
-  constructor(resourceRef: Ref<Resource | null>, onChanged: () => void) {
+  constructor(onChanged: (notification: Notification) => void) {
     super()
-    this.resourceRef = resourceRef
     this.onChanged = onChanged
   }
 
   /**
-   * Called when any change occurs in the observed model tree
+   * Called when any change occurs anywhere in the observed ResourceSet tree
    */
   notifyChanged(notification: Notification): void {
     // Let EContentAdapter handle adding/removing itself from child objects
     super.notifyChanged(notification)
 
-    // Trigger Vue reactivity
-    this.onChanged()
+    // Trigger Vue reactivity + dirty tracking
+    this.onChanged(notification)
   }
 }
 
 /**
  * Composable for managing instance tree state
  */
-export function useInstanceTree(resource: Ref<Resource | null>) {
+export function useInstanceTree(
+  resources: Ref<Resource[]>,
+  activeResource: Ref<Resource | null>
+) {
   // Selection state - PrimeVue Tree expects selectionKeys as { 'key': true } object
   const selectedKeys = ref<Record<string, boolean>>({})
   const selectedObject = ref<EObject | null>(null)
@@ -174,7 +179,10 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
   // Version counter to force reactivity (incremented on each change)
   const version = ref(0)
 
-  // Content adapter for automatic change detection
+  // Bumped whenever any resource's modified (dirty) flag flips
+  const dirtyVersion = ref(0)
+
+  // Single content adapter attached to the whole ResourceSet
   let contentAdapter: TreeContentAdapter | null = null
 
   /**
@@ -182,86 +190,87 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
    */
   function triggerUpdate(): void {
     version.value++
-    triggerRef(resource)
+    triggerRef(resources)
+  }
+
+  /** Mark a resource as having unsaved changes */
+  function markDirty(res: any): void {
+    try { res?.setModified?.(true) } catch { /* ignore */ }
+    dirtyVersion.value++
+  }
+
+  /** Resolve the Resource a notification originates from (notifier or its eResource) */
+  function resourceOfNotification(n: Notification): any {
+    try {
+      const notifier: any = (n as any).getNotifier?.()
+      if (!notifier) return null
+      if (typeof notifier.getContents === 'function') return notifier // notifier IS a Resource
+      return notifier.eResource?.() ?? null
+    } catch { return null }
   }
 
   /**
-   * Setup content adapter for a resource
+   * Setup the single ResourceSet-level content adapter (once).
+   * EContentAdapter.setTarget propagates to every Resource and EObject,
+   * including ones added later, so we never re-attach per resource.
    */
-  function setupAdapter(res: Resource | null, oldRes: Resource | null): void {
-    // Remove adapter from old resource
-    if (oldRes && contentAdapter) {
-      try {
-        const adapters = (oldRes as any).eAdapters?.()
-        if (adapters) {
-          const idx = adapters.indexOf(contentAdapter)
-          if (idx >= 0) {
-            adapters.splice(idx, 1)
-          }
-        }
-      } catch (e) {
-        console.warn('[InstanceTree] Failed to remove adapter from old resource:', e)
-      }
-    }
-
-    // Add adapter to new resource
-    if (res) {
-      contentAdapter = new TreeContentAdapter(resource, triggerUpdate)
-      try {
-        const adapters = (res as any).eAdapters?.()
-        if (adapters) {
-          adapters.push(contentAdapter)
-        } else {
-          console.warn('[InstanceTree] Resource does not support eAdapters')
-        }
-      } catch (e) {
-        console.warn('[InstanceTree] Failed to add adapter to resource:', e)
-      }
+  function ensureAdapter(): void {
+    if (contentAdapter) return
+    contentAdapter = new TreeContentAdapter((notification) => {
+      const res = resourceOfNotification(notification)
+      if (res) markDirty(res)
+      triggerUpdate()
+    })
+    try {
+      ;(contentAdapter as any).setTarget(getResourceSet())
+    } catch (e) {
+      console.warn('[InstanceTree] Failed to attach ResourceSet adapter:', e)
     }
   }
-
-  // Watch for resource changes to setup/remove adapter
-  watch(resource, (newRes, oldRes) => {
-    setupAdapter(newRes, oldRes)
-  }, { immediate: true })
+  ensureAdapter()
 
   /**
-   * Build tree nodes from resource contents
+   * Build tree nodes: a Resource tier (top level) over the object tier.
+   * Each managed Resource becomes one node; its children are the resource's roots.
    */
-  const treeNodes = computed((): InstanceTreeNode[] => {
-    // Access version to create dependency
+  const treeNodes = computed((): AnyTreeNode[] => {
+    // Reactive dependencies
     const _ = version.value
+    const _d = dirtyVersion.value
 
     // Also access views version for reactivity
     const views = useSharedViews()
     const _viewVersion = views.version.value
-    const activeView = views.activeView.value
 
     nodeCache.clear()
 
-    if (!resource.value) {
-      return []
+    const result: AnyTreeNode[] = []
+    for (const res of resources.value) {
+      const rawResource: any = toRaw(res)
+      if (!rawResource || typeof rawResource.getContents !== 'function') continue
+
+      const contents = toRaw(rawResource.getContents())
+      const validContents = Array.from(contents).filter((obj: any) => {
+        const rawObj = toRaw(obj)
+        return rawObj && typeof rawObj.eClass === 'function'
+      })
+      const rawNodes = validContents.map((obj: any) => buildTreeNode(obj))
+      const children = filterTreeNodes(rawNodes, views.isNodeVisible)
+
+      const uri = rawResource.getURI?.()?.toString?.() || ''
+      result.push({
+        kind: 'resource',
+        key: `res:${uri}`,
+        label: resourceDisplayName(rawResource),
+        icon: '',
+        resource: rawResource as Resource,
+        uri,
+        dirty: !!rawResource.isModified?.(),
+        children,
+        leaf: children.length === 0
+      })
     }
-
-    // Use toRaw to bypass Vue's reactive proxy
-    const rawResource = toRaw(resource.value)
-    const contents = toRaw(rawResource.getContents())
-
-    // Filter to only valid EObjects
-    const validContents = Array.from(contents).filter(obj => {
-      const rawObj = toRaw(obj)
-      const isValid = rawObj && typeof rawObj.eClass === 'function'
-      if (!isValid) {
-        console.warn('[InstanceTree] Skipping invalid root object:', obj)
-      }
-      return isValid
-    })
-
-    // Build tree nodes
-    const rawNodes = validContents.map(obj => buildTreeNode(obj))
-
-    // Apply view filtering
-    return filterTreeNodes(rawNodes, views.isNodeVisible)
+    return result
   })
 
   /**
@@ -377,11 +386,24 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
   /**
    * Handle node selection
    */
-  function selectNode(node: InstanceTreeNode | null): void {
-    if (node) {
+  function selectNode(node: AnyTreeNode | null): void {
+    if (node && (node as any).kind === 'resource') {
+      // Resource node: make it the active target, clear object selection
       selectedKeys.value = { [node.key]: true }
-      selectedObject.value = node.data
-      selectedNode.value = node
+      selectedObject.value = null
+      selectedNode.value = null
+      const res = (node as any).resource
+      if (res) activeResource.value = res
+      return
+    }
+    if (node) {
+      const objNode = node as InstanceTreeNode
+      selectedKeys.value = { [objNode.key]: true }
+      selectedObject.value = objNode.data
+      selectedNode.value = objNode
+      // Keep the active resource in sync with the selected object's resource
+      const res = toRaw(objNode.data)?.eResource?.()
+      if (res) activeResource.value = res
     } else {
       selectedKeys.value = {}
       selectedObject.value = null
@@ -550,13 +572,14 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
   function deleteObject(obj: EObject): boolean {
     const rawObj = toRaw(obj)
 
-    // Check if it's a root object
-    const res = resource.value
-    if (res) {
-      const contents = res.getContents()
+    // Check if it's a root object of any managed resource
+    const ownerRes: any = rawObj.eResource?.()
+    if (ownerRes && typeof ownerRes.getContents === 'function') {
+      const contents = ownerRes.getContents()
       for (let i = 0; i < contents.size(); i++) {
         if (toRaw(contents.get(i)) === rawObj) {
           contents.remove(rawObj)
+          markDirty(ownerRes)
           triggerUpdate()
           return true
         }
@@ -586,12 +609,14 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
    * Delete a root object from the resource
    */
   function deleteRootObject(obj: EObject): boolean {
-    const res = resource.value
-    if (!res) return false
+    const raw = toRaw(obj)
+    const res: any = raw.eResource?.()
+    if (!res || typeof res.getContents !== 'function') return false
 
     const contents = res.getContents()
-    const removed = contents.remove(obj)
+    const removed = contents.remove(raw)
     if (removed) {
+      markDirty(res)
       triggerUpdate()
       selectNode(null)
     }
@@ -671,21 +696,10 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
    * Creates a new resource if none exists
    */
   function addRootObject(obj: EObject): void {
-    // Create a new resource if none exists
-    if (!resource.value) {
-      const rs = getResourceSet()
-      const uri = URI.createURI('instances.xmi')
-      const newResource = new XMIResource(uri)
-      rs.getResources().push(newResource)
-      newResource.setResourceSet(rs)
-      resource.value = newResource
+    // Target the active resource; create a default one if none is managed yet
+    let res: any = activeResource.value ? toRaw(activeResource.value) : null
+    if (!res) res = toRaw(createResource('instances'))
 
-      // Setup adapter for the new resource
-      setupAdapter(newResource, null)
-    }
-
-    // Use toRaw to bypass Vue's reactive proxy
-    const res = toRaw(resource.value)
     const contents = toRaw(res.getContents())
     if (typeof (contents as any).add === 'function') {
       // Use EList.add() to trigger EMF notifications
@@ -697,6 +711,7 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
     // Assign xmi:id after adding to resource (needs eResource() for setID)
     assignXmiId(obj)
 
+    markDirty(res)
     // Fallback: manually trigger if notifications don't fire
     triggerUpdate()
 
@@ -704,18 +719,169 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
     setTimeout(() => selectObject(obj), 0)
   }
 
+  // ── Resource management ──────────────────────────────────────────────────
+
+  /** List currently managed resources (raw) */
+  function listResources(): Resource[] {
+    return resources.value.map(r => toRaw(r) as Resource)
+  }
+
+  /** Whether a resource has unsaved changes (reactive via dirtyVersion) */
+  function isResourceDirty(res: Resource): boolean {
+    const _ = dirtyVersion.value
+    return !!(toRaw(res) as any).isModified?.()
+  }
+
+  /** Set the active (default target) resource */
+  function setActiveResource(res: Resource | null): void {
+    activeResource.value = res ? (toRaw(res) as Resource) : null
+  }
+
+  function rsIndexOf(rsResources: any, raw: any): number {
+    try {
+      if (typeof rsResources.indexOf === 'function') return rsResources.indexOf(raw)
+    } catch { /* ignore */ }
+    return -1
+  }
+
+  function rsRemove(rsResources: any, raw: any): void {
+    const idx = rsIndexOf(rsResources, raw)
+    try {
+      if (idx >= 0 && typeof rsResources.removeAt === 'function') rsResources.removeAt(idx)
+      else if (typeof rsResources.remove === 'function') rsResources.remove(raw)
+    } catch { /* ignore */ }
+  }
+
+  /** Add an existing resource to the managed set (dedup by URI); makes it active */
+  function addResource(res: Resource): Resource {
+    const rs = getResourceSet()
+    const raw: any = toRaw(res)
+    if (typeof raw.setResourceSet === 'function') raw.setResourceSet(rs)
+
+    const rsResources: any = rs.getResources()
+    const uriStr = raw.getURI?.()?.toString?.() || ''
+
+    // Replace any existing managed resource with the same (non-empty) URI
+    if (uriStr) {
+      const existingIdx = resources.value.findIndex(
+        r => ((toRaw(r) as any).getURI?.()?.toString?.() || '') === uriStr
+      )
+      if (existingIdx >= 0) {
+        rsRemove(rsResources, toRaw(resources.value[existingIdx]))
+        const next = [...resources.value]
+        next.splice(existingIdx, 1)
+        resources.value = next
+      }
+    }
+
+    if (rsIndexOf(rsResources, raw) < 0) {
+      if (typeof rsResources.add === 'function') rsResources.add(raw)
+      else rsResources.push(raw)
+    }
+
+    resources.value = [...resources.value, raw]
+    activeResource.value = raw
+    version.value++
+    triggerRef(resources)
+    return raw
+  }
+
+  /** Create a new empty resource with the given name; makes it active */
+  function createResource(name: string): Resource {
+    const rs = getResourceSet()
+    const fileName = sanitizeFilename(name) + '.xmi'
+    const res = new XMIResource(URI.createURI(fileName))
+    res.setResourceSet(rs)
+    return addResource(res)
+  }
+
+  /** Remove a resource from the managed set (and the ResourceSet) */
+  function deleteResource(res: Resource): void {
+    const raw: any = toRaw(res)
+    const rs = getResourceSet()
+    rsRemove(rs.getResources(), raw)
+    resources.value = resources.value.filter(r => toRaw(r) !== raw)
+    if (activeResource.value && toRaw(activeResource.value) === raw) {
+      activeResource.value = resources.value.length ? (toRaw(resources.value[0]) as Resource) : null
+    }
+    version.value++
+    triggerRef(resources)
+  }
+
+  /** Rename a resource (updates its URI → determines the target file) */
+  function renameResource(res: Resource, newName: string): void {
+    const raw: any = toRaw(res)
+    const fileName = sanitizeFilename(newName) + '.xmi'
+    try { raw.setURI?.(URI.createURI(fileName)) } catch { /* ignore */ }
+    markDirty(raw)
+    version.value++
+    triggerRef(resources)
+  }
+
+  /** Replace the whole managed set (used by compat shims) */
+  function setResources(list: Resource[]): void {
+    const rs = getResourceSet()
+    const rsResources: any = rs.getResources()
+    for (const r of resources.value) rsRemove(rsResources, toRaw(r))
+    resources.value = []
+    activeResource.value = null
+    for (const r of list) addResource(r)
+    version.value++
+    triggerRef(resources)
+  }
+
+  function clearResources(): void {
+    setResources([])
+  }
+
+  /** Move an EObject (with its containment subtree) into another resource as a root */
+  function moveToResource(obj: EObject, target: Resource): boolean {
+    const raw: any = toRaw(obj)
+    const targetRaw: any = toRaw(target)
+    const source: any = raw.eResource?.()
+    if (!source || !targetRaw || source === targetRaw) return false
+    try {
+      // Detach from current containment (or from source root contents)
+      const container = raw.eContainer?.()
+      if (container) {
+        const feature = raw.eContainingFeature?.()
+        if (feature) {
+          const val = toRaw(container.eGet(feature))
+          if (val && typeof (val as any).remove === 'function') (val as any).remove(raw)
+          else container.eSet(feature, null)
+        }
+      } else {
+        const sc = toRaw(source.getContents())
+        if (typeof (sc as any).remove === 'function') (sc as any).remove(raw)
+      }
+      // Attach as a root of the target
+      const tc = toRaw(targetRaw.getContents())
+      if (typeof (tc as any).add === 'function') (tc as any).add(raw)
+      else (tc as any).push(raw)
+
+      assignXmiId(raw)
+      markDirty(source)
+      markDirty(targetRaw)
+      triggerUpdate()
+      return true
+    } catch (e) {
+      console.warn('[InstanceTree] moveToResource failed:', e)
+      return false
+    }
+  }
+
+  /** Serialize a single resource to an XMI string */
+  async function serializeResource(res: Resource): Promise<string> {
+    const raw: any = toRaw(res)
+    if (!raw || typeof raw.saveToString !== 'function') return ''
+    return raw.saveToString()
+  }
+
   /**
    * Get all objects of a given type (or subtypes) from the instance tree
    */
   function getAllObjectsOfType(eClass: EClass): EObject[] {
-    const res = resource.value
-    if (!res) {
-      console.warn('[InstanceTree] getAllObjectsOfType: no resource')
-      return []
-    }
-
     const result: EObject[] = []
-    const contents = res.getContents()
 
     // Helper to compare EClasses by identity or by name+package URI
     function isSameClass(a: EClass, b: EClass): boolean {
@@ -774,30 +940,35 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
       return false
     }
 
-    for (const obj of contents) {
-      collectObjects(obj)
+    for (const res of resources.value) {
+      const raw: any = toRaw(res)
+      for (const obj of raw.getContents()) {
+        collectObjects(obj)
+      }
     }
 
     return result
   }
 
   /**
-   * Get all root objects from the resource
+   * Get all root objects across all managed resources
    */
   function getRootObjects(): EObject[] {
-    const res = resource.value
-    if (!res) return []
-    const contents = res.getContents()
-    return typeof (contents as any).toArray === 'function'
-      ? (contents as any).toArray()
-      : Array.from(contents)
+    const all: EObject[] = []
+    for (const res of resources.value) {
+      const contents: any = (toRaw(res) as any).getContents()
+      const arr = typeof contents.toArray === 'function' ? contents.toArray() : Array.from(contents)
+      all.push(...arr)
+    }
+    return all
   }
 
   /**
-   * Serialize all instances in the resource to XMI string
+   * Serialize all instances of the ACTIVE resource to an XMI string.
+   * (Multi-resource callers should prefer serializeResource / saving per resource.)
    */
   async function serializeAllInstances(): Promise<string> {
-    const res = resource.value
+    const res: any = activeResource.value ? toRaw(activeResource.value) : (resources.value[0] ? toRaw(resources.value[0]) : null)
     if (!res) return ''
     return res.saveToString()
   }
@@ -837,7 +1008,8 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
 
     // Add all objects and transfer their xmi:ids from the original resource
     const rawObjects = objects.map(obj => toRaw(obj))
-    const origResource = resource.value
+    // Objects in a group share their source resource; capture it before moving them.
+    const origResource: any = rawObjects.length ? (rawObjects[0] as any).eResource?.() ?? null : null
     for (const rawObj of rawObjects) {
       tempResource.getContents().push(rawObj)
       // Copy xmi:id from original resource to temp resource
@@ -916,6 +1088,11 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
     showSuperTypes,
     selection,
 
+    // Resource state
+    resources,
+    activeResource,
+    dirtyVersion,
+
     // Methods
     selectNode,
     selectObject,
@@ -928,6 +1105,19 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
     addRootObject,
     getAllObjectsOfType,
     triggerUpdate,
+
+    // Resource management
+    listResources,
+    isResourceDirty,
+    setActiveResource,
+    createResource,
+    addResource,
+    deleteResource,
+    renameResource,
+    setResources,
+    clearResources,
+    moveToResource,
+    serializeResource,
 
     // Serialization
     getRootObjects,
@@ -947,7 +1137,8 @@ export function useInstanceTree(resource: Ref<Resource | null>) {
  * Module-level singleton for shared state across components
  */
 interface SharedState {
-  resource: Ref<Resource | null>
+  resources: Ref<Resource[]>
+  activeResource: Ref<Resource | null>
   instance: ReturnType<typeof useInstanceTree>
   isLoading: Ref<boolean>
   loadingName: Ref<string>
@@ -961,10 +1152,12 @@ function getOrCreateSharedState(): SharedState {
     return _sharedState
   }
 
-  const resource = ref<Resource | null>(null)
+  const resources = ref<Resource[]>([])
+  const activeResource = ref<Resource | null>(null)
   _sharedState = {
-    resource,
-    instance: useInstanceTree(resource),
+    resources,
+    activeResource,
+    instance: useInstanceTree(resources, activeResource),
     isLoading: ref(false),
     loadingName: ref('')
   }
@@ -975,29 +1168,36 @@ function getOrCreateSharedState(): SharedState {
 export function useSharedInstanceTree(resource?: Ref<Resource | null>) {
   const state = getOrCreateSharedState()
 
-  if (resource && resource !== state.resource) {
-    // Replace the resource ref's value, but keep the same ref
-    state.resource.value = resource.value
+  // Legacy compat: if a single resource ref is passed, adopt it as the sole resource
+  if (resource && resource.value && !state.resources.value.includes(resource.value)) {
+    state.instance.setResources([resource.value])
   }
 
   return state.instance
 }
 
 /**
- * Set the resource for the shared instance tree
+ * Compat shim: replace the managed set with a single resource (or clear).
  */
 export function setSharedResource(resource: Resource | null): void {
   const state = getOrCreateSharedState()
-
-  state.resource.value = resource
+  state.instance.setResources(resource ? [resource] : [])
 }
 
 /**
- * Get the shared resource ref
+ * Compat shim: the "primary" resource = active resource, or the first managed one.
  */
 export function getSharedResource(): Resource | null {
   const state = getOrCreateSharedState()
-  return state.resource.value
+  return state.activeResource.value ?? state.resources.value[0] ?? null
+}
+
+/**
+ * All managed resources (multi-resource API).
+ */
+export function getSharedResources(): Resource[] {
+  const state = getOrCreateSharedState()
+  return state.resources.value
 }
 
 /**
@@ -1060,11 +1260,6 @@ export async function loadInstancesFromXMI(xmiContent: string, filePath: string)
     const loadedObjects = [...loadResource.getContents()]
     const loadedCount = loadedObjects.length
 
-    // Track source file path for each loaded object (for saving back to original file)
-    for (const obj of loadedObjects) {
-      setObjectSourcePath(obj, filePath)
-    }
-
     // If we have errors and no objects were loaded, throw to trigger error handling
     if (errors.length > 0 && loadedCount === 0) {
       const errorMessages = errors.map(e =>
@@ -1073,35 +1268,13 @@ export async function loadInstancesFromXMI(xmiContent: string, filePath: string)
       throw new Error(errorMessages)
     }
 
-    // Ensure we have a resource to add objects to
-    if (!state.resource.value) {
-      // Use the loaded resource directly
-      state.resource.value = loadResource
-    } else {
-      // Add loaded objects to existing resource
-      const existingContents = state.resource.value.getContents()
-      const tempContents = loadResource.getContents()
-      for (const obj of loadedObjects) {
-        // Remove from temp resource first
-        if (typeof (tempContents as any).remove === 'function') {
-          (tempContents as any).remove(obj)
-        } else {
-          const idx = tempContents.indexOf(obj)
-          if (idx >= 0 && typeof (tempContents as any).removeAt === 'function') {
-            (tempContents as any).removeAt(idx)
-          }
-        }
-        // Add to existing resource
-        if (typeof (existingContents as any).add === 'function') {
-          ;(existingContents as any).add(obj)
-        } else {
-          existingContents.push(obj)
-        }
-      }
-    }
+    // Add the loaded file as its OWN managed resource (no merging into one shared
+    // resource). Provenance is now the object's containing resource. Re-loading the
+    // same URI replaces the existing managed resource (see addResource dedup).
+    state.instance.addResource(loadResource)
 
     // Assign xmi:id to all loaded objects (and their children) that don't have one yet
-    assignXmiIdsRecursive(state.resource.value)
+    assignXmiIdsRecursive(loadResource)
 
     // Trigger tree update to reflect the new objects
     state.instance.triggerUpdate()
@@ -1249,12 +1422,13 @@ export function assignXmiIdsRecursive(resource: Resource): void {
  */
 export function getObjectByXmiId(id: string): EObject | null {
   const state = getOrCreateSharedState()
-  const resource = state.resource.value
-  if (!resource) return null
-
-  // XMLResource has getEObject method that accepts ID as URI fragment
-  if (typeof (resource as any).getEObject === 'function') {
-    return (resource as any).getEObject(id)
+  // Search across all managed resources
+  for (const resource of state.resources.value) {
+    const raw: any = toRaw(resource)
+    if (typeof raw.getEObject === 'function') {
+      const obj = raw.getEObject(id)
+      if (obj) return obj
+    }
   }
   return null
 }
@@ -1267,11 +1441,8 @@ export function getObjectByXmiId(id: string): EObject | null {
  */
 export function generateMissingXmiIds(rootOnly: boolean = false): number {
   const state = getOrCreateSharedState()
-  const resource = state.resource.value
-  if (!resource) return 0
 
   let count = 0
-  const contents = resource.getContents()
 
   function processObject(obj: EObject): void {
     if (!hasXmiId(obj)) {
@@ -1299,8 +1470,11 @@ export function generateMissingXmiIds(rootOnly: boolean = false): number {
     }
   }
 
-  for (const obj of contents) {
-    processObject(obj)
+  for (const resource of state.resources.value) {
+    const raw: any = toRaw(resource)
+    for (const obj of raw.getContents()) {
+      processObject(obj)
+    }
   }
 
   console.log('[XmiId] Generated', count, 'missing IDs')
