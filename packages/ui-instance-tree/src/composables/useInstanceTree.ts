@@ -1118,6 +1118,7 @@ export function useInstanceTree(
     clearResources,
     moveToResource,
     serializeResource,
+    markResourceDirty: (res: Resource) => markDirty(res),
 
     // Serialization
     getRootObjects,
@@ -1275,6 +1276,9 @@ export async function loadInstancesFromXMI(xmiContent: string, filePath: string)
 
     // Assign xmi:id to all loaded objects (and their children) that don't have one yet
     assignXmiIdsRecursive(loadResource)
+
+    // A freshly loaded resource has no unsaved changes
+    try { (loadResource as any).setModified?.(false) } catch { /* ignore */ }
 
     // Trigger tree update to reflect the new objects
     state.instance.triggerUpdate()
