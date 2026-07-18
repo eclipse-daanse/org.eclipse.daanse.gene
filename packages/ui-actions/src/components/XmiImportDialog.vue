@@ -20,13 +20,13 @@
 
         <div
           class="xmi-import-option"
-          :class="{ 'xmi-import-option--selected': mode === 'REPLACE' }"
-          @click="mode = 'REPLACE'"
+          :class="{ 'xmi-import-option--selected': mode === 'STANDALONE' }"
+          @click="mode = 'STANDALONE'"
         >
-          <RadioButton v-model="mode" value="REPLACE" inputId="mode-replace" />
-          <label for="mode-replace" class="xmi-import-option-content">
-            <span class="xmi-import-option-title">Replace</span>
-            <span class="xmi-import-option-desc">Replace existing instances with the imported data</span>
+          <RadioButton v-model="mode" value="STANDALONE" inputId="mode-standalone" />
+          <label for="mode-standalone" class="xmi-import-option-content">
+            <span class="xmi-import-option-title">Open standalone</span>
+            <span class="xmi-import-option-desc">Open as a fresh view, loading referenced resources too</span>
           </label>
         </div>
 
@@ -35,10 +35,22 @@
           :class="{ 'xmi-import-option--selected': mode === 'MERGE' }"
           @click="mode = 'MERGE'"
         >
-          <RadioButton v-model="mode" value="MERGE" inputId="mode-merge" />
-          <label for="mode-merge" class="xmi-import-option-content">
-            <span class="xmi-import-option-title">Merge</span>
-            <span class="xmi-import-option-desc">Add imported objects to the existing instance tree</span>
+          <RadioButton v-model="mode" value="MERGE" inputId="mode-merge-add" />
+          <label for="mode-merge-add" class="xmi-import-option-content">
+            <span class="xmi-import-option-title">Add to view</span>
+            <span class="xmi-import-option-desc">Add as a resource to the current view</span>
+          </label>
+        </div>
+
+        <div
+          class="xmi-import-option"
+          :class="{ 'xmi-import-option--selected': mode === 'REPLACE' }"
+          @click="mode = 'REPLACE'"
+        >
+          <RadioButton v-model="mode" value="REPLACE" inputId="mode-replace" />
+          <label for="mode-replace" class="xmi-import-option-content">
+            <span class="xmi-import-option-title">Replace</span>
+            <span class="xmi-import-option-desc">Replace the current view with only this file</span>
           </label>
         </div>
       </div>
@@ -66,7 +78,7 @@ function getEventBus() {
 }
 
 const visible = ref(false)
-const mode = ref<'REPLACE' | 'MERGE'>('REPLACE')
+const mode = ref<'REPLACE' | 'MERGE' | 'STANDALONE'>('STANDALONE')
 
 const artifactName = computed(() => props.name || 'Action Result')
 
@@ -79,7 +91,7 @@ const objectCount = computed(() => {
 })
 
 function open() {
-  mode.value = 'REPLACE'
+  mode.value = 'STANDALONE'
   visible.value = true
 }
 
