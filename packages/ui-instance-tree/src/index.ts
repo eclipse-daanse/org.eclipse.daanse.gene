@@ -518,6 +518,39 @@ context.log.info('ViewsPanel available as component (integrated in InstanceTree)
           }
 
           eventBus?.emit('instance:imported', { mode, count: result.loadedCount, danglingRefs: danglingRefs.length })
+
+        } else if (mode === 'STANDALONE') {
+          // STANDALONE: fresh view — load this file plus its referenced resources
+          const result = await loadResourceStandalone(xmiContent, targetUri, { replace: true })
+          context.log.info(`XMI Import (STANDALONE): ${result.loadedCount} objects, ${result.referencedLoaded} referenced resource(s)`)
+
+          if (result.loadedCount === 0 && problemsService?.addIssues) {
+            problemsService.addIssues([{
+              severity: 'ERROR',
+              message: 'XMI Import failed: No objects could be loaded. The metamodel may not be registered.',
+              className: 'XMI Import'
+            }])
+          }
+
+          if (result.errors.length > 0 && problemsService?.addIssues) {
+            problemsService.addIssues(result.errors.map((e: any) => ({
+              severity: 'ERROR',
+              message: `Import error: ${e.message}`,
+              className: 'XMI Import'
+            })))
+          }
+
+          const danglingRefs = checkDanglingReferences()
+          if (danglingRefs.length > 0 && problemsService?.addIssues) {
+            problemsService.addIssues(danglingRefs.map(d => ({
+              severity: 'WARN',
+              message: `Dangling reference: ${d.featureName} on ${d.className} → unresolved proxy`,
+              className: d.className,
+              featureName: d.featureName
+            })))
+          }
+
+          eventBus?.emit('instance:imported', { mode, count: result.loadedCount, danglingRefs: danglingRefs.length })
         }
       } catch (err: any) {
         context.log.error(`XMI Import failed: ${err.message}`)

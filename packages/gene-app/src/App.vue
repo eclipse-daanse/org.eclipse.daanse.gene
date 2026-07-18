@@ -962,6 +962,9 @@ const workspaceContent = ref<string | null>(null)
 // Current workspace entry (for saving)
 const currentWorkspaceEntry = ref<any | null>(null)
 
+// Pending explorer instance-add awaiting the user's load-mode choice
+const pendingInstanceAdd = ref<{ entry: any; content: string } | null>(null)
+
 // Handle perspective change from activity bar
 function handlePerspectiveChange(perspectiveId: string) {
   console.log('handlePerspectiveChange:', perspectiveId)
@@ -1288,11 +1291,20 @@ async function reloadFailedInstanceFiles(sourceId: string) {
 }
 
 // Handle adding instances (.xmi file) to the workspace
-async function handleInstanceAdd(entry: any, content: string) {
+async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE' | 'MERGE' | 'REPLACE') {
   console.log('[App] Adding instances to workspace:', entry.name, 'content length:', content?.length)
 
-  if (!instanceTreeComposables.value?.loadInstancesFromXMI) {
+  const itc: any = instanceTreeComposables.value
+  if (!itc?.loadInstancesFromXMI) {
     console.warn('[App] Instance tree composables not available')
+    return
+  }
+
+  // No mode yet → ask the user how to open (standalone incl. referenced / add / replace)
+  if (!mode) {
+    pendingInstanceAdd.value = { entry, content }
+    const eventBus = tsm.getService<any>('gene.eventbus')
+    eventBus?.emit('instance:showImportDialog', { xmiContent: content, name: entry.name })
     return
   }
 
@@ -1300,8 +1312,17 @@ async function handleInstanceAdd(entry: any, content: string) {
   problemsService.clearIssuesForFile(entry.path)
 
   try {
-    console.log('[App] Calling loadInstancesFromXMI...')
-    const result = await instanceTreeComposables.value.loadInstancesFromXMI(content, entry.path)
+    console.log('[App] Calling instance load, mode:', mode)
+    let result: any
+    if (mode === 'STANDALONE') {
+      result = await itc.loadResourceStandalone(content, entry.path, { replace: true })
+    } else if (mode === 'REPLACE') {
+      itc.setSharedResource?.(null)
+      result = await itc.loadInstancesFromXMI(content, entry.path)
+    } else {
+      // MERGE — add as a new resource to the current view
+      result = await itc.loadInstancesFromXMI(content, entry.path)
+    }
     console.log('[App] Instances loaded from:', entry.name, 'count:', result.loadedCount, 'errors:', result.errors.length)
 
     // Check instance tree state after loading
@@ -2219,6 +2240,14 @@ onMounted(() => {
   })
 
   eventBus.on('xmiImport:execute', async (data: any) => {
+    // Explorer-origin add: route the chosen mode back to the full add flow
+    // (keeps EditorConfig instanceSource + live OCL wiring)
+    if (pendingInstanceAdd.value) {
+      const p = pendingInstanceAdd.value
+      pendingInstanceAdd.value = null
+      await handleInstanceAdd(p.entry, p.content, data.mode)
+      return
+    }
     const cr = tsm.getService<any>('gene.command.registry')
     if (cr) await cr.execute('instance.importXmi', { xmiContent: data.xmiContent, mode: data.mode })
   })
