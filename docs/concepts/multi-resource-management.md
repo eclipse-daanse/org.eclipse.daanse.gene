@@ -138,10 +138,16 @@ allein (inkl. referenzierter Resources) oder additiv geöffnet wird.
   kein Objekt-Select; Empty-State über `resources.length`.
 
 **Phase 7 — Metamodeler-Parität** · `metamodeler/src/composables/useMetamodeler.ts`, `MetamodelerTree.vue`
-- `resource:171`→`resources[]`/`activeResource`; `rootPackage:443`→aktive Resource-Root; `treeNodes:460`
-  Resource-Ebene; `setupAdapter:404`→`setTarget`; `createNewPackage:757`/`loadFromEcoreString:966`
-  Add-as-Resource; editierbare Roots in `importedPackages:195` reconcilen; `moveToResource` über
-  `EClassifiers`/`ESubpackages`.
+> ⚠️ **ZURÜCKGESTELLT.** `useMetamodeler.ts` erzwingt bewusst eine **Ein-Resource-Invariante**
+> (Kommentar bei `:94`; Fix `16613f0`) gegen den Cross-Ref-Identity-Split
+> ([[project_metamodeler_crossref_identity_split]]) und ModelRegistry-Reaktivitätsbugs
+> ([[project_metamodeler_reactivity_registry]]). Multi-Resource widerspricht dieser Invariante direkt
+> und würde diese kürzlich behobenen Bugs riskieren. Daher separater, später abgesicherter Schritt
+> (mit Cross-Ref-Regressionstests) — **nicht** Teil dieser Umsetzung.
+- Geplant (bei Wiederaufnahme): `resource:171`→`resources[]`/`activeResource`; `rootPackage:443`→aktive
+  Resource-Root; `treeNodes:460` Resource-Ebene; `setupAdapter:404`→`setTarget`;
+  `createNewPackage:757`/`loadFromEcoreString:966` Add-as-Resource; editierbare Roots in
+  `importedPackages:195` reconcilen; `moveToResource` über `EClassifiers`/`ESubpackages`.
 
 ## Kritische Dateien
 
@@ -178,7 +184,11 @@ allein (inkl. referenzierter Resources) oder additiv geöffnet wird.
 - Metamodell-Modus: dieselben Aktionen für EClasses/EFeatures über mehrere .ecore-Resources.
 - End-to-end im echten App-Lauf.
 
-## Lieferung
+## Lieferung / Status
 
-Umsetzung in Phasen (0→7); sinnvoll als getrennte PRs je Phasenblock (Kern 0–2, Cross-Ref/Load 3–4,
-Save/Move 5–6, Metamodeler 7).
+- **Phasen 0–6 umgesetzt** (Branch `feat/multi-resource-management`): Multi-Resource-Kern + Resource-Ebene
+  im Tree, EditorContext-Resource-API + Dirty, Cross-Resource-nsURI + Auto-Load referenzierter Resources,
+  Lade-Dialog (Standalone/Add/Replace), pro-Resource-Speichern, Resource-Kontextmenü + Move + Drop-to-Root.
+  → Die **Instanz-Editor-User-Story ist damit vollständig**.
+- **Phase 7 (Metamodeler-Parität) zurückgestellt** — siehe Warnhinweis oben (Ein-Resource-Invariante).
+- Noch nicht verifiziert (Typecheck/App-Test ausstehend).
