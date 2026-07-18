@@ -7,7 +7,7 @@
  */
 
 import { inject, provide, ref, computed, type InjectionKey, type Ref, type ComputedRef } from 'tsm:vue'
-import type { EObject, EClass, EReference, EPackage } from '@emfts/core'
+import type { EObject, EClass, EReference, EPackage, Resource } from '@emfts/core'
 
 // ============ Global Reactive Mode ============
 // This allows components to reactively switch between contexts
@@ -147,6 +147,27 @@ export interface TreeNode {
 }
 
 /**
+ * Info about a managed Resource (for the resource tier of the tree / save UI).
+ */
+export interface ResourceInfo {
+  resource: Resource
+  /** Display name (without extension) */
+  name: string
+  /** Logical/identity URI (determines the target file) */
+  uri: string
+  /** Whether the resource has unsaved changes */
+  dirty: boolean
+  /** Whether this is the active (default target) resource */
+  isActive: boolean
+}
+
+/** Result of serializing one resource for saving */
+export interface SerializedResource {
+  filename: string
+  content: string
+}
+
+/**
  * Package info for the model browser
  */
 export interface PackageInfo {
@@ -231,6 +252,22 @@ export interface EditorContext {
   // content adapter / triggerUpdate). Consumers can depend on it to re-read
   // model-derived data (e.g. containment children) after mutations.
   version?: Ref<number>
+
+  // ── Resource management (multi-resource editors) ──────────────────────────
+  // Optional so a mode that has not adopted the multi-resource model yet
+  // (e.g. metamodeler until Phase 7) can omit them.
+  resources?: ComputedRef<ResourceInfo[]>
+  activeResource?: Ref<Resource | null>
+  setActiveResource?: (res: Resource) => void
+  createResource?: (name: string) => Resource
+  renameResource?: (res: Resource, newName: string) => void
+  deleteResource?: (res: Resource) => void
+  moveToResource?: (obj: EObject, target: Resource) => boolean
+  isResourceDirty?: (res: Resource) => boolean
+  /** Serialize one resource → { filename, content } (caller writes the file) */
+  saveResource?: (res: Resource) => Promise<SerializedResource>
+  /** Serialize all managed resources */
+  saveAll?: () => Promise<SerializedResource[]>
 }
 
 /**

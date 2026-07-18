@@ -5,10 +5,10 @@
  * for the Instance Editor perspective.
  */
 
-import { computed, ref, triggerRef } from 'tsm:vue'
-import type { EditorContext, PackageInfo, ClassInfo, TreeNode } from './editorContext'
+import { computed, ref, toRaw } from 'tsm:vue'
+import type { EditorContext, PackageInfo, ClassInfo, ResourceInfo, SerializedResource } from './editorContext'
 import { useSharedInstanceTree } from '../composables/useInstanceTree'
-import type { EClass, EReference, EObject } from '@emfts/core'
+import type { EClass, EReference, EObject, Resource } from '@emfts/core'
 
 // TSM service getter — set during activate() to avoid circular dependency
 let _tsmContext: any = null
@@ -125,14 +125,55 @@ export function createInstanceContext(): EditorContext {
     // Root object management
     addRootObject: (obj: EObject) => instanceTree.addRootObject(obj),
 
-    // Dirty state
-    dirty: instanceTree.dirty || ref(false),
+    // Dirty state — true if any managed resource has unsaved changes
+    dirty: computed(() => {
+      const _ = instanceTree.dirtyVersion.value
+      return instanceTree.resources.value.some((r: any) => !!r.isModified?.())
+    }),
 
-    // Mark as dirty (for properties panel to notify changes)
+    // Mark the active resource as dirty (properties panel notifies edits)
     markDirty: () => {
-      if (instanceTree.dirty) {
-        instanceTree.dirty.value = true
+      const r = instanceTree.activeResource.value
+      if (r) instanceTree.markResourceDirty(r)
+    },
+
+    // ── Resource management ──────────────────────────────────────────────
+    resources: computed<ResourceInfo[]>(() => {
+      const _ = instanceTree.dirtyVersion.value
+      const activeRaw = instanceTree.activeResource.value ? toRaw(instanceTree.activeResource.value) : null
+      return instanceTree.resources.value.map((r: any) => {
+        const raw: any = toRaw(r)
+        const uri = raw.getURI?.()?.toString?.() || ''
+        return {
+          resource: raw as Resource,
+          name: (uri.split(/[\\/]/).pop() || 'resource').replace(/\.[^.]+$/, '') || 'resource',
+          uri,
+          dirty: !!raw.isModified?.(),
+          isActive: raw === activeRaw
+        }
+      })
+    }),
+    activeResource: instanceTree.activeResource,
+    setActiveResource: (res: Resource) => instanceTree.setActiveResource(res),
+    createResource: (name: string) => instanceTree.createResource(name),
+    renameResource: (res: Resource, newName: string) => instanceTree.renameResource(res, newName),
+    deleteResource: (res: Resource) => instanceTree.deleteResource(res),
+    moveToResource: (obj: EObject, target: Resource) => instanceTree.moveToResource(obj, target),
+    isResourceDirty: (res: Resource) => instanceTree.isResourceDirty(res),
+    saveResource: async (res: Resource): Promise<SerializedResource> => {
+      const content = await instanceTree.serializeResource(res)
+      const uri = (toRaw(res) as any).getURI?.()?.toString?.() || ''
+      return { filename: uri.split(/[\\/]/).pop() || 'instance.xmi', content }
+    },
+    saveAll: async (): Promise<SerializedResource[]> => {
+      const out: SerializedResource[] = []
+      for (const r of instanceTree.resources.value) {
+        const raw: any = toRaw(r)
+        const content = await instanceTree.serializeResource(raw)
+        const uri = raw.getURI?.()?.toString?.() || ''
+        out.push({ filename: uri.split(/[\\/]/).pop() || 'instance.xmi', content })
       }
+      return out
     },
 
     // Trigger update
