@@ -155,7 +155,7 @@ export function createInstanceContext(): EditorContext {
     }),
     activeResource: instanceTree.activeResource,
     setActiveResource: (res: Resource) => instanceTree.setActiveResource(res),
-    createResource: (name: string) => instanceTree.createResource(name),
+    createResource: (name: string, folder?: string) => instanceTree.createResource(name, folder),
     renameResource: (res: Resource, newName: string) => instanceTree.renameResource(res, newName),
     deleteResource: (res: Resource) => instanceTree.deleteResource(res),
     moveToResource: (obj: EObject, target: Resource) => instanceTree.moveToResource(obj, target),
