@@ -9,14 +9,12 @@
  * Files are saved relative to the workspace file location using Gene's file system.
  */
 
-import { computed, ref, shallowRef, watch, onMounted, inject } from 'tsm:vue'
+import { computed, ref, watch, inject } from 'tsm:vue'
 import { DataTable } from 'tsm:primevue'
 import { Column } from 'tsm:primevue'
 import { InputText } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
 import { Dropdown } from 'tsm:primevue'
-import type { StorageStrategy } from 'ui-perspectives'
-import type { EObject } from '@emfts/core'
 
 const props = defineProps<{
   visible: boolean
@@ -28,7 +26,6 @@ const emit = defineEmits<{
 }>()
 
 const tsm = inject<any>('tsm')
-const perspective = tsm?.getService('ui.perspectives')?.useSharedPerspective()
 const fileSystem = tsm?.getService('ui.file-explorer.composables')?.useSharedFileSystem?.()
 const _injectedEditorConfig = inject<any>('gene.editor.config', null)
 // Fallback: get from TSM if inject didn't work (timing issue)
@@ -37,208 +34,54 @@ const editorConfigService = computed(() => _injectedEditorConfig || tsm?.getServ
 const saving = ref(false)
 const subfolder = ref<string>('instances') // Subfolder relative to workspace
 
-// Storage strategy - local ref that can be changed in dialog
-const storageStrategy = ref<StorageStrategy>('single-file')
-
-// Strategy options for dropdown
-const strategyOptions = [
-  { label: 'Single File', value: 'single-file' },
-  { label: 'File per Entity', value: 'file-per-entity' }
-]
-
-// Instance tree service access via global
-interface InstanceTreeService {
-  getRootObjects: () => EObject[]
-  getSuggestedFilename: (obj: EObject) => string
-  serializeAllInstances: () => Promise<string>
-  serializeSingleInstance: (obj: EObject) => Promise<string>
-  serializeInstances: (objects: EObject[]) => Promise<string>
-}
-
-function getInstanceTreeService(): InstanceTreeService | null {
+// Instance tree composable (exposes resources + serializeResource + isResourceDirty)
+function getInstanceTreeService(): any {
   const state = tsm?.getService('gene.instance.tree.state')
   return state?.instance || null
 }
 
-// Get source path for an object (if loaded from XMI)
-function getObjectSourcePath(obj: EObject): string | undefined {
-  const service = getInstanceTreeService()
-  return (service as any)?.getObjectSourcePath?.(obj)
+// One row per managed resource
+interface ResourceRow {
+  resource: any
+  filename: string // editable target filename (resource name → file)
+  dirty: boolean
 }
 
-// Get label for an EObject
-function getObjectLabel(obj: EObject): string {
-  const eClass = obj.eClass()
-  const nameAttr = eClass.getEStructuralFeature('name')
-  if (nameAttr) {
-    const name = obj.eGet(nameAttr)
-    if (name) return String(name)
-  }
-  const idAttr = eClass.getEStructuralFeature('id')
-  if (idAttr) {
-    const id = obj.eGet(idAttr)
-    if (id) return String(id)
-  }
-  return eClass.getName()
-}
+const resourceRows = ref<ResourceRow[]>([])
 
-// Get EClass name for an EObject
-function getClassName(obj: EObject): string {
-  return obj.eClass().getName()
-}
-
-// Instance data for the table
-interface InstanceRow {
-  obj: EObject
-  className: string
-  label: string
-  targetFile: string // Full path where this object will be saved
-  sourcePath?: string // Original XMI file path (if loaded from file)
-}
-
-// Group of objects from the same source file
-interface SourceFileGroup {
-  sourcePath: string
-  filename: string
-  objects: EObject[]
-  labels: string[]
-}
-
-const instanceRows = ref<InstanceRow[]>([])
-const singleFilename = ref('instances.xmi')
-
-// Group objects by their source file
-const sourceFileGroups = computed((): SourceFileGroup[] => {
-  const groups = new Map<string, SourceFileGroup>()
-
-  for (const row of instanceRows.value) {
-    if (row.sourcePath) {
-      let group = groups.get(row.sourcePath)
-      if (!group) {
-        group = {
-          sourcePath: row.sourcePath,
-          filename: row.sourcePath.split('/').pop() || 'instances.xmi',
-          objects: [],
-          labels: []
-        }
-        groups.set(row.sourcePath, group)
-      }
-      group.objects.push(row.obj)
-      group.labels.push(row.label)
-    }
-  }
-
-  return Array.from(groups.values())
-})
-
-// Check if all instances have source files (loaded from XMI)
-const hasSourceFiles = computed(() => instanceRows.value.every(row => row.sourcePath))
-
-// Check if objects came from multiple files
-const hasMultipleSourceFiles = computed(() => sourceFileGroups.value.length > 1)
-
-// Load instances when dialog opens
+// Load resources when dialog opens
 watch(() => props.visible, (isVisible) => {
   if (isVisible) {
-    loadInstances()
+    loadResources()
   }
 }, { immediate: true })
 
-function loadInstances() {
-  const service = getInstanceTreeService()
+function loadResources() {
+  const service: any = getInstanceTreeService()
   if (!service) {
     console.warn('[SaveInstancesDialog] Instance tree service not available')
-    instanceRows.value = []
+    resourceRows.value = []
     return
   }
 
-  // Initialize storage strategy from workspace settings
-  storageStrategy.value = perspective?.state?.workspaceSettings?.storageStrategy || 'single-file'
-
-  // Get existing instance sources from EditorConfig
+  // Restore the target subfolder from existing instance sources (if any)
   const editorConfig = editorConfigService.value
   const existingSources = editorConfig?.instanceSources?.value || []
-
-  // Extract subfolder and filenames from existing sources
-  let existingSubfolder = ''
-  const existingFilenames = new Map<string, string>() // label -> filename
-
   if (existingSources.length > 0) {
-    for (const source of existingSources) {
-      const location = source.location || source.path || ''
-      const name = source.name || ''
-
-      if (location.includes('/')) {
-        // Extract subfolder from first source
-        if (!existingSubfolder) {
-          const parts = location.split('/')
-          existingSubfolder = parts.slice(0, -1).join('/')
-        }
-        // Map name to filename
-        const filename = location.split('/').pop() || ''
-        if (name && filename) {
-          existingFilenames.set(name, filename)
-        }
-      } else {
-        // No subfolder - file at root
-        if (!existingSubfolder) {
-          existingSubfolder = '' // empty means root
-        }
-        if (name && location) {
-          existingFilenames.set(name, location)
-        }
-      }
-    }
-
-    // Update subfolder if we found one
-    if (existingSubfolder !== undefined) {
-      subfolder.value = existingSubfolder
-    }
-
-    console.log('[SaveInstancesDialog] Restored from existing sources:', {
-      subfolder: existingSubfolder,
-      filenames: Object.fromEntries(existingFilenames)
-    })
+    const loc = existingSources[0].location || existingSources[0].path || ''
+    if (loc.includes('/')) subfolder.value = loc.substring(0, loc.lastIndexOf('/'))
   }
 
-  const rootObjects = service.getRootObjects()
-  instanceRows.value = rootObjects.map(obj => {
-    const label = getObjectLabel(obj)
-    // Get original source path if object was loaded from XMI
-    const sourcePath = getObjectSourcePath(obj)
-    // Target file: use source path if available, otherwise generate new path
-    const generatedFilename = service.getSuggestedFilename(obj)
-    const targetFile = sourcePath || `instances/${generatedFilename}`
+  // One row per managed resource; filename = resource name (→ target file)
+  const resources = service.resources?.value || (service.listResources ? service.listResources() : [])
+  resourceRows.value = (resources || []).map((r: any) => {
+    const uri = r.getURI?.()?.toString?.() || ''
     return {
-      obj,
-      className: getClassName(obj),
-      label,
-      targetFile,
-      sourcePath
+      resource: r,
+      filename: uri.split('/').pop() || 'instances.xmi',
+      dirty: !!r.isModified?.()
     }
   })
-
-  // Set single filename from source files or existing sources
-  if (instanceRows.value.length > 0) {
-    // Check if all objects came from the same source file
-    const sourcePaths = new Set(instanceRows.value.map(r => r.sourcePath).filter(Boolean))
-    if (sourcePaths.size === 1) {
-      // All objects from one file - use that filename
-      const sourcePath = [...sourcePaths][0]!
-      singleFilename.value = sourcePath.split('/').pop() || 'instances.xmi'
-      // Also set subfolder from source path
-      if (sourcePath.includes('/')) {
-        subfolder.value = sourcePath.substring(0, sourcePath.lastIndexOf('/'))
-      } else {
-        subfolder.value = ''
-      }
-    } else if (existingSources.length === 1) {
-      const location = existingSources[0].location || existingSources[0].path || ''
-      singleFilename.value = location.split('/').pop() || 'instances.xmi'
-    } else {
-      singleFilename.value = 'instances.xmi'
-    }
-  }
 }
 
 // Get workspace info from EditorConfig
@@ -335,19 +178,13 @@ const canSaveToWorkspace = computed(() => !!workspaceInfo.value)
 
 // Save instances
 async function handleSave() {
-  const service = getInstanceTreeService()
+  const service: any = getInstanceTreeService()
   if (!service || !workspaceInfo.value) return
 
   saving.value = true
   try {
-    // Update workspace settings with selected strategy
-    if (perspective?.updateWorkspaceSettings) {
-      perspective.updateWorkspaceSettings({ storageStrategy: storageStrategy.value })
-    }
-
     const { sourceId, parentPath } = workspaceInfo.value
     const geneFS = tsm?.getService('gene.filesystem')
-
     if (!geneFS) {
       console.error('[SaveInstancesDialog] Gene file system not available')
       return
@@ -356,72 +193,29 @@ async function handleSave() {
     // Determine target folder path
     const useSubfolder = subfolder.value.trim().length > 0
     let targetFolderPath: string
-
     if (useSubfolder) {
-      // Create subfolder if specified
       targetFolderPath = parentPath ? `${parentPath}/${subfolder.value}` : subfolder.value
       await ensureFolder(geneFS, sourceId, targetFolderPath, parentPath)
     } else {
-      // Save directly in workspace directory
       targetFolderPath = parentPath || ''
     }
 
-    console.log('[SaveInstancesDialog] Saving to folder:', targetFolderPath || '(root)')
-
-    if (storageStrategy.value === 'single-file') {
-      // Save all instances to single file
-      const xmiContent = await service.serializeAllInstances()
-
-      await createAndWriteFile(geneFS, sourceId, targetFolderPath, singleFilename.value, xmiContent)
-
-      // Update EditorConfig with instance source (relative path)
-      const relativePath = useSubfolder ? `${subfolder.value}/${singleFilename.value}` : singleFilename.value
-      await updateEditorConfig([{ path: relativePath, name: 'Instances' }])
-    } else {
-      // File-per-entity mode: group objects by their target file
-      const instanceSources: { path: string; name: string }[] = []
-
-      // Group objects by targetFile
-      const fileGroups = new Map<string, { objects: EObject[], labels: string[] }>()
-      for (const row of instanceRows.value) {
-        let group = fileGroups.get(row.targetFile)
-        if (!group) {
-          group = { objects: [], labels: [] }
-          fileGroups.set(row.targetFile, group)
-        }
-        group.objects.push(row.obj)
-        group.labels.push(row.label)
-      }
-
-      // Save each group to its target file
-      for (const [targetFile, group] of fileGroups) {
-        const xmiContent = await service.serializeInstances(group.objects)
-
-        // Extract folder and filename from target path
-        const folderPath = targetFile.includes('/') ? targetFile.substring(0, targetFile.lastIndexOf('/')) : ''
-        const filename = targetFile.split('/').pop() || 'instances.xmi'
-
-        // Ensure folder exists if needed
-        if (folderPath) {
-          await ensureFolder(geneFS, sourceId, folderPath.startsWith(parentPath) ? folderPath : (parentPath ? `${parentPath}/${folderPath}` : folderPath), parentPath)
-        }
-
-        console.log('[SaveInstancesDialog] Saving', group.objects.length, 'objects to:', targetFile)
-        const fullFolderPath = folderPath.startsWith(parentPath) ? folderPath : (parentPath && folderPath ? `${parentPath}/${folderPath}` : (parentPath || folderPath))
-        await createAndWriteFile(geneFS, sourceId, fullFolderPath, filename, xmiContent)
-
-        instanceSources.push({
-          path: targetFile,
-          name: group.labels.join(', ')
-        })
-      }
-
-      // Update EditorConfig with instance sources
-      await updateEditorConfig(instanceSources)
+    // Save each managed resource to its own file (filename = resource name)
+    const sources: { path: string; name: string }[] = []
+    for (const row of resourceRows.value) {
+      const filename = (row.filename || 'instances.xmi').trim() || 'instances.xmi'
+      const content = await service.serializeResource(row.resource)
+      await createAndWriteFile(geneFS, sourceId, targetFolderPath, filename, content)
+      try { row.resource.setModified?.(false); row.dirty = false } catch { /* ignore */ }
+      const relativePath = useSubfolder ? `${subfolder.value}/${filename}` : filename
+      sources.push({ path: relativePath, name: filename.replace(/\.[^.]+$/, '') || filename })
     }
+
+    await updateEditorConfig(sources)
 
     // Refresh file system to show new files
     await geneFS.refreshSource(sourceId)
+    service.triggerUpdate?.()
 
     emit('saved')
     emit('close')
@@ -531,7 +325,7 @@ async function updateEditorConfig(sources: { path: string; name: string }[]) {
   }
 }
 
-const hasInstances = computed(() => instanceRows.value.length > 0)
+const hasInstances = computed(() => resourceRows.value.length > 0)
 const canSave = computed(() => hasInstances.value && canSaveToWorkspace.value)
 </script>
 
@@ -555,55 +349,19 @@ const canSave = computed(() => hasInstances.value && canSaveToWorkspace.value)
           </div>
 
           <template v-else>
-            <!-- Storage Strategy Selector -->
-            <div class="strategy-section">
-              <div class="field">
-                <label>Storage Strategy</label>
-                <Dropdown
-                  v-model="storageStrategy"
-                  :options="strategyOptions"
-                  optionLabel="label"
-                  optionValue="value"
-                  class="strategy-dropdown"
-                />
-              </div>
-            </div>
-
-            <!-- Single File Mode -->
-            <div v-if="storageStrategy === 'single-file'" class="single-file-section">
-              <div class="field">
-                <label>Filename</label>
-                <InputText v-model="singleFilename" placeholder="instances.xmi" />
-              </div>
-              <p class="hint">All {{ instanceRows.length }} instances will be saved to this file.</p>
-            </div>
-
-            <!-- File per Entity Mode -->
-            <div v-else class="file-per-entity-section">
-              <p class="section-label">Each object will be saved to its target file:</p>
+            <!-- Managed resources: one file per resource -->
+            <div class="file-per-entity-section">
+              <p class="section-label">Each resource is saved to its own file:</p>
               <div class="instances-table">
-                <DataTable :value="instanceRows" size="small" scrollable scrollHeight="280px">
-                  <Column header="Type" style="width: 90px">
+                <DataTable :value="resourceRows" size="small" scrollable scrollHeight="280px">
+                  <Column header="" style="width: 28px">
                     <template #body="{ data }">
-                      <span class="class-name">{{ data.className }}</span>
+                      <span v-if="data.dirty" class="source-path" title="Unsaved changes">●</span>
                     </template>
                   </Column>
-                  <Column header="Name" style="width: 100px">
+                  <Column header="Filename">
                     <template #body="{ data }">
-                      {{ data.label }}
-                    </template>
-                  </Column>
-                  <Column header="Source" style="width: 140px">
-                    <template #body="{ data }">
-                      <span v-if="data.sourcePath" class="source-path" :title="data.sourcePath">
-                        {{ data.sourcePath.split('/').pop() }}
-                      </span>
-                      <span v-else class="no-source">(new)</span>
-                    </template>
-                  </Column>
-                  <Column header="Target File">
-                    <template #body="{ data }">
-                      <InputText v-model="data.targetFile" size="small" class="target-file-input" />
+                      <InputText v-model="data.filename" size="small" class="target-file-input" />
                     </template>
                   </Column>
                 </DataTable>
