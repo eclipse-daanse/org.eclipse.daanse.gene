@@ -37,7 +37,37 @@ export interface InstanceTreeNode {
   parent?: InstanceTreeNode
   /** XMI ID (for tooltip) */
   xmiId?: string | null
+  /** Discriminator (absent ⇒ object node) */
+  kind?: 'object'
 }
+
+/**
+ * Top-tier node representing an EMF Resource (a managed model file).
+ * Children are the resource's root object nodes.
+ */
+export interface ResourceTreeNode {
+  /** Discriminator */
+  kind: 'resource'
+  /** Unique key, e.g. `res:<uri>` */
+  key: string
+  /** Display label (resource name, without extension) */
+  label: string
+  /** Empty icon — rendered in slot */
+  icon: string
+  /** The EMF Resource this node represents */
+  resource: Resource
+  /** Logical/identity URI of the resource */
+  uri: string
+  /** Whether the resource has unsaved changes */
+  dirty: boolean
+  /** Child object nodes (the resource's roots) */
+  children?: InstanceTreeNode[]
+  /** Whether this is a leaf node */
+  leaf: boolean
+}
+
+/** A tree node is either a Resource node (top tier) or an object node */
+export type AnyTreeNode = ResourceTreeNode | InstanceTreeNode
 
 /**
  * Tree selection state
