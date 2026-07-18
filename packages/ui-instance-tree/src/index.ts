@@ -61,6 +61,13 @@ export {
   type XMILoadResult
 } from './composables/useInstanceTree'
 
+// Multi-resource: standalone load + referenced-resource auto-load
+export {
+  getSharedResources,
+  loadResourceStandalone,
+  setInstanceFileReader
+} from './composables/useInstanceTree'
+
 // Re-export views composable
 export {
   useViews,
@@ -119,8 +126,11 @@ import {
   useSharedInstanceTree,
   setSharedResource,
   getSharedResource,
+  getSharedResources,
   getInstanceLoadingState,
   loadInstancesFromXMI,
+  loadResourceStandalone,
+  setInstanceFileReader,
   getObjectSourcePath,
   setObjectSourcePath,
   getXmiId,
@@ -285,8 +295,11 @@ export async function activate(context: ModuleContext): Promise<void> {
     useSharedInstanceTree,
     setSharedResource,
     getSharedResource,
+    getSharedResources,
     getInstanceLoadingState,
     loadInstancesFromXMI,
+    loadResourceStandalone,
+    setInstanceFileReader,
     getObjectSourcePath,
     setObjectSourcePath,
     // XMI ID functions

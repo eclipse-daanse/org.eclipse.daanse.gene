@@ -1294,6 +1294,122 @@ export async function loadInstancesFromXMI(xmiContent: string, filePath: string)
   }
 }
 
+// ── Cross-resource references / referenced-resource auto-load ───────────────
+
+/**
+ * App-provided reader that returns the XMI content for a referenced resource URI
+ * (or null if it cannot be found). Wired from the app via the file system service.
+ */
+let _instanceFileReader: ((uri: string) => Promise<string | null>) | null = null
+
+export function setInstanceFileReader(
+  reader: ((uri: string) => Promise<string | null>) | null
+): void {
+  _instanceFileReader = reader
+}
+
+/**
+ * Collect distinct base URIs of unresolved cross-resource references across all
+ * managed resources. Skips metamodel/package URIs (resolved via the package
+ * registry) and URIs that are already loaded members.
+ */
+function collectUnresolvedResourceUris(): string[] {
+  const state = getOrCreateSharedState()
+  const found = new Set<string>()
+  const loadedUris = new Set<string>()
+  for (const r of state.resources.value) {
+    const u = (toRaw(r) as any).getURI?.()?.toString?.() || ''
+    if (u) loadedUris.add(u)
+  }
+  const registry: any = _canonicalRegistry
+
+  function visit(obj: any): void {
+    const raw = toRaw(obj)
+    let eClass: any
+    try { eClass = raw.eClass() } catch { return }
+    const features = eClass.getEAllStructuralFeatures?.() || []
+    for (const f of features) {
+      // Only non-containment references can point across resources
+      if (typeof (f as any).isContainment !== 'function' || (f as any).isContainment()) continue
+      let val: any
+      try { val = toRaw(raw.eGet(f)) } catch { continue }
+      if (!val) continue
+      const items = (Array.isArray(val) || (val as any)[Symbol.iterator]) ? Array.from(val as any) : [val]
+      for (const v of items) {
+        if (v && typeof (v as any).eIsProxy === 'function' && (v as any).eIsProxy()) {
+          const puri = (v as any).eProxyURI?.()?.toString?.() || ''
+          const base = puri.split('#')[0]
+          if (base && !loadedUris.has(base) &&
+              !(registry && typeof registry.has === 'function' && registry.has(base))) {
+            found.add(base)
+          }
+        }
+      }
+    }
+    // Recurse into containment children
+    let contained: any
+    try { contained = raw.eContents?.() } catch { contained = null }
+    if (contained) for (const child of contained) visit(child)
+  }
+
+  for (const r of state.resources.value) {
+    for (const root of (toRaw(r) as any).getContents()) visit(root)
+  }
+  return Array.from(found)
+}
+
+/**
+ * Load a resource "standalone": load the primary file, then follow cross-resource
+ * references and auto-load each referenced resource (best-effort, via the injected
+ * file reader) into the SAME ResourceSet so proxies resolve. Missing files stay
+ * unresolved (surfaced as dangling-reference warnings by the caller).
+ *
+ * @param opts.replace clear the currently managed resources first (fresh view)
+ */
+export async function loadResourceStandalone(
+  xmiContent: string,
+  filePath: string,
+  opts: { replace?: boolean } = {}
+): Promise<XMILoadResult & { referencedLoaded: number }> {
+  const state = getOrCreateSharedState()
+  if (opts.replace) state.instance.clearResources()
+
+  // Load the primary file as its own resource
+  const primary = await loadInstancesFromXMI(xmiContent, filePath)
+  const primaryRes = state.activeResource.value
+
+  // Follow references and auto-load referenced resources (bounded; handles cycles)
+  let referencedLoaded = 0
+  if (_instanceFileReader) {
+    const attempted = new Set<string>()
+    for (let iter = 0; iter < 25; iter++) {
+      const uris = collectUnresolvedResourceUris().filter(u => !attempted.has(u))
+      if (uris.length === 0) break
+      let progressed = false
+      for (const uri of uris) {
+        attempted.add(uri)
+        try {
+          const content = await _instanceFileReader(uri)
+          if (content != null) {
+            await loadInstancesFromXMI(content, uri)
+            referencedLoaded++
+            progressed = true
+          }
+        } catch (e) {
+          console.warn('[InstanceTree] Failed to auto-load referenced resource:', uri, e)
+        }
+      }
+      if (!progressed) break
+    }
+  }
+
+  // Keep the primary resource active (auto-loads changed it)
+  if (primaryRes) state.instance.setActiveResource(primaryRes)
+  state.instance.triggerUpdate()
+
+  return { ...primary, referencedLoaded }
+}
+
 /**
  * Get the XMI ID for an EObject from its containing resource
  * @param obj The EObject to get the ID for
