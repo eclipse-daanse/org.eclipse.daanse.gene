@@ -757,6 +757,30 @@ async function loadInstancesFromEditorConfig(workspaceEntry: any) {
     sourceId
   })
 
+  // Wire the referenced-resource file reader so a "standalone" load can auto-load
+  // cross-referenced instance resources on demand (multi-resource, Phase 3).
+  const itc: any = instanceTreeComposables.value
+  if (itc?.setInstanceFileReader) {
+    itc.setInstanceFileReader(async (uri: string): Promise<string | null> => {
+      try {
+        const clean = String(uri).replace(/^file:\/\//, '')
+        const absolutePath = clean.startsWith('/')
+          ? clean
+          : (workspaceParentPath ? `${workspaceParentPath}/${clean}` : clean)
+        let fileEntry = fileSystem.getFileByPath(sourceId, absolutePath)
+        if (!fileEntry) {
+          const filename = absolutePath.split('/').pop()
+          if (filename) fileEntry = fileSystem.getFileByPath(sourceId, filename)
+        }
+        if (!fileEntry) return null
+        return await fileSystem.readTextFile(fileEntry)
+      } catch (e) {
+        console.warn('[App] Referenced instance file reader failed for', uri, e)
+        return null
+      }
+    })
+  }
+
   // Debug: List available files in source
   const availableFiles = fileSystem.filesBySource?.get(sourceId)
   console.log('[App] Available files in source:', availableFiles?.map((f: any) => f.path))
