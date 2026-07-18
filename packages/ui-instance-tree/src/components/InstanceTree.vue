@@ -96,6 +96,26 @@ const ctxAllPackages = computed(() => ctx.allPackages.value)
 // Context menu ref
 const contextMenu = ref<InstanceType<typeof ContextMenu> | null>(null)
 
+// Node captured on right-click — may be a resource node (which has no selectedNode)
+const ctxMenuNode = ref<any>(null)
+
+function onNodeContextMenu(node: any, event: MouseEvent) {
+  ctxMenuNode.value = node
+  ctx.selectNode(node)
+  handleContextMenu(event)
+}
+
+function createResourcePrompt() {
+  const name = window.prompt('New resource name:', 'new-resource')
+  if (name && name.trim()) (ctx as any).createResource?.(name.trim())
+}
+
+function renameResourcePrompt(res: any) {
+  const cur = ctxMenuNode.value?.label || ''
+  const name = window.prompt('Rename resource:', cur)
+  if (name && name.trim()) (ctx as any).renameResource?.(res, name.trim())
+}
+
 // Drag state
 const isDragOver = ref(false)
 
@@ -154,6 +174,9 @@ const hasModels = computed(() => ctxAllPackages.value.length > 0)
 
 // Check if we have any instances
 const hasInstances = computed(() => ctxTreeNodes.value.length > 0)
+
+// Whether the active editor context supports explicit resource management
+const canManageResources = computed(() => typeof (ctx as any).createResource === 'function')
 
 // Check if we're in instance mode (not metamodel mode)
 const isInstanceMode = computed(() => ctx.mode === 'instance')
@@ -343,6 +366,20 @@ function getValidClassesForRef(ref: EReference): EClass[] {
 
 // Context menu items
 const contextMenuItems = computed(() => {
+  const menuNode = ctxMenuNode.value
+
+  // Resource-node menu (New / Save / Rename / Delete)
+  if (menuNode?.kind === 'resource') {
+    const res = menuNode.resource
+    return [
+      { label: 'New Resource…', icon: 'pi pi-plus', command: () => createResourcePrompt() },
+      { separator: true },
+      { label: 'Save…', icon: 'pi pi-save', command: () => eventBus?.emit('save-instances-request') },
+      { label: 'Rename…', icon: 'pi pi-pencil', command: () => renameResourcePrompt(res) },
+      { label: 'Delete Resource', icon: 'pi pi-trash', command: () => (ctx as any).deleteResource?.(res) }
+    ]
+  }
+
   if (!ctxSelectedNode.value) return []
 
   const items = []
@@ -404,6 +441,23 @@ const contextMenuItems = computed(() => {
         const commandRegistry = tsm?.getService('gene.command.registry')
         commandRegistry?.execute('instance.setIcon', { targetType })
       }
+    })
+  }
+
+  // Move to Resource — move the selected object's subtree into another resource
+  const moveData = ctxSelectedNode.value?.data
+  const moveTargets = (((ctx as any).resources?.value) || []).filter((ri: any) => {
+    try { return ri.resource !== moveData?.eResource?.() } catch { return true }
+  })
+  if (moveData && moveTargets.length > 0) {
+    items.push({
+      label: 'Move to Resource',
+      icon: 'pi pi-arrow-right',
+      items: moveTargets.map((ri: any) => ({
+        label: ri.name,
+        icon: 'pi pi-folder',
+        command: () => (ctx as any).moveToResource?.(moveData, ri.resource)
+      }))
     })
   }
 
@@ -597,17 +651,28 @@ function handleDrop(event: DragEvent) {
     return
   }
 
-  // Find a valid containment reference
-  const containmentRefs = ctx.getAvailableContainmentRefs()
-  for (const ref of containmentRefs) {
-    const refType = ref.getEType() as EClass
-    if (refType && isSubtypeOf(classInfo.eClass, refType)) {
-      handleAddChild(classInfo.eClass, ref)
-      return
+  // If an object is selected, try to create the drop as its child
+  if (ctxSelectedObject.value) {
+    const containmentRefs = ctx.getAvailableContainmentRefs()
+    for (const ref of containmentRefs) {
+      const refType = ref.getEType() as EClass
+      if (refType && isSubtypeOf(classInfo.eClass, refType)) {
+        handleAddChild(classInfo.eClass, ref)
+        return
+      }
     }
   }
 
-  console.warn(`No valid containment reference found for ${qualifiedName}`)
+  // Otherwise (a resource node is active / nothing selected): create as a ROOT
+  // object in the active resource.
+  try {
+    const factory = classInfo.eClass.getEPackage().getEFactoryInstance()
+    const newObj = factory.create(classInfo.eClass)
+    ctx.addRootObject(newObj)
+    emit('object-create', newObj)
+  } catch (e) {
+    console.warn(`Could not create root instance for ${qualifiedName}:`, e)
+  }
 }
 
 /**
@@ -665,6 +730,15 @@ watch(ctxSelectedObject, (obj) => {
         size="small"
         @click="showNewInstanceDialog = true"
       />
+      <Button
+        v-if="canManageResources"
+        label="New Resource"
+        icon="pi pi-folder-plus"
+        size="small"
+        severity="secondary"
+        outlined
+        @click="createResourcePrompt"
+      />
     </div>
 
     <!-- Instance tree -->
@@ -681,7 +755,7 @@ watch(ctxSelectedObject, (obj) => {
           <div
             class="tree-node"
             :class="{ 'tree-node--resource': node.kind === 'resource' }"
-            @contextmenu.prevent="(event) => { ctx.selectNode(node); handleContextMenu(event) }"
+            @contextmenu.prevent="(event) => onNodeContextMenu(node, event)"
           >
             <template v-if="node.kind === 'resource'">
               <i class="node-icon pi pi-folder"></i>
