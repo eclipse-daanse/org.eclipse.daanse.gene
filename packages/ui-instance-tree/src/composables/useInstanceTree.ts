@@ -875,6 +875,76 @@ export function useInstanceTree(
     }
   }
 
+  /** Detach an object from its current containment (or from its resource roots) */
+  function detachObject(raw: any): void {
+    const container = raw.eContainer?.()
+    if (container) {
+      const feature = raw.eContainingFeature?.()
+      if (feature) {
+        const val = toRaw(container.eGet(feature))
+        if (val && typeof (val as any).remove === 'function') (val as any).remove(raw)
+        else container.eSet(feature, null)
+      }
+    } else {
+      const res = raw.eResource?.()
+      if (res) {
+        const c = toRaw(res.getContents())
+        if (c && typeof (c as any).remove === 'function') (c as any).remove(raw)
+      }
+    }
+  }
+
+  /**
+   * Reorder/move an object so it becomes a sibling of `target` (right after it by
+   * default). Works within the same container (pure reorder) AND across containers
+   * or resources (move + position). Uses EList.addAt for precise positioning.
+   */
+  function moveObjectBeside(dragged: EObject, target: EObject, after = true): boolean {
+    const raw: any = toRaw(dragged)
+    const t: any = toRaw(target)
+    if (!raw || !t || raw === t) return false
+
+    // Never drop an object into its own subtree
+    let anc: any = t.eContainer?.()
+    while (anc) { if (toRaw(anc) === raw) return false; anc = anc.eContainer?.() }
+
+    // Resolve the target's sibling list + owning resource
+    const tContainer: any = t.eContainer?.()
+    let list: any
+    let targetRes: any
+    if (tContainer) {
+      const feature: any = t.eContainingFeature?.()
+      if (!feature || typeof feature.isMany !== 'function' || !feature.isMany()) return false
+      list = toRaw(tContainer.eGet(feature))
+      targetRes = tContainer.eResource?.()
+    } else {
+      targetRes = t.eResource?.()
+      if (!targetRes) return false
+      list = toRaw(targetRes.getContents())
+    }
+    if (!list || typeof list.indexOf !== 'function') return false
+
+    const srcRes: any = raw.eResource?.()
+    try {
+      detachObject(raw)
+      let idx = list.indexOf(t)
+      if (idx < 0) idx = typeof list.size === 'function' ? list.size() : 0
+      else if (after) idx = idx + 1
+      if (typeof list.addAt === 'function') list.addAt(idx, raw)
+      else if (typeof list.add === 'function') list.add(raw)
+      else return false
+
+      assignXmiId(raw)
+      if (srcRes) markDirty(srcRes)
+      if (targetRes) markDirty(targetRes)
+      triggerUpdate()
+      return true
+    } catch (e) {
+      console.warn('[InstanceTree] moveObjectBeside failed:', e)
+      return false
+    }
+  }
+
   /** Serialize a single resource to an XMI string */
   async function serializeResource(res: Resource): Promise<string> {
     const raw: any = toRaw(res)
@@ -1122,6 +1192,7 @@ export function useInstanceTree(
     setResources,
     clearResources,
     moveToResource,
+    moveObjectBeside,
     serializeResource,
     markResourceDirty: (res: Resource) => markDirty(res),
 

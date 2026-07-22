@@ -106,6 +106,46 @@ function onNodeContextMenu(node: any, event: MouseEvent) {
   handleContextMenu(event)
 }
 
+// ── Node drag-and-drop: reorder / move objects ──────────────────────────────
+const draggedObject = ref<any>(null)
+
+function onNodeDragStart(node: any, event: DragEvent) {
+  // Resource nodes are not draggable (reordering resources not enabled)
+  if (node?.kind === 'resource') { event.preventDefault(); return }
+  draggedObject.value = node?.data ?? null
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    try { event.dataTransfer.setData('application/x-instance-move', node?.key || '') } catch { /* ignore */ }
+  }
+}
+
+function onNodeDragOverReorder(_node: any, event: DragEvent) {
+  // Only accept drops while an instance node is being dragged; otherwise let the
+  // container handle model-browser (x-eclass) drops.
+  if (draggedObject.value) {
+    event.preventDefault()
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+function onNodeDropReorder(node: any, event: DragEvent) {
+  if (!draggedObject.value) return
+  event.preventDefault()
+  event.stopPropagation()
+  const dragged = draggedObject.value
+  draggedObject.value = null
+  if (!node || dragged === node.data) return
+  if (node.kind === 'resource') {
+    ;(ctx as any).moveToResource?.(dragged, node.resource)
+  } else if (node.data) {
+    ;(ctx as any).moveObjectBeside?.(dragged, node.data, true)
+  }
+}
+
+function onNodeDragEnd() {
+  draggedObject.value = null
+}
+
 // New Resource dialog (name + path)
 const showNewResourceDialog = ref(false)
 const newResourceName = ref('new-resource')
@@ -860,7 +900,12 @@ watch(ctxSelectedObject, (obj) => {
         <template #default="{ node }">
           <div
             class="tree-node"
-            :class="{ 'tree-node--resource': node.kind === 'resource' }"
+            :class="{ 'tree-node--resource': node.kind === 'resource', 'tree-node--dragging': draggedObject && draggedObject === node.data }"
+            :draggable="node.kind !== 'resource'"
+            @dragstart="(e) => onNodeDragStart(node, e)"
+            @dragover="(e) => onNodeDragOverReorder(node, e)"
+            @drop="(e) => onNodeDropReorder(node, e)"
+            @dragend="onNodeDragEnd"
             @contextmenu.prevent="(event) => onNodeContextMenu(node, event)"
           >
             <template v-if="node.kind === 'resource'">
@@ -1068,6 +1113,10 @@ watch(ctxSelectedObject, (obj) => {
 
 .node-label {
   font-size: 0.875rem;
+}
+
+.tree-node--dragging {
+  opacity: 0.5;
 }
 
 /* Resource nodes: distinct from folders — box icon, bolder row, subtle band */
