@@ -263,6 +263,8 @@ export interface EditorContext {
   renameResource?: (res: Resource, newName: string) => void
   deleteResource?: (res: Resource) => void
   moveToResource?: (obj: EObject, target: Resource) => boolean
+  /** Reorder/move an object so it becomes a sibling of target (after it by default) */
+  moveObjectBeside?: (dragged: EObject, target: EObject, after?: boolean) => boolean
   isResourceDirty?: (res: Resource) => boolean
   /** Serialize one resource → { filename, content } (caller writes the file) */
   saveResource?: (res: Resource) => Promise<SerializedResource>
