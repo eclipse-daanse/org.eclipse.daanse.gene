@@ -214,48 +214,6 @@ const folderOptions = computed(() => {
   return options
 })
 
-// Folder options for the New Resource dialog (scan existing workspace folders)
-const editorConfigService = computed(() => tsm?.getService('gene.editor.config'))
-
-const newResourceWorkspace = computed(() => {
-  const ec: any = editorConfigService.value
-  const entry = ec?.workspaceFileEntry?.value
-  const path = ec?.workspaceFilePath?.value
-  if (!entry || !path) return null
-  const lastSlash = path.lastIndexOf('/')
-  return { sourceId: entry.sourceId, parentPath: lastSlash > 0 ? path.substring(0, lastSlash) : '' }
-})
-
-function collectResourceFolders(entries: any[], basePath: string, prefix: string, options: { label: string; value: string }[]) {
-  if (!entries) return
-  for (const entry of entries) {
-    if (!entry.isDirectory) continue
-    const entryPath = entry.path || ''
-    if (basePath && !entryPath.startsWith(basePath)) continue
-    const relativePath = basePath ? entryPath.substring(basePath.length + 1) : entryPath
-    if (!relativePath || relativePath.startsWith('.')) continue
-    const indent = prefix ? `${prefix}/${entry.name}` : entry.name
-    if (!options.some(o => o.value === relativePath)) options.push({ label: indent, value: relativePath })
-    if (entry.children) collectResourceFolders(entry.children, basePath, indent, options)
-  }
-}
-
-const folderOptions = computed(() => {
-  const options: { label: string; value: string }[] = [
-    { label: '/ (workspace root)', value: '' },
-    { label: 'instances', value: 'instances' }
-  ]
-  const geneFS: any = tsm?.getService('gene.filesystem')
-  const ws = newResourceWorkspace.value
-  if (geneFS && ws) {
-    const source = geneFS.sources?.value?.find((s: any) => s.id === ws.sourceId)
-    if (source?.data?.entries) collectResourceFolders(source.data.entries, ws.parentPath, '', options)
-  }
-  const cur = newResourcePath.value?.trim()
-  if (cur && !options.some(o => o.value === cur)) options.push({ label: `${cur} (new)`, value: cur })
-  return options
-})
-
 function renameResourcePrompt(res: any) {
   const cur = ctxMenuNode.value?.label || ''
   const name = window.prompt('Rename resource:', cur)
