@@ -109,6 +109,26 @@ function onNodeContextMenu(node: any, event: MouseEvent) {
 }
 
 // ── Node drag-and-drop via PrimeVue Tree (draggableNodes / droppableNodes) ──
+/**
+ * PrimeVue's node-drop event does NOT expose the drop position (before/after/into);
+ * `dropPosition` is internal to the node component. Derive before/after ourselves
+ * from the pointer position relative to the target row: upper half → before,
+ * lower half → after. This makes the two drop-points of the same gap (target's
+ * "after" and next node's "before") resolve consistently — otherwise an "insert
+ * before" gesture was silently turned into "insert after" (one row too low).
+ */
+function isDropAfter(event: any, fallback = true): boolean {
+  const oe = event?.originalEvent
+  const y = oe?.clientY
+  const tgt = oe?.target as HTMLElement | undefined
+  if (typeof y !== 'number' || !tgt?.closest) return fallback
+  const nodeEl = tgt.closest('.p-tree-node') as HTMLElement | null
+  const rowEl = (nodeEl?.querySelector(':scope > .p-tree-node-content') as HTMLElement | null) || nodeEl
+  const rect = rowEl?.getBoundingClientRect?.()
+  if (!rect || !rect.height) return fallback
+  return y >= rect.top + rect.height / 2
+}
+
 function onTreeNodeDrop(event: any) {
   const dragNode = event?.dragNode
   const dropNode = event?.dropNode
@@ -121,8 +141,8 @@ function onTreeNodeDrop(event: any) {
     // Dropped onto a resource → make it a root of that resource
     ;(ctx as any).moveToResource?.(draggedObj, dropNode.resource)
   } else if (dropNode.data) {
-    // Dropped onto/next to another object → reorder/move beside it
-    ;(ctx as any).moveObjectBeside?.(draggedObj, dropNode.data, true)
+    // Dropped next to another object → reorder/move to that side (before/after)
+    ;(ctx as any).moveObjectBeside?.(draggedObj, dropNode.data, isDropAfter(event))
   }
 }
 
