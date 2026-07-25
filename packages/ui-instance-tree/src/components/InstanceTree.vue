@@ -10,7 +10,7 @@
  * - Metamodeler: shows .ecore elements as instances of Ecore.ecore
  */
 
-import { ref, computed, watch, inject } from 'tsm:vue'
+import { ref, computed, watch, inject, nextTick } from 'tsm:vue'
 import { Tree } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
 import { ContextMenu } from 'tsm:primevue'
@@ -129,6 +129,62 @@ function isDropAfter(event: any, fallback = true): boolean {
   return y >= rect.top + rect.height / 2
 }
 
+// ── FLIP animation: after a reorder/move, glide rows to their new positions ──
+const treeContainerRef = ref<HTMLElement | null>(null)
+
+/** Snapshot each visible row's viewport position, keyed by node key. */
+function captureRowRects(): Map<string, { top: number; left: number }> {
+  const map = new Map<string, { top: number; left: number }>()
+  const root = treeContainerRef.value
+  if (!root) return map
+  root.querySelectorAll<HTMLElement>('.tree-node[data-node-key]').forEach(el => {
+    const key = el.getAttribute('data-node-key')
+    const row = el.closest('.p-tree-node-content') as HTMLElement | null
+    if (!key || !row) return
+    const r = row.getBoundingClientRect()
+    map.set(key, { top: r.top, left: r.left })
+  })
+  return map
+}
+
+/** FLIP: invert to the old positions, then play back to the new ones. */
+async function animateReorder(first: Map<string, { top: number; left: number }>) {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
+  await nextTick()
+  const root = treeContainerRef.value
+  if (!root) return
+  const rows: HTMLElement[] = []
+  root.querySelectorAll<HTMLElement>('.tree-node[data-node-key]').forEach(el => {
+    const key = el.getAttribute('data-node-key')
+    const row = el.closest('.p-tree-node-content') as HTMLElement | null
+    if (!key || !row) return
+    const prev = first.get(key)
+    if (!prev) return
+    const now = row.getBoundingClientRect()
+    const dx = prev.left - now.left
+    const dy = prev.top - now.top
+    if (!dx && !dy) return
+    // Invert: place the row where it used to be, without transition
+    row.style.transition = 'none'
+    row.style.transform = `translate(${dx}px, ${dy}px)`
+    rows.push(row)
+  })
+  if (rows.length === 0) return
+  // Force reflow so the inverted state is committed before playing
+  void root.offsetHeight
+  // Play: animate back to the natural (new) position
+  for (const row of rows) {
+    row.style.transition = 'transform 0.22s cubic-bezier(0.2, 0, 0, 1)'
+    row.style.transform = ''
+  }
+  window.setTimeout(() => {
+    for (const row of rows) {
+      row.style.transition = ''
+      row.style.transform = ''
+    }
+  }, 280)
+}
+
 function onTreeNodeDrop(event: any) {
   const dragNode = event?.dragNode
   const dropNode = event?.dropNode
@@ -137,13 +193,17 @@ function onTreeNodeDrop(event: any) {
   if (!draggedObj || dragNode?.kind === 'resource') return
   if (!dropNode || dropNode === dragNode) return
 
+  // Snapshot positions BEFORE the model changes, then animate the delta.
+  const first = captureRowRects()
+  let moved = false
   if (dropNode.kind === 'resource') {
     // Dropped onto a resource → make it a root of that resource
-    ;(ctx as any).moveToResource?.(draggedObj, dropNode.resource)
+    moved = !!(ctx as any).moveToResource?.(draggedObj, dropNode.resource)
   } else if (dropNode.data) {
     // Dropped next to another object → reorder/move to that side (before/after)
-    ;(ctx as any).moveObjectBeside?.(draggedObj, dropNode.data, isDropAfter(event))
+    moved = !!(ctx as any).moveObjectBeside?.(draggedObj, dropNode.data, isDropAfter(event))
   }
+  if (moved) animateReorder(first)
 }
 
 // New Resource dialog (name + path)
@@ -858,7 +918,7 @@ watch(ctxSelectedObject, (obj) => {
     </div>
 
     <!-- Instance tree -->
-    <div v-else class="tree-container">
+    <div v-else class="tree-container" ref="treeContainerRef">
       <Tree
         :value="ctxTreeNodes"
         v-model:selectionKeys="ctxSelectedKeys"
@@ -874,6 +934,7 @@ watch(ctxSelectedObject, (obj) => {
           <div
             class="tree-node"
             :class="{ 'tree-node--resource': node.kind === 'resource' }"
+            :data-node-key="node.key"
             @contextmenu.prevent="(event) => onNodeContextMenu(node, event)"
           >
             <template v-if="node.kind === 'resource'">
@@ -1325,11 +1386,13 @@ watch(ctxSelectedObject, (obj) => {
 -->
 <style>
 [data-pc-section='drag-image'] {
-  display: flex;
+  display: inline-flex !important;
   align-items: center;
   gap: 0.25rem;
   box-sizing: border-box;
-  width: auto !important;
+  /* PrimeVue sets an inline width = full row width; force shrink-to-content */
+  width: max-content !important;
+  max-width: 320px !important;
   height: auto !important;
   padding: 0.25rem 0.6rem;
   background: var(--surface-0, #ffffff);
@@ -1339,10 +1402,19 @@ watch(ctxSelectedObject, (obj) => {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
   font-size: 0.875rem;
   white-space: nowrap;
+  overflow: hidden;
   opacity: 0.95;
   pointer-events: none;
 }
+/* Keep inner elements from stretching the ghost to full width */
+[data-pc-section='drag-image'] * {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 [data-pc-section='drag-image'] .p-tree-node-toggle-button {
-  display: none;
+  display: none !important;
 }
 </style>
