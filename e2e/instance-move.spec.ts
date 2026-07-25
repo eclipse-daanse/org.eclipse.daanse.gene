@@ -21,6 +21,25 @@ import { waitForAppReady, loadEcoreModel, loadInstances } from './helpers'
 test.describe('Instance Tree: move / drop validation', () => {
   test.beforeEach(async ({ page }) => {
     await waitForAppReady(page)
+
+    // Open the Model Editor perspective so the model-browser / instance-tree
+    // services become available (retry until the PerspectiveManager is ready).
+    await page.evaluate(async () => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl?.__vue_app__?._context?.provides?.['tsm']
+      if (!tsm) throw new Error('TSM not available')
+      for (let i = 0; i < 50; i++) {
+        const pm = tsm.getService('ui.registry.perspectives')
+        if (pm) {
+          pm.openWorkspace({}, '/e2e-test/workspace.xmi', 'model-editor')
+          return
+        }
+        await new Promise(r => setTimeout(r, 100))
+      }
+      throw new Error('PerspectiveManager not available after 5s')
+    })
+    await page.waitForTimeout(1500)
+
     await loadEcoreModel(page, '/uni/move-test.ecore')
     await page.waitForTimeout(300)
     await loadInstances(page, '/uni/move-test.xmi')
