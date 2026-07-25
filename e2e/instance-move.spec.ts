@@ -123,6 +123,6 @@ test.describe('Instance Tree: move / drop validation', () => {
     `)
     expect(r.ok).toBe(true)
     expect(r.containedIn).toBe('books')  // moved from 'featured' into 'books'
-    expect(r.booksNow).toBe(2)           // bookA + bookC
+    expect(r.booksNow).toBe(3)           // bookA + bookB + moved bookC
   })
 })
