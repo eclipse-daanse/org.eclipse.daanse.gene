@@ -321,7 +321,11 @@ async function discoverActionServers(registry: ActionRegistryImpl, context: Modu
     }
     const urls = feat(pluginConfig, 'serverUrls')
     if (urls) {
-      const arr = Array.isArray(urls) ? urls : (urls.data || [])
+      // serverUrls may be an array, an EList (.data), or a space/comma-separated
+      // string (attribute form in config.xmi)
+      const arr = Array.isArray(urls)
+        ? urls
+        : (urls.data || (typeof urls === 'string' ? urls.split(/[\s,]+/).filter(Boolean) : []))
       servers.push(...arr.map(String))
     }
   }
