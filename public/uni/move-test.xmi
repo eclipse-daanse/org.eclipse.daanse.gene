@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mt:Library xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:mt="http://example.org/movetest" xmi:id="lib">
+  <books xmi:id="bookA" title="A">
+    <chapters xmi:id="chap1" title="A.1"/>
+  </books>
+  <books xmi:id="bookB" title="B"/>
+  <featured xmi:id="bookC" title="C"/>
+  <owner xmi:id="personP" name="P"/>
+</mt:Library>
