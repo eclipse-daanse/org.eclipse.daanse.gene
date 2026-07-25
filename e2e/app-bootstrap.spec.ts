@@ -65,11 +65,13 @@ test.describe('App Bootstrap', () => {
 
     // Navigate fresh so we capture all logs
     await page.goto('/')
-    await page.waitForSelector('.gene-layout', { timeout: 15_000 })
-    // Give TSM time to finish loading modules
-    await page.waitForTimeout(3000)
+    // Cold-start dev-server compilation can be slow in CI; allow generous time.
+    await page.waitForSelector('.gene-layout', { timeout: 30_000 })
 
-    const hasBootstrapComplete = logs.some(l => l.includes('Bootstrap complete'))
-    expect(hasBootstrapComplete).toBe(true)
+    // Poll for the bootstrap-complete log instead of a fixed wait, so we don't
+    // race TSM finishing module load.
+    await expect
+      .poll(() => logs.some(l => l.includes('Bootstrap complete')), { timeout: 20_000 })
+      .toBe(true)
   })
 })

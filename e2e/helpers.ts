@@ -5,8 +5,10 @@ import { type Page } from '@playwright/test'
  */
 export async function waitForAppReady(page: Page): Promise<void> {
   await page.goto('/')
-  await page.waitForSelector('.gene-layout', { timeout: 15_000 })
-  await page.waitForSelector('.activity-bar .activity-item', { timeout: 10_000 })
+  // The dev server compiles modules on demand, so the first navigation in CI can
+  // be slow (cold start). Allow generous time for the layout to appear.
+  await page.waitForSelector('.gene-layout', { timeout: 30_000 })
+  await page.waitForSelector('.activity-bar .activity-item', { timeout: 15_000 })
 }
 
 /**

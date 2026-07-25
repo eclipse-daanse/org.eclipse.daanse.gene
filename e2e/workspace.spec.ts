@@ -88,19 +88,24 @@ test.describe('Model & Instances', () => {
     // Wait for tree to render
     await page.waitForTimeout(500)
 
-    // Find tree toggler buttons (PrimeVue Tree expand icons)
-    const togglers = page.locator('.p-tree-node-toggle-button, .p-tree-toggler')
+    // The resource tier auto-expands on load, so the first toggler belongs to the
+    // resource node (clicking it would COLLAPSE). Target object-node togglers
+    // (rows that are not the resource node) to actually expand deeper.
+    const togglers = page
+      .locator('.p-tree-node-content')
+      .filter({ hasNot: page.locator('.tree-node--resource') })
+      .locator('.p-tree-node-toggle-button')
     const count = await togglers.count()
 
     if (count > 0) {
-      // Click first toggler to expand
+      const before = await page.locator('.p-tree-node').count()
+      // Click first object toggler to expand
       await togglers.first().click()
       await page.waitForTimeout(300)
 
-      // After expanding, there should be child nodes visible
-      const childNodes = page.locator('.p-tree-node')
-      const childCount = await childNodes.count()
-      expect(childCount).toBeGreaterThan(1)
+      // After expanding, more nodes should be visible than before
+      const after = await page.locator('.p-tree-node').count()
+      expect(after).toBeGreaterThan(before)
     }
   })
 
