@@ -897,18 +897,54 @@ export function useInstanceTree(
   }
 
   /**
-   * Reorder/move an object so it becomes a sibling of `target` (right after it by
-   * default). Works within the same container (pure reorder) AND across containers
-   * or resources (move + position). Uses EList.addAt for precise positioning.
+   * Validate whether `dragged` may be moved beside `target` (i.e. inserted as a
+   * sibling into the target's containing feature). Checks, in order: not self, not
+   * into its own subtree, the target feature is multi-valued, and the dragged
+   * object's type is allowed by the containment reference. Returns a `reason` string
+   * on rejection (for UI feedback). Root-level targets (no container) accept any type.
    */
-  function moveObjectBeside(dragged: EObject, target: EObject, after = true): boolean {
+  function canMoveBeside(dragged: EObject, target: EObject): { ok: boolean; reason?: string } {
     const raw: any = toRaw(dragged)
     const t: any = toRaw(target)
-    if (!raw || !t || raw === t) return false
+    if (!raw || !t) return { ok: false, reason: 'Ungültige Auswahl.' }
+    if (raw === t) return { ok: false }
 
     // Never drop an object into its own subtree
     let anc: any = t.eContainer?.()
-    while (anc) { if (toRaw(anc) === raw) return false; anc = anc.eContainer?.() }
+    while (anc) {
+      if (toRaw(anc) === raw) return { ok: false, reason: 'Ein Objekt kann nicht in seinen eigenen Teilbaum verschoben werden.' }
+      anc = anc.eContainer?.()
+    }
+
+    const tContainer: any = t.eContainer?.()
+    if (!tContainer) return { ok: true } // target is a root → roots accept any type
+
+    const feature: any = t.eContainingFeature?.()
+    const fname: string = feature?.getName?.() ?? 'Referenz'
+    if (!feature || typeof feature.isMany !== 'function' || !feature.isMany()) {
+      return { ok: false, reason: `„${fname}“ ist keine Mehrfach-Referenz – hier kann nichts eingeordnet werden.` }
+    }
+    // Type compatibility: dragged's class must be assignable to the reference's type
+    const refType: any = typeof feature.getEReferenceType === 'function'
+      ? feature.getEReferenceType()
+      : feature.getEType?.()
+    const dc: any = raw.eClass?.()
+    if (refType && dc && !(refType === dc || (typeof refType.isSuperTypeOf === 'function' && refType.isSuperTypeOf(dc)))) {
+      return { ok: false, reason: `${dc.getName?.() ?? 'Objekt'} ist in „${fname}“ (erwartet ${refType.getName?.() ?? '?'}) nicht erlaubt.` }
+    }
+    return { ok: true }
+  }
+
+  /**
+   * Reorder/move an object so it becomes a sibling of `target` (right after it by
+   * default). Works within the same container (pure reorder) AND across containers
+   * or resources (move + position). Uses EList.addAt for precise positioning.
+   * Invalid moves are rejected (see canMoveBeside).
+   */
+  function moveObjectBeside(dragged: EObject, target: EObject, after = true): boolean {
+    if (!canMoveBeside(dragged, target).ok) return false
+    const raw: any = toRaw(dragged)
+    const t: any = toRaw(target)
 
     // Resolve the target's sibling list + owning resource
     const tContainer: any = t.eContainer?.()
@@ -916,7 +952,6 @@ export function useInstanceTree(
     let targetRes: any
     if (tContainer) {
       const feature: any = t.eContainingFeature?.()
-      if (!feature || typeof feature.isMany !== 'function' || !feature.isMany()) return false
       list = toRaw(tContainer.eGet(feature))
       targetRes = tContainer.eResource?.()
     } else {
@@ -1195,6 +1230,7 @@ export function useInstanceTree(
     clearResources,
     moveToResource,
     moveObjectBeside,
+    canMoveBeside,
     serializeResource,
     markResourceDirty: (res: Resource) => markDirty(res),
 
