@@ -143,11 +143,14 @@
     // --- Plugin-Liste + Defaults aus Repo laden ---
     async function loadData() {
       try {
-        // Branches laden
-        const branches = await api(`repos/${REPO}/branches`)
-        branchSelect.innerHTML = branches.map(b =>
-          `<option ${b.name === 'main' ? 'selected' : ''}>${b.name}</option>`
-        ).join('')
+        // Branches laden (per_page=100, sonst liefert die API nur die ersten 30
+        // alphabetisch -> bei vielen feat/fix-Branches faellt "main" von Seite 1).
+        const branches = await api(`repos/${REPO}/branches?per_page=100`)
+        branchSelect.innerHTML = branches
+          .slice()
+          .sort((a, b) => (a.name === 'main' ? -1 : b.name === 'main' ? 1 : a.name.localeCompare(b.name)))
+          .map(b => `<option ${b.name === 'main' ? 'selected' : ''}>${b.name}</option>`)
+          .join('')
 
         // release-plugins.json laden (Defaults)
         try {
