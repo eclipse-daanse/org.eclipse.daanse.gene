@@ -161,6 +161,8 @@ export function createInstanceContext(): EditorContext {
     moveToResource: (obj: EObject, target: Resource) => instanceTree.moveToResource(obj, target),
     moveObjectBeside: (dragged: EObject, target: EObject, after?: boolean) => instanceTree.moveObjectBeside(dragged, target, after),
     canMoveBeside: (dragged: EObject, target: EObject) => instanceTree.canMoveBeside(dragged, target),
+    canDropInto: (dragged: EObject, targetParent: EObject) => instanceTree.canDropInto(dragged, targetParent),
+    moveInto: (dragged: EObject, targetParent: EObject, ref: EReference) => instanceTree.moveInto(dragged, targetParent, ref),
     isResourceDirty: (res: Resource) => instanceTree.isResourceDirty(res),
     saveResource: async (res: Resource): Promise<SerializedResource> => {
       const content = await instanceTree.serializeResource(res)

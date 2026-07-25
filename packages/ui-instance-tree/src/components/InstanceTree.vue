@@ -110,23 +110,25 @@ function onNodeContextMenu(node: any, event: MouseEvent) {
 
 // ── Node drag-and-drop via PrimeVue Tree (draggableNodes / droppableNodes) ──
 /**
- * PrimeVue's node-drop event does NOT expose the drop position (before/after/into);
- * `dropPosition` is internal to the node component. Derive before/after ourselves
- * from the pointer position relative to the target row: upper half → before,
- * lower half → after. This makes the two drop-points of the same gap (target's
- * "after" and next node's "before") resolve consistently — otherwise an "insert
- * before" gesture was silently turned into "insert after" (one row too low).
+ * PrimeVue's node-drop event does NOT expose the drop position (before/into/after);
+ * `dropPosition` is internal to the node component. Derive the zone ourselves from
+ * the pointer position relative to the target row, using the SAME thresholds as
+ * PrimeVue's own drag-over (top 25% → before, bottom 25% → after, middle → into),
+ * so the visual indicator (drop-line vs. into-box) matches what actually happens.
  */
-function isDropAfter(event: any, fallback = true): boolean {
+function getDropZone(event: any): 'before' | 'into' | 'after' {
   const oe = event?.originalEvent
   const y = oe?.clientY
   const tgt = oe?.target as HTMLElement | undefined
-  if (typeof y !== 'number' || !tgt?.closest) return fallback
+  if (typeof y !== 'number' || !tgt?.closest) return 'after'
   const nodeEl = tgt.closest('.p-tree-node') as HTMLElement | null
   const rowEl = (nodeEl?.querySelector(':scope > .p-tree-node-content') as HTMLElement | null) || nodeEl
   const rect = rowEl?.getBoundingClientRect?.()
-  if (!rect || !rect.height) return fallback
-  return y >= rect.top + rect.height / 2
+  if (!rect || !rect.height) return 'after'
+  const rel = (y - rect.top) / rect.height
+  if (rel < 0.25) return 'before'
+  if (rel > 0.75) return 'after'
+  return 'into'
 }
 
 // ── FLIP animation: after a reorder/move, glide rows to their new positions ──
@@ -219,16 +221,24 @@ function resolveDraggingObject(): any {
   return findTreeNode(key)?.data ?? null
 }
 
-// Mark an object row red while hovering it during a drag if the move is not allowed.
+// Mark an object row red while hovering it during a drag when NEITHER inserting
+// beside it NOR into it is possible (a fully invalid target).
 function onNodeDragEnter(e: any) {
   const target = e?.node
   if (!target || target.kind === 'resource' || !target.data) { invalidDropKey.value = null; return }
   const dragged = resolveDraggingObject()
   if (!dragged) { invalidDropKey.value = null; return }
-  const check = (ctx as any).canMoveBeside?.(dragged, target.data) ?? { ok: true }
-  invalidDropKey.value = check.ok ? null : target.key
+  const beside = (ctx as any).canMoveBeside?.(dragged, target.data)?.ok ?? true
+  const into = (ctx as any).canDropInto?.(dragged, target.data)?.ok ?? false
+  invalidDropKey.value = (beside || into) ? null : target.key
 }
 function clearDragFeedback() { invalidDropKey.value = null }
+
+/** Perform a move + FLIP animation (snapshots positions just before the change). */
+function performMove(fn: () => boolean) {
+  const first = captureRowRects()
+  if (fn()) animateReorder(first)
+}
 
 function onTreeNodeDrop(event: any) {
   clearDragFeedback()
@@ -239,24 +249,62 @@ function onTreeNodeDrop(event: any) {
   if (!draggedObj || dragNode?.kind === 'resource') return
   if (!dropNode || dropNode === dragNode) return
 
-  // Validate object-to-object moves and reject with feedback (resource drops are
-  // always allowed — a resource root accepts any type).
-  if (dropNode.kind !== 'resource' && dropNode.data) {
-    const check = (ctx as any).canMoveBeside?.(draggedObj, dropNode.data) ?? { ok: true }
-    if (!check.ok) { showDropMessage(check.reason); return }
+  // Dropped onto a resource → make it a root of that resource (any type allowed)
+  if (dropNode.kind === 'resource') {
+    performMove(() => !!(ctx as any).moveToResource?.(draggedObj, dropNode.resource))
+    return
+  }
+  if (!dropNode.data) return
+
+  const zone = getDropZone(event)
+  if (zone === 'into') {
+    // Drop INTO the target as a child — resolve the containment reference.
+    const res = (ctx as any).canDropInto?.(draggedObj, dropNode.data) ?? { ok: false, refs: [] }
+    if (!res.ok) { showDropMessage(res.reason); return }
+    if (res.refs.length === 1) {
+      performMove(() => !!(ctx as any).moveInto?.(draggedObj, dropNode.data, res.refs[0]))
+    } else {
+      openIntoDialog(draggedObj, dropNode.data, res.refs)
+    }
+    return
   }
 
-  // Snapshot positions BEFORE the model changes, then animate the delta.
-  const first = captureRowRects()
-  let moved = false
-  if (dropNode.kind === 'resource') {
-    // Dropped onto a resource → make it a root of that resource
-    moved = !!(ctx as any).moveToResource?.(draggedObj, dropNode.resource)
-  } else if (dropNode.data) {
-    // Dropped next to another object → reorder/move to that side (before/after)
-    moved = !!(ctx as any).moveObjectBeside?.(draggedObj, dropNode.data, isDropAfter(event))
+  // Dropped next to the target → reorder/move to that side (before/after)
+  const check = (ctx as any).canMoveBeside?.(draggedObj, dropNode.data) ?? { ok: true }
+  if (!check.ok) { showDropMessage(check.reason); return }
+  performMove(() => !!(ctx as any).moveObjectBeside?.(draggedObj, dropNode.data, zone === 'after'))
+}
+
+// ── "Insert into" dialog (when a target has several matching containment refs) ──
+const showIntoDialog = ref(false)
+const intoDragged = ref<any>(null)
+const intoTarget = ref<any>(null)
+const intoRefs = ref<any[]>([])
+
+function openIntoDialog(dragged: any, target: any, refs: any[]) {
+  intoDragged.value = dragged
+  intoTarget.value = target
+  intoRefs.value = refs
+  showIntoDialog.value = true
+}
+function closeIntoDialog() {
+  showIntoDialog.value = false
+  intoDragged.value = null
+  intoTarget.value = null
+  intoRefs.value = []
+}
+function chooseIntoRef(ref: any) {
+  const dragged = intoDragged.value
+  const target = intoTarget.value
+  closeIntoDialog()
+  if (dragged && target && ref) {
+    performMove(() => !!(ctx as any).moveInto?.(dragged, target, ref))
   }
-  if (moved) animateReorder(first)
+}
+function refLabel(ref: any): string { return ref?.getName?.() ?? 'Referenz' }
+function refTypeLabel(ref: any): string {
+  const t = typeof ref?.getEReferenceType === 'function' ? ref.getEReferenceType() : ref?.getEType?.()
+  return t?.getName?.() ?? ''
 }
 
 // New Resource dialog (name + path)
@@ -1071,6 +1119,32 @@ watch(ctxSelectedObject, (obj) => {
       </template>
     </Dialog>
 
+    <!-- Insert-into dialog: target has several matching containment references -->
+    <Dialog
+      v-model:visible="showIntoDialog"
+      header="In welche Referenz einfügen?"
+      :modal="true"
+      :style="{ width: '420px' }"
+      @hide="closeIntoDialog"
+    >
+      <div class="into-options">
+        <button
+          v-for="r in intoRefs"
+          :key="refLabel(r)"
+          type="button"
+          class="into-option"
+          @click="chooseIntoRef(r)"
+        >
+          <i class="pi pi-sitemap"></i>
+          <span class="into-ref">{{ refLabel(r) }}</span>
+          <span v-if="refTypeLabel(r)" class="into-type">{{ refTypeLabel(r) }}</span>
+        </button>
+      </div>
+      <template #footer>
+        <Button label="Abbrechen" severity="secondary" @click="closeIntoDialog" />
+      </template>
+    </Dialog>
+
     <!-- New Resource Dialog -->
     <Dialog
       v-model:visible="showNewResourceDialog"
@@ -1376,7 +1450,7 @@ watch(ctxSelectedObject, (obj) => {
   transform: translateY(-50%);
 }
 
-/* Middle-of-row hover: soft highlight (cursor half still decides before/after) */
+/* Middle-of-row hover = "insert into" (drop as child): soft highlight box */
 :deep(.p-tree-node-content.p-tree-node-dragover) {
   background: var(--primary-50, rgba(59, 130, 246, 0.12));
   box-shadow: inset 0 0 0 1px var(--primary-color, #3b82f6);
@@ -1423,6 +1497,39 @@ watch(ctxSelectedObject, (obj) => {
 .drop-msg-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
 .drop-msg-enter-from,
 .drop-msg-leave-to { opacity: 0; transform: translateY(0.5rem); }
+
+/* Insert-into dialog options */
+.into-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.into-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface-card, var(--surface-0, #fff));
+  border: 1px solid var(--surface-border, #e2e8f0);
+  border-radius: 6px;
+  color: var(--text-color, inherit);
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.into-option:hover {
+  background: var(--primary-50, rgba(59, 130, 246, 0.12));
+  border-color: var(--primary-color, #3b82f6);
+}
+.into-option i { color: var(--text-color-secondary, #64748b); }
+.into-option .into-ref { font-weight: 600; }
+.into-option .into-type {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary, #64748b);
+}
 
 /* Dialog styles */
 .dialog-content {
