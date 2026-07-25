@@ -185,13 +185,66 @@ async function animateReorder(first: Map<string, { top: number; left: number }>)
   }, 280)
 }
 
+// ── Drop validation feedback ────────────────────────────────────────────────
+// Key of the row currently highlighted as an INVALID drop target (during drag).
+const invalidDropKey = ref<string | null>(null)
+// Transient message shown when a drop is rejected.
+const dropMessage = ref<string | null>(null)
+let dropMessageTimer: number | undefined
+
+function showDropMessage(reason?: string) {
+  dropMessage.value = reason || 'Verschieben an dieser Stelle nicht möglich.'
+  if (dropMessageTimer) window.clearTimeout(dropMessageTimer)
+  dropMessageTimer = window.setTimeout(() => { dropMessage.value = null }, 3000)
+}
+
+/** Find a tree node by its key by walking the current tree. */
+function findTreeNode(key: string | null): any {
+  if (!key) return null
+  const stack = [...(ctxTreeNodes.value || [])]
+  while (stack.length) {
+    const n = stack.pop()
+    if (!n) continue
+    if (n.key === key) return n
+    if (n.children) stack.push(...n.children)
+  }
+  return null
+}
+
+/** Resolve the object currently being dragged via PrimeVue's data-p-dragging marker. */
+function resolveDraggingObject(): any {
+  const root = treeContainerRef.value
+  const src = root?.querySelector('.p-tree-node-content[data-p-dragging="true"]')
+  const key = src?.querySelector('[data-node-key]')?.getAttribute('data-node-key') ?? null
+  return findTreeNode(key)?.data ?? null
+}
+
+// Mark an object row red while hovering it during a drag if the move is not allowed.
+function onNodeDragEnter(e: any) {
+  const target = e?.node
+  if (!target || target.kind === 'resource' || !target.data) { invalidDropKey.value = null; return }
+  const dragged = resolveDraggingObject()
+  if (!dragged) { invalidDropKey.value = null; return }
+  const check = (ctx as any).canMoveBeside?.(dragged, target.data) ?? { ok: true }
+  invalidDropKey.value = check.ok ? null : target.key
+}
+function clearDragFeedback() { invalidDropKey.value = null }
+
 function onTreeNodeDrop(event: any) {
+  clearDragFeedback()
   const dragNode = event?.dragNode
   const dropNode = event?.dropNode
   const draggedObj = dragNode?.data
   // Only object nodes are moved; resource nodes are not draggable
   if (!draggedObj || dragNode?.kind === 'resource') return
   if (!dropNode || dropNode === dragNode) return
+
+  // Validate object-to-object moves and reject with feedback (resource drops are
+  // always allowed — a resource root accepts any type).
+  if (dropNode.kind !== 'resource' && dropNode.data) {
+    const check = (ctx as any).canMoveBeside?.(draggedObj, dropNode.data) ?? { ok: true }
+    if (!check.ok) { showDropMessage(check.reason); return }
+  }
 
   // Snapshot positions BEFORE the model changes, then animate the delta.
   const first = captureRowRects()
@@ -918,7 +971,7 @@ watch(ctxSelectedObject, (obj) => {
     </div>
 
     <!-- Instance tree -->
-    <div v-else class="tree-container" ref="treeContainerRef">
+    <div v-else class="tree-container" ref="treeContainerRef" @dragend.capture="clearDragFeedback">
       <Tree
         :value="ctxTreeNodes"
         v-model:selectionKeys="ctxSelectedKeys"
@@ -928,12 +981,17 @@ watch(ctxSelectedObject, (obj) => {
         :droppableNodes="true"
         @node-select="handleNodeSelect"
         @node-drop="onTreeNodeDrop"
+        @node-dragenter="onNodeDragEnter"
+        @node-dragleave="clearDragFeedback"
         class="emf-tree"
       >
         <template #default="{ node }">
           <div
             class="tree-node"
-            :class="{ 'tree-node--resource': node.kind === 'resource' }"
+            :class="{
+              'tree-node--resource': node.kind === 'resource',
+              'tree-node--invalid-drop': node.key === invalidDropKey
+            }"
             :data-node-key="node.key"
             @contextmenu.prevent="(event) => onNodeContextMenu(node, event)"
           >
@@ -950,6 +1008,14 @@ watch(ctxSelectedObject, (obj) => {
           </div>
         </template>
       </Tree>
+
+      <!-- Transient feedback when a drop was rejected -->
+      <transition name="drop-msg">
+        <div v-if="dropMessage" class="drop-message">
+          <i class="pi pi-ban"></i>
+          <span>{{ dropMessage }}</span>
+        </div>
+      </transition>
     </div>
 
     <!-- Drag overlay -->
@@ -1112,6 +1178,7 @@ watch(ctxSelectedObject, (obj) => {
 .tree-container {
   flex: 1;
   overflow: auto;
+  position: relative;
 }
 
 .emf-tree {
@@ -1314,6 +1381,48 @@ watch(ctxSelectedObject, (obj) => {
   background: var(--primary-50, rgba(59, 130, 246, 0.12));
   box-shadow: inset 0 0 0 1px var(--primary-color, #3b82f6);
 }
+
+/* Invalid drop target (type not allowed / not a multi-valued container) — mark red */
+.tree-node--invalid-drop {
+  cursor: not-allowed;
+}
+:deep(.p-tree-node-content:has(.tree-node--invalid-drop)) {
+  outline: 1px dashed var(--red-500, #ef4444);
+  outline-offset: -1px;
+  border-radius: 4px;
+  background: var(--red-50, rgba(239, 68, 68, 0.1));
+}
+/* Recolor the reorder line/dot on an invalid target */
+:deep(.p-tree-node:has(.tree-node--invalid-drop) .p-tree-node-drop-point) {
+  border-top-color: var(--red-500, #ef4444);
+}
+:deep(.p-tree-node:has(.tree-node--invalid-drop) .p-tree-node-drop-point)::before {
+  background: var(--red-500, #ef4444);
+}
+
+/* Transient rejection message */
+.drop-message {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--red-50, #fef2f2);
+  color: var(--red-700, #b91c1c);
+  border: 1px solid var(--red-200, #fecaca);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+}
+.drop-message i { flex-shrink: 0; }
+.drop-msg-enter-active,
+.drop-msg-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.drop-msg-enter-from,
+.drop-msg-leave-to { opacity: 0; transform: translateY(0.5rem); }
 
 /* Dialog styles */
 .dialog-content {
