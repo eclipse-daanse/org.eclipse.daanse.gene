@@ -49,6 +49,8 @@ const sharedTree = useSharedInstanceTree()
 
 // Listen for events from sidebar header actions and central menu
 eventBus?.on?.('show-new-instance-dialog', () => { showNewInstanceDialog.value = true })
+// The header "+" opens a menu: New Instance / New Resource
+eventBus?.on?.('show-add-menu', (e: any) => { addMenu.value?.show?.(e) })
 
 
 // Helper to get name from ENamedElement - handles both native and DynamicEObject
@@ -235,6 +237,18 @@ const viewFilterMenuItems = computed(() => {
 function toggleViewFilterMenu(event: Event) {
   viewFilterMenu.value?.toggle(event)
 }
+
+// "+" add menu: New Instance / New Resource
+const addMenu = ref<any>(null)
+const addMenuItems = computed(() => {
+  const items: any[] = [
+    { label: 'New Instance', icon: 'pi pi-plus', command: () => { showNewInstanceDialog.value = true } }
+  ]
+  if (canManageResources.value) {
+    items.push({ label: 'New Resource…', icon: 'pi pi-box', command: () => createResourcePrompt() })
+  }
+  return items
+})
 
 // Available classes for creating instances (filtered by active view)
 const views = useSharedViews()
@@ -865,6 +879,9 @@ watch(ctxSelectedObject, (obj) => {
 
     <!-- Context Menu -->
     <ContextMenu ref="contextMenu" :model="contextMenuItems" />
+
+    <!-- "+" add menu (New Instance / New Resource) -->
+    <Menu ref="addMenu" :model="addMenuItems" :popup="true" />
 
     <!-- New Instance Dialog -->
     <Dialog

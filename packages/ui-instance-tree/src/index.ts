@@ -391,7 +391,7 @@ export async function activate(context: ModuleContext): Promise<void> {
       defaultOrder: 0,
       headerActions: [
         { icon: 'pi pi-search', tooltip: 'Search (Ctrl+Shift+F)', onClick: () => eventBus?.emit('open-search-dialog') },
-        { icon: 'pi pi-plus', tooltip: 'New Instance', onClick: () => eventBus?.emit('show-new-instance-dialog') }
+        { icon: 'pi pi-plus', tooltip: 'New…', onClick: (e: any) => eventBus?.emit('show-add-menu', e) }
       ]
     } as any)
     context.log.info('Instance Tree panel registered')
