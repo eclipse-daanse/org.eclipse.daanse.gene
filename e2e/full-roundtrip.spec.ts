@@ -82,7 +82,7 @@ async function createEcoreViaUI(page: Page): Promise<void> {
   await page.locator('#refContainment').click()
   await page.getByRole('button', { name: 'Select…' }).click()
   await page.waitForTimeout(500)
-  await page.locator('.ccp-tree .p-tree-node-content:has(.ccp-node:text-is("Product"))').first().click()
+  await page.locator('.picker-item:has(.picker-item-label:text-is("Product"))').first().click()
   await page.getByRole('button', { name: 'Create', exact: true }).click()
 
   // Add "title: EString" attribute to Product

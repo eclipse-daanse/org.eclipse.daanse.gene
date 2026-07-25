@@ -232,7 +232,7 @@ test.describe('Metamodeler: Create Ecore Model', () => {
     // Select "Product" as target type via ClassPicker
     await page.getByRole('button', { name: 'Select…' }).click()
     await page.waitForTimeout(500)
-    const productInPicker = page.locator('.ccp-tree .p-tree-node-content:has(.ccp-node:text-is("Product"))').first()
+    const productInPicker = page.locator('.picker-item:has(.picker-item-label:text-is("Product"))').first()
     await productInPicker.click()
 
     // Target shows "Product", create
@@ -285,7 +285,7 @@ test.describe('Metamodeler: Create Ecore Model', () => {
     await page.locator('#refContainment').click()
     await page.getByRole('button', { name: 'Select…' }).click()
     await page.waitForTimeout(500)
-    await page.locator('.ccp-tree .p-tree-node-content:has(.ccp-node:text-is("Child"))').first().click()
+    await page.locator('.picker-item:has(.picker-item-label:text-is("Child"))').first().click()
     await page.getByRole('button', { name: 'Create', exact: true }).click()
 
     // --- Add "parent" reference from Child → Parent ---
@@ -297,7 +297,7 @@ test.describe('Metamodeler: Create Ecore Model', () => {
     await page.locator('#refName').fill('parent')
     await page.getByRole('button', { name: 'Select…' }).click()
     await page.waitForTimeout(500)
-    await page.locator('.ccp-tree .p-tree-node-content:has(.ccp-node:text-is("Parent"))').first().click()
+    await page.locator('.picker-item:has(.picker-item-label:text-is("Parent"))').first().click()
     await page.getByRole('button', { name: 'Create', exact: true }).click()
 
     // --- Expand Child, select "parent: Parent" reference ---
