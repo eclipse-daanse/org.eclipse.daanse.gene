@@ -1222,6 +1222,38 @@ watch(ctxSelectedObject, (obj) => {
   font-size: 0.875rem;
 }
 
+/* ── Drag & Drop feedback ─────────────────────────────────────────────── */
+/* Source row while it is being dragged (PrimeVue sets data-p-dragging) */
+:deep(.p-tree-node-content[data-p-dragging='true']) {
+  opacity: 0.4;
+}
+
+/* Reorder indicator between rows: a clean thin line (not the default empty box) */
+:deep(.p-tree-node-drop-point) {
+  height: 0;
+  margin: 0 0.25rem;
+  border-top: 2px solid var(--primary-color, #3b82f6);
+  border-radius: 2px;
+  position: relative;
+}
+:deep(.p-tree-node-drop-point)::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary-color, #3b82f6);
+  transform: translateY(-50%);
+}
+
+/* Middle-of-row hover: soft highlight (cursor half still decides before/after) */
+:deep(.p-tree-node-content.p-tree-node-dragover) {
+  background: var(--primary-50, rgba(59, 130, 246, 0.12));
+  box-shadow: inset 0 0 0 1px var(--primary-color, #3b82f6);
+}
+
 /* Dialog styles */
 .dialog-content {
   display: flex;
@@ -1283,4 +1315,34 @@ watch(ctxSelectedObject, (obj) => {
   background: var(--primary-50);
 }
 
+</style>
+
+<!--
+  Global (non-scoped) style for the drag ghost. PrimeVue clones the dragged row
+  and appends it to <body> as the native drag image (data-pc-section="drag-image"),
+  so it lives OUTSIDE this component's scoped styles and would otherwise render with
+  no background/padding (looks broken). Give it a clean, solid card look here.
+-->
+<style>
+[data-pc-section='drag-image'] {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  box-sizing: border-box;
+  width: auto !important;
+  height: auto !important;
+  padding: 0.25rem 0.6rem;
+  background: var(--surface-0, #ffffff);
+  color: var(--text-color, #1e293b);
+  border: 1px solid var(--surface-border, #e2e8f0);
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+  font-size: 0.875rem;
+  white-space: nowrap;
+  opacity: 0.95;
+  pointer-events: none;
+}
+[data-pc-section='drag-image'] .p-tree-node-toggle-button {
+  display: none;
+}
 </style>
