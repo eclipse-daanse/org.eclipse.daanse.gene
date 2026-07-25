@@ -33,7 +33,7 @@ const perspective = tsm?.getService('ui.perspectives')?.useSharedPerspective()
 const workspaceSettings = computed(() => perspective?.state?.workspaceSettings)
 
 // === Master-Detail Navigation ===
-type SettingsCategory = 'icons' | 'views' | 'actions' | 'events' | 'storage' | 'resolvers'
+type SettingsCategory = 'icons' | 'views' | 'actions' | 'events' | 'storage' | 'resolvers' | 'about'
 
 const categories: { id: SettingsCategory; label: string; icon: string }[] = [
   { id: 'icons', label: 'Icon Mappings', icon: 'pi pi-palette' },
@@ -41,8 +41,19 @@ const categories: { id: SettingsCategory; label: string; icon: string }[] = [
   { id: 'actions', label: 'Actions', icon: 'pi pi-play' },
   { id: 'events', label: 'Event Mappings', icon: 'pi pi-bolt' },
   { id: 'storage', label: 'Storage', icon: 'pi pi-database' },
-  { id: 'resolvers', label: 'Package Resolvers', icon: 'pi pi-link' }
+  { id: 'resolvers', label: 'Package Resolvers', icon: 'pi pi-link' },
+  { id: 'about', label: 'About', icon: 'pi pi-info-circle' }
 ]
+
+// ── About: Gene version + loaded plugin manifests ──────────────────────────
+declare const __GENE_VERSION__: string
+const geneVersion = typeof __GENE_VERSION__ !== 'undefined' ? __GENE_VERSION__ : 'dev'
+
+const loadedManifests = computed(() => {
+  const system: any = tsm?.getService?.('tsm.system')
+  const manifests: any[] = system?.getManifests?.() || []
+  return [...manifests].sort((a, b) => (a?.id || '').localeCompare(b?.id || ''))
+})
 
 const selectedCategory = ref<SettingsCategory>(
   (props.initialSection as SettingsCategory) || 'icons'
@@ -768,6 +779,40 @@ function formatKind(kind: string): string {
                 No package resolvers configured. Local registry is always used as default.
               </div>
             </div>
+
+            <!-- About -->
+            <div v-else-if="selectedCategory === 'about'" class="detail-content">
+              <h3 class="detail-title">About</h3>
+              <p class="detail-description">GenE version and the manifests of the loaded plugins.</p>
+
+              <div class="about-version">
+                <i class="pi pi-box"></i>
+                <span class="about-version-name">GenE</span>
+                <span class="about-version-num">v{{ geneVersion }}</span>
+              </div>
+
+              <h4 class="about-plugins-title">Loaded plugins ({{ loadedManifests.length }})</h4>
+              <div class="about-plugins">
+                <DataTable :value="loadedManifests" size="small" scrollable scrollHeight="360px">
+                  <Column header="ID">
+                    <template #body="{ data }">
+                      <span class="about-plugin-id">{{ data.id }}</span>
+                    </template>
+                  </Column>
+                  <Column header="Name">
+                    <template #body="{ data }">{{ data.name || '—' }}</template>
+                  </Column>
+                  <Column header="Version" style="width: 110px">
+                    <template #body="{ data }">{{ data.version || '—' }}</template>
+                  </Column>
+                  <Column header="Dependencies">
+                    <template #body="{ data }">
+                      <span class="about-plugin-deps">{{ (data.dependencies && data.dependencies.length) ? data.dependencies.join(', ') : '—' }}</span>
+                    </template>
+                  </Column>
+                </DataTable>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -946,6 +991,48 @@ function formatKind(kind: string): string {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.about-version {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--surface-ground, rgba(127, 127, 127, 0.08));
+}
+
+.about-version i {
+  color: var(--primary-color, #6366f1);
+  font-size: 1.1rem;
+}
+
+.about-version-name {
+  font-weight: 700;
+}
+
+.about-version-num {
+  margin-left: auto;
+  font-family: monospace;
+  color: var(--text-color-secondary);
+}
+
+.about-plugins-title {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.about-plugin-id {
+  font-family: monospace;
+  font-size: 0.8125rem;
+  color: var(--primary-color, #6366f1);
+}
+
+.about-plugin-deps {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
 }
 
 .detail-title {

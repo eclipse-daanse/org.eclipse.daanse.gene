@@ -67,8 +67,20 @@ function scanTsmModules(): Map<string, TsmModule> {
 // Build module map at startup
 const tsmModules = scanTsmModules()
 
+// Gene version (from root package.json), exposed to the app as __GENE_VERSION__
+const geneVersion: string = (() => {
+  try {
+    return JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8')).version || 'dev'
+  } catch {
+    return 'dev'
+  }
+})()
+
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __GENE_VERSION__: JSON.stringify(geneVersion)
+  },
   plugins: [
     tidPlugin(),
     vue(),
