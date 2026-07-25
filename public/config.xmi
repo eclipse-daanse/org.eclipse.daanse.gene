@@ -32,8 +32,7 @@
   <!-- Plugin Configs -->
   <pluginConfigs xsi:type="actions:ActionsPluginConfig"
       xmlns:actions="http://gene/plugin/actions/1.0"
-      pluginId="ui-actions" enabled="true">
-    <serverUrls>http://localhost:3099</serverUrls>
-  </pluginConfigs>
+      pluginId="ui-actions" enabled="true"
+      serverUrls="http://localhost:3099"/>
 
 </gene:AppConfig>
