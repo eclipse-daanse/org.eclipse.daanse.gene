@@ -160,6 +160,7 @@ export function createInstanceContext(): EditorContext {
     deleteResource: (res: Resource) => instanceTree.deleteResource(res),
     moveToResource: (obj: EObject, target: Resource) => instanceTree.moveToResource(obj, target),
     moveObjectBeside: (dragged: EObject, target: EObject, after?: boolean) => instanceTree.moveObjectBeside(dragged, target, after),
+    canMoveBeside: (dragged: EObject, target: EObject) => instanceTree.canMoveBeside(dragged, target),
     isResourceDirty: (res: Resource) => instanceTree.isResourceDirty(res),
     saveResource: async (res: Resource): Promise<SerializedResource> => {
       const content = await instanceTree.serializeResource(res)

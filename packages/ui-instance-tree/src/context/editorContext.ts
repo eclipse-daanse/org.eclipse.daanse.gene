@@ -265,6 +265,8 @@ export interface EditorContext {
   moveToResource?: (obj: EObject, target: Resource) => boolean
   /** Reorder/move an object so it becomes a sibling of target (after it by default) */
   moveObjectBeside?: (dragged: EObject, target: EObject, after?: boolean) => boolean
+  /** Validate a move-beside without performing it (for drag feedback / prevention). */
+  canMoveBeside?: (dragged: EObject, target: EObject) => { ok: boolean; reason?: string }
   isResourceDirty?: (res: Resource) => boolean
   /** Serialize one resource → { filename, content } (caller writes the file) */
   saveResource?: (res: Resource) => Promise<SerializedResource>
