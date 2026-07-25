@@ -311,8 +311,8 @@ test.describe('Metamodeler: Create Ecore Model', () => {
     await parentRefNode.click()
     await page.waitForTimeout(500)
 
-    // Properties should now show EReference properties including "E Opposite"
-    await expect(page.getByText('E Opposite').first()).toBeVisible({ timeout: 5000 })
+    // Properties should now show the EReference eOpposite editor (label = feature name "eOpposite")
+    await expect(page.locator('.eopposite-field').first()).toBeVisible({ timeout: 5000 })
 
     // --- Set eOpposite via dropdown ---
     const oppositeDropdown = page.locator('.eopposite-field .p-select, .eopposite-field .p-dropdown').first()
