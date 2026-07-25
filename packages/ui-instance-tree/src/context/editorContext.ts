@@ -267,6 +267,10 @@ export interface EditorContext {
   moveObjectBeside?: (dragged: EObject, target: EObject, after?: boolean) => boolean
   /** Validate a move-beside without performing it (for drag feedback / prevention). */
   canMoveBeside?: (dragged: EObject, target: EObject) => { ok: boolean; reason?: string }
+  /** Validate dropping INTO a parent; returns eligible containment refs (dialog if >1). */
+  canDropInto?: (dragged: EObject, targetParent: EObject) => { ok: boolean; refs: EReference[]; reason?: string }
+  /** Move an object into a parent's specific containment reference. */
+  moveInto?: (dragged: EObject, targetParent: EObject, ref: EReference) => boolean
   isResourceDirty?: (res: Resource) => boolean
   /** Serialize one resource → { filename, content } (caller writes the file) */
   saveResource?: (res: Resource) => Promise<SerializedResource>

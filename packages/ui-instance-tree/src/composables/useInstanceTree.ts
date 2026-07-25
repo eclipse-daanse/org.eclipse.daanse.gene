@@ -982,6 +982,77 @@ export function useInstanceTree(
     }
   }
 
+  /** Whether a (containment) reference accepts an object of the given class. */
+  function refAcceptsType(ref: any, eClass: any): boolean {
+    const refType: any = typeof ref.getEReferenceType === 'function'
+      ? ref.getEReferenceType()
+      : ref.getEType?.()
+    if (!refType || !eClass) return false
+    return refType === eClass || (typeof refType.isSuperTypeOf === 'function' && refType.isSuperTypeOf(eClass))
+  }
+
+  /**
+   * Containment references of `targetParent` into which `dragged` may be dropped as
+   * a child: type-compatible, and either multi-valued or an empty single-valued ref
+   * (never clobbers an occupied single-valued containment). Excludes cycles.
+   */
+  function getDropContainments(dragged: EObject, targetParent: EObject): EReference[] {
+    const raw: any = toRaw(dragged)
+    const p: any = toRaw(targetParent)
+    if (!raw || !p || raw === p) return []
+    // Cycle guard: targetParent must not be inside dragged's own subtree
+    let anc: any = p
+    while (anc) { if (toRaw(anc) === raw) return []; anc = anc.eContainer?.() }
+    const pClass: any = p.eClass?.()
+    const dc: any = raw.eClass?.()
+    if (!pClass || !dc) return []
+    return getContainmentReferences(pClass).filter((ref: any) => {
+      if (!refAcceptsType(ref, dc)) return false
+      if (typeof ref.isMany === 'function' && ref.isMany()) return true
+      const cur = toRaw(p.eGet(ref))
+      return cur == null || (Array.isArray(cur) && cur.length === 0)
+    })
+  }
+
+  /**
+   * Validate dropping `dragged` INTO `targetParent` as a child. Returns the list of
+   * eligible containment references (may be several → caller resolves via dialog).
+   */
+  function canDropInto(dragged: EObject, targetParent: EObject): { ok: boolean; refs: EReference[]; reason?: string } {
+    const refs = getDropContainments(dragged, targetParent)
+    if (refs.length === 0) {
+      return { ok: false, refs, reason: 'Kann hier nicht als Kind eingefügt werden (kein passender Container).' }
+    }
+    return { ok: true, refs }
+  }
+
+  /** Move `dragged` into `targetParent`'s containment reference `ref`. */
+  function moveInto(dragged: EObject, targetParent: EObject, ref: EReference): boolean {
+    const raw: any = toRaw(dragged)
+    const p: any = toRaw(targetParent)
+    const r: any = toRaw(ref)
+    if (!raw || !p || !r) return false
+    // Re-validate against the current model state
+    if (!getDropContainments(raw, p).some(x => toRaw(x) === r)) return false
+    const srcRes: any = raw.eResource?.()
+    try {
+      detachObject(raw)
+      const list = toRaw(p.eGet(r))
+      if (list && typeof (list as any).add === 'function') (list as any).add(raw)
+      else if (list && typeof (list as any).push === 'function') (list as any).push(raw)
+      else p.eSet(r, raw) // empty single-valued containment
+      assignXmiId(raw)
+      if (srcRes) markDirty(srcRes)
+      const tRes: any = p.eResource?.()
+      if (tRes) markDirty(tRes)
+      triggerUpdate()
+      return true
+    } catch (e) {
+      console.warn('[InstanceTree] moveInto failed:', e)
+      return false
+    }
+  }
+
   /** Serialize a single resource to an XMI string */
   async function serializeResource(res: Resource): Promise<string> {
     const raw: any = toRaw(res)
@@ -1231,6 +1302,8 @@ export function useInstanceTree(
     moveToResource,
     moveObjectBeside,
     canMoveBeside,
+    canDropInto,
+    moveInto,
     serializeResource,
     markResourceDirty: (res: Resource) => markDirty(res),
 
