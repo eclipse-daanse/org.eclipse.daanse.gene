@@ -781,6 +781,8 @@ export function useInstanceTree(
 
     resources.value = [...resources.value, raw]
     activeResource.value = raw
+    // Auto-expand the resource node so its root objects are visible by default
+    if (uriStr) expandedKeys.value = { ...expandedKeys.value, [`res:${uriStr}`]: true }
     version.value++
     triggerRef(resources)
     return raw
