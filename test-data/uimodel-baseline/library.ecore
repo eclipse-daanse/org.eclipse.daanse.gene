@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" nsURI="http://www.gene.org/uimodel-baseline/library/1.0" nsPrefix="lib" name="librarybase">
+  <eClassifiers xsi:type="ecore:EEnum" name="Genre">
+    <eLiterals name="NOVEL"/>
+    <eLiterals value="1" name="SCIFI"/>
+    <eLiterals value="2" name="FANTASY"/>
+    <eLiterals value="3" name="NONFICTION"/>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Genre eines Mediums (EEnum-Abdeckung fuer den Property-View)."/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Library">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="name">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name der Bibliothek (Pflichtfeld, lowerBound=1)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" iD="true" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="code">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Fachlicher Schluessel (iD-Attribut, Primary Key)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EDate" name="founded">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Gruendungsdatum (EDate-Abdeckung)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EDouble" name="rating">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Bewertung (EDouble-Abdeckung)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EInt" name="maxMembers">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Maximale Mitgliederzahl (EInt-Abdeckung)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EBoolean" name="open">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Ist die Bibliothek geoeffnet (EBoolean-Abdeckung)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" upperBound="-1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="tags">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Freie Schlagworte (mehrwertiges Attribut, upperBound=-1)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="#//Shelf" name="shelves">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Regale (Containment-Referenz mit konkretem Typ)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="#//Member" name="members">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Mitglieder (Containment-Referenz mit konkretem Typ; Ziele fuer Non-Containment-Referenzen)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" eType="#//Medium" name="featuredMedium">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Medium des Monats (Non-Containment, einwertig, abstrakter Zieltyp)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" upperBound="-1" eType="#//Medium" name="highlights">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Empfehlungen (Non-Containment, mehrwertig)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" eType="#//Member" name="librarian">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Verantwortlicher Bibliothekar. Nur Mitglieder mit isStaff=true sind zulaessig (OCL-Referenzfilter)."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore/OCL">
+        <details key="referenceFilter" value="self.members-&gt;select(m | m.isStaff)-&gt;exists(m | m = target)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" changeable="false" volatile="true" transient="true" derived="true" eType="http://www.eclipse.org/emf/2002/Ecore#//EInt" name="memberCount">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Anzahl der Mitglieder (derived Attribut mit OCL-derivation)."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore/OCL">
+        <details key="derivation" value="self.members-&gt;size()"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" changeable="false" volatile="true" transient="true" derived="true" upperBound="-1" eType="#//Member" name="staff">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Alle Mitarbeiter (derived Referenz mit OCL-derivation)."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore/OCL">
+        <details key="derivation" value="self.members-&gt;select(m | m.isStaff)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eOperations eType="http://www.eclipse.org/emf/2002/Ecore#//EInt" name="getShelfCount">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Anzahl der Regale (EOperation ohne Parameter)."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore/OCL">
+        <details key="body" value="self.shelves-&gt;size()"/>
+      </eAnnotations>
+    </eOperations>
+    <eOperations eType="http://www.eclipse.org/emf/2002/Ecore#//EBoolean" name="hasTag">
+      <eParameters lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="searchTag">
+        <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+          <details key="documentation" value="Das zu suchende Schlagwort."/>
+        </eAnnotations>
+      </eParameters>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Prueft, ob ein Schlagwort vergeben ist (EOperation mit Parameter, oeffnet den Parameter-Dialog)."/>
+      </eAnnotations>
+      <eAnnotations source="http://www.eclipse.org/emf/2002/Ecore/OCL">
+        <details key="body" value="self.tags-&gt;exists(t | t = searchTag)"/>
+      </eAnnotations>
+    </eOperations>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Wurzelklasse der Baseline. Deckt alle Attribut-Typen, Referenz-Arten, Derived Features und Operationen ab."/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Shelf">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="name">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name des Regals (Pflichtfeld)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EInt" name="capacity">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Stellplaetze im Regal."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" containment="true" upperBound="-1" eType="#//Medium" name="media">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Medien in diesem Regal (Containment mit abstraktem Typ; Subklassen Book und Dvd -&gt; Klassenauswahl beim Anlegen)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Mittlere Ebene der Verschachtelung (Library -&gt; Shelf -&gt; Medium)."/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" abstract="true" name="Medium">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="name">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Titel des Mediums (Pflichtfeld)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="#//Genre" name="genre">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Genre (EEnum-Attribut)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Abstrakter Medientyp mit zwei konkreten Subklassen (Book, Dvd)."/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Book" eSuperTypes="#//Medium">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="author">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Autor des Buches."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EInt" name="pages">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Seitenzahl."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Konkrete Subklasse 1 von Medium."/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Dvd" eSuperTypes="#//Medium">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EInt" name="runtimeMinutes">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Laufzeit in Minuten."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Konkrete Subklasse 2 von Medium."/>
+    </eAnnotations>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Member">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" lowerBound="1" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="name">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Name des Mitglieds (Pflichtfeld)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EString" name="email">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="E-Mail-Adresse."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" eType="http://www.eclipse.org/emf/2002/Ecore#//EBoolean" name="isStaff">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Mitarbeiter-Flag. Steuert den OCL-Referenzfilter von Library.librarian."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Mitglied der Bibliothek. Ziel des OCL-gefilterten librarian-Referenz."/>
+    </eAnnotations>
+  </eClassifiers>
+  <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+    <details key="documentation" value="Baseline-Metamodell fuer den Property-View des Instance-Editors (Phase 0b, docs/concepts/uimodel-properties-plan.md Abschnitt 6.1). Deckt alle Komponenten-Typen des Panels ab."/>
+  </eAnnotations>
+</ecore:EPackage>
