@@ -21,6 +21,7 @@
   <startupModules>ui-problems-panel</startupModules>
   <startupModules>ui-workspace</startupModules>
   <startupModules>instance-builder</startupModules>
+  <startupModules>ui-uimodel-forms</startupModules>
   <startupModules>tsm-devtools</startupModules>
   <startupModules>ui-model-view</startupModules>
   <startupModules>metamodeler</startupModules>

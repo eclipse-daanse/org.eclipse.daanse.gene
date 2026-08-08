@@ -1,0 +1,16 @@
+{
+  "id": "ui-uimodel-forms",
+  "name": "UiModel Forms",
+  "version": "0.0.1",
+  "description": "UIModel-driven property forms (renders the instance property view via @emfts/uimodel-composer)",
+  "entry": "src/index.ts",
+  "provides": [
+    {
+      "id": "ui.uimodel.forms",
+      "description": "UiModel forms service: default UIModel generator, composer view, feature flag"
+    }
+  ],
+  "dependencies": [
+    "instance-builder"
+  ]
+}

@@ -1148,8 +1148,25 @@ provide(GENE_EDITOR_CONTEXT_KEY, {
   handleNavigate,
   handleSearch,
   mode: ctx.value?.mode ?? 'instance',
-  rootPackage: rootPackage.value
+  rootPackage: rootPackage.value,
+  // Wert-Zugriff + Aktionen fuer die UiModel-Widget-Bridge (ui-uimodel-forms):
+  // die Bridge rendert PropertyField ausserhalb dieses Templates und braucht
+  // dieselben Pfade fuer Lesen/Schreiben/Fehler wie die bisherigen Sektionen.
+  getFeatureValue,
+  setFeatureValue,
+  getFeatureError,
+  handleCreate,
+  handleOclBlocked
 })
+
+// ── UiModel-basiertes Rendering (Feature-Flag, Plan Phase 1) ────────────────
+const uimodelForms = tsm?.getService('ui.uimodel.forms')
+const uimodelFlag = uimodelForms?.useUimodelPropertiesFlag?.()
+const UimodelPropertiesView = uimodelForms?.UimodelPropertiesView
+// Nur im Instance-Modus (Metamodeler bleibt in dieser Iteration beim alten Pfad)
+const useUimodelRendering = computed(() =>
+  !!(uimodelFlag?.enabled?.value && UimodelPropertiesView && (ctx.value?.mode ?? 'instance') === 'instance')
+)
 
 /**
  * Handle OCL blocked assignment attempt
@@ -1340,6 +1357,17 @@ function handleCancelParameterDialog() {
           <span>This class has no editable properties.</span>
         </div>
 
+        <!-- UiModel-Pfad (Feature-Flag): Attributes + References rendert der
+             uimodel-composer; Wert-Zugriff/Aktionen laufen ueber den oben
+             bereitgestellten Editor-Kontext (identisches Verhalten). -->
+        <component
+          v-if="useUimodelRendering && selectedObject"
+          :is="UimodelPropertiesView"
+          :eObject="selectedObject"
+          :attributes="attributeFeatures"
+          :references="referenceFeatures"
+        />
+        <template v-else>
         <!-- Attributes -->
         <div v-if="hasAttributes" class="section-group">
           <div class="section-heading">Attributes</div>
@@ -1384,6 +1412,7 @@ function handleCancelParameterDialog() {
             />
           </div>
         </div>
+        </template>
 
         <!-- Derived Values -->
         <div v-if="hasDerivedFeatures" class="section-group">
