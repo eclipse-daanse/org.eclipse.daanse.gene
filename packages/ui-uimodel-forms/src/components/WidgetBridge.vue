@@ -12,6 +12,9 @@
  */
 import { computed, inject } from 'tsm:vue'
 import type { EObject, EStructuralFeature, EClass, EReference } from '@emfts/core'
+import { useValidation } from '@emfts/uimodel-composer'
+import type { WidgetComponent } from '@emfts/uimodel-composer'
+import { bumpModelVersion } from '../oclAdapter'
 
 const props = defineProps<{
   eObject: EObject
@@ -19,6 +22,10 @@ const props = defineProps<{
   eClass?: EClass
   custom?: Record<string, unknown>
 }>()
+
+// Das UIModel-Widget (fuer ValidationExpressions), vom WidgetComposer
+// als custom.rawWidget durchgereicht.
+const rawWidget = computed(() => (props.custom?.rawWidget ?? null) as WidgetComponent | null)
 
 const tsm = inject<any>('tsm')
 
@@ -41,13 +48,30 @@ const isReference = computed(() => {
 })
 
 const value = computed(() => editorCtx?.getFeatureValue?.(props.feature))
-const error = computed(() => editorCtx?.getFeatureError?.(props.feature))
+
+// Validierung (Plan Phase 2, F5 — eine Quelle): Sind am UIModel-Widget
+// ValidationExpressions definiert, ist deren Ergebnis massgeblich; sonst
+// werden uebergangsweise die Fehler aus useInstanceEditor durchgereicht.
+// Es wird immer nur EINE Meldung angezeigt (keine Doppelmeldung, A8).
+const uimodelValidation = useValidation(
+  () => rawWidget.value?.validations ?? [],
+  () => props.eObject
+)
+const error = computed(() => {
+  const v = uimodelValidation.value
+  if (v && !v.valid) return v.message
+  return editorCtx?.getFeatureError?.(props.feature)
+})
 const availableObjects = computed(() => isReference.value ? editorCtx?.getAvailableObjects?.(props.feature) : undefined)
 const validChildClasses = computed(() => isReference.value ? editorCtx?.getValidChildClasses?.(props.feature) : undefined)
 const oclFilter = computed(() => isReference.value ? editorCtx?.getOclFilter?.(props.feature) : undefined)
 
 function onUpdateValue(v: unknown) {
   editorCtx?.setFeatureValue?.(props.feature, v)
+  // OCL-Expression-Cache invalidieren: der Instance-Kontext fuehrt keine
+  // Modell-Version (anders als der Metamodeler), deshalb wird direkt an der
+  // Schreibquelle invalidiert — visibilityCondition/Validations werten neu aus.
+  bumpModelVersion()
 }
 function onCreate(eClass: EClass) {
   editorCtx?.handleCreate?.(eClass, props.feature)

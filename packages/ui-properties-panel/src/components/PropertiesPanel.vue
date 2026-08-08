@@ -1156,7 +1156,10 @@ provide(GENE_EDITOR_CONTEXT_KEY, {
   setFeatureValue,
   getFeatureError,
   handleCreate,
-  handleOclBlocked
+  handleOclBlocked,
+  // Reaktive Modell-Version (EMF-Content-Adapter → triggerUpdate): die
+  // UiModel-View koppelt daran die Invalidierung des OCL-Expression-Caches.
+  modelVersion
 })
 
 // ── UiModel-basiertes Rendering (Feature-Flag, Plan Phase 1) ────────────────
