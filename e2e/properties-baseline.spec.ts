@@ -197,7 +197,8 @@ test.describe('Properties-Baseline: Screenshots', () => {
   })
 
   test('Root-Objekt (Library): alle Attribut-Typen, Referenzen, Derived, Operationen', async ({ page }) => {
-    await selectByXmiId(page, 'lib1')
+    // 'Operations' ist die letzte Sektion — wenn sie da ist, sind alle da
+    await selectByXmiId(page, 'lib1', 'Operations')
     await waitForPanelSettled(page)
     const panel = propertiesPanel(page)
 
@@ -339,7 +340,7 @@ test.describe('Properties-Baseline: Absprungpunkte', () => {
   })
 
   test('Operation ohne Parameter liefert Ergebnis inline', async ({ page }) => {
-    await selectByXmiId(page, 'lib1')
+    await selectByXmiId(page, 'lib1', 'getShelfCount')
     await waitForPanelSettled(page)
     const panel = propertiesPanel(page)
 
@@ -353,7 +354,7 @@ test.describe('Properties-Baseline: Absprungpunkte', () => {
   })
 
   test('Operation mit Parametern oeffnet den Parameter-Dialog', async ({ page }) => {
-    await selectByXmiId(page, 'lib1')
+    await selectByXmiId(page, 'lib1', 'hasTag')
     await waitForPanelSettled(page)
     const panel = propertiesPanel(page)
 
