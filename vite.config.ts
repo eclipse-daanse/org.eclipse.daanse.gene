@@ -211,12 +211,20 @@ export default defineConfig({
       { find: 'ui-problems-panel', replacement: fileURLToPath(new URL('./packages/ui-problems-panel/src/index.ts', import.meta.url)) },
       { find: 'ui-search', replacement: fileURLToPath(new URL('./packages/ui-search/src/index.ts', import.meta.url)) },
     ],
+    // Force a single instance of these packages. @emfts/uimodel-composer is
+    // npm-linked during development (real path outside the project root) and
+    // ships its own node_modules copies of vue/@emfts/core/@emfts/vue-registry.
+    // Without dedupe its imports would resolve to those copies, breaking
+    // singleton identity (EPackageRegistry.INSTANCE, eClass identity, provide/inject).
+    dedupe: ['vue', '@emfts/core', '@emfts/vue-registry'],
   },
   optimizeDeps: {
     // Exclude @emfts/core from pre-bundling to avoid module duplication.
     // Pre-bundling creates a separate copy, causing singletons like
     // EPackageRegistry.INSTANCE to exist twice (pre-bundled vs original ESM).
-    exclude: ['@emfts/core'],
+    // @emfts/uimodel-composer is npm-linked (symlink) — keep it out of the
+    // pre-bundle so its @emfts/core imports stay deduped to the app instance.
+    exclude: ['@emfts/core', '@emfts/uimodel-composer'],
     // sax is a CJS dep of @emfts/core that must be pre-bundled for ESM compat
     include: ['sax']
   },

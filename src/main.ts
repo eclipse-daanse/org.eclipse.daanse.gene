@@ -17,6 +17,11 @@ import * as VueRouter from 'vue-router'
 import * as emfts from '@emfts/core'
 import * as emftsVueRegistry from '@emfts/vue-registry'
 import * as emftsCodecJsonSchema from '@emfts/codec.jsonschema'
+// NOTE: @emfts/uimodel-composer is not published yet — it is npm-linked from
+// the local EMFTs workspace (see docs/concepts/uimodel-composer-linking.md).
+// The static import is intentional on this branch: the link is a prerequisite.
+import * as emftsUimodelComposer from '@emfts/uimodel-composer'
+import { UimodelPackage, UimodelFactory } from '@emfts/uimodel-composer'
 
 // Import PrimeVue config and directives
 import PrimeVue from 'primevue/config'
@@ -90,7 +95,8 @@ async function bootstrap(): Promise<void> {
     tsmRuntime.register('@emfts/vue-registry', emftsVueRegistry, '0.1.0')
     tsmRuntime.register('@eclipse-daanse/tsm', { injectable, singleton, inject: tsmInject }, '1.0.0')
     tsmRuntime.register('@emfts/codec.jsonschema', emftsCodecJsonSchema, '1.0.0')
-    console.log('[main] Registered shared libraries: vue, vue-router, primevue, @emfts/core, @emfts/vue-registry, @eclipse-daanse/tsm')
+    tsmRuntime.register('@emfts/uimodel-composer', emftsUimodelComposer, '0.0.1')
+    console.log('[main] Registered shared libraries: vue, vue-router, primevue, @emfts/core, @emfts/vue-registry, @eclipse-daanse/tsm, @emfts/uimodel-composer')
 
     // 3. Load AppConfig from config.xmi (fallback to hardcoded defaults)
     const appConfig = await loadAppConfig('/config.xmi')
@@ -109,6 +115,16 @@ async function bootstrap(): Promise<void> {
     tsm.registerService('tsm.system', tsm)
     tsm.registerService('gene.app.config', appConfig)
     tsm.registerService('gene.package.registry', emfts.EPackageRegistry.INSTANCE)
+
+    // Register the UIModel metamodel (http://uimodel/1.0) in the canonical
+    // EPackageRegistry. Touching UimodelFactory.eINSTANCE wires the factory
+    // to the package (setEPackage establishes the bidirectional reference).
+    // Both come from the npm-linked @emfts/uimodel-composer, which is deduped
+    // onto the app's @emfts/core instance (see vite.config.ts resolve.dedupe).
+    const uimodelPackage = UimodelPackage.eINSTANCE
+    void UimodelFactory.eINSTANCE
+    emfts.EPackageRegistry.INSTANCE.set(uimodelPackage.getNsURI(), uimodelPackage)
+    console.log(`[main] Registered UIModel package: ${uimodelPackage.getNsURI()}`)
 
     // 6. Listen for module events
     tsm.onModuleEvent({
