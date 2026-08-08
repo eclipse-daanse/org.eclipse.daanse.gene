@@ -29,14 +29,20 @@ const rawWidget = computed(() => (props.custom?.rawWidget ?? null) as WidgetComp
 
 const tsm = inject<any>('tsm')
 
-// PropertyField ueber den TSM-Service beziehen (kein statischer Cross-Import)
+// Feld-Komponenten ueber den TSM-Service beziehen (kein statischer Cross-Import)
 const instanceComponents = tsm?.getService('ui.instance.components')
 const PropertyField = instanceComponents?.PropertyField
+const DerivedField = instanceComponents?.DerivedField
 
 // Editor-Kontext des PropertiesPanel (stellt Wert-Zugriff + Aktionen bereit)
 const instanceComposables = tsm?.getService('ui.instance.composables')
 const GENE_EDITOR_CONTEXT_KEY = instanceComposables?.GENE_EDITOR_CONTEXT_KEY
 const editorCtx = inject<any>(GENE_EDITOR_CONTEXT_KEY, null)
+
+// Derived Features (Phase 4): read-only, OCL-berechnet → DerivedField
+const isDerived = computed(() => {
+  try { return (props.feature as { isDerived?: () => boolean }).isDerived?.() === true } catch { return false }
+})
 
 // Referenz-Erkennung (robust fuer DynamicEObjects): die Referenz-Helfer des
 // Panels (getAvailableObjects etc.) rufen isContainment() auf und wuerden
@@ -88,7 +94,18 @@ function onOclBlocked(obj: EObject, reason: string) {
 </script>
 
 <template>
-  <div v-if="PropertyField && editorCtx" class="uimodel-property-row">
+  <!-- Derived Features: read-only, OCL-berechnet (Klasse property-row
+       zusaetzlich fuer Selektor-Paritaet mit dem alten Pfad) -->
+  <div v-if="isDerived && DerivedField" class="uimodel-property-row property-row">
+    <component
+      :is="DerivedField"
+      :feature="feature"
+      :eObject="eObject"
+      :problemsService="editorCtx?.problemsService"
+      @navigate="onNavigate"
+    />
+  </div>
+  <div v-else-if="PropertyField && editorCtx" class="uimodel-property-row property-row">
     <component
       :is="PropertyField"
       :feature="feature"

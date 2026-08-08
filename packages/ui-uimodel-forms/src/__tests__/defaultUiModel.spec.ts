@@ -78,6 +78,26 @@ describe('buildDefaultUiModel', () => {
     expect(fields[2].validations ?? []).toHaveLength(0)
   })
 
+  it('erzeugt eine read-only Derived-Values-Gruppe ohne Validations', () => {
+    const ecore = getEcorePackage()
+    const derived = makeAttr('memberCount', () => ecore.getEInt(), 1)
+
+    const um = buildDefaultUiModel({
+      eClass: eClass as never,
+      attributes: [],
+      references: [],
+      derived: [derived] as never[]
+    })
+
+    expect(um.components).toHaveLength(1)
+    const form = um.components[0] as never as { group?: string; fields: Array<{ readOnly?: boolean; required?: boolean; validations: unknown[] }> }
+    expect(form.group).toBe('Derived Values')
+    expect(form.fields[0].readOnly).toBe(true)
+    // Derived sind nie Pflichtfelder und werden nicht validiert
+    expect(form.fields[0].required).toBe(false)
+    expect(form.fields[0].validations).toHaveLength(0)
+  })
+
   it('featureDisplayName wandelt camelCase in Title Case', () => {
     const f = makeAttr('maxMembers', () => getEcorePackage().getEString())
     expect(featureDisplayName(f as never)).toBe('Max Members')

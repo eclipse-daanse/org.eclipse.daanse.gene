@@ -16,6 +16,8 @@ export interface DefaultUiModelInput {
   attributes: EStructuralFeature[]
   /** Editierbare Referenzen (Containment + Non-Containment) */
   references: EStructuralFeature[]
+  /** Derived Features (Attribute + Referenzen) — read-only, OCL-berechnet */
+  derived?: EStructuralFeature[]
 }
 
 /** camelCase → Title Case, identisch zur bisherigen Label-Ableitung im Panel */
@@ -113,6 +115,20 @@ export function buildDefaultUiModel(input: DefaultUiModelInput): UIModel {
     form.name = 'references'
     form.group = 'References'
     form.fields = input.references.map(f => initWidget(factory.createReferenceLinkWidget(), f, 'References'))
+    components.push(form)
+  }
+
+  if ((input.derived?.length ?? 0) > 0) {
+    const form = factory.createFormView()
+    form.name = 'derived'
+    form.group = 'Derived Values'
+    form.fields = (input.derived ?? []).map(f => {
+      const w = initWidget(factory.createInputWidget(), f, 'Derived Values')
+      w.readOnly = true
+      w.required = false
+      w.validations = []
+      return w
+    })
     components.push(form)
   }
 

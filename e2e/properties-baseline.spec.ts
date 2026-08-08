@@ -26,7 +26,16 @@ const XMI_PATH = '/test-data/uimodel-baseline/library-instance.xmi'
  * Model-Editor-Perspektive oeffnen und Referenzmodell + Instanz laden
  * (gleicher Aufbau wie instance-move.spec.ts).
  */
+// Nachher-Abgleich (Plan 6.4): UIMODEL_FLAG=true laesst dieselbe Suite gegen
+// den Composer-Pfad laufen — gleiche Selektoren, gleiche Screenshots.
+// Default 'false' = alter Pfad (B2-Garantie), da das App-Default seit
+// Phase 4 "an" ist.
+const UIMODEL_FLAG = process.env.UIMODEL_FLAG === 'true' ? 'true' : 'false'
+
 async function setupBaseline(page: Page): Promise<void> {
+  await page.addInitScript((flag: string) => {
+    localStorage.setItem('gene.uimodelProperties', flag)
+  }, UIMODEL_FLAG)
   await waitForAppReady(page)
 
   // WICHTIG: openWorkspace rendert die Perspektive genau einmal — Panels, die

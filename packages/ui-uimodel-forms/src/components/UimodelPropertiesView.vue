@@ -19,6 +19,8 @@ const props = defineProps<{
   eObject: EObject
   attributes: EStructuralFeature[]
   references: EStructuralFeature[]
+  /** Derived Features (Ecore-derived Attribute + Referenzen), read-only */
+  derived?: EStructuralFeature[]
 }>()
 
 // Modell-Version aus dem Editor-Kontext → OCL-Cache invalidieren, damit
@@ -41,7 +43,8 @@ const uiModel = computed(() => {
   return buildDefaultUiModel({
     eClass,
     attributes: props.attributes,
-    references: props.references
+    references: props.references,
+    derived: props.derived
   })
 })
 </script>
