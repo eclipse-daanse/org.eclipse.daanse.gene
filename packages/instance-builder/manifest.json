@@ -26,6 +26,10 @@
     {
       "id": "ui.component.registry",
       "description": "Component registry for custom property editors"
+    },
+    {
+      "id": "ui.instance.composables",
+      "description": "Instance editor composables (useInstanceEditor, GENE_EDITOR_CONTEXT_KEY)"
     }
   ],
   "dependencies": ["gene-app", "ui-layout", "ui-model-browser"]
