@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Autoriertes UIModel fuer die Baseline-Klasse Library (Plan Phase 3, A1/A5):
+  weicht bewusst vom Default-Generator ab — eigene Gruppe "Stammdaten",
+  andere Feld-Reihenfolge (Signatur vor Bezeichnung), deutsche Labels und
+  nur eine Teilmenge der Features. Aenderungen an DIESER Datei muessen die
+  Property-Anzeige ohne Codeaenderung veraendern (modellgetriebenes Rendering).
+-->
+<uimodel:UIModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:uimodel="http://uimodel/1.0"
+    name="library-authored" priority="10">
+  <targetClasses href="http://www.gene.org/uimodel-baseline/library/1.0#//Library"/>
+  <components xsi:type="uimodel:FormView" name="stammdaten" group="Stammdaten">
+    <fields xsi:type="uimodel:InputWidget" name="code" label="Signatur">
+      <feature href="http://www.gene.org/uimodel-baseline/library/1.0#//Library/code"/>
+    </fields>
+    <fields xsi:type="uimodel:InputWidget" name="name" label="Bezeichnung" required="true">
+      <feature href="http://www.gene.org/uimodel-baseline/library/1.0#//Library/name"/>
+      <validations language="OCL" body="self.name &lt;&gt; null and self.name.size() &gt; 0"
+          defaultMessage="Bezeichnung ist ein Pflichtfeld" severity="ERROR"/>
+    </fields>
+    <fields xsi:type="uimodel:NumberWidget" name="maxMembers" label="Kapazitaet">
+      <feature href="http://www.gene.org/uimodel-baseline/library/1.0#//Library/maxMembers"/>
+    </fields>
+  </components>
+  <components xsi:type="uimodel:FormView" name="bestand" group="Bestand">
+    <fields xsi:type="uimodel:ReferenceLinkWidget" name="shelves" label="Regale">
+      <feature href="http://www.gene.org/uimodel-baseline/library/1.0#//Library/shelves"/>
+    </fields>
+    <fields xsi:type="uimodel:ReferenceLinkWidget" name="librarian" label="Verantwortlich">
+      <feature href="http://www.gene.org/uimodel-baseline/library/1.0#//Library/librarian"/>
+    </fields>
+  </components>
+</uimodel:UIModel>

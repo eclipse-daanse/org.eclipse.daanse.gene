@@ -24,6 +24,8 @@ interface ReferenceOption {
 }
 
 const props = defineProps<{
+  /** Optional label override (e.g. from an authored UIModel widget) */
+  label?: string
   feature: EReference
   value: any
   readonly?: boolean
@@ -95,6 +97,7 @@ const displayValue = computed(() => {
 
 // Format feature name for display
 const displayName = computed(() => {
+  if (props.label) return props.label
   const name = props.feature.getName()
   return name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
 })

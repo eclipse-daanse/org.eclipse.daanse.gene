@@ -13,6 +13,7 @@ import type { EObject, EStructuralFeature } from '@emfts/core'
 import { UIModelComposer } from '@emfts/uimodel-composer'
 import { buildDefaultUiModel } from '../defaultUiModel'
 import { bumpModelVersion } from '../oclAdapter'
+import { findUiModel } from '../uiModelRegistry'
 
 const props = defineProps<{
   eObject: EObject
@@ -27,10 +28,15 @@ const GENE_EDITOR_CONTEXT_KEY = tsm?.getService('ui.instance.composables')?.GENE
 const editorCtx = inject<any>(GENE_EDITOR_CONTEXT_KEY, null)
 watch(() => editorCtx?.modelVersion?.value, () => bumpModelVersion())
 
-// UIModel je Selektion neu aufbauen (billig, kleine Modelle). Bewusst KEINE
-// Abhaengigkeit auf die Modell-Version: ein Rebuild pro Tastendruck wuerde
-// die Widgets neu erzeugen und den Fokus zerstoeren (vgl. Plan, Risiken).
+// Autoriertes UIModel aus der Registry (Workspace vor App-Default, Phase 3);
+// ohne Treffer Default-Generator. Je Selektion neu ausgewaehlt/aufgebaut —
+// bewusst KEINE Abhaengigkeit auf die Modell-Version: ein Rebuild pro
+// Tastendruck wuerde die Widgets neu erzeugen und den Fokus zerstoeren.
+// findUiModel liest die Registry-Version → Registry-Aenderungen (Datei
+// hinzugefuegt/entfernt) waehlen automatisch neu aus.
 const uiModel = computed(() => {
+  const authored = findUiModel(props.eObject)
+  if (authored) return authored
   const eClass = props.eObject?.eClass?.()
   return buildDefaultUiModel({
     eClass,

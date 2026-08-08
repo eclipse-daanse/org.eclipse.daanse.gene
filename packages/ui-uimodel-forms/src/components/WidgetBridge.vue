@@ -94,6 +94,7 @@ function onOclBlocked(obj: EObject, reason: string) {
       :feature="feature"
       :eObject="eObject"
       :value="value"
+      :label="rawWidget?.label"
       :error="error"
       :availableObjects="availableObjects"
       :validChildClasses="validChildClasses"
