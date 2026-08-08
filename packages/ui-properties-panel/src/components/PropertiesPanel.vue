@@ -1593,6 +1593,12 @@ function handleCancelParameterDialog() {
   background: transparent;
   padding: 0;
   border: none;
+  /* PrimeVue styled-mode kann die Breadcrumb-Styles verspaetet injizieren —
+     ohne explizites Flex-Layout kollabiert das nav auf Hoehe 0 und die Links
+     sind unsichtbar/unklickbar (Hit-Test trifft panel-content). */
+  display: flex;
+  align-items: center;
+  min-height: 1.75rem;
 }
 
 :deep(.instance-breadcrumb .p-breadcrumb-list) {
