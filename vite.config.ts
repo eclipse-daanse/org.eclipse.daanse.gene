@@ -224,7 +224,10 @@ export default defineConfig({
     // EPackageRegistry.INSTANCE to exist twice (pre-bundled vs original ESM).
     // @emfts/uimodel-composer is npm-linked (symlink) — keep it out of the
     // pre-bundle so its @emfts/core imports stay deduped to the app instance.
-    exclude: ['@emfts/core', '@emfts/uimodel-composer'],
+    // @emfts/vue-registry: the composer (excluded) would load the raw dist
+    // file while app/plugins get the pre-bundled copy — two componentRegistry
+    // singletons. Excluding it gives everyone the same raw module.
+    exclude: ['@emfts/core', '@emfts/uimodel-composer', '@emfts/vue-registry'],
     // sax is a CJS dep of @emfts/core that must be pre-bundled for ESM compat
     include: ['sax']
   },

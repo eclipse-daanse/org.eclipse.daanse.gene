@@ -1,0 +1,63 @@
+<script setup lang="ts">
+/**
+ * UimodelPropertiesView — rendert die Feature-Sektionen des Property-Views
+ * ueber den @emfts/uimodel-composer (Plan Phase 1).
+ *
+ * Ohne autoriertes UIModel wird per Default-Generator eines aus der EClass
+ * des selektierten Objekts erzeugt (E4). Die Feature-Listen kommen vom
+ * PropertiesPanel (useInstanceEditor), damit exakt dieselben Features
+ * erscheinen wie im bisherigen Pfad.
+ */
+import { computed } from 'tsm:vue'
+import type { EObject, EStructuralFeature } from '@emfts/core'
+import { UIModelComposer } from '@emfts/uimodel-composer'
+import { buildDefaultUiModel } from '../defaultUiModel'
+
+const props = defineProps<{
+  eObject: EObject
+  attributes: EStructuralFeature[]
+  references: EStructuralFeature[]
+}>()
+
+// UIModel je Selektion neu aufbauen (billig, kleine Modelle). Bewusst KEINE
+// Abhaengigkeit auf die Modell-Version: ein Rebuild pro Tastendruck wuerde
+// die Widgets neu erzeugen und den Fokus zerstoeren (vgl. Plan, Risiken).
+const uiModel = computed(() => {
+  const eClass = props.eObject?.eClass?.()
+  return buildDefaultUiModel({
+    eClass,
+    attributes: props.attributes,
+    references: props.references
+  })
+})
+</script>
+
+<template>
+  <div class="uimodel-properties-view">
+    <UIModelComposer :ui-model="uiModel" :model="eObject" />
+  </div>
+</template>
+
+<style scoped>
+/* Sektions-Ueberschrift aus dem gestempelten data-uim-group-Attribut —
+   gleiche Optik wie .section-heading des bisherigen Panels. */
+.uimodel-properties-view :deep(.uimodel-form-view[data-uim-group])::before {
+  content: attr(data-uim-group);
+  display: block;
+  font-size: 0.75rem;
+  text-align: center;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--primary-color, #6366f1);
+  padding: 0.5rem 0.75rem 0.35rem;
+  margin-bottom: 0.4rem;
+  background: color-mix(in srgb, var(--primary-color, #6366f1) 6%, transparent);
+  border-radius: 4px;
+  border-bottom: 2px solid color-mix(in srgb, var(--primary-color, #6366f1) 25%, transparent);
+}
+
+.uimodel-properties-view :deep(.uimodel-form-view) {
+  margin-bottom: 0.25rem;
+}
+</style>
