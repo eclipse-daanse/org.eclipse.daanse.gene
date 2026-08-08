@@ -68,6 +68,23 @@ function initWidget(widget: WidgetComponent, feature: EStructuralFeature, group:
   widget.feature = feature
   widget.label = featureDisplayName(feature)
   widget.required = isRequired(feature)
+
+  // Pflichtfeld-Validierung als OCL-ValidationExpression (Plan Phase 2, F5):
+  // die strukturellen Checks wandern schrittweise aus useInstanceEditor in
+  // das UIModel — eine Quelle, ausgewertet ueber den gene-OCL-Adapter.
+  if (widget.required) {
+    const factory = UimodelFactory.eINSTANCE
+    const vex = factory.createValidationExpression()
+    vex.language = 'OCL'
+    // Strings: leer gilt wie fehlend (Verhalten des bisherigen required-Checks)
+    const n = feature.getName()
+    vex.body = dataTypeName(feature) === 'EString'
+      ? `self.${n} <> null and self.${n}.size() > 0`
+      : `self.${n} <> null`
+    vex.defaultMessage = `${widget.label} is required`
+    vex.severity = 'ERROR'
+    widget.validations = [vex]
+  }
   return widget
 }
 

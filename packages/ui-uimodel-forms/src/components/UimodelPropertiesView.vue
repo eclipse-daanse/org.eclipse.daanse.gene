@@ -8,16 +8,24 @@
  * PropertiesPanel (useInstanceEditor), damit exakt dieselben Features
  * erscheinen wie im bisherigen Pfad.
  */
-import { computed } from 'tsm:vue'
+import { computed, inject, watch } from 'tsm:vue'
 import type { EObject, EStructuralFeature } from '@emfts/core'
 import { UIModelComposer } from '@emfts/uimodel-composer'
 import { buildDefaultUiModel } from '../defaultUiModel'
+import { bumpModelVersion } from '../oclAdapter'
 
 const props = defineProps<{
   eObject: EObject
   attributes: EStructuralFeature[]
   references: EStructuralFeature[]
 }>()
+
+// Modell-Version aus dem Editor-Kontext → OCL-Cache invalidieren, damit
+// visibilityCondition/ValidationExpression auf Wertaenderungen reagieren.
+const tsm = inject<any>('tsm')
+const GENE_EDITOR_CONTEXT_KEY = tsm?.getService('ui.instance.composables')?.GENE_EDITOR_CONTEXT_KEY
+const editorCtx = inject<any>(GENE_EDITOR_CONTEXT_KEY, null)
+watch(() => editorCtx?.modelVersion?.value, () => bumpModelVersion())
 
 // UIModel je Selektion neu aufbauen (billig, kleine Modelle). Bewusst KEINE
 // Abhaengigkeit auf die Modell-Version: ein Rebuild pro Tastendruck wuerde
