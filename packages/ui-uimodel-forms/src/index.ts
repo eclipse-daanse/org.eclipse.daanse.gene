@@ -19,11 +19,25 @@ import UimodelPropertiesView from './components/UimodelPropertiesView.vue'
 import { buildDefaultUiModel, featureDisplayName } from './defaultUiModel'
 import { useUimodelPropertiesFlag } from './featureFlag'
 import { GeneOclValidator, setOclQuery, bumpModelVersion } from './oclAdapter'
+import {
+  setFileSystem,
+  loadAppDefaults,
+  reloadWorkspaceUiModels,
+  addUiModelsFromXmi,
+  removePath,
+  findUiModel,
+  getRegistryVersion,
+  listRegisteredUiModels
+} from './uiModelRegistry'
 
 export { buildDefaultUiModel, featureDisplayName } from './defaultUiModel'
 export { useUimodelPropertiesFlag } from './featureFlag'
 export { bumpModelVersion } from './oclAdapter'
+export { findUiModel, getRegistryVersion } from './uiModelRegistry'
 export { default as UimodelPropertiesView } from './components/UimodelPropertiesView.vue'
+
+// Workspace-Event-Listener (App dispatcht gene:workspace-loaded auf window)
+let workspaceListener: (() => void) | null = null
 
 let unregisterBridge: (() => void) | null = null
 
@@ -58,12 +72,29 @@ export async function activate(context: ModuleContext): Promise<void> {
     })
     .catch(() => context.log.warn('UiModel Forms: ui-problems-panel not available — OCL expressions fail open'))
 
+  // UiModel-Registry (Phase 3): App-Defaults laden, Workspace-Scan bei
+  // jedem Workspace-Load (Event kommt aus gene-app nach dem Laden aller
+  // Model-/Instance-Quellen — Metamodelle sind dann registriert, sodass
+  // Feature-Referenzen der UIModels aufloesbar sind).
+  setFileSystem(context.services.get('gene.filesystem') ?? null)
+  void loadAppDefaults()
+  workspaceListener = () => { void reloadWorkspaceUiModels() }
+  window.addEventListener('gene:workspace-loaded', workspaceListener)
+
   context.services.register('ui.uimodel.forms', {
     UimodelPropertiesView: markRaw(UimodelPropertiesView),
     buildDefaultUiModel,
     featureDisplayName,
     useUimodelPropertiesFlag,
-    bumpModelVersion
+    bumpModelVersion,
+    // Registry-API
+    findUiModel,
+    getRegistryVersion,
+    addUiModelsFromXmi,
+    removeUiModelPath: removePath,
+    reloadWorkspaceUiModels,
+    loadAppDefaults,
+    listRegisteredUiModels
   })
 
   context.log.info('UiModel Forms module activated')
@@ -74,6 +105,11 @@ export async function deactivate(context: ModuleContext): Promise<void> {
   unregisterBridge?.()
   unregisterBridge = null
   setOclQuery(null)
+  setFileSystem(null)
+  if (workspaceListener) {
+    window.removeEventListener('gene:workspace-loaded', workspaceListener)
+    workspaceListener = null
+  }
   context.services.unregister('ui.uimodel.forms')
   context.log.info('UiModel Forms module deactivated')
 }

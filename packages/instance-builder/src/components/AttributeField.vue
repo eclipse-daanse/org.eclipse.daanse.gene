@@ -19,6 +19,8 @@ const props = defineProps<{
   value: any
   readonly?: boolean
   error?: string
+  /** Optional label override (e.g. from an authored UIModel widget) */
+  label?: string
 }>()
 
 const emit = defineEmits<{
@@ -116,8 +118,9 @@ function onUpdate(newValue: any) {
   emit('update:value', newValue)
 }
 
-// Format feature name for display
+// Format feature name for display (explicit label wins)
 const displayName = computed(() => {
+  if (props.label) return props.label
   const name = props.feature.getName()
   // Convert camelCase to Title Case
   return name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())

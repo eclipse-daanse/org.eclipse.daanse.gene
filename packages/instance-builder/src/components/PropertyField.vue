@@ -23,6 +23,8 @@ const props = defineProps<{
   value: any
   readonly?: boolean
   error?: string
+  /** Optional label override (e.g. from an authored UIModel widget) */
+  label?: string
   /** Available objects for reference selection */
   availableObjects?: EObject[]
   /** Available concrete classes for containment references */
@@ -148,6 +150,7 @@ function onOclBlocked(object: EObject, reason: string) {
         v-if="featureInfo.isAttribute"
         :feature="feature as EAttribute"
         :value="value"
+        :label="label"
         @update:value="onUpdate"
         :readonly="readonly"
         :error="error"
@@ -191,6 +194,7 @@ function onOclBlocked(object: EObject, reason: string) {
         v-else-if="featureInfo.isReference"
         :feature="feature as EReference"
         :value="value"
+        :label="label"
         @update:value="onUpdate"
         @create="onCreate"
         @select="onSelect"
