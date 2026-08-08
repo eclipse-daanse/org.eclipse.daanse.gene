@@ -2,7 +2,8 @@
  * Feature-Flag fuer das UiModel-basierte Property-Rendering (Plan E6).
  *
  * Persistenz in localStorage, damit das Flag Reloads ueberlebt und in
- * E2E-Tests vor dem App-Start gesetzt werden kann. Default: aus.
+ * E2E-Tests vor dem App-Start gesetzt werden kann.
+ * Default: AN (Phase 4) — abschaltbar mit localStorage 'false'.
  */
 
 import { ref } from 'tsm:vue'
@@ -14,9 +15,9 @@ const enabled: Ref<boolean> = ref(readInitial())
 
 function readInitial(): boolean {
   try {
-    return localStorage.getItem(STORAGE_KEY) === 'true'
+    return localStorage.getItem(STORAGE_KEY) !== 'false'
   } catch {
-    return false
+    return true
   }
 }
 

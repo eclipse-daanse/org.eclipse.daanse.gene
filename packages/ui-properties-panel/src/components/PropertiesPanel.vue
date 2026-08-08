@@ -1369,6 +1369,7 @@ function handleCancelParameterDialog() {
           :eObject="selectedObject"
           :attributes="attributeFeatures"
           :references="referenceFeatures"
+          :derived="[...derivedAttributeFeatures, ...derivedReferenceFeatures]"
         />
         <template v-else>
         <!-- Attributes -->
@@ -1417,9 +1418,11 @@ function handleCancelParameterDialog() {
         </div>
         </template>
 
-        <!-- Derived Values -->
-        <div v-if="hasDerivedFeatures" class="section-group">
+        <!-- Derived Values: mit UiModel-Rendering kommen die Ecore-derived
+             Features aus dem Composer — hier bleiben dann nur C-OCL-only. -->
+        <div v-if="useUimodelRendering ? coclDerivedConstraints.length > 0 : hasDerivedFeatures" class="section-group">
           <div class="section-heading">Derived Values</div>
+          <template v-if="!useUimodelRendering">
           <div
             v-for="feature in derivedAttributeFeatures"
             :key="feature.getName()"
@@ -1444,6 +1447,7 @@ function handleCancelParameterDialog() {
               @navigate="handleNavigate"
             />
           </div>
+          </template>
           <!-- C-OCL-only derived features -->
           <CoclDerivedField
             v-for="constraint in coclDerivedConstraints"

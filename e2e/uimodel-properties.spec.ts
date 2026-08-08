@@ -95,13 +95,14 @@ test.describe('UiModel-Properties (Flag an)', () => {
     const panel = propertiesPanel(page)
     await expect(panel.locator('.uimodel-properties-view')).toBeVisible()
     const forms = panel.locator('.uimodel-form-view')
-    await expect(forms).toHaveCount(2)
+    await expect(forms).toHaveCount(3)
     await expect(forms.nth(0)).toHaveAttribute('data-uim-group', 'Attributes')
     await expect(forms.nth(1)).toHaveAttribute('data-uim-group', 'References')
-    // 7 Attribute + 5 Referenzen des Referenzmodells
-    await expect(panel.locator('.uimodel-property-row')).toHaveCount(12)
-    // Alte Sektionen fuer Attributes/References sind ersetzt; Derived/Operations bleiben
-    await expect(panel.getByText('Derived Values')).toBeVisible()
+    // Derived Values seit Phase 4 ebenfalls im Composer-Pfad
+    await expect(forms.nth(2)).toHaveAttribute('data-uim-group', 'Derived Values')
+    // 7 Attribute + 5 Referenzen + 2 Derived des Referenzmodells
+    await expect(panel.locator('.uimodel-property-row')).toHaveCount(14)
+    // Operations bleiben (bewusst) beim Panel-Rahmen
     await expect(panel.getByText('Operations')).toBeVisible()
   })
 
@@ -175,7 +176,7 @@ test.describe('UiModel-Properties (Flag an)', () => {
       tsm.getService('ui.uimodel.forms').removeUiModelPath('library.uimodel.xmi')
     })
     await expect(panel.locator('.uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'Attributes', { timeout: 5000 })
-    await expect(panel.locator('.uimodel-property-row')).toHaveCount(12)
+    await expect(panel.locator('.uimodel-property-row')).toHaveCount(14)
   })
 
   test('Workspace-Stufe schlaegt App-Default (E7-Hierarchie)', async ({ page }) => {

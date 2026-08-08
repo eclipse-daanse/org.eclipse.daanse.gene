@@ -1,5 +1,17 @@
 # Plan: UiModel-basierte Property-Ansicht im Instance-Editor
 
+**Status (2026-08-08):** Phasen 0–4 umgesetzt. Flag-Default ist AN
+(`localStorage gene.uimodelProperties='false'` schaltet auf den alten Pfad).
+Nachher-Abgleich bestanden: die Baseline-Suite laeuft mit `UIMODEL_FLAG=true`
+(Composer-Pfad) identisch gruen inkl. Screenshots.
+Bewusste Abweichung von Phase 4: **Operationen** bleiben beim Panel-Rahmen —
+`uimodel.ecore` kennt nur Feature-basierte Widgets (`WidgetComponent.feature:
+EStructuralFeature [1]`), EOperations sind damit nicht abbildbar. Kandidat
+fuer eine uimodel.ecore-Erweiterung im EMFTs-Projekt (Entscheidung F4),
+zusammen mit C-OCL-only-Derived (constraint- statt feature-basiert).
+Ebenfalls beim Panel-Rahmen: XMI-ID/Primary-Key-Zeile, Breadcrumb,
+OCL-Constraint-Formular (wie geplant).
+
 **Branch:** `feat/uimodel`
 **Ziel:** Die Property-Anzeige des Instance-Editors (heute: fest kodierte Sektionen in
 `packages/ui-properties-panel/src/components/PropertiesPanel.vue`) wird durch den
