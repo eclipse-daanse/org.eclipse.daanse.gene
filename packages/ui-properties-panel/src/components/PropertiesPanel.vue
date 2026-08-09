@@ -1161,6 +1161,20 @@ provide(GENE_EDITOR_CONTEXT_KEY, {
   getFeatureError,
   handleCreate,
   handleOclBlocked,
+  // Objektbewusste Varianten (uimodel ForEach/GroupWidget, emf.ts.ui#6):
+  // im Body eines ForEach ist das Ziel-Objekt ein Collection-Element,
+  // NICHT das selektierte Objekt — der Editor-Pfad gilt nur fuer dieses.
+  getFeatureValueOn: (obj: EObject, feature: EStructuralFeature) => {
+    if (obj === selectedObject.value) return getFeatureValue(feature)
+    void modelVersion.value
+    try { return obj.eGet(feature) } catch { return undefined }
+  },
+  setFeatureValueOn: (obj: EObject, feature: EStructuralFeature, value: unknown) => {
+    if (obj === selectedObject.value) { setFeatureValue(feature, value); return }
+    try { obj.eSet(feature, value) } catch { return }
+    ctx.value?.markDirty?.()
+    ctx.value?.triggerUpdate?.()
+  },
   // Reaktive Modell-Version (EMF-Content-Adapter → triggerUpdate): die
   // UiModel-View koppelt daran die Invalidierung des OCL-Expression-Caches.
   modelVersion
