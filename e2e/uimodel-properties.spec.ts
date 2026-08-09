@@ -284,6 +284,48 @@ test.describe('UiModel-Properties (Flag an)', () => {
     })
   })
 
+  test('Generic-Default: Label aus Ecore-Annotation (http://uimodel/1.0, key label)', async ({ page }) => {
+    const panel = propertiesPanel(page)
+
+    // Eigenes Mini-Metamodell mit annotiertem Feature — bewusst NICHT im
+    // Baseline-Ecore (der alte Pfad kennt keine Annotationen; eine dortige
+    // Annotation wuerde die Pfad-Paritaet der Baseline brechen).
+    await page.evaluate(async () => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const ecore = `<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="anno" nsURI="http://gene/test/anno/1.0" nsPrefix="anno">
+  <eClassifiers xsi:type="ecore:EClass" name="Thing">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="title">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eAnnotations source="http://uimodel/1.0">
+        <details key="label" value="Titel (aus Ecore)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="count">
+      <eType xsi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    </eStructuralFeatures>
+  </eClassifiers>
+</ecore:EPackage>`
+      const mb = tsm.getService('ui.model-browser.composables')
+      await mb.loadEcoreFile(ecore, 'anno-test.ecore')
+      const instance = `<?xml version="1.0" encoding="UTF-8"?>
+<anno:Thing xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:anno="http://gene/test/anno/1.0" xmi:id="thing1" title="Hallo" count="7"/>`
+      const it = tsm.getService('ui.instance-tree.composables')
+      await it.loadInstancesFromXMI(instance, 'anno-instance.xmi')
+    })
+    await selectByXmiId(page, 'thing1')
+
+    // Annotiertes Feature zeigt das Ecore-Label, unannotiertes die Ableitung
+    const labels = panel.locator('.uimodel-property-row .field-label')
+    await expect(labels.nth(0)).toContainText('Titel (aus Ecore)', { timeout: 5000 })
+    await expect(labels.nth(1)).toContainText('Count')
+  })
+
   test('Flag-Umschaltung ohne Reload stellt den alten Pfad wieder her', async ({ page }) => {
     const panel = propertiesPanel(page)
     await expect(panel.locator('.uimodel-properties-view')).toBeVisible()
