@@ -1,9 +1,22 @@
 # Plan: UiModel-basierte Property-Ansicht im Instance-Editor
 
-**Status (2026-08-08):** Phasen 0–4 umgesetzt. Flag-Default ist AN
+**Status (2026-08-09):** Phasen 0–4 umgesetzt, dazu die komplette
+Design-Schleife mit dem uimodel-composer integriert (emf.ts.ui #2–#6):
+AllFeatures-Platzhalter in FormView.fields, PropertyBindings (Label aus
+Ecore-Annotation http://uimodel/1.0/label), TemplateCase-Fallliste statt
+implizitem Typ-Mapping, GroupWidget/Conditional/ForEach (objektbewusste
+Wert-Zugriffe fuer Element-Editing). Flag-Default ist AN
 (`localStorage gene.uimodelProperties='false'` schaltet auf den alten Pfad).
 Nachher-Abgleich bestanden: die Baseline-Suite laeuft mit `UIMODEL_FLAG=true`
-(Composer-Pfad) identisch gruen inkl. Screenshots.
+(Composer-Pfad) identisch gruen inkl. Screenshots (pixelgenau nachgemessen).
+
+**Verbleibende Blocker vor dem Merge:** EMFTs-Arbeitsstand (#2–#6)
+committen/pushen und `@emfts/uimodel-composer` veroeffentlichen (dann in
+gene: npm-Link raus, regulaere Dependency rein), manuelle Abnahme (7C).
+**Upstream-Nacharbeiten** (Workarounds in gene danach entfernbar):
+https://github.com/eclipse-fennec/emf.ts.ui/issues/7 — Expression-Tick
+(Live-Reaktivitaet fuer Bindings/Visibility/Validierung/Strukturen),
+required aus lowerBound in der Expansion, Deprecated-Cleanup.
 Bewusste Abweichung von Phase 4: **Operationen** bleiben beim Panel-Rahmen —
 `uimodel.ecore` kennt nur Feature-basierte Widgets (`WidgetComponent.feature:
 EStructuralFeature [1]`), EOperations sind damit nicht abbildbar. Kandidat
