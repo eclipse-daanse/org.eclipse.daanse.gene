@@ -222,6 +222,68 @@ test.describe('UiModel-Properties (Flag an)', () => {
     await expect(panel.locator('.uimodel-all-features, .uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'AppDefault', { timeout: 5000 })
   })
 
+  test('PropertyBindings: Label aus Expression, readOnly reagiert auf Instanzwert', async ({ page }) => {
+    const panel = propertiesPanel(page)
+
+    // UIModel mit Bindings (emf.ts.ui#3): Label berechnet aus dem Feature,
+    // readOnly gebunden an einen Instanzwert (open) desselben Objekts.
+    await page.evaluate(async () => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const svc = tsm.getService('ui.uimodel.forms')
+      const nsUri = 'http://www.gene.org/uimodel-baseline/library/1.0'
+      const xmi = `<?xml version="1.0" encoding="UTF-8"?>
+<uimodel:UIModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:uimodel="http://uimodel/1.0"
+    name="binding-demo">
+  <targetClasses href="${nsUri}#//Library"/>
+  <components xsi:type="uimodel:FormView" name="demo" group="Bindings">
+    <fields xsi:type="uimodel:InputWidget" name="name">
+      <feature href="${nsUri}#//Library/name"/>
+      <bindings property="label">
+        <expression language="JS" body="feature.name.toUpperCase()"/>
+      </bindings>
+    </fields>
+    <fields xsi:type="uimodel:NumberWidget" name="maxMembers">
+      <feature href="${nsUri}#//Library/maxMembers"/>
+      <bindings property="readOnly">
+        <expression language="JS" body="self.open === true"/>
+      </bindings>
+    </fields>
+  </components>
+</uimodel:UIModel>`
+      await svc.addUiModelsFromXmi(xmi, 'binding-demo.uimodel.xmi', 'workspace')
+    })
+
+    // Label kommt aus der Expression (name → NAME)
+    const nameRow = panel.locator('.uimodel-property-row').first()
+    await expect(nameRow.locator('.field-label')).toContainText('NAME', { timeout: 5000 })
+
+    // readOnly: Library.open ist true → Feld deaktiviert
+    const maxRow = panel.locator('.uimodel-property-row').nth(1)
+    await expect(maxRow.locator('input').first()).toBeDisabled()
+
+    // Instanzwert aendern (open=false) → Live-Neuauswertung: die Bridge
+    // wertet Bindings gegen die Expression-Version aus (bumpModelVersion);
+    // upstream (useWidgetConfig) ist noch nicht reaktiv, siehe emf.ts.ui#3.
+    await page.evaluate(() => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const it = tsm.getService('ui.instance-tree.composables')
+      const lib: any = Array.from(it.useSharedInstanceTree().getRootObjects())[0]
+      const openF = lib.eClass().getEStructuralFeature('open')
+      lib.eSet(openF, false)
+      tsm.getService('ui.uimodel.forms').bumpModelVersion()
+    })
+    await expect(maxRow.locator('input').first()).toBeEnabled({ timeout: 5000 })
+
+    await page.evaluate(() => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      tsm.getService('ui.uimodel.forms').removeUiModelPath('binding-demo.uimodel.xmi')
+    })
+  })
+
   test('Flag-Umschaltung ohne Reload stellt den alten Pfad wieder her', async ({ page }) => {
     const panel = propertiesPanel(page)
     await expect(panel.locator('.uimodel-properties-view')).toBeVisible()

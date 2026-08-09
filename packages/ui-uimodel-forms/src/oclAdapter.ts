@@ -59,6 +59,16 @@ export function bumpModelVersion(): void {
 }
 
 /**
+ * Reaktiver Zugriff auf die Expression-Version — fuer computeds, die
+ * Expressions ausserhalb des OCL-Adapters neu auswerten muessen (z. B.
+ * JS-PropertyBindings in der WidgetBridge: upstream wertet useWidgetConfig
+ * nicht reaktiv auf Instanzwerte aus, emf.ts.ui#3).
+ */
+export function expressionVersion(): number {
+  return version.value
+}
+
+/**
  * Validator-Klasse im Format, das registerOclEvaluator() des Composers
  * erwartet: pro Auswertung wird eine Instanz erzeugt, evaluateExpression
  * liefert synchron ein boolesches Ergebnis. Zustand (Cache/Version) ist

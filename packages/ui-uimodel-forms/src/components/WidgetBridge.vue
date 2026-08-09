@@ -12,9 +12,9 @@
  */
 import { computed, inject } from 'tsm:vue'
 import type { EObject, EStructuralFeature, EClass, EReference } from '@emfts/core'
-import { useValidation } from '@emfts/uimodel-composer'
+import { useValidation, resolveBindings } from '@emfts/uimodel-composer'
 import type { WidgetComponent } from '@emfts/uimodel-composer'
-import { bumpModelVersion } from '../oclAdapter'
+import { bumpModelVersion, expressionVersion } from '../oclAdapter'
 import { createRequiredValidation } from '../defaultUiModel'
 
 const props = defineProps<{
@@ -27,6 +27,32 @@ const props = defineProps<{
 // Das UIModel-Widget (fuer ValidationExpressions), vom WidgetComposer
 // als custom.rawWidget durchgereicht.
 const rawWidget = computed(() => (props.custom?.rawWidget ?? null) as WidgetComponent | null)
+
+// Fertig aufgeloeste Widget-Konfiguration (Issue #3): der WidgetComposer
+// reicht sie als custom.resolvedStyle durch — PropertyBindings > statische
+// Widget-Attribute > Style-Kette.
+const resolvedConfig = computed(() => (props.custom?.resolvedStyle ?? null) as
+  { label?: string; readOnly?: boolean; required?: boolean } | null)
+
+// LIVE-Neuauswertung der Bindings: upstream (useWidgetConfig) haengt nicht
+// reaktiv an Instanzwerten (emf.ts.ui#3) — hier gegen unsere Expression-
+// Version ausgewertet, die bei jeder Wertaenderung gebumpt wird. Ergebnis
+// gewinnt gegen den (potenziell veralteten) resolvedStyle-Snapshot.
+const liveBindings = computed(() => {
+  void expressionVersion()
+  const w = rawWidget.value
+  if (!w || (w.bindings?.length ?? 0) === 0) return null
+  try { return resolveBindings(w, props.eObject) } catch { return null }
+})
+const effectiveLabel = computed(() =>
+  (liveBindings.value?.values?.label as string | undefined)
+    ?? resolvedConfig.value?.label ?? rawWidget.value?.label)
+const effectiveReadOnly = computed(() =>
+  (liveBindings.value?.values?.readOnly as boolean | undefined)
+    ?? resolvedConfig.value?.readOnly)
+const effectiveRequired = computed(() =>
+  (liveBindings.value?.values?.required as boolean | undefined)
+    ?? resolvedConfig.value?.required)
 
 const tsm = inject<any>('tsm')
 
@@ -72,8 +98,11 @@ const effectiveValidations = computed(() => {
   if (authored.length > 0) return authored
   if (isDerived.value) return []
   try {
-    if ((props.feature.getLowerBound?.() ?? 0) > 0) {
-      return [createRequiredValidation(props.feature, rawWidget.value?.label)]
+    // required-Binding/-Attribut hat Vorrang vor der lowerBound-Ableitung
+    // (explizites required=false unterdrueckt den Check)
+    const required = effectiveRequired.value ?? ((props.feature.getLowerBound?.() ?? 0) > 0)
+    if (required) {
+      return [createRequiredValidation(props.feature, effectiveLabel.value)]
     }
   } catch { /* ignore */ }
   return []
@@ -131,7 +160,8 @@ function onOclBlocked(obj: EObject, reason: string) {
       :feature="feature"
       :eObject="eObject"
       :value="value"
-      :label="rawWidget?.label"
+      :label="effectiveLabel"
+      :readonly="effectiveReadOnly"
       :error="error"
       :availableObjects="availableObjects"
       :validChildClasses="validChildClasses"
