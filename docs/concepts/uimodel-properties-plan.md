@@ -324,6 +324,14 @@ vermerkt.
 **Eingereicht als Feature Request:** https://github.com/eclipse-fennec/emf.ts.ui/issues/2
 (umgesetzt und in gene integriert, s. 8.6)
 
+**Nachtrag (2026-08-09):** https://github.com/eclipse-fennec/emf.ts.ui/issues/4 —
+`AllFeatures` als fields-Platzhalter in FormView statt eigenstaendigem
+Composer: keine implizite Praesentation (section/h3) in der Library;
+Layout gehoert den Containern/Konsumenten. Nach Umsetzung entfallen in
+gene die Heading-Sonderfaelle (rendersOwnHeading, h3-Styling,
+AllFeaturesComposer-Registry-Eintrag) und generic-default wrappt seine
+Bloecke in FormViews.
+
 **Nachtrag (2026-08-09):** https://github.com/eclipse-fennec/emf.ts.ui/issues/3 —
 `PropertyBinding`: expression-faehige Widget-Parameter (label/readOnly/… als
 OCL/JS-Expression mit Kontext self=Domaenenobjekt + feature/eClass). Loest
