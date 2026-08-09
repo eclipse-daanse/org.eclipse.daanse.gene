@@ -321,6 +321,8 @@ vermerkt.
 
 ## 8. Erweiterungs-Spezifikation: Generische Layouts via `AllFeatures` (Folge-Iteration, EMFTs-Projekt)
 
+**Eingereicht als Feature Request:** https://github.com/eclipse-fennec/emf.ts.ui/issues/2
+
 **Motivation (Diskussion 2026-08-09):** Autorierte UIModels binden Widgets per
 `feature href` an konkrete Features konkreter Klassen — klassenuebergreifende
 Layouts („Id, dann alle Attribute, dann alle Referenzen") und Regeln
