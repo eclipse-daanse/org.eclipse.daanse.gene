@@ -1,15 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   App-Default: generisches Property-Layout fuer ALLE Klassen (keine
-  targetClasses) via AllFeatures-Platzhalter (emf.ts.ui Issue #2).
+  targetClasses). Struktur wie autorierte Modelle: FormView je Sektion
+  (group = Ueberschrift, gerendert vom Konsumenten), darin AllFeatures
+  als fields-Platzhalter (emf.ts.ui #2/#4) — expandiert beim Rendern zu
+  einem Widget je passendem Feature der selektierten Klasse.
 
-  Bewusste Abweichung vom upstream-Beispiel (model/templates/ im Composer):
-  KEIN eigener Identification-Block - das iD-Attribut erscheint wie im
-  bisherigen gene-Layout unter Attributes; die XMI-ID/Primary-Key-Zeile
-  rendert weiterhin der Panel-Rahmen. Grund: Pixel-Paritaet mit der
-  Verhaltens-Baseline (e2e/properties-baseline.spec.ts).
+  Bewusste Abweichung vom upstream-Beispiel: KEIN Identification-Block —
+  das iD-Attribut erscheint wie im bisherigen gene-Layout unter Attributes;
+  die XMI-ID/Primary-Key-Zeile rendert der Panel-Rahmen (Pixel-Paritaet
+  mit e2e/properties-baseline.spec.ts).
 
-  Filter sind JS-Metaausdruecke: self = EStructuralFeature (Meta-Ebene).
+  filter: JS-Metaausdruecke, self = EStructuralFeature (Meta-Ebene).
+  Label-Konvention (emf.ts.ui#3): EAnnotation am Feature
+  (source http://uimodel/1.0, key label) uebersteuert die Namens-
+  Ableitung; ohne Annotation greift fail-open die Ableitung.
 -->
 <uimodel:UIModel
     xmlns:xmi="http://www.omg.org/XMI"
@@ -18,33 +23,35 @@
     xmlns:uimodel="http://uimodel/1.0"
     name="gene-generic-default">
 
-  <!-- Label-Konvention: EAnnotation am Feature (source http://uimodel/1.0,
-       key label) uebersteuert die Namens-Ableitung — Labels werden damit
-       im Metamodell gepflegt, nicht pro UIModel. Fail-open: ohne Annotation
-       liefert die Expression undefined und die Ableitung greift. -->
-  <components xsi:type="uimodel:AllFeatures" name="attributes" group="Attributes">
-    <filter language="JS"
-        body="self.eClass().getName() === 'EAttribute' &amp;&amp; !self.derived &amp;&amp; !self.transient"/>
-    <bindings property="label">
-      <expression language="JS"
-          body="feature.getEAnnotation('http://uimodel/1.0')?.getDetails()?.getByKey('label')"/>
-    </bindings>
+  <components xsi:type="uimodel:FormView" name="attributes" group="Attributes">
+    <fields xsi:type="uimodel:AllFeatures" name="all-attributes">
+      <filter language="JS"
+          body="self.eClass().getName() === 'EAttribute' &amp;&amp; !self.derived &amp;&amp; !self.transient"/>
+      <bindings property="label">
+        <expression language="JS"
+            body="feature.getEAnnotation('http://uimodel/1.0')?.getDetails()?.getByKey('label')"/>
+      </bindings>
+    </fields>
   </components>
 
-  <components xsi:type="uimodel:AllFeatures" name="references" group="References">
-    <filter language="JS"
-        body="self.eClass().getName() === 'EReference' &amp;&amp; !self.derived &amp;&amp; !self.transient"/>
-    <bindings property="label">
-      <expression language="JS"
-          body="feature.getEAnnotation('http://uimodel/1.0')?.getDetails()?.getByKey('label')"/>
-    </bindings>
+  <components xsi:type="uimodel:FormView" name="references" group="References">
+    <fields xsi:type="uimodel:AllFeatures" name="all-references">
+      <filter language="JS"
+          body="self.eClass().getName() === 'EReference' &amp;&amp; !self.derived &amp;&amp; !self.transient"/>
+      <bindings property="label">
+        <expression language="JS"
+            body="feature.getEAnnotation('http://uimodel/1.0')?.getDetails()?.getByKey('label')"/>
+      </bindings>
+    </fields>
   </components>
 
-  <components xsi:type="uimodel:AllFeatures" name="derived" group="Derived Values">
-    <filter language="JS" body="self.derived === true"/>
-    <bindings property="label">
-      <expression language="JS"
-          body="feature.getEAnnotation('http://uimodel/1.0')?.getDetails()?.getByKey('label')"/>
-    </bindings>
+  <components xsi:type="uimodel:FormView" name="derived" group="Derived Values">
+    <fields xsi:type="uimodel:AllFeatures" name="all-derived">
+      <filter language="JS" body="self.derived === true"/>
+      <bindings property="label">
+        <expression language="JS"
+            body="feature.getEAnnotation('http://uimodel/1.0')?.getDetails()?.getByKey('label')"/>
+      </bindings>
+    </fields>
   </components>
 </uimodel:UIModel>
