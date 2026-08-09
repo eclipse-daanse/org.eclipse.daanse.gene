@@ -477,3 +477,103 @@ Klassenuebergreifende Verfeinerung (Workspace-Datei, eine Regel):
    CSS :has() verborgen (Paritaet: keine leeren Sektionen).
 4. ✅ Nachher-Abgleich wiederholt: Baseline mit UIMODEL_FLAG=true 17/17,
    pixelgenau nachgemessen 0 diff-Pixel auf allen 6 Screenshots.
+
+---
+
+## 9. Erweiterung: Workspace-weite Widget-Overrides (`UIModelContribution`)
+
+**Anforderung (2026-08-09):** Workspace-weite Einstellung, die das Default-
+Template PUNKTUELL uebersteuert — z. B. „Feature `x` mit eType EString bitte
+als Multiline-Editor" — ohne das komplette `generic-default.uimodel.xmi` in
+den Workspace zu kopieren (Kopien divergieren bei App-Updates und sind fuer
+eine Ein-Zeilen-Regel unverhaeltnismaessig). Das ist die in E7 notierte
+Ausbaustufe „feature-genaue Overrides".
+
+### 9.1 Zielbild
+
+Eine kleine Workspace-Datei traegt nur das Delta:
+
+```xml
+<!-- workspace: overrides.uimodel.xmi -->
+<uimodel:UIModelContribution
+    xmlns:uimodel="http://uimodel/1.0" ...
+    name="workspace-overrides" priority="100">
+
+  <templates xsi:type="uimodel:TextAreaWidget" xmi:id="t-textarea" name="textarea" rows="5"/>
+
+  <!-- Regel: Feature x (EString) ueberall als Multiline -->
+  <cases widget="#t-textarea">
+    <when language="JS"
+        body="self.getName() === 'x' &amp;&amp; self.getEType()?.getName() === 'EString'"/>
+  </cases>
+</uimodel:UIModelContribution>
+```
+
+Wirkung: Bei JEDER AllFeatures-Expansion (generic-default UND autorierte
+Modelle mit Platzhaltern) werden beigesteuerte Cases VOR den lokalen Cases
+geprueft — Workspace-Regeln uebersteuern das Default-Mapping, ohne es zu
+ersetzen. Explizit gebundene Widgets (handgeschriebene fields) bleiben
+unberuehrt.
+
+### 9.2 Metamodell-Erweiterung (uimodel.ecore, EMFTs)
+
+```
+EClass UIModelContribution {
+  name:      EString
+  priority:  EInt = 0                       — Reihung mehrerer Contributions
+  templates: WidgetComponent[*] (containment) — Prototypen-Katalog (wie UIModel)
+  cases:     TemplateCase[*]   (containment)  — beigesteuerte Widget-Wahl-Faelle
+  bindings:  PropertyBinding[*] (containment) — optional, s. D1
+}
+```
+
+Bewusst KEIN components-Baum: eine Contribution definiert keine Struktur,
+nur Regeln — das unterscheidet sie vom UIModel und macht die Semantik klar.
+
+### 9.3 Aufloesungs-Semantik (Composer)
+
+- `ExpansionContext` erhaelt `contributedCases: TemplateCase[]`
+  (vom Konsumenten befuellt, nach Contribution-priority absteigend sortiert;
+  innerhalb einer Contribution Dokument-Reihenfolge).
+- `widgetPrototypeFor`: contributed cases → lokale cases → `template`-
+  Kurzform → kein Treffer = Fehler (wie #5). `when` bleibt fail-closed.
+- Optional D1: `contributedBindings` analog — werden wie Block-Bindings an
+  jedes expandierte Widget angehaengt (widget-/block-eigene gewinnen).
+- Reiner Kern bleibt pur: Contributions kommen NUR ueber den Context —
+  der Composer laedt/sammelt selbst nichts.
+
+### 9.4 gene-Seite
+
+1. `UiModelRegistry`: erkennt `UIModelContribution`-Wurzeln in
+   `*.uimodel.xmi` (App-Default- und Workspace-Stufe wie gehabt;
+   Workspace-Contributions vor App-Contributions).
+2. `UimodelPropertiesView`: befuellt den bereitgestellten
+   `EXPANSION_CONTEXT` zusaetzlich mit den Contributions aus der Registry
+   (reaktiv ueber die Registry-Version — Datei rein/raus wirkt sofort).
+3. E2E: Regel-Datei in Workspace-Stufe laden → Feature x rendert als
+   TextArea, alle anderen EStrings weiter als Input; Datei entfernen →
+   Default greift wieder. Baseline (ohne Contributions) bleibt pixelgenau.
+4. Dogfooding: die Override-Datei ist eine normale uimodel-Instanz — mit
+   gene selbst editierbar; optionale Settings-UI s. D3.
+
+### 9.5 Offene Entscheidungen
+
+- **D1:** v1 nur `cases` (Widget-Wahl) oder auch `bindings` (z. B.
+  Label-/readOnly-Regeln workspace-weit)? Empfehlung: beides — bindings
+  sind derselbe Mechanismus und decken „alle description-Felder
+  placeholder=..." gleich mit ab.
+- **D2:** Gelten Contributions auch in AUTORIERTEN Modellen mit
+  AllFeatures-Platzhaltern (Empfehlung: ja — die Regel ist global; wer
+  volle Kontrolle will, schreibt explizite fields) — oder nur im
+  generic-default?
+- **D3:** Einstell-UI: v1 file-basiert (Workspace-Datei); spaeter optional
+  eine Workspace-Settings-Seite, die die Datei ueber ein Formular pflegt.
+- **D4:** Benennung: `UIModelContribution` vs. `WidgetRuleSet` vs.
+  `UIModelOverlay`.
+
+### 9.6 Umsetzungsreihenfolge
+
+1. EMFTs: Metamodell + ExpansionContext + widgetPrototypeFor + Tests
+   (eigenes Issue, nach Entscheidung D1/D2/D4).
+2. gene: Registry-Erkennung + Context-Befuellung + E2E (klein, ~1 Session).
+3. Optional D3 (Settings-UI) als eigene Folge-Iteration.
