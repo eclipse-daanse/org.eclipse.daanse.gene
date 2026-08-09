@@ -53,6 +53,10 @@ const isReference = computed(() => {
   try { return f?.eClass?.()?.getName?.() === 'EReference' } catch { return false }
 })
 
+// problemsService laedt asynchron — den reaktiven Ref bevorzugen, der
+// eingefrorene Snapshot im Kontext kann noch null sein.
+const problemsService = computed(() => editorCtx?.problemsServiceRef?.value ?? editorCtx?.problemsService)
+
 const value = computed(() => editorCtx?.getFeatureValue?.(props.feature))
 
 // Validierung (Plan Phase 2, F5 — eine Quelle): Sind am UIModel-Widget
@@ -101,7 +105,7 @@ function onOclBlocked(obj: EObject, reason: string) {
       :is="DerivedField"
       :feature="feature"
       :eObject="eObject"
-      :problemsService="editorCtx?.problemsService"
+      :problemsService="problemsService"
       @navigate="onNavigate"
     />
   </div>
@@ -116,7 +120,7 @@ function onOclBlocked(obj: EObject, reason: string) {
       :availableObjects="availableObjects"
       :validChildClasses="validChildClasses"
       :rootPackage="editorCtx.rootPackage"
-      :problemsService="editorCtx.problemsService"
+      :problemsService="problemsService"
       :oclFilter="oclFilter"
       @update:value="onUpdateValue"
       @create="onCreate"

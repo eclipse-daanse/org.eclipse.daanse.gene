@@ -1,16 +1,28 @@
 <script setup lang="ts">
 /**
  * UimodelPropertiesView — rendert die Feature-Sektionen des Property-Views
- * ueber den @emfts/uimodel-composer (Plan Phase 1).
+ * ueber den @emfts/uimodel-composer (Plan Phase 1/3/4).
  *
- * Ohne autoriertes UIModel wird per Default-Generator eines aus der EClass
- * des selektierten Objekts erzeugt (E4). Die Feature-Listen kommen vom
- * PropertiesPanel (useInstanceEditor), damit exakt dieselben Features
- * erscheinen wie im bisherigen Pfad.
+ * Ohne autoriertes UIModel (Registry, Phase 3) wird per Default-Generator
+ * eines aus der EClass erzeugt (E4). Die Komponenten des UIModels werden
+ * hier selbst ueber den ComponentDispatcher des Composers verteilt statt
+ * ueber <UIModelComposer>, damit je Gruppe eine ECHTE Sektions-Ueberschrift
+ * im DOM steht (Paritaet zum bisherigen Panel; uimodel.ecore kennt noch
+ * kein Section-Titel-Konzept — F4-Erweiterungskandidat).
  */
-import { computed, inject, watch } from 'tsm:vue'
+import { computed, inject, provide, watch } from 'tsm:vue'
 import type { EObject, EStructuralFeature } from '@emfts/core'
-import { UIModelComposer } from '@emfts/uimodel-composer'
+import {
+  ComponentDispatcher,
+  createComposerRegistry,
+  COMPOSER_REGISTRY_KEY,
+  FormViewComposer,
+  SectionViewComposer,
+  TabViewComposer,
+  SummaryViewComposer,
+  TableViewComposer,
+  MasterDetailComposer
+} from '@emfts/uimodel-composer'
 import { buildDefaultUiModel } from '../defaultUiModel'
 import { bumpModelVersion } from '../oclAdapter'
 import { findUiModel } from '../uiModelRegistry'
@@ -22,6 +34,17 @@ const props = defineProps<{
   /** Derived Features (Ecore-derived Attribute + Referenzen), read-only */
   derived?: EStructuralFeature[]
 }>()
+
+// Composer-Registry fuer die Dispatch-Kette bereitstellen (sonst macht das
+// UIModelComposer; Vega/Map bewusst nicht registriert — nicht benoetigt).
+provide(COMPOSER_REGISTRY_KEY, createComposerRegistry({
+  FormView: FormViewComposer,
+  SectionView: SectionViewComposer,
+  TabView: TabViewComposer,
+  SummaryView: SummaryViewComposer,
+  TableView: TableViewComposer,
+  MasterDetail: MasterDetailComposer
+}))
 
 // Modell-Version aus dem Editor-Kontext → OCL-Cache invalidieren, damit
 // visibilityCondition/ValidationExpression auf Wertaenderungen reagieren.
@@ -47,20 +70,38 @@ const uiModel = computed(() => {
     derived: props.derived
   })
 })
+
+const components = computed(() => uiModel.value?.components ?? [])
 </script>
 
 <template>
   <div class="uimodel-properties-view">
-    <UIModelComposer :ui-model="uiModel" :model="eObject" />
+    <div
+      v-for="component in components"
+      :key="component.name"
+      class="section-group"
+    >
+      <div v-if="component.group" class="section-heading">{{ component.group }}</div>
+      <ComponentDispatcher :component="component" :model="eObject" />
+    </div>
   </div>
 </template>
 
 <style scoped>
-/* Sektions-Ueberschrift aus dem gestempelten data-uim-group-Attribut —
-   gleiche Optik wie .section-heading des bisherigen Panels. */
-.uimodel-properties-view :deep(.uimodel-form-view[data-uim-group])::before {
-  content: attr(data-uim-group);
-  display: block;
+/* Gleiche Optik wie die Sektionen des bisherigen Panels: dort sind die
+   Sektionen direkte Flex-Kinder von .panel-content (gap: 0.75rem) — hier
+   stecken sie in einem Wrapper und brauchen denselben Abstand. */
+.uimodel-properties-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.section-group {
+  margin-bottom: 0.25rem;
+}
+
+.section-heading {
   font-size: 0.75rem;
   text-align: center;
   font-weight: 700;
@@ -72,9 +113,5 @@ const uiModel = computed(() => {
   background: color-mix(in srgb, var(--primary-color, #6366f1) 6%, transparent);
   border-radius: 4px;
   border-bottom: 2px solid color-mix(in srgb, var(--primary-color, #6366f1) 25%, transparent);
-}
-
-.uimodel-properties-view :deep(.uimodel-form-view) {
-  margin-bottom: 0.25rem;
 }
 </style>

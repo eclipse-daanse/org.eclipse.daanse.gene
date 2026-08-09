@@ -47,7 +47,10 @@ async function setupBaseline(page: Page): Promise<void> {
     const tsm = appEl?.__vue_app__?._context?.provides?.['tsm']
     const pm = tsm?.getService?.('ui.registry.perspectives')
     const pr = tsm?.getService?.('ui.registry.panels')
-    return !!(pm && pr?.get?.('instance-tree') && pr?.get?.('properties') && pr?.get?.('model-browser'))
+    // ui.uimodel.forms mit abwarten: das Properties-Panel loest den Service
+    // beim Mount auf — die Perspektive darf nicht vorher oeffnen.
+    return !!(pm && pr?.get?.('instance-tree') && pr?.get?.('properties') && pr?.get?.('model-browser')
+      && tsm?.getService?.('ui.uimodel.forms'))
   }, undefined, { timeout: 60_000 })
 
   await page.evaluate(() => {
@@ -210,6 +213,15 @@ test.describe('Properties-Baseline: Screenshots', () => {
     await selectByXmiId(page, 'lib1', 'Operations')
     await waitForPanelSettled(page)
     const panel = propertiesPanel(page)
+
+    // Nachher-Abgleich-Ehrlichkeit: mit UIMODEL_FLAG=true MUSS der
+    // Composer-Pfad aktiv sein — sonst vergleicht der Lauf den alten
+    // Pfad mit sich selbst.
+    if (UIMODEL_FLAG === 'true') {
+      await expect(panel.locator('.uimodel-properties-view')).toBeVisible()
+    } else {
+      await expect(panel.locator('.uimodel-properties-view')).toHaveCount(0)
+    }
 
     // Plausibilitaet vor dem Screenshot: Sektionen und Schluesselfelder vorhanden
     await expect(panel.locator('.class-name')).toHaveText('Library')
