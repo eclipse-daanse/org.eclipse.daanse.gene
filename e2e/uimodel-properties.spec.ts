@@ -326,6 +326,108 @@ test.describe('UiModel-Properties (Flag an)', () => {
     await expect(labels.nth(1)).toContainText('Count')
   })
 
+  test('Strukturen (emf.ts.ui#6): GroupWidget, Conditional, ForEach mit Element-Editing', async ({ page }) => {
+    const panel = propertiesPanel(page)
+
+    await page.evaluate(async () => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const svc = tsm.getService('ui.uimodel.forms')
+      const nsUri = 'http://www.gene.org/uimodel-baseline/library/1.0'
+      const xmi = `<?xml version="1.0" encoding="UTF-8"?>
+<uimodel:UIModel xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:uimodel="http://uimodel/1.0"
+    name="struktur-demo" priority="20">
+  <targetClasses href="${nsUri}#//Library"/>
+  <components xsi:type="uimodel:FormView" name="demo" group="Struktur">
+    <fields xsi:type="uimodel:GroupWidget" name="kopf" layout="HORIZONTAL">
+      <fields xsi:type="uimodel:InputWidget" name="name" label="Name">
+        <feature href="${nsUri}#//Library/name"/>
+      </fields>
+      <fields xsi:type="uimodel:NumberWidget" name="maxMembers" label="Kapazitaet">
+        <feature href="${nsUri}#//Library/maxMembers"/>
+      </fields>
+    </fields>
+    <fields xsi:type="uimodel:Conditional" name="offen-check">
+      <condition language="JS" body="self.open === true"/>
+      <then xsi:type="uimodel:InputWidget" name="code" label="Signatur (offen)">
+        <feature href="${nsUri}#//Library/code"/>
+      </then>
+      <else xsi:type="uimodel:NumberWidget" name="rating" label="Bewertung (geschlossen)">
+        <feature href="${nsUri}#//Library/rating"/>
+      </else>
+    </fields>
+    <fields xsi:type="uimodel:ForEach" name="regale" emptyText="keine Regale">
+      <items language="JS" body="self.shelves"/>
+      <body xsi:type="uimodel:InputWidget" name="shelf-name" label="Regal">
+        <feature href="${nsUri}#//Shelf/name"/>
+      </body>
+    </fields>
+  </components>
+</uimodel:UIModel>`
+      await svc.addUiModelsFromXmi(xmi, 'struktur-demo.uimodel.xmi', 'workspace')
+    })
+
+    // GroupWidget: horizontale Gruppe mit beiden Feldern
+    const gruppe = panel.locator('.uimodel-group--horizontal')
+    await expect(gruppe).toBeVisible({ timeout: 5000 })
+    await expect(gruppe.locator('.uimodel-property-row')).toHaveCount(2)
+
+    // Conditional: open=true → then-Zweig (Signatur), else-Zweig fehlt
+    await expect(panel.getByText('Signatur (offen)')).toBeVisible()
+    await expect(panel.getByText('Bewertung (geschlossen)')).toHaveCount(0)
+
+    // ForEach: ein Input pro Regal, mit Element-Werten
+    const regalInputs = panel.locator('.uimodel-property-row')
+      .filter({ has: page.locator('.field-label', { hasText: 'Regal' }) })
+      .locator('input')
+    await expect(regalInputs).toHaveCount(2)
+    await expect(regalInputs.nth(0)).toHaveValue('Belletristik')
+    await expect(regalInputs.nth(1)).toHaveValue('Sachbuecher')
+
+    // Element-Editing: schreibt an das ELEMENT (shelf1), nicht an die Library
+    await regalInputs.nth(0).fill('Romane')
+    await page.waitForTimeout(500)
+    const werte = await page.evaluate(() => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const it = tsm.getService('ui.instance-tree.composables')
+      const lib: any = Array.from(it.useSharedInstanceTree().getRootObjects())[0]
+      const shelvesF = lib.eClass().getEStructuralFeature('shelves')
+      const shelves = Array.from(lib.eGet(shelvesF))
+      const nameF = (shelves[0] as any).eClass().getEStructuralFeature('name')
+      return {
+        shelf0: (shelves[0] as any).eGet(nameF),
+        libName: lib.eGet(lib.eClass().getEStructuralFeature('name'))
+      }
+    })
+    expect(werte.shelf0).toBe('Romane')
+    expect(werte.libName).toBe('Stadtbibliothek')
+
+    // Conditional wechselt den Zweig nach Wertaenderung + ECHTEM
+    // Selektionswechsel (ueber ein anderes Objekt — Deselect+Reselect
+    // desselben Objekts im selben Tick ist fuer Vue ein No-op; die
+    // Live-Reaktivitaet der Struktur-Aufloesung ist der bekannte
+    // Upstream-Tick-Punkt, emf.ts.ui#3-Kommentar).
+    await page.evaluate(() => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const it = tsm.getService('ui.instance-tree.composables')
+      const lib: any = Array.from(it.useSharedInstanceTree().getRootObjects())[0]
+      lib.eSet(lib.eClass().getEStructuralFeature('open'), false)
+    })
+    await selectByXmiId(page, 'shelf1')
+    await selectByXmiId(page, 'lib1')
+    await expect(panel.getByText('Bewertung (geschlossen)')).toBeVisible({ timeout: 5000 })
+    await expect(panel.getByText('Signatur (offen)')).toHaveCount(0)
+
+    await page.evaluate(() => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      tsm.getService('ui.uimodel.forms').removeUiModelPath('struktur-demo.uimodel.xmi')
+    })
+  })
+
   test('Flag-Umschaltung ohne Reload stellt den alten Pfad wieder her', async ({ page }) => {
     const panel = propertiesPanel(page)
     await expect(panel.locator('.uimodel-properties-view')).toBeVisible()

@@ -84,7 +84,13 @@ const isReference = computed(() => {
 // eingefrorene Snapshot im Kontext kann noch null sein.
 const problemsService = computed(() => editorCtx?.problemsServiceRef?.value ?? editorCtx?.problemsService)
 
-const value = computed(() => editorCtx?.getFeatureValue?.(props.feature))
+// Objektbewusster Wert-Zugriff (emf.ts.ui#6): in ForEach-Bodies ist
+// props.eObject ein Collection-Element, nicht das selektierte Objekt —
+// der alte getFeatureValue-Pfad wuerde am falschen Objekt lesen.
+const value = computed(() => {
+  if (editorCtx?.getFeatureValueOn) return editorCtx.getFeatureValueOn(props.eObject, props.feature)
+  return editorCtx?.getFeatureValue?.(props.feature)
+})
 
 // Validierung (Plan Phase 2, F5 — eine Quelle): Sind am UIModel-Widget
 // ValidationExpressions definiert, ist deren Ergebnis massgeblich; sonst
@@ -122,7 +128,8 @@ const validChildClasses = computed(() => isReference.value ? editorCtx?.getValid
 const oclFilter = computed(() => isReference.value ? editorCtx?.getOclFilter?.(props.feature) : undefined)
 
 function onUpdateValue(v: unknown) {
-  editorCtx?.setFeatureValue?.(props.feature, v)
+  if (editorCtx?.setFeatureValueOn) editorCtx.setFeatureValueOn(props.eObject, props.feature, v)
+  else editorCtx?.setFeatureValue?.(props.feature, v)
   // OCL-Expression-Cache invalidieren: der Instance-Kontext fuehrt keine
   // Modell-Version (anders als der Metamodeler), deshalb wird direkt an der
   // Schreibquelle invalidiert — visibilityCondition/Validations werten neu aus.

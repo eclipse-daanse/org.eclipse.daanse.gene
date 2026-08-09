@@ -129,4 +129,26 @@ provide(EXPANSION_CONTEXT_KEY, computed(() => collectExpansionContext(uiModel.va
 .uimodel-properties-view .section-group:not(:has(.uimodel-property-row)) {
   display: none;
 }
+
+/* GroupWidget-Layouts (emf.ts.ui#6): der Composer stempelt nur Klassen,
+   das Layout definiert der Konsument. */
+.uimodel-properties-view :deep(.uimodel-group--horizontal) {
+  display: flex;
+  gap: 0.5rem;
+}
+.uimodel-properties-view :deep(.uimodel-group--horizontal > *) {
+  flex: 1;
+  min-width: 0;
+}
+.uimodel-properties-view :deep(.uimodel-group--grid) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.uimodel-properties-view :deep(.uimodel-foreach-empty) {
+  color: var(--text-color-secondary);
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  margin: 0;
+}
 </style>
