@@ -22,7 +22,6 @@ import {
   SummaryViewComposer,
   TableViewComposer,
   MasterDetailComposer,
-  AllFeaturesComposer,
   collectExpansionContext,
   EXPANSION_CONTEXT_KEY
 } from '@emfts/uimodel-composer'
@@ -46,8 +45,7 @@ provide(COMPOSER_REGISTRY_KEY, createComposerRegistry({
   TabView: TabViewComposer,
   SummaryView: SummaryViewComposer,
   TableView: TableViewComposer,
-  MasterDetail: MasterDetailComposer,
-  AllFeatures: AllFeaturesComposer
+  MasterDetail: MasterDetailComposer
 }))
 
 // Modell-Version aus dem Editor-Kontext → OCL-Cache invalidieren, damit
@@ -82,11 +80,6 @@ const components = computed(() => uiModel.value?.components ?? [])
 // UIModelComposer — wir dispatchen selbst, also selbst bereitstellen.
 provide(EXPANSION_CONTEXT_KEY, computed(() => collectExpansionContext(uiModel.value as any)))
 
-// AllFeatures-Bloecke rendern ihre Gruppenueberschrift selbst (h3 im
-// AllFeaturesComposer) — unsere Wrapper-Ueberschrift wuerde doppeln.
-function rendersOwnHeading(component: any): boolean {
-  try { return component?.eClass?.()?.getName?.() === 'AllFeatures' } catch { return false }
-}
 </script>
 
 <template>
@@ -96,7 +89,7 @@ function rendersOwnHeading(component: any): boolean {
       :key="component.name"
       class="section-group"
     >
-      <div v-if="component.group && !rendersOwnHeading(component)" class="section-heading">{{ component.group }}</div>
+      <div v-if="component.group" class="section-heading">{{ component.group }}</div>
       <ComponentDispatcher :component="component" :model="eObject" />
     </div>
   </div>
@@ -116,8 +109,7 @@ function rendersOwnHeading(component: any): boolean {
   margin-bottom: 0.25rem;
 }
 
-.section-heading,
-.uimodel-properties-view :deep(.uimodel-all-features__title) {
+.section-heading {
   font-size: 0.75rem;
   text-align: center;
   font-weight: 700;
@@ -131,10 +123,10 @@ function rendersOwnHeading(component: any): boolean {
   border-bottom: 2px solid color-mix(in srgb, var(--primary-color, #6366f1) 25%, transparent);
 }
 
-/* Leere AllFeatures-Sektionen (Klasse hat keine passenden Features)
-   komplett verbergen — Paritaet: das bisherige Panel rendert Sektionen
-   nur, wenn sie Inhalt haben. */
-.uimodel-properties-view :deep(.uimodel-all-features:not(:has(.uimodel-property-row))) {
+/* Leere Sektionen (AllFeatures-Platzhalter expandierte zu 0 Widgets)
+   samt Ueberschrift verbergen — Paritaet: das bisherige Panel rendert
+   Sektionen nur, wenn sie Inhalt haben. */
+.uimodel-properties-view .section-group:not(:has(.uimodel-property-row)) {
   display: none;
 }
 </style>

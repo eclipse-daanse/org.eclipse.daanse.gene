@@ -324,6 +324,14 @@ vermerkt.
 **Eingereicht als Feature Request:** https://github.com/eclipse-fennec/emf.ts.ui/issues/2
 (umgesetzt und in gene integriert, s. 8.6)
 
+**Nachtrag (2026-08-09):** https://github.com/eclipse-fennec/emf.ts.ui/issues/5 —
+`TemplateCase`: Widget-Typ-Wahl als explizite, geordnete Fallliste am
+AllFeatures (when-Expression + Widget-Referenz auf den Templates-Katalog,
+first-match-wins, expliziter Default-Fall). Ersetzt das implizite
+defaultWidgetFor() im Code — das Typ-Mapping wird lesbares, pro Workspace
+ueberschreibbares Modell. Nach Umsetzung: generic-default.uimodel.xmi um
+die Fall-Liste ergaenzen.
+
 **Nachtrag (2026-08-09):** https://github.com/eclipse-fennec/emf.ts.ui/issues/4 —
 `AllFeatures` als fields-Platzhalter in FormView statt eigenstaendigem
 Composer: keine implizite Praesentation (section/h3) in der Library;
