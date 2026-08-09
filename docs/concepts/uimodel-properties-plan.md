@@ -322,6 +322,13 @@ vermerkt.
 ## 8. Erweiterungs-Spezifikation: Generische Layouts via `AllFeatures` (Folge-Iteration, EMFTs-Projekt)
 
 **Eingereicht als Feature Request:** https://github.com/eclipse-fennec/emf.ts.ui/issues/2
+(umgesetzt und in gene integriert, s. 8.6)
+
+**Nachtrag (2026-08-09):** https://github.com/eclipse-fennec/emf.ts.ui/issues/3 —
+`PropertyBinding`: expression-faehige Widget-Parameter (label/readOnly/… als
+OCL/JS-Expression mit Kontext self=Domaenenobjekt + feature/eClass). Loest
+das Label-Problem des geteilten AllFeatures-Templates generisch (Labels z. B.
+aus EAnnotations am Feature) und macht readOnly/required instanzabhaengig.
 
 **Motivation (Diskussion 2026-08-09):** Autorierte UIModels binden Widgets per
 `feature href` an konkrete Features konkreter Klassen — klassenuebergreifende
