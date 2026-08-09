@@ -124,7 +124,10 @@ async function selectByXmiId(page: Page, xmiId: string, requiredText?: string): 
       // zum Selektionszeitpunkt. Sind sie noch nicht aufgeloest, bleibt das
       // Panel sektionslos; nur eine NEUE Selektion baut den Editor neu auf.
       // Deshalb gehoert auch dieser Check in die Retry-Schleife.
-      const hasSections = await propertiesPanel(page).locator('.section-heading').first()
+      // Beide Heading-Formen: .section-heading (alter Pfad/Panel-Rahmen) und
+      // .uimodel-all-features__title (AllFeatures-Sektionen im Composer-Pfad)
+      const hasSections = await propertiesPanel(page)
+        .locator('.section-heading, .uimodel-all-features__title').first()
         .waitFor({ state: 'visible', timeout: 2000 }).then(() => true).catch(() => false)
       // Optional: ein testkritischer Text (z. B. eine Referenz-Row), der beim
       // unvollstaendig aufgebauten Editor fehlen kann — dann neu selektieren.

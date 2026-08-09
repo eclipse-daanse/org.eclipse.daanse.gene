@@ -424,12 +424,20 @@ Klassenuebergreifende Verfeinerung (Workspace-Datei, eine Regel):
 - O4: Validierung von `with` gegen `targetClasses` (Analogon zu
   `featureBelongsToTargetClasses`) oder stilles Leer-Matchen bei fremden Klassen?
 
-### 8.6 Folgearbeiten in gene (nach der Composer-Erweiterung)
+### 8.6 Folgearbeiten in gene — ERLEDIGT (2026-08-09)
 
-1. `generic-default.uimodel.xmi` + `templates.uimodel.xmi` nach `public/uimodels/`.
-2. Default-Generator (`defaultUiModel.ts`) entfernen; Minimal-Fallback nur fuer
-   „keine UIModel-Quelle verfuegbar".
-3. `UimodelPropertiesView`: eigene ComposerRegistry um `AllFeaturesComposer`
-   ergaenzen (oder auf Default-Registry des Composers umstellen).
-4. Nachher-Abgleich wiederholen (Baseline mit UIMODEL_FLAG=true muss
-   pixelidentisch bleiben, wenn das Template das heutige Layout abbildet).
+1. ✅ `public/uimodels/generic-default.uimodel.xmi` (+ index.json) — eigene,
+   paritaetstreue Variante OHNE Identification-Block (iD-Attribut bleibt wie
+   bisher unter Attributes); JS-Metafilter.
+2. ✅/teilweise: Default-Generator bleibt bewusst als Fallback (greift nur,
+   wenn keine UIModel-Quelle ladbar ist, z. B. fetch-Fehler); Required-
+   Validation-Erzeugung als geteilte Utility (`createRequiredValidation`)
+   herausgeloest — die WidgetBridge synthetisiert sie fuer AllFeatures-
+   expandierte Widgets (Expansion setzt upstream keine Validations, A8).
+3. ✅ `AllFeaturesComposer` in der Registry; `EXPANSION_CONTEXT` wird von der
+   View selbst provided (sie dispatcht ohne UIModelComposer); Wrapper-
+   Ueberschrift fuer AllFeatures unterdrueckt (Composer rendert eigenes h3,
+   auf .section-heading-Optik gestylt); leere AllFeatures-Sektionen per
+   CSS :has() verborgen (Paritaet: keine leeren Sektionen).
+4. ✅ Nachher-Abgleich wiederholt: Baseline mit UIMODEL_FLAG=true 17/17,
+   pixelgenau nachgemessen 0 diff-Pixel auf allen 6 Screenshots.
