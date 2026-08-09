@@ -3,15 +3,21 @@
   App-Default: generisches Property-Layout fuer ALLE Klassen (keine
   targetClasses). Struktur wie autorierte Modelle: FormView je Sektion
   (group = Ueberschrift, gerendert vom Konsumenten), darin AllFeatures
-  als fields-Platzhalter (emf.ts.ui #2/#4) — expandiert beim Rendern zu
-  einem Widget je passendem Feature der selektierten Klasse.
+  als fields-Platzhalter (emf.ts.ui #2/#4).
+
+  Widget-Typ-Wahl (emf.ts.ui #5): explizite TemplateCase-Fallliste je
+  Platzhalter — erster Treffer gewinnt, letzter Fall ohne when ist der
+  Default. Die Prototypen stehen einmal im templates-Katalog und werden
+  per Referenz wiederverwendet; ein implizites Code-Mapping gibt es
+  nicht mehr.
 
   Bewusste Abweichung vom upstream-Beispiel: KEIN Identification-Block —
   das iD-Attribut erscheint wie im bisherigen gene-Layout unter Attributes;
   die XMI-ID/Primary-Key-Zeile rendert der Panel-Rahmen (Pixel-Paritaet
   mit e2e/properties-baseline.spec.ts).
 
-  filter: JS-Metaausdruecke, self = EStructuralFeature (Meta-Ebene).
+  filter/when: JS-Metaausdruecke, self = EStructuralFeature (Meta-Ebene,
+  Method-Call-Stil: nur das Wurzelobjekt ist geproxied).
   Label-Konvention (emf.ts.ui#3): EAnnotation am Feature
   (source http://uimodel/1.0, key label) uebersteuert die Namens-
   Ableitung; ohne Annotation greift fail-open die Ableitung.
@@ -23,6 +29,14 @@
     xmlns:uimodel="http://uimodel/1.0"
     name="gene-generic-default">
 
+  <!-- Prototypen-Katalog: einmal definiert, von allen Cases referenziert -->
+  <templates xsi:type="uimodel:CheckboxWidget"      xmi:id="t-checkbox"  name="checkbox"/>
+  <templates xsi:type="uimodel:NumberWidget"        xmi:id="t-number"    name="number"/>
+  <templates xsi:type="uimodel:DateWidget"          xmi:id="t-date"      name="date"/>
+  <templates xsi:type="uimodel:SelectWidget"        xmi:id="t-select"    name="select"/>
+  <templates xsi:type="uimodel:ReferenceLinkWidget" xmi:id="t-reference" name="reference"/>
+  <templates xsi:type="uimodel:InputWidget"         xmi:id="t-input"     name="input"/>
+
   <components xsi:type="uimodel:FormView" name="attributes" group="Attributes">
     <fields xsi:type="uimodel:AllFeatures" name="all-attributes">
       <filter language="JS"
@@ -31,6 +45,20 @@
         <expression language="JS"
             body="feature.getEAnnotation('http://uimodel/1.0')?.getDetails()?.getByKey('label')"/>
       </bindings>
+      <cases widget="#t-checkbox">
+        <when language="JS" body="['EBoolean','EBooleanObject'].includes(self.getEType()?.getName())"/>
+      </cases>
+      <cases widget="#t-number">
+        <when language="JS"
+            body="['EInt','EIntegerObject','ELong','ELongObject','EShort','EShortObject','EFloat','EFloatObject','EDouble','EDoubleObject','EBigDecimal','EBigInteger','EByte'].includes(self.getEType()?.getName())"/>
+      </cases>
+      <cases widget="#t-date">
+        <when language="JS" body="self.getEType()?.getName() === 'EDate'"/>
+      </cases>
+      <cases widget="#t-select">
+        <when language="JS" body="self.getEType()?.eClass().getName() === 'EEnum'"/>
+      </cases>
+      <cases widget="#t-input"/>   <!-- Default-Fall, explizit -->
     </fields>
   </components>
 
@@ -42,6 +70,7 @@
         <expression language="JS"
             body="feature.getEAnnotation('http://uimodel/1.0')?.getDetails()?.getByKey('label')"/>
       </bindings>
+      <cases widget="#t-reference"/>
     </fields>
   </components>
 
@@ -52,6 +81,9 @@
         <expression language="JS"
             body="feature.getEAnnotation('http://uimodel/1.0')?.getDetails()?.getByKey('label')"/>
       </bindings>
+      <!-- Widget-Typ hier nur formal: derived Features rendert die
+           WidgetBridge ohnehin als read-only DerivedField -->
+      <cases widget="#t-input"/>
     </fields>
   </components>
 </uimodel:UIModel>
