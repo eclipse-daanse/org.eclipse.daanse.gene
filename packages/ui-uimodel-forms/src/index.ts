@@ -16,6 +16,7 @@ import { registerOclEvaluator } from '@emfts/uimodel-composer'
 
 import WidgetBridge from './components/WidgetBridge.vue'
 import UimodelPropertiesView from './components/UimodelPropertiesView.vue'
+import OverlaySettings from './components/OverlaySettings.vue'
 import { buildDefaultUiModel, featureDisplayName } from './defaultUiModel'
 import { useUimodelPropertiesFlag } from './featureFlag'
 import { GeneOclValidator, setOclQuery, bumpModelVersion } from './oclAdapter'
@@ -27,6 +28,7 @@ import {
   removePath,
   findUiModel,
   getRegistryVersion,
+  getOverlayCases,
   listRegisteredUiModels
 } from './uiModelRegistry'
 
@@ -83,6 +85,7 @@ export async function activate(context: ModuleContext): Promise<void> {
 
   context.services.register('ui.uimodel.forms', {
     UimodelPropertiesView: markRaw(UimodelPropertiesView),
+    OverlaySettings: markRaw(OverlaySettings),
     buildDefaultUiModel,
     featureDisplayName,
     useUimodelPropertiesFlag,
@@ -94,6 +97,7 @@ export async function activate(context: ModuleContext): Promise<void> {
     removeUiModelPath: removePath,
     reloadWorkspaceUiModels,
     loadAppDefaults,
+    getOverlayCases,
     listRegisteredUiModels
   })
 
