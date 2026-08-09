@@ -18,17 +18,33 @@
     xmlns:uimodel="http://uimodel/1.0"
     name="gene-generic-default">
 
+  <!-- Label-Konvention: EAnnotation am Feature (source http://uimodel/1.0,
+       key label) uebersteuert die Namens-Ableitung — Labels werden damit
+       im Metamodell gepflegt, nicht pro UIModel. Fail-open: ohne Annotation
+       liefert die Expression undefined und die Ableitung greift. -->
   <components xsi:type="uimodel:AllFeatures" name="attributes" group="Attributes">
     <filter language="JS"
         body="self.eClass().getName() === 'EAttribute' &amp;&amp; !self.derived &amp;&amp; !self.transient"/>
+    <bindings property="label">
+      <expression language="JS"
+          body="feature.getEAnnotation('http://uimodel/1.0')?.getDetails()?.getByKey('label')"/>
+    </bindings>
   </components>
 
   <components xsi:type="uimodel:AllFeatures" name="references" group="References">
     <filter language="JS"
         body="self.eClass().getName() === 'EReference' &amp;&amp; !self.derived &amp;&amp; !self.transient"/>
+    <bindings property="label">
+      <expression language="JS"
+          body="feature.getEAnnotation('http://uimodel/1.0')?.getDetails()?.getByKey('label')"/>
+    </bindings>
   </components>
 
   <components xsi:type="uimodel:AllFeatures" name="derived" group="Derived Values">
     <filter language="JS" body="self.derived === true"/>
+    <bindings property="label">
+      <expression language="JS"
+          body="feature.getEAnnotation('http://uimodel/1.0')?.getDetails()?.getByKey('label')"/>
+    </bindings>
   </components>
 </uimodel:UIModel>
