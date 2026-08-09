@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <fennecui:EditorConfig xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:fennecui="https://eclipse.org/fennec/ts/generic/ui" name="UimodelBaseline" configFileExtensions="" enabled="true" activeViewId="">
   <modelSources name="library" location="library.ecore" resolution="0" registerPackages="true" enabled="true"/>
-  <instanceSources name="library-instance.xmi" location="library-instance.xmi" resolution="0" enabled="true"/>
+  <instanceSources name="library-instance" location="instances/library-instance.xmi" resolution="0" enabled="true"/>
+  <iconMappings targetTypeUri="http://www.gene.org/uimodel-baseline/library/1.0#Shelf" scope="TYPE_ONLY" priority="20">
+    <icon xsi:type="fennecui:LibraryIcon" library="CUSTOM" name="pi pi-folder"/>
+  </iconMappings>
+  <iconMappings targetTypeUri="http://www.gene.org/uimodel-baseline/library/1.0#Book" scope="TYPE_ONLY" priority="20">
+    <icon xsi:type="fennecui:LibraryIcon" library="CUSTOM" name="pi pi-book"/>
+  </iconMappings>
+  <iconMappings targetTypeUri="http://www.gene.org/uimodel-baseline/library/1.0#Library" scope="TYPE_ONLY" priority="20">
+    <icon xsi:type="fennecui:LibraryIcon" library="CUSTOM" name="pi pi-expand"/>
+  </iconMappings>
   <layoutConfig primarySidebarWidth="360" secondarySidebarWidth="360" panelAreaHeight="300" primarySidebarVisible="true" secondarySidebarVisible="true" panelAreaVisible="false" activityBarVisible="true" statusBarVisible="true" activeActivityId="instance-tree"/>
 </fennecui:EditorConfig>
