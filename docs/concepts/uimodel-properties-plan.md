@@ -480,7 +480,9 @@ Klassenuebergreifende Verfeinerung (Workspace-Datei, eine Regel):
 
 ---
 
-## 9. Erweiterung: Workspace-weite Widget-Overrides (`UIModelContribution`)
+## 9. Erweiterung: Workspace-weite Widget-Overrides (`UIModelOverlay`)
+
+**Eingereicht als Feature Request:** https://github.com/eclipse-fennec/emf.ts.ui/issues/8
 
 **Anforderung (2026-08-09):** Workspace-weite Einstellung, die das Default-
 Template PUNKTUELL uebersteuert — z. B. „Feature `x` mit eType EString bitte
@@ -495,7 +497,7 @@ Eine kleine Workspace-Datei traegt nur das Delta:
 
 ```xml
 <!-- workspace: overrides.uimodel.xmi -->
-<uimodel:UIModelContribution
+<uimodel:UIModelOverlay
     xmlns:uimodel="http://uimodel/1.0" ...
     name="workspace-overrides" priority="100">
 
@@ -506,7 +508,7 @@ Eine kleine Workspace-Datei traegt nur das Delta:
     <when language="JS"
         body="self.getName() === 'x' &amp;&amp; self.getEType()?.getName() === 'EString'"/>
   </cases>
-</uimodel:UIModelContribution>
+</uimodel:UIModelOverlay>
 ```
 
 Wirkung: Bei JEDER AllFeatures-Expansion (generic-default UND autorierte
@@ -518,7 +520,7 @@ unberuehrt.
 ### 9.2 Metamodell-Erweiterung (uimodel.ecore, EMFTs)
 
 ```
-EClass UIModelContribution {
+EClass UIModelOverlay {
   name:      EString
   priority:  EInt = 0                       — Reihung mehrerer Contributions
   templates: WidgetComponent[*] (containment) — Prototypen-Katalog (wie UIModel)
@@ -556,20 +558,17 @@ nur Regeln — das unterscheidet sie vom UIModel und macht die Semantik klar.
 4. Dogfooding: die Override-Datei ist eine normale uimodel-Instanz — mit
    gene selbst editierbar; optionale Settings-UI s. D3.
 
-### 9.5 Offene Entscheidungen
+### 9.5 Entschieden (2026-08-09)
 
-- **D1:** v1 nur `cases` (Widget-Wahl) oder auch `bindings` (z. B.
-  Label-/readOnly-Regeln workspace-weit)? Empfehlung: beides — bindings
-  sind derselbe Mechanismus und decken „alle description-Felder
-  placeholder=..." gleich mit ab.
-- **D2:** Gelten Contributions auch in AUTORIERTEN Modellen mit
-  AllFeatures-Platzhaltern (Empfehlung: ja — die Regel ist global; wer
-  volle Kontrolle will, schreibt explizite fields) — oder nur im
-  generic-default?
-- **D3:** Einstell-UI: v1 file-basiert (Workspace-Datei); spaeter optional
-  eine Workspace-Settings-Seite, die die Datei ueber ein Formular pflegt.
-- **D4:** Benennung: `UIModelContribution` vs. `WidgetRuleSet` vs.
-  `UIModelOverlay`.
+- **D1:** v1 NUR Widget-Wahl (`cases` + `templates`) — keine bindings.
+- **D2:** Overlays gelten ueberall, wo AllFeatures expandiert (auch in
+  autorierten Modellen); explizite fields bleiben unberuehrt.
+- **D3:** Settings-Page in gene; die Einstellung darf im Workspace-`.wsp`
+  leben — v1: Registry-Scan der `*.uimodel.xmi` wie gehabt, die
+  Settings-Page pflegt die Overlay-Datei; optional ein Source-Eintrag im
+  EditorConfig (`.wsp`) analog modelSources (fennecui-Erweiterung,
+  eigene gene-Iteration).
+- **D4:** Name: **`UIModelOverlay`**.
 
 ### 9.6 Umsetzungsreihenfolge
 
