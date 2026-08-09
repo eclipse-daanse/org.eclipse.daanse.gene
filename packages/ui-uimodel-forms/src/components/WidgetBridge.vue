@@ -12,9 +12,9 @@
  */
 import { computed, inject } from 'tsm:vue'
 import type { EObject, EStructuralFeature, EClass, EReference } from '@emfts/core'
-import { useValidation, resolveBindings } from '@emfts/uimodel-composer'
+import { useValidation } from '@emfts/uimodel-composer'
 import type { WidgetComponent } from '@emfts/uimodel-composer'
-import { bumpModelVersion, expressionVersion } from '../oclAdapter'
+import { bumpModelVersion } from '../oclAdapter'
 import { createRequiredValidation } from '../defaultUiModel'
 
 const props = defineProps<{
@@ -34,25 +34,13 @@ const rawWidget = computed(() => (props.custom?.rawWidget ?? null) as WidgetComp
 const resolvedConfig = computed(() => (props.custom?.resolvedStyle ?? null) as
   { label?: string; readOnly?: boolean; required?: boolean } | null)
 
-// LIVE-Neuauswertung der Bindings: upstream (useWidgetConfig) haengt nicht
-// reaktiv an Instanzwerten (emf.ts.ui#3) — hier gegen unsere Expression-
-// Version ausgewertet, die bei jeder Wertaenderung gebumpt wird. Ergebnis
-// gewinnt gegen den (potenziell veralteten) resolvedStyle-Snapshot.
-const liveBindings = computed(() => {
-  void expressionVersion()
-  const w = rawWidget.value
-  if (!w || (w.bindings?.length ?? 0) === 0) return null
-  try { return resolveBindings(w, props.eObject) } catch { return null }
-})
-const effectiveLabel = computed(() =>
-  (liveBindings.value?.values?.label as string | undefined)
-    ?? resolvedConfig.value?.label ?? rawWidget.value?.label)
-const effectiveReadOnly = computed(() =>
-  (liveBindings.value?.values?.readOnly as boolean | undefined)
-    ?? resolvedConfig.value?.readOnly)
-const effectiveRequired = computed(() =>
-  (liveBindings.value?.values?.required as boolean | undefined)
-    ?? resolvedConfig.value?.required)
+// resolvedStyle ist seit dem Expression-Tick (emf.ts.ui#7) selbst reaktiv:
+// bumpModelVersion() bumpt den Composer-Tick, useWidgetConfig wertet neu
+// aus und der WidgetComposer reicht frische Werte durch — die frühere
+// Doppel-Auswertung (liveBindings) ist entfallen.
+const effectiveLabel = computed(() => resolvedConfig.value?.label ?? rawWidget.value?.label)
+const effectiveReadOnly = computed(() => resolvedConfig.value?.readOnly)
+const effectiveRequired = computed(() => resolvedConfig.value?.required)
 
 const tsm = inject<any>('tsm')
 

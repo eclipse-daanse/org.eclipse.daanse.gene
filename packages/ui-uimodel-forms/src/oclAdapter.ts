@@ -16,6 +16,7 @@
  */
 
 import { ref } from 'tsm:vue'
+import { bumpExpressionTick } from '@emfts/uimodel-composer'
 
 // Reaktive Version: wird bei jedem eingetroffenen Ergebnis und bei
 // Modellaenderungen erhoeht. Von evaluateExpression GELESEN, damit Vue-
@@ -52,20 +53,14 @@ export function setOclQuery(fn: OclQuery | null): void {
   queryFn = fn
 }
 
-/** Modellaenderung → Cache invalidieren und Neubewertung anstossen. */
+/** Modellaenderung → Cache invalidieren und Neubewertung anstossen.
+ * Bumpt auch den Expression-Tick des Composers (emf.ts.ui#7): damit
+ * werten Bindings, Visibility, Validierung UND Conditional/ForEach
+ * live neu aus. */
 export function bumpModelVersion(): void {
   cache.clear()
   version.value++
-}
-
-/**
- * Reaktiver Zugriff auf die Expression-Version — fuer computeds, die
- * Expressions ausserhalb des OCL-Adapters neu auswerten muessen (z. B.
- * JS-PropertyBindings in der WidgetBridge: upstream wertet useWidgetConfig
- * nicht reaktiv auf Instanzwerte aus, emf.ts.ui#3).
- */
-export function expressionVersion(): number {
-  return version.value
+  bumpExpressionTick()
 }
 
 /**

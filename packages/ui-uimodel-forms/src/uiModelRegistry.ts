@@ -49,8 +49,12 @@ export function setFileSystem(fs: FileSystemService | null): void {
   fileSystem = fs
 }
 
-/** XMI-Inhalt laden und alle UIModel-Wurzeln zurueckgeben. */
-export async function loadUiModelXmi(content: string, path: string): Promise<UIModel[]> {
+/** XMI-Inhalt laden und Wurzeln der akzeptierten Typen zurueckgeben. */
+export async function loadUiModelXmi(
+  content: string,
+  path: string,
+  acceptedTypes: string[] = ['UIModel']
+): Promise<UIModel[]> {
   const resourceSet = new BasicResourceSet()
   const res = new XMIResource(URI.createURI(path))
   resourceSet.getResources().push(res)
@@ -61,22 +65,60 @@ export async function loadUiModelXmi(content: string, path: string): Promise<UIM
   const contents = res.getContents()
   for (let i = 0; i < contents.length; i++) {
     const root = contents.get(i) as EObject
-    if (root?.eClass?.()?.getName?.() === 'UIModel') {
+    if (acceptedTypes.includes(root?.eClass?.()?.getName?.() ?? '')) {
       result.push(root as unknown as UIModel)
     }
   }
   return result
 }
 
-/** UIModel(s) aus einem XMI-String in eine Stufe der Registry uebernehmen. */
+/**
+ * UIModel(s) UND UIModelOverlay(s) aus einem XMI-String in eine Stufe der
+ * Registry uebernehmen. Overlays (emf.ts.ui#8) steuern TemplateCases fuer
+ * die AllFeatures-Expansion bei (getOverlayCases) und sind keine
+ * Layout-Kandidaten fuer findUiModel.
+ */
 export async function addUiModelsFromXmi(content: string, path: string, tier: Tier): Promise<number> {
-  const loaded = await loadUiModelXmi(content, path)
+  const loaded = await loadUiModelXmi(content, path, ['UIModel', 'UIModelOverlay'])
   removePath(path)
-  for (const uiModel of loaded) {
-    models.push({ uiModel, path, tier })
+  for (const root of loaded) {
+    if ((root as unknown as EObject).eClass?.()?.getName?.() === 'UIModelOverlay') {
+      overlays.push({ overlay: root as unknown as OverlayLike, path, tier })
+    } else {
+      models.push({ uiModel: root, path, tier })
+    }
   }
   version.value++
   return loaded.length
+}
+
+interface OverlayLike {
+  name?: string
+  priority?: number
+  cases?: unknown[]
+}
+
+interface RegisteredOverlay {
+  overlay: OverlayLike
+  path: string
+  tier: Tier
+}
+
+const overlays: RegisteredOverlay[] = []
+
+/**
+ * Beigesteuerte TemplateCases aller Overlays: Workspace vor App-Default,
+ * darin Overlay-priority absteigend, innerhalb eines Overlays
+ * Dokument-Reihenfolge. Fuer ExpansionContext.overlayCases (emf.ts.ui#8);
+ * liest die Registry-Version (reaktiv in computeds nutzbar).
+ */
+export function getOverlayCases(): unknown[] {
+  void version.value
+  const byTier = (tier: Tier) => overlays
+    .filter(o => o.tier === tier)
+    .sort((a, b) => (b.overlay.priority ?? 0) - (a.overlay.priority ?? 0))
+    .flatMap(o => o.overlay.cases ?? [])
+  return [...byTier('workspace'), ...byTier('app')]
 }
 
 export function removePath(path: string): void {
@@ -87,12 +129,21 @@ export function removePath(path: string): void {
       removed = true
     }
   }
+  for (let i = overlays.length - 1; i >= 0; i--) {
+    if (overlays[i].path === path) {
+      overlays.splice(i, 1)
+      removed = true
+    }
+  }
   if (removed) version.value++
 }
 
 function clearTier(tier: Tier): void {
   for (let i = models.length - 1; i >= 0; i--) {
     if (models[i].tier === tier) models.splice(i, 1)
+  }
+  for (let i = overlays.length - 1; i >= 0; i--) {
+    if (overlays[i].tier === tier) overlays.splice(i, 1)
   }
 }
 

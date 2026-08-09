@@ -129,13 +129,15 @@ test.describe('UiModel-Properties (Flag an)', () => {
     const nameInput = nameRow.locator('input').first()
 
     await nameInput.fill('')
-    // Asynchrone OCL-Auswertung (Parser/Worker beim ersten Mal langsam)
-    await expect(nameRow.getByText('Name is required')).toBeVisible({ timeout: 20_000 })
+    // Asynchrone OCL-Auswertung (Parser/Worker beim ersten Mal langsam).
+    // Meldungstext je nach Quelle: Expansion (emf.ts.ui#7) liefert
+    // "... ist erforderlich.", gene-Synthese "... is required".
+    await expect(nameRow.getByText(/is required|ist erforderlich/i)).toBeVisible({ timeout: 20_000 })
     // Genau EINE Meldung (keine Doppelmeldung alt+neu, Kriterium A8)
-    await expect(nameRow.getByText(/required/i)).toHaveCount(1)
+    await expect(nameRow.getByText(/is required|ist erforderlich/i)).toHaveCount(1)
 
     await nameInput.fill('Stadtbibliothek')
-    await expect(nameRow.getByText('Name is required')).not.toBeVisible({ timeout: 20_000 })
+    await expect(nameRow.getByText(/is required|ist erforderlich/i)).not.toBeVisible({ timeout: 20_000 })
   })
 
   test('Referenz-Absprungpunkt: Such-Dialog oeffnet aus der Bridge-Row', async ({ page }) => {

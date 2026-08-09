@@ -33,17 +33,22 @@ const perspective = tsm?.getService('ui.perspectives')?.useSharedPerspective()
 const workspaceSettings = computed(() => perspective?.state?.workspaceSettings)
 
 // === Master-Detail Navigation ===
-type SettingsCategory = 'icons' | 'views' | 'actions' | 'events' | 'storage' | 'resolvers' | 'about'
+type SettingsCategory = 'icons' | 'views' | 'widgets' | 'actions' | 'events' | 'storage' | 'resolvers' | 'about'
 
-const categories: { id: SettingsCategory; label: string; icon: string }[] = [
+const allCategories: { id: SettingsCategory; label: string; icon: string }[] = [
   { id: 'icons', label: 'Icon Mappings', icon: 'pi pi-palette' },
   { id: 'views', label: 'Views', icon: 'pi pi-eye' },
+  // nur sichtbar, wenn das ui-uimodel-forms-Plugin aktiv ist (Service-Lookup)
+  { id: 'widgets', label: 'Property Widgets', icon: 'pi pi-sliders-h' },
   { id: 'actions', label: 'Actions', icon: 'pi pi-play' },
   { id: 'events', label: 'Event Mappings', icon: 'pi pi-bolt' },
   { id: 'storage', label: 'Storage', icon: 'pi pi-database' },
   { id: 'resolvers', label: 'Package Resolvers', icon: 'pi pi-link' },
   { id: 'about', label: 'About', icon: 'pi pi-info-circle' }
 ]
+const categories = computed(() =>
+  allCategories.filter(c => c.id !== 'widgets' || OverlaySettingsPanel.value)
+)
 
 // ── About: Gene version + loaded plugin manifests ──────────────────────────
 declare const __GENE_VERSION__: string
@@ -87,6 +92,8 @@ const MappingScope = computed(() => iconRegistryService.value?.MappingScope ?? {
 const IconLibrary = computed(() => iconRegistryService.value?.IconLibrary ?? { PRIME_ICONS: 'PRIME_ICONS', MATERIAL_SYMBOLS: 'MATERIAL_SYMBOLS', FONT_AWESOME: 'FONT_AWESOME', CUSTOM: 'CUSTOM' })
 
 const ViewsEditorPanel = computed(() => tsm?.getService('ui.instance-tree.components')?.ViewsEditorPanel || null)
+// Workspace-weite Widget-Overrides (ui-uimodel-forms, optionales Plugin)
+const OverlaySettingsPanel = computed(() => tsm?.getService('ui.uimodel.forms')?.OverlaySettings || null)
 const IconPickerComponent = computed(() => tsm?.getService('ui.instance-tree.components')?.IconPicker || null)
 
 const actionComponents = computed(() => tsm?.getService('gene.action.components') || null)
@@ -588,6 +595,13 @@ function formatKind(kind: string): string {
               <div v-if="ViewsEditorPanel" class="views-panel-container">
                 <component :is="ViewsEditorPanel" :packages="[]" />
               </div>
+            </div>
+
+            <!-- Property Widgets (workspace-weite Widget-Overrides, ui-uimodel-forms) -->
+            <div v-else-if="selectedCategory === 'widgets'" class="detail-content">
+              <h3 class="detail-title">Property Widgets</h3>
+              <p class="detail-description">Workspace-wide widget overrides for the generic property layout (e.g. render a feature as multiline editor).</p>
+              <component v-if="OverlaySettingsPanel" :is="OverlaySettingsPanel" />
             </div>
 
             <!-- Actions -->
