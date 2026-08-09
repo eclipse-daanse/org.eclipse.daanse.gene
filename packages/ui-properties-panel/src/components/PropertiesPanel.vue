@@ -1145,6 +1145,10 @@ provide(GENE_EDITOR_CONTEXT_KEY, {
   getValidChildClasses,
   getOclFilter,
   problemsService: problemsService.value,
+  // Reaktive Variante: problemsService laedt asynchron (onMounted) — der
+  // obige Snapshot ist beim fruehen provide() noch null und bleibt es.
+  // Die Widget-Bridge liest deshalb den Ref.
+  problemsServiceRef: problemsService,
   handleNavigate,
   handleSearch,
   mode: ctx.value?.mode ?? 'instance',
@@ -1163,12 +1167,25 @@ provide(GENE_EDITOR_CONTEXT_KEY, {
 })
 
 // ── UiModel-basiertes Rendering (Feature-Flag, Plan Phase 1) ────────────────
-const uimodelForms = tsm?.getService('ui.uimodel.forms')
-const uimodelFlag = uimodelForms?.useUimodelPropertiesFlag?.()
-const UimodelPropertiesView = uimodelForms?.UimodelPropertiesView
+// Der Service registriert sich NACH diesem Panel-Modul (Modul-Reihenfolge) —
+// beim fruehen Mount (Perspektive oeffnet direkt nach Panel-Registrierung)
+// waere ein einmaliges getService dauerhaft null. Deshalb kurzer Retry.
+const uimodelFormsRef = ref<any>(tsm?.getService('ui.uimodel.forms') ?? null)
+if (!uimodelFormsRef.value && tsm) {
+  let attempts = 0
+  const poll = setInterval(() => {
+    const svc = tsm.getService('ui.uimodel.forms')
+    if (svc || ++attempts > 50) {
+      if (svc) uimodelFormsRef.value = svc
+      clearInterval(poll)
+    }
+  }, 100)
+}
+const uimodelFlag = computed(() => uimodelFormsRef.value?.useUimodelPropertiesFlag?.())
+const UimodelPropertiesView = computed(() => uimodelFormsRef.value?.UimodelPropertiesView ?? null)
 // Nur im Instance-Modus (Metamodeler bleibt in dieser Iteration beim alten Pfad)
 const useUimodelRendering = computed(() =>
-  !!(uimodelFlag?.enabled?.value && UimodelPropertiesView && (ctx.value?.mode ?? 'instance') === 'instance')
+  !!(uimodelFlag.value?.enabled?.value && UimodelPropertiesView.value && (ctx.value?.mode ?? 'instance') === 'instance')
 )
 
 /**
