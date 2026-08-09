@@ -75,19 +75,28 @@ function initWidget(widget: WidgetComponent, feature: EStructuralFeature, group:
   // die strukturellen Checks wandern schrittweise aus useInstanceEditor in
   // das UIModel — eine Quelle, ausgewertet ueber den gene-OCL-Adapter.
   if (widget.required) {
-    const factory = UimodelFactory.eINSTANCE
-    const vex = factory.createValidationExpression()
-    vex.language = 'OCL'
-    // Strings: leer gilt wie fehlend (Verhalten des bisherigen required-Checks)
-    const n = feature.getName()
-    vex.body = dataTypeName(feature) === 'EString'
-      ? `self.${n} <> null and self.${n}.size() > 0`
-      : `self.${n} <> null`
-    vex.defaultMessage = `${widget.label} is required`
-    vex.severity = 'ERROR'
-    widget.validations = [vex]
+    widget.validations = [createRequiredValidation(feature, widget.label)]
   }
   return widget
+}
+
+/**
+ * Required-Check als OCL-ValidationExpression. Auch von der WidgetBridge
+ * genutzt, um bei AllFeatures-expandierten Widgets (die Expansion setzt
+ * keine Validations) dieselbe Semantik zu synthetisieren.
+ */
+export function createRequiredValidation(feature: EStructuralFeature, label?: string) {
+  const factory = UimodelFactory.eINSTANCE
+  const vex = factory.createValidationExpression()
+  vex.language = 'OCL'
+  // Strings: leer gilt wie fehlend (Verhalten des bisherigen required-Checks)
+  const n = feature.getName()
+  vex.body = dataTypeName(feature) === 'EString'
+    ? `self.${n} <> null and self.${n}.size() > 0`
+    : `self.${n} <> null`
+  vex.defaultMessage = `${label ?? featureDisplayName(feature)} is required`
+  vex.severity = 'ERROR'
+  return vex
 }
 
 /**

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  App-Default: generisches Property-Layout fuer ALLE Klassen (keine
+  targetClasses) via AllFeatures-Platzhalter (emf.ts.ui Issue #2).
+
+  Bewusste Abweichung vom upstream-Beispiel (model/templates/ im Composer):
+  KEIN eigener Identification-Block - das iD-Attribut erscheint wie im
+  bisherigen gene-Layout unter Attributes; die XMI-ID/Primary-Key-Zeile
+  rendert weiterhin der Panel-Rahmen. Grund: Pixel-Paritaet mit der
+  Verhaltens-Baseline (e2e/properties-baseline.spec.ts).
+
+  Filter sind JS-Metaausdruecke: self = EStructuralFeature (Meta-Ebene).
+-->
+<uimodel:UIModel
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmi:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:uimodel="http://uimodel/1.0"
+    name="gene-generic-default">
+
+  <components xsi:type="uimodel:AllFeatures" name="attributes" group="Attributes">
+    <filter language="JS"
+        body="self.eClass().getName() === 'EAttribute' &amp;&amp; !self.derived &amp;&amp; !self.transient"/>
+  </components>
+
+  <components xsi:type="uimodel:AllFeatures" name="references" group="References">
+    <filter language="JS"
+        body="self.eClass().getName() === 'EReference' &amp;&amp; !self.derived &amp;&amp; !self.transient"/>
+  </components>
+
+  <components xsi:type="uimodel:AllFeatures" name="derived" group="Derived Values">
+    <filter language="JS" body="self.derived === true"/>
+  </components>
+</uimodel:UIModel>

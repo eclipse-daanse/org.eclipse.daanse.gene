@@ -15,6 +15,7 @@ import type { EObject, EStructuralFeature, EClass, EReference } from '@emfts/cor
 import { useValidation } from '@emfts/uimodel-composer'
 import type { WidgetComponent } from '@emfts/uimodel-composer'
 import { bumpModelVersion } from '../oclAdapter'
+import { createRequiredValidation } from '../defaultUiModel'
 
 const props = defineProps<{
   eObject: EObject
@@ -63,8 +64,23 @@ const value = computed(() => editorCtx?.getFeatureValue?.(props.feature))
 // ValidationExpressions definiert, ist deren Ergebnis massgeblich; sonst
 // werden uebergangsweise die Fehler aus useInstanceEditor durchgereicht.
 // Es wird immer nur EINE Meldung angezeigt (keine Doppelmeldung, A8).
+// AllFeatures-expandierte Widgets tragen keine Validations — den
+// Required-Check aus dem Feature (lowerBound) synthetisieren, damit die
+// Semantik unabhaengig von der UIModel-Quelle identisch ist.
+const effectiveValidations = computed(() => {
+  const authored = rawWidget.value?.validations ?? []
+  if (authored.length > 0) return authored
+  if (isDerived.value) return []
+  try {
+    if ((props.feature.getLowerBound?.() ?? 0) > 0) {
+      return [createRequiredValidation(props.feature, rawWidget.value?.label)]
+    }
+  } catch { /* ignore */ }
+  return []
+})
+
 const uimodelValidation = useValidation(
-  () => rawWidget.value?.validations ?? [],
+  () => effectiveValidations.value,
   () => props.eObject
 )
 const error = computed(() => {

@@ -94,7 +94,7 @@ test.describe('UiModel-Properties (Flag an)', () => {
   test('Composer rendert Attributes + References als FormViews', async ({ page }) => {
     const panel = propertiesPanel(page)
     await expect(panel.locator('.uimodel-properties-view')).toBeVisible()
-    const forms = panel.locator('.uimodel-form-view')
+    const forms = panel.locator('.uimodel-all-features, .uimodel-form-view')
     await expect(forms).toHaveCount(3)
     await expect(forms.nth(0)).toHaveAttribute('data-uim-group', 'Attributes')
     await expect(forms.nth(1)).toHaveAttribute('data-uim-group', 'References')
@@ -150,7 +150,7 @@ test.describe('UiModel-Properties (Flag an)', () => {
   test('Autoriertes Workspace-UIModel ersetzt Default; Entfernen faellt zurueck (A1/A5)', async ({ page }) => {
     const panel = propertiesPanel(page)
     // Default-Generator aktiv
-    await expect(panel.locator('.uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'Attributes')
+    await expect(panel.locator('.uimodel-all-features, .uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'Attributes')
 
     // Autoriertes UIModel in die Workspace-Stufe laden (Datei aus test-data)
     await page.evaluate(async () => {
@@ -162,8 +162,8 @@ test.describe('UiModel-Properties (Flag an)', () => {
     })
 
     // Anzeige folgt dem Modell: eigene Gruppen, Labels, Reihenfolge (Signatur vor Bezeichnung)
-    await expect(panel.locator('.uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'Stammdaten', { timeout: 5000 })
-    await expect(panel.locator('.uimodel-form-view').nth(1)).toHaveAttribute('data-uim-group', 'Bestand')
+    await expect(panel.locator('.uimodel-all-features, .uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'Stammdaten', { timeout: 5000 })
+    await expect(panel.locator('.uimodel-all-features, .uimodel-form-view').nth(1)).toHaveAttribute('data-uim-group', 'Bestand')
     const labels = panel.locator('.uimodel-property-row .field-label')
     await expect(labels.nth(0)).toContainText('Signatur')
     await expect(labels.nth(1)).toContainText('Bezeichnung')
@@ -175,7 +175,7 @@ test.describe('UiModel-Properties (Flag an)', () => {
       const tsm = appEl.__vue_app__._context.provides['tsm']
       tsm.getService('ui.uimodel.forms').removeUiModelPath('library.uimodel.xmi')
     })
-    await expect(panel.locator('.uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'Attributes', { timeout: 5000 })
+    await expect(panel.locator('.uimodel-all-features, .uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'Attributes', { timeout: 5000 })
     await expect(panel.locator('.uimodel-property-row')).toHaveCount(14)
   })
 
@@ -201,7 +201,7 @@ test.describe('UiModel-Properties (Flag an)', () => {
 </uimodel:UIModel>`
       await svc.addUiModelsFromXmi(appXmi, 'app-default.uimodel.xmi', 'app')
     })
-    await expect(panel.locator('.uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'AppDefault', { timeout: 5000 })
+    await expect(panel.locator('.uimodel-all-features, .uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'AppDefault', { timeout: 5000 })
 
     // Workspace-Modell dazu → gewinnt gegen App-Default
     await page.evaluate(async () => {
@@ -211,7 +211,7 @@ test.describe('UiModel-Properties (Flag an)', () => {
       const content = await (await fetch('/test-data/uimodel-baseline/library.uimodel.xmi')).text()
       await svc.addUiModelsFromXmi(content, 'library.uimodel.xmi', 'workspace')
     })
-    await expect(panel.locator('.uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'Stammdaten', { timeout: 5000 })
+    await expect(panel.locator('.uimodel-all-features, .uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'Stammdaten', { timeout: 5000 })
 
     // Workspace-Modell weg → App-Default greift wieder
     await page.evaluate(() => {
@@ -219,7 +219,7 @@ test.describe('UiModel-Properties (Flag an)', () => {
       const tsm = appEl.__vue_app__._context.provides['tsm']
       tsm.getService('ui.uimodel.forms').removeUiModelPath('library.uimodel.xmi')
     })
-    await expect(panel.locator('.uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'AppDefault', { timeout: 5000 })
+    await expect(panel.locator('.uimodel-all-features, .uimodel-form-view').nth(0)).toHaveAttribute('data-uim-group', 'AppDefault', { timeout: 5000 })
   })
 
   test('Flag-Umschaltung ohne Reload stellt den alten Pfad wieder her', async ({ page }) => {
