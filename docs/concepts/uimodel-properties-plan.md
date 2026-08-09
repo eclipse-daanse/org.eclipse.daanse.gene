@@ -316,3 +316,118 @@ vermerkt.
 3. Kopie ins Workspace legen, Reihenfolge/Labels ändern → Panel übernimmt die
    Workspace-Variante (A5); alle Absprungpunkte durchklicken (A1).
 4. Feature-Flag ausschalten → alte Anzeige, gleiche Daten (B2).
+
+---
+
+## 8. Erweiterungs-Spezifikation: Generische Layouts via `AllFeatures` (Folge-Iteration, EMFTs-Projekt)
+
+**Motivation (Diskussion 2026-08-09):** Autorierte UIModels binden Widgets per
+`feature href` an konkrete Features konkreter Klassen — klassenuebergreifende
+Layouts („Id, dann alle Attribute, dann alle Referenzen") und Regeln
+(„Feature `description` ueberall als Multiline-Editor") sind damit nicht
+abbildbar. Der heutige Default-Generator in gene kodiert genau so ein Layout
+hart — diese Semantik gehoert ins Metamodell und in den Composer, damit sie
+fuer JEDEN Konsumenten gilt, nicht nur fuer gene.
+
+### 8.1 Metamodell-Erweiterung (`uimodel.ecore`, Entscheidung F4)
+
+```
+EClass AllFeatures extends Component {
+  with:     EStructuralFeature[*]    — explizite Auswahl, definierte Reihenfolge
+  eType:    EClassifier[*]           — Typ-Filter (strukturierter Shortcut)
+  filter:   Expression[0..1] (containment) — OCL/JS-Query GEGEN DAS FEATURE
+  template: WidgetComponent[0..1]    — Widget-Prototyp (href, z. B. templates.uimodel.xmi)
+  priority: EInt = 0                 — Konfliktaufloesung zwischen Bloecken
+}
+```
+
+- **Kein Kategorie-Enum** (ATTRIBUTES/REFERENCES/DERIVED/…): Kategorien sind
+  reflektiv am Feature ablesbar und werden als `filter`-Expression formuliert —
+  `self` ist dabei das `EStructuralFeature` (Meta-Ebene!), im Unterschied zu
+  `visibilityCondition`/`validations` (dort: Domaenenobjekt). Beispiele:
+  `self.oclIsKindOf(ecore::EAttribute) and not self.derived`,
+  `self.derived`, `self.iD`, `self.name = 'description'`, `self.containment`.
+- **`template`**: `WidgetComponent` ohne gebundenes `feature` (dafuer
+  `WidgetComponent.feature` auf `[0..1]` lockern + Constraint „ungebunden nur
+  als Prototyp"). Pro Treffer: `EcoreUtil.copy`, `feature` binden, Label aus
+  dem Feature ableiten, sofern der Prototyp keins vorgibt. Kein `template` →
+  eingebautes Typ-Mapping (EBoolean→Checkbox, EInt→Number, EDate→Date,
+  EEnum→Select, sonst Input; Referenzen→ReferenceLink).
+- **Vorlagen-Bibliotheken**: eigenstaendige XMI-Dateien mit benannten
+  Prototypen (`templates.uimodel.xmi#multiline`), workspace- und app-weit teilbar.
+
+### 8.2 Auswahl- und Konflikt-Semantik
+
+1. Grundmenge = alle Features der EClass (inkl. geerbte), in Feature-Reihenfolge.
+2. `with` gesetzt → genau diese Features in dieser Reihenfolge; sonst schneiden
+   `eType` und `filter` die Grundmenge zu (beide gesetzt = UND).
+3. Treffen mehrere `AllFeatures`-Bloecke dasselbe Feature:
+   `priority` (hoechste gewinnt) → Spezifitaet (`with` > gefiltert) →
+   Dokument-Reihenfolge (first-match-wins). Das entscheidet die ZUORDNUNG des
+   Features zu einem Block; die Block-Reihenfolge im Panel bleibt
+   Dokument-Reihenfolge der `components`.
+4. `Component.group` liefert wie gehabt die Sektions-Ueberschrift.
+
+### 8.3 Renderer (uimodel-composer)
+
+- **`AllFeaturesComposer`** als regulaerer Eintrag der ComposerRegistry
+  (Muster: Komponente, die sich selbst enthalten kann — rendert pro Treffer
+  `WidgetComposer`, fuer verschachtelte Faelle auch rekursiv Dispatcher).
+- **Reiner Kern `expandFeatures(eClass, allFeatures, siblings): WidgetComponent[]`**
+  als exportierte Utility — dieselbe Semantik fuer Renderer, UIModel-Editor
+  (Live-Preview des effektiven Layouts) und Tests.
+- Damit funktionieren Template-UIModels in ALLEN Composer-Konsumenten;
+  gene ist reiner Konsument.
+
+### 8.4 Beispiele
+
+Generisches Default-Layout (ersetzt gene's hart kodierten Generator; wird als
+`public/uimodels/generic-default.uimodel.xmi` App-Default):
+
+```xml
+<uimodel:UIModel name="generic-default">
+  <components xsi:type="uimodel:AllFeatures" name="id" group="Identification">
+    <filter language="OCL" body="self.iD"/>
+  </components>
+  <components xsi:type="uimodel:AllFeatures" name="attribute" group="Attributes">
+    <filter language="OCL" body="self.oclIsKindOf(ecore::EAttribute) and not self.derived"/>
+  </components>
+  <components xsi:type="uimodel:AllFeatures" name="referenzen" group="References">
+    <filter language="OCL" body="self.oclIsKindOf(ecore::EReference) and not self.derived"/>
+  </components>
+  <components xsi:type="uimodel:AllFeatures" name="derived" group="Derived Values">
+    <filter language="OCL" body="self.derived"/>
+  </components>
+</uimodel:UIModel>
+```
+
+Klassenuebergreifende Verfeinerung (Workspace-Datei, eine Regel):
+
+```xml
+<uimodel:UIModel name="my-refinements" priority="10">
+  <components xsi:type="uimodel:AllFeatures" name="beschreibungen" group="Attributes"
+              template="templates.uimodel.xmi#multiline">
+    <filter language="OCL" body="self.name = 'description'"/>
+  </components>
+</uimodel:UIModel>
+```
+
+### 8.5 Offene Entscheidungspunkte (EMFTs-Session)
+
+- O1: Kann die OCL-Engine Meta-Level-Ausdruecke (`oclIsKindOf(ecore::EAttribute)`)?
+  Fallback: JS-Expressions (`self.eClass().getName() === 'EAttribute'`) gehen sofort.
+- O2: Duerfen Prototyp-`validations` Platzhalter (`self.${feature}`) enthalten
+  (Substitution beim Klonen) oder bleibt v1 auf Widget-Typ/Konfiguration beschraenkt?
+- O3: Dedup-Scope von first-match-wins: pro UIModel oder pro Sektion?
+- O4: Validierung von `with` gegen `targetClasses` (Analogon zu
+  `featureBelongsToTargetClasses`) oder stilles Leer-Matchen bei fremden Klassen?
+
+### 8.6 Folgearbeiten in gene (nach der Composer-Erweiterung)
+
+1. `generic-default.uimodel.xmi` + `templates.uimodel.xmi` nach `public/uimodels/`.
+2. Default-Generator (`defaultUiModel.ts`) entfernen; Minimal-Fallback nur fuer
+   „keine UIModel-Quelle verfuegbar".
+3. `UimodelPropertiesView`: eigene ComposerRegistry um `AllFeaturesComposer`
+   ergaenzen (oder auf Default-Registry des Composers umstellen).
+4. Nachher-Abgleich wiederholen (Baseline mit UIMODEL_FLAG=true muss
+   pixelidentisch bleiben, wenn das Template das heutige Layout abbildet).
