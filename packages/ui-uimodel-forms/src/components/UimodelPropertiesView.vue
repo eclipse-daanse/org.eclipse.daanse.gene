@@ -27,7 +27,7 @@ import {
 } from '@emfts/uimodel-composer'
 import { buildDefaultUiModel } from '../defaultUiModel'
 import { bumpModelVersion } from '../oclAdapter'
-import { findUiModel } from '../uiModelRegistry'
+import { findUiModel, getOverlayCases } from '../uiModelRegistry'
 
 const props = defineProps<{
   eObject: EObject
@@ -78,7 +78,14 @@ const components = computed(() => uiModel.value?.components ?? [])
 // AllFeatures-Expansionskontext (Dedup zwischen Geschwister-Bloecken +
 // explizit gebundene Widgets): normalerweise provided das der
 // UIModelComposer — wir dispatchen selbst, also selbst bereitstellen.
-provide(EXPANSION_CONTEXT_KEY, computed(() => collectExpansionContext(uiModel.value as any)))
+// Plus overlayCases (emf.ts.ui#8): workspace-weite Widget-Wahl-Regeln
+// aus der Registry (Settings-Page/Workspace-Dateien) — sie gewinnen
+// gegen die lokalen Cases des UIModels; reaktiv ueber die Registry-
+// Version (getOverlayCases liest sie).
+provide(EXPANSION_CONTEXT_KEY, computed(() => ({
+  ...collectExpansionContext(uiModel.value as any),
+  overlayCases: getOverlayCases() as any[]
+})))
 
 </script>
 
