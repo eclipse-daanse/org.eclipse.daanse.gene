@@ -17,9 +17,34 @@ import {
   type WidgetKind
 } from '../overlayRules'
 import { loadUiModelXmi, reloadWorkspaceUiModels } from '../uiModelRegistry'
+import { createFeaturePickerSource, createETypePickerSource } from '../overlayPickers'
 
 const tsm = inject<any>('tsm')
 const fs = computed(() => tsm?.getService('gene.filesystem'))
+
+// Auswahl-Dialoge: generischer PickerDialog aus ui-search (Service),
+// Daten aus der Model-Registry — Features/eTypes der geladenen Metamodelle
+// sind damit klickbar statt Freitext (Freitext bleibt moeglich).
+const PickerDialog = computed(() => tsm?.getService('ui.search.components')?.PickerDialog ?? null)
+const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry?.() ?? null
+const featurePickerVisible = ref(false)
+const eTypePickerVisible = ref(false)
+const featureSource = computed(() => modelRegistry ? createFeaturePickerSource(modelRegistry) : null)
+const eTypeSource = computed(() => modelRegistry ? createETypePickerSource(modelRegistry) : null)
+
+function onFeaturePicked(item: { label: string; secondaryLabel?: string }) {
+  newRule.value.featureName = item.label
+  // eType des gewaehlten Features als Vorbelegung (nur wenn leer)
+  if (!newRule.value.eTypeName && item.secondaryLabel) {
+    newRule.value.eTypeName = item.secondaryLabel
+  }
+  featurePickerVisible.value = false
+}
+
+function onETypePicked(item: { label: string }) {
+  newRule.value.eTypeName = item.label
+  eTypePickerVisible.value = false
+}
 
 const rules = ref<OverlayRule[]>([])
 const rawCases = ref<string[]>([])
@@ -157,12 +182,41 @@ async function save() {
     </div>
 
     <div class="add-form">
-      <InputText v-model="newRule.featureName" placeholder="Feature-Name (optional)" size="small" />
-      <InputText v-model="newRule.eTypeName" placeholder="eType, z. B. EString (optional)" size="small" />
+      <div class="picker-field">
+        <InputText v-model="newRule.featureName" placeholder="Feature-Name (optional)" size="small" />
+        <Button v-if="PickerDialog && featureSource" icon="pi pi-search" text size="small"
+                @click="featurePickerVisible = true" v-tooltip.bottom="'Feature aus Metamodell waehlen'" />
+      </div>
+      <div class="picker-field">
+        <InputText v-model="newRule.eTypeName" placeholder="eType, z. B. EString (optional)" size="small" />
+        <Button v-if="PickerDialog && eTypeSource" icon="pi pi-search" text size="small"
+                @click="eTypePickerVisible = true" v-tooltip.bottom="'eType waehlen'" />
+      </div>
       <Select v-model="newRule.widget" :options="widgetOptions" optionLabel="label"
               optionValue="value" size="small" class="widget-select" />
       <Button label="Hinzufuegen" icon="pi pi-plus" size="small" :disabled="!canAdd" @click="addRule" />
     </div>
+
+    <component
+      :is="PickerDialog"
+      v-if="PickerDialog && featureSource"
+      v-model:visible="featurePickerVisible"
+      header="Feature waehlen"
+      placeholder="Feature suchen..."
+      display-mode="grouped"
+      :data-source="featureSource"
+      @select="onFeaturePicked"
+    />
+    <component
+      :is="PickerDialog"
+      v-if="PickerDialog && eTypeSource"
+      v-model:visible="eTypePickerVisible"
+      header="eType waehlen"
+      placeholder="Typ suchen..."
+      display-mode="grouped"
+      :data-source="eTypeSource"
+      @select="onETypePicked"
+    />
 
     <div class="actions">
       <Button label="Speichern" icon="pi pi-save" size="small" :disabled="!hasWorkspace" @click="save" />
@@ -177,6 +231,7 @@ async function save() {
 .hint { font-size: 0.85rem; color: var(--text-color-secondary); margin: 0; }
 .empty { font-size: 0.85rem; color: var(--text-color-secondary); font-style: italic; }
 .add-form { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+.picker-field { display: flex; gap: 0.15rem; align-items: center; }
 .widget-select { min-width: 12rem; }
 .actions { display: flex; gap: 0.75rem; align-items: center; }
 .status { font-size: 0.8rem; }
