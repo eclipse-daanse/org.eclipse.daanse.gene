@@ -2,7 +2,7 @@
  * Unit-Tests fuer die Overlay-Regel-Serialisierung (Plan Abschnitt 9, D3).
  */
 import { describe, it, expect } from 'vitest'
-import { rulesToOverlayXmi, parseOverlayRules, ruleWhenBody, isValidRule } from '../overlayRules'
+import { rulesToOverlayXmi, parseOverlayRules, ruleWhenBody, isValidRule, compatibleWidgets } from '../overlayRules'
 
 describe('overlayRules', () => {
   it('ruleWhenBody kombiniert featureName und eType mit UND', () => {
@@ -52,6 +52,18 @@ describe('overlayRules', () => {
     expect(parsed[1]).toEqual({ featureName: undefined, eTypeName: 'EDate', widget: 'date' })
     expect(parsed[2]).toEqual({ raw: 'self.derived === true' })
     expect(parsed[3]).toEqual({ raw: '(Default-Fall)' })
+  })
+
+  it('compatibleWidgets verhindert tote Kombinationen', () => {
+    expect(compatibleWidgets('EString')).toEqual(['input', 'textarea'])
+    expect(compatibleWidgets('EDate')).toEqual(['date', 'input'])
+    expect(compatibleWidgets('EBoolean')).toEqual(['checkbox', 'input'])
+    expect(compatibleWidgets('EInt')).toEqual(['number', 'input'])
+    // Multiline fuer EDate ist NICHT waehlbar
+    expect(compatibleWidgets('EDate')).not.toContain('textarea')
+    // unbekannt/leer: alles erlaubt
+    expect(compatibleWidgets(undefined).length).toBe(7)
+    expect(compatibleWidgets('Genre')).toContain('select')
   })
 
   it('Roundtrip: serialisieren → parsen liefert dieselben Regeln', () => {

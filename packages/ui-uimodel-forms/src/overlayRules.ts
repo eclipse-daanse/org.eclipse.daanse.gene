@@ -36,6 +36,25 @@ export function isValidRule(rule: OverlayRule): boolean {
   return !!(rule.featureName?.trim() || rule.eTypeName?.trim()) && !!rule.widget
 }
 
+/**
+ * Widget-Arten, die fuer einen eType sinnvoll sind (UI-Filter der
+ * Settings-Page — verhindert tote Kombinationen wie Multiline+EDate).
+ * Unbekannte/leere Typen erlauben alles.
+ */
+export function compatibleWidgets(eTypeName?: string): WidgetKind[] {
+  const t = eTypeName?.trim()
+  if (!t) return WIDGET_KINDS.map(w => w.kind)
+  if (t === 'EString' || t === 'EChar') return ['input', 'textarea']
+  if (t === 'EBoolean' || t === 'EBooleanObject') return ['checkbox', 'input']
+  if (['EInt', 'EIntegerObject', 'ELong', 'ELongObject', 'EShort', 'EShortObject',
+       'EFloat', 'EFloatObject', 'EDouble', 'EDoubleObject', 'EBigDecimal',
+       'EBigInteger', 'EByte'].includes(t)) return ['number', 'input']
+  if (t === 'EDate') return ['date', 'input']
+  // Nutzer-Typen: Enums → Select, Klassen → Reference; von der Page
+  // anhand der Picker-Auswahl unterschieden — hier grosszuegig beides.
+  return ['select', 'reference', 'input', 'textarea']
+}
+
 /** when-Expression einer Regel (Meta-Ebene, self = EStructuralFeature). */
 export function ruleWhenBody(rule: OverlayRule): string {
   const parts: string[] = []
