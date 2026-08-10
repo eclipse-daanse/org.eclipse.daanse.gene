@@ -161,6 +161,14 @@ async function save() {
     await f.writeTextFile(entry, xmi)
     await reloadWorkspaceUiModels()
     statusText.value = `Gespeichert: ${OVERLAY_FILE_NAME} (${rules.value.filter(isValidRule).length} Regel(n))`
+    // Unterstuetzung pruefen — beim allerersten Speichern gab es noch
+    // keine Datei, der Hinweis-Banner waere sonst nie erschienen.
+    try {
+      const roots = await loadUiModelXmi(xmi, OVERLAY_FILE_NAME, ['UIModelOverlay'])
+      composerSupport.value = roots.length > 0
+    } catch {
+      composerSupport.value = false
+    }
   } catch (e) {
     errorText.value = `Speichern fehlgeschlagen: ${e instanceof Error ? e.message : e}`
   }
