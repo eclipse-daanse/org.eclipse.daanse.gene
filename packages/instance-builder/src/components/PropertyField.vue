@@ -25,6 +25,8 @@ const props = defineProps<{
   error?: string
   /** Optional label override (e.g. from an authored UIModel widget) */
   label?: string
+  /** Optional widget-type hint (UIModel widget EClass name) */
+  widgetHint?: string
   /** Available objects for reference selection */
   availableObjects?: EObject[]
   /** Available concrete classes for containment references */
@@ -151,6 +153,7 @@ function onOclBlocked(object: EObject, reason: string) {
         :feature="feature as EAttribute"
         :value="value"
         :label="label"
+        :widgetHint="widgetHint"
         @update:value="onUpdate"
         :readonly="readonly"
         :error="error"

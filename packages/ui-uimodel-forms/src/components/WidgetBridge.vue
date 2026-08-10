@@ -39,6 +39,12 @@ const resolvedConfig = computed(() => (props.custom?.resolvedStyle ?? null) as
 // aus und der WidgetComposer reicht frische Werte durch — die frühere
 // Doppel-Auswertung (liveBindings) ist entfallen.
 const effectiveLabel = computed(() => resolvedConfig.value?.label ?? rawWidget.value?.label)
+
+// Widget-Typ als Hint an die Feld-Kette (z. B. TextAreaWidget → mehrzeilig):
+// damit wirken Overlay-Regeln/autorierte Widget-Typen auch durch die Bridge.
+const widgetHint = computed(() => {
+  try { return (rawWidget.value as any)?.eClass?.()?.getName?.() } catch { return undefined }
+})
 const effectiveReadOnly = computed(() => resolvedConfig.value?.readOnly)
 const effectiveRequired = computed(() => resolvedConfig.value?.required)
 
@@ -156,6 +162,7 @@ function onOclBlocked(obj: EObject, reason: string) {
       :eObject="eObject"
       :value="value"
       :label="effectiveLabel"
+      :widgetHint="widgetHint"
       :readonly="effectiveReadOnly"
       :error="error"
       :availableObjects="availableObjects"

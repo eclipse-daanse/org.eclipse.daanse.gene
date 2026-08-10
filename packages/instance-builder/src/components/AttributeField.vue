@@ -21,6 +21,8 @@ const props = defineProps<{
   error?: string
   /** Optional label override (e.g. from an authored UIModel widget) */
   label?: string
+  /** Optional widget-type hint (UIModel widget EClass name, e.g. 'TextAreaWidget') */
+  widgetHint?: string
 }>()
 
 const emit = defineEmits<{
@@ -84,6 +86,12 @@ const inputType = computed(() => {
   const typeName = dataTypeName.value
 
   if (isEnum.value) return 'enum'
+
+  // UIModel-Widget-Hint: TextAreaWidget rendert Strings mehrzeilig
+  // (Overlay-Regeln/autorierte Widgets, emf.ts.ui#5/#8)
+  if (props.widgetHint === 'TextAreaWidget' && ['EString', 'String'].includes(typeName)) {
+    return 'textarea'
+  }
 
   switch (typeName) {
     case 'EString':

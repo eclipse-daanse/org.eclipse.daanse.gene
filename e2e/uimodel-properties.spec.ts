@@ -430,6 +430,67 @@ test.describe('UiModel-Properties (Flag an)', () => {
     })
   })
 
+  test('UIModelOverlay (emf.ts.ui#8): Workspace-Regel rendert author als Multiline', async ({ page }) => {
+    const panel = propertiesPanel(page)
+
+    // book1 hat 'author' (EString) → Default: einzeiliges Input
+    await selectByXmiId(page, 'book1')
+    const authorRow = panel.locator('.uimodel-property-row').filter({ hasText: 'Author' })
+    await expect(authorRow.locator('input')).toHaveCount(1)
+    await expect(authorRow.locator('textarea')).toHaveCount(0)
+
+    // Overlay-Regel wie von der Settings-Page erzeugt (author → TextArea)
+    await page.evaluate(async () => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const svc = tsm.getService('ui.uimodel.forms')
+      const xmi = `<?xml version="1.0" encoding="UTF-8"?>
+<uimodel:UIModelOverlay xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:uimodel="http://uimodel/1.0"
+    name="workspace-overrides" priority="100">
+  <templates xsi:type="uimodel:TextAreaWidget" xmi:id="t-textarea" name="textarea"/>
+  <cases widget="#t-textarea">
+    <when language="JS" body="self.getName() === 'author' &amp;&amp; self.getEType()?.getName() === 'EString'"/>
+  </cases>
+</uimodel:UIModelOverlay>`
+      await svc.addUiModelsFromXmi(xmi, 'workspace-overrides.uimodel.xmi', 'workspace')
+    })
+
+    // Neuselektion (Registry-Aenderung waehlt neu aus; Widgets neu aufgebaut)
+    await selectByXmiId(page, 'shelf1')
+    await selectByXmiId(page, 'book1')
+
+    // author rendert jetzt mehrzeilig; andere Strings (title) bleiben einzeilig
+    await expect(authorRow.locator('textarea')).toHaveCount(1, { timeout: 5000 })
+    const nameRow = panel.locator('.uimodel-property-row').filter({ hasText: 'Name' }).first()
+    await expect(nameRow.locator('input')).toHaveCount(1)
+
+    // Editieren durch die Textarea funktioniert (gleiche Bridge-Pfade)
+    await authorRow.locator('textarea').fill('Kafka, Franz')
+    await page.waitForTimeout(400)
+    const wert = await page.evaluate(() => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const it = tsm.getService('ui.instance-tree.composables')
+      const lib: any = Array.from(it.useSharedInstanceTree().getRootObjects())[0]
+      const shelves = Array.from(lib.eGet(lib.eClass().getEStructuralFeature('shelves')))
+      const book: any = Array.from((shelves[0] as any).eGet((shelves[0] as any).eClass().getEStructuralFeature('media')))[0]
+      return book.eGet(book.eClass().getEStructuralFeature('author'))
+    })
+    expect(wert).toBe('Kafka, Franz')
+
+    // Regel entfernen → Default (Input) greift wieder
+    await page.evaluate(() => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      tsm.getService('ui.uimodel.forms').removeUiModelPath('workspace-overrides.uimodel.xmi')
+    })
+    await selectByXmiId(page, 'shelf1')
+    await selectByXmiId(page, 'book1')
+    await expect(authorRow.locator('input')).toHaveCount(1, { timeout: 5000 })
+    await expect(authorRow.locator('textarea')).toHaveCount(0)
+  })
+
   test('Flag-Umschaltung ohne Reload stellt den alten Pfad wieder her', async ({ page }) => {
     const panel = propertiesPanel(page)
     await expect(panel.locator('.uimodel-properties-view')).toBeVisible()
