@@ -5,12 +5,13 @@
  * (workspace-overrides.uimodel.xmi) im Workspace. Die Datei ist die
  * Quelle der Wahrheit; die Registry laedt sie wie jede *.uimodel.xmi.
  */
-import { ref, computed, onMounted, inject } from 'tsm:vue'
-import { Button, InputText, Select, Message, DataTable, Column } from 'tsm:primevue'
+import { ref, computed, watch, onMounted, inject } from 'tsm:vue'
+import { Button, InputText, Select, SelectButton, Message, DataTable, Column } from 'tsm:primevue'
 import {
   OVERLAY_FILE_NAME,
   WIDGET_KINDS,
   isValidRule,
+  compatibleWidgets,
   rulesToOverlayXmi,
   parseOverlayRules,
   type OverlayRule,
@@ -34,17 +35,20 @@ const eTypeSource = computed(() => modelRegistry ? createETypePickerSource(model
 
 function onFeaturePicked(item: { label: string; secondaryLabel?: string }) {
   newRule.value.featureName = item.label
-  // eType des gewaehlten Features als Vorbelegung (nur wenn leer)
-  if (!newRule.value.eTypeName && item.secondaryLabel) {
-    newRule.value.eTypeName = item.secondaryLabel
-  }
+  // Der eType kommt FEST aus dem Metamodell (nicht frei kombinierbar —
+  // ein widerspruechlicher Typ ergaebe eine Regel, die nie greift).
+  newRule.value.eTypeName = item.secondaryLabel ?? ''
   featurePickerVisible.value = false
 }
 
-function onETypePicked(item: { label: string }) {
+function onETypePicked(item: { label: string; groupKey?: string }) {
   newRule.value.eTypeName = item.label
+  // sinnvoller Widget-Default je nach Typ-Art
+  if (item.groupKey === 'Enums') newRule.value.widget = 'select'
+  else if (item.groupKey === 'Klassen') newRule.value.widget = 'reference'
   eTypePickerVisible.value = false
 }
+
 
 const rules = ref<OverlayRule[]>([])
 const rawCases = ref<string[]>([])
@@ -55,6 +59,33 @@ const fileEntry = ref<any>(null)
 const sourceId = ref<string | null>(null)
 
 const newRule = ref<OverlayRule>({ featureName: '', eTypeName: '', widget: 'textarea' })
+
+// ── Regel-Modus: "Bestimmtes Feature" ODER "Alle Features eines Typs" ──────
+// Die freie Kombination beider Kriterien erlaubte tote Regeln
+// (z. B. author + EDate: matcht nie). Der Modus macht die zwei sinnvollen
+// Regel-Arten explizit; im Feature-Modus ist der eType aus dem Metamodell
+// abgeleitet und nicht editierbar.
+type RuleMode = 'feature' | 'type'
+const ruleMode = ref<RuleMode>('feature')
+const modeOptions = [
+  { label: 'Bestimmtes Feature', value: 'feature' },
+  { label: 'Alle Features eines Typs', value: 'type' }
+]
+watch(ruleMode, () => {
+  newRule.value = { featureName: '', eTypeName: '', widget: newRule.value.widget }
+})
+
+// Widget-Auswahl nach eType gefiltert (kein Multiline-Datum etc.)
+const filteredWidgetOptions = computed(() => {
+  const allowed = compatibleWidgets(newRule.value.eTypeName)
+  return WIDGET_KINDS.filter(w => allowed.includes(w.kind))
+    .map(w => ({ label: w.label, value: w.kind }))
+})
+watch(filteredWidgetOptions, (opts) => {
+  if (!opts.some(o => o.value === newRule.value.widget) && opts.length > 0) {
+    newRule.value.widget = opts[0].value as WidgetKind
+  }
+})
 
 const widgetOptions = WIDGET_KINDS.map(w => ({ label: w.label, value: w.kind }))
 const canAdd = computed(() => isValidRule(newRule.value))
@@ -182,17 +213,29 @@ async function save() {
     </div>
 
     <div class="add-form">
-      <div class="picker-field">
-        <InputText v-model="newRule.featureName" placeholder="Feature-Name (optional)" size="small" />
-        <Button v-if="PickerDialog && featureSource" icon="pi pi-search" text size="small"
-                @click="featurePickerVisible = true" v-tooltip.bottom="'Feature aus Metamodell waehlen'" />
-      </div>
-      <div class="picker-field">
-        <InputText v-model="newRule.eTypeName" placeholder="eType, z. B. EString (optional)" size="small" />
-        <Button v-if="PickerDialog && eTypeSource" icon="pi pi-search" text size="small"
-                @click="eTypePickerVisible = true" v-tooltip.bottom="'eType waehlen'" />
-      </div>
-      <Select v-model="newRule.widget" :options="widgetOptions" optionLabel="label"
+      <SelectButton v-model="ruleMode" :options="modeOptions" optionLabel="label"
+                    optionValue="value" size="small" :allowEmpty="false" />
+
+      <template v-if="ruleMode === 'feature'">
+        <div class="picker-field">
+          <InputText v-model="newRule.featureName" placeholder="Feature waehlen..." size="small" readonly
+                     @click="featurePickerVisible = true" />
+          <Button v-if="PickerDialog && featureSource" icon="pi pi-search" text size="small"
+                  @click="featurePickerVisible = true" v-tooltip.bottom="'Feature aus Metamodell waehlen'" />
+        </div>
+        <span v-if="newRule.eTypeName" class="etype-info">Typ: {{ newRule.eTypeName }}</span>
+      </template>
+
+      <template v-else>
+        <div class="picker-field">
+          <InputText v-model="newRule.eTypeName" placeholder="eType waehlen..." size="small" readonly
+                     @click="eTypePickerVisible = true" />
+          <Button v-if="PickerDialog && eTypeSource" icon="pi pi-search" text size="small"
+                  @click="eTypePickerVisible = true" v-tooltip.bottom="'eType waehlen'" />
+        </div>
+      </template>
+
+      <Select v-model="newRule.widget" :options="filteredWidgetOptions" optionLabel="label"
               optionValue="value" size="small" class="widget-select" />
       <Button label="Hinzufuegen" icon="pi pi-plus" size="small" :disabled="!canAdd" @click="addRule" />
     </div>
@@ -232,6 +275,8 @@ async function save() {
 .empty { font-size: 0.85rem; color: var(--text-color-secondary); font-style: italic; }
 .add-form { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 .picker-field { display: flex; gap: 0.15rem; align-items: center; }
+.picker-field input { cursor: pointer; }
+.etype-info { font-size: 0.8rem; color: var(--text-color-secondary); }
 .widget-select { min-width: 12rem; }
 .actions { display: flex; gap: 0.75rem; align-items: center; }
 .status { font-size: 0.8rem; }

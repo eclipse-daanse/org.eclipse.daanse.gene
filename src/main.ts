@@ -50,6 +50,7 @@ import Message from 'primevue/message'
 import Tag from 'primevue/tag'
 import Splitter from 'primevue/splitter'
 import SplitterPanel from 'primevue/splitterpanel'
+import SelectButton from 'primevue/selectbutton'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
@@ -88,7 +89,7 @@ async function bootstrap(): Promise<void> {
       Tree, Button, Dialog, ContextMenu, Dropdown, InputText, Textarea,
       Checkbox, InputNumber, Calendar, DataTable, Column, Menu, Breadcrumb,
       Card, Fieldset, Message, Tag, Splitter, SplitterPanel, Tabs, TabList,
-      Tab, TabPanels, TabPanel, Select, Panel, ToggleSwitch, Toolbar,
+      Tab, TabPanels, TabPanel, Select, SelectButton, Panel, ToggleSwitch, Toolbar,
       IconField, InputIcon, ProgressBar, ProgressSpinner
     }, '4.3.0')
     tsmRuntime.register('@emfts/core', emfts, '1.0.0')
