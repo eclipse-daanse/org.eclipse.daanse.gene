@@ -745,3 +745,31 @@ Zwei Punkte, die beim Bau nicht offensichtlich waren:
 Startup-Modul ist und Monaco buendelt). Aufraeum-Kandidat: Monaco als
 TSM-Shared-Lib registrieren und in dmn-editor/transformation/
 ui-uimodel-forms gemeinsam nutzen (eigene Iteration).
+
+### 10.2 Sicherheits-Nachtrag: HTML aus Modelldateien (2026-08-13)
+
+Modellinstanzen kommen aus Git, von Atlas-Servern oder aus fremden
+Workspaces — HTML darin ist nicht vertrauenswuerdig.
+
+**Real ausnutzbar war die Markdown-Vorschau.** Markdown erlaubt
+Inline-HTML, und die Vorschau setzt das Ergebnis per `v-html` ein. Ein
+`<img src=x onerror=...>` in einem Markdown-Feld wird ausgefuehrt.
+Nachgemessen: ohne Bereinigung feuert der Handler tatsaechlich (E2E-Test in
+`uimodel-properties.spec.ts` schlaegt dann mit „onerror aus der Modelldatei
+wurde in der Vorschau ausgefuehrt" fehl). Die Bereinigung war von Anfang an
+drin; der Test haelt sie jetzt fest.
+
+**RichText/Quill war NICHT ausnutzbar.** Quill parst eingehendes HTML in
+sein Delta-Format und verwirft unbekannte Attribute von sich aus —
+gemessen: aus `<img src=x onerror="...">` wird `<img src="x">`. Die
+zusaetzliche Bereinigung dort ist Absicherung fuer den Fall, dass der Wert
+spaeter woanders gerendert wird, kein Fix fuer eine offene Luecke.
+
+Damit ist auch GHSA-v3m3-f69x-jf25 (Quill 2.0.3, HTML-Export ohne
+Validierung) abgedeckt — versionsunabhaengig. Ein Downgrade auf Quill 2.0.2
+waere die schlechtere Antwort: 2.0.3 ist die neueste Version, und das
+Grundproblem bestuende unabhaengig davon fort.
+
+`sanitizeHtml()` liegt als eigenes Modul vor, weil `.vue`-Dateien mit
+`tsm:`-Importen nicht unit-testbar sind (das TSM-Plugin loest sie erst zur
+Laufzeit auf) — als reine Funktion ist die Logik pruefbar.
