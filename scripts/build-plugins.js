@@ -243,7 +243,12 @@ async function buildPlugin(plugin) {
         // Transform tsm: imports and bare shared module imports
         ...(isLibraryProvider ? [] : [tsmPlugin({
           useRenderChunk: true,
-          sharedModules: ['vue', 'vue-router', 'primevue', '@emfts/core', '@emfts/vue-registry', '@eclipse-daanse/tsm', '@emfts/codec.jsonschema']
+          // WICHTIG: Jedes Paket, das externalFn ausschliesst, muss hier
+          // stehen — sonst bleibt ein nackter ESM-Import im Bundle, den der
+          // Browser zur Laufzeit nicht aufloesen kann
+          // ("Failed to resolve module specifier"). externalFn schliesst
+          // u. a. ALLE @emfts/* aus; die Liste muss also mitwachsen.
+          sharedModules: ['vue', 'vue-router', 'primevue', '@emfts/core', '@emfts/vue-registry', '@eclipse-daanse/tsm', '@emfts/codec.jsonschema', '@emfts/uimodel-composer']
         })])
       ],
       build: {
