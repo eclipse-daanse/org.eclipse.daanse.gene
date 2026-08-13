@@ -5,9 +5,22 @@
  * (Quill); ist er nicht registriert (oder quill nicht installiert),
  * degradiert die Komponente zu einer Textarea auf dem HTML-Quelltext —
  * kein Datenverlust.
+ *
+ * SICHERHEIT: Der Wert ist HTML aus einer Modelldatei — also nicht
+ * vertrauenswuerdig (Instanzen kommen aus Git, Atlas-Servern, fremden
+ * Workspaces). Quill rendert ihn in ein contenteditable; ein
+ * `<img src=x onerror=...>` wuerde dabei ausgefuehrt. Deshalb wird in
+ * BEIDE Richtungen mit DOMPurify bereinigt: beim Anzeigen und bevor der
+ * Editor-Inhalt zurueck ins Modell geht.
+ *
+ * Das deckt zugleich GHSA-v3m3-f69x-jf25 ab (fehlende Validierung im
+ * HTML-Export von Quill 2.0.3). Ein Downgrade auf 2.0.2 waere die
+ * schlechtere Antwort: 2.0.3 ist die neueste Version, und das Grundproblem
+ * — ungeprueftes HTML aus Modelldateien — bliebe unabhaengig davon bestehen.
  */
 import { computed } from 'tsm:vue'
 import * as primevue from 'tsm:primevue'
+import { sanitizeHtml } from '../sanitizeHtml'
 
 const props = withDefaults(defineProps<{
   modelValue?: string
@@ -30,8 +43,16 @@ const Textarea = (primevue as Record<string, unknown>).Textarea as object | unde
 
 const editorStyle = computed(() => ({ height: `${Math.max(4, props.rows) * 19}px` }))
 
+/** Was der Editor zu sehen bekommt (Modell → Ansicht). */
+const safeValue = computed(() => sanitizeHtml(props.modelValue))
+
+/** Was ins Modell zurueckgeht (Ansicht → Modell). */
 function onEditorChange(value: string | undefined) {
-  emit('update:modelValue', value ?? '')
+  const cleaned = sanitizeHtml(value)
+  // Nur melden, wenn sich der bereinigte Wert wirklich unterscheidet —
+  // sonst loest das Zurueckschreiben des sanitisierten Werts eine Schleife
+  // aus, sobald der Editor beim Laden erneut emittiert.
+  if (cleaned !== sanitizeHtml(props.modelValue)) emit('update:modelValue', cleaned)
 }
 </script>
 
@@ -41,7 +62,7 @@ function onEditorChange(value: string | undefined) {
     v-if="Editor"
     class="richtext-editor"
     :class="{ 'richtext-editor--invalid': invalid }"
-    :modelValue="modelValue ?? ''"
+    :modelValue="safeValue"
     :readonly="readOnly"
     :editorStyle="editorStyle"
     @update:modelValue="onEditorChange"
