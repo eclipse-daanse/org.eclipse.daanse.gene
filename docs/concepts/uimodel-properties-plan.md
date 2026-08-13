@@ -19,7 +19,8 @@ Mit 0.0.2-next.1 sind Vega/Maps/Diagram in eigene Pakete gewandert
 (Breaking); gene ist nicht betroffen, weil es diese Composer nie
 registriert hat — Nebeneffekt: OpenLayers ist komplett aus dem Build
 verschwunden (~1,3 MB Chunks weniger).
-**Verbleibender Blocker:** manuelle Abnahme (7C).
+**Manuelle Abnahme (7C): erteilt am 2026-08-11.** Damit sind alle
+Merge-Blocker erledigt — der Branch ist bereit fuer den PR nach `main`.
 **Upstream-Nacharbeiten** (Workarounds in gene danach entfernbar):
 https://github.com/eclipse-fennec/emf.ts.ui/issues/7 — Deprecated-Cleanup
 (Expression-Tick und required-Ableitung sind geliefert).
@@ -329,7 +330,7 @@ vermerkt.
 | B5 | **Projektregeln:** `vue-tsc`/ESLint sauber; keine `window.*`-Zugriffe (TSM/DI); keine Änderungen im EMFTs-Projekt aus gene heraus; auf dem Merge-Stand keine `file:`/lokalen Pfade in package.json oder Lockfile (erfüllt: Composer ist reguläre Registry-Dependency). |
 | B6 | **Plugin-Modularität:** `ui-uimodel-forms` hängt von keinem anderen UI-Plugin statisch ab; `ui-properties-panel` konsumiert es ausschließlich über den TSM-Service. |
 
-### C — Manuelles Abnahme-Szenario (Nutzer)
+### C — Manuelles Abnahme-Szenario (Nutzer) — **ABGENOMMEN (2026-08-11)**
 
 1. Workspace mit Referenzmodell + Instanz öffnen → Default-Anzeige prüfen (A4),
    Werte editieren, speichern, XMI kontrollieren (A3).
