@@ -17,9 +17,6 @@ import * as VueRouter from 'vue-router'
 import * as emfts from '@emfts/core'
 import * as emftsVueRegistry from '@emfts/vue-registry'
 import * as emftsCodecJsonSchema from '@emfts/codec.jsonschema'
-// NOTE: @emfts/uimodel-composer is not published yet — it is npm-linked from
-// the local EMFTs workspace (see docs/concepts/uimodel-composer-linking.md).
-// The static import is intentional on this branch: the link is a prerequisite.
 import * as emftsUimodelComposer from '@emfts/uimodel-composer'
 import { UimodelPackage, UimodelFactory } from '@emfts/uimodel-composer'
 
@@ -64,6 +61,7 @@ import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import ProgressBar from 'primevue/progressbar'
 import ProgressSpinner from 'primevue/progressspinner'
+import Editor from 'primevue/editor'
 
 // TSM instance (global for app access)
 let tsm: TsmPluginSystem
@@ -90,7 +88,7 @@ async function bootstrap(): Promise<void> {
       Checkbox, InputNumber, Calendar, DataTable, Column, Menu, Breadcrumb,
       Card, Fieldset, Message, Tag, Splitter, SplitterPanel, Tabs, TabList,
       Tab, TabPanels, TabPanel, Select, SelectButton, Panel, ToggleSwitch, Toolbar,
-      IconField, InputIcon, ProgressBar, ProgressSpinner
+      IconField, InputIcon, ProgressBar, ProgressSpinner, Editor
     }, '4.3.0')
     tsmRuntime.register('@emfts/core', emfts, '1.0.0')
     tsmRuntime.register('@emfts/vue-registry', emftsVueRegistry, '0.1.0')
@@ -120,8 +118,8 @@ async function bootstrap(): Promise<void> {
     // Register the UIModel metamodel (http://uimodel/1.0) in the canonical
     // EPackageRegistry. Touching UimodelFactory.eINSTANCE wires the factory
     // to the package (setEPackage establishes the bidirectional reference).
-    // Both come from the npm-linked @emfts/uimodel-composer, which is deduped
-    // onto the app's @emfts/core instance (see vite.config.ts resolve.dedupe).
+    // Both come from @emfts/uimodel-composer, which is deduped onto the app's
+    // @emfts/core instance (see vite.config.ts resolve.dedupe).
     const uimodelPackage = UimodelPackage.eINSTANCE
     void UimodelFactory.eINSTANCE
     emfts.EPackageRegistry.INSTANCE.set(uimodelPackage.getNsURI(), uimodelPackage)

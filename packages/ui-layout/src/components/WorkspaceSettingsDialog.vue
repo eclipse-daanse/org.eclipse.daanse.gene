@@ -124,18 +124,26 @@ function setStorageStrategy(strategy: StorageStrategy) {
 
 const saving = ref(false)
 
+// Property-Widgets-Panel: speichert seine Regeldatei selbst (defineExpose),
+// wird vom globalen Save-Button mitgenommen.
+const overlayPanelRef = ref<any>(null)
+
 function getFileSystem(): any {
   return tsm?.getService('gene.filesystem')
 }
 
 async function handleSave() {
-  if (!editorConfig?.workspaceFileEntry?.value) {
-    console.warn('[WorkspaceSettings] No workspace file entry, cannot save')
-    return
-  }
-
   saving.value = true
   try {
+    // Property-Widgets pflegen eine EIGENE Datei im Workspace
+    // (workspace-overrides.uimodel.xmi), nicht die EditorConfig — deshalb
+    // vor dem .wsp-Save und unabhaengig von workspaceFileEntry.
+    await overlayPanelRef.value?.save?.()
+
+    if (!editorConfig?.workspaceFileEntry?.value) {
+      console.warn('[WorkspaceSettings] No workspace file entry, cannot save editor config')
+      return
+    }
     const fileSystem = getFileSystem()
     console.log('[WorkspaceSettings] fileSystem:', !!fileSystem, 'writeTextFile:', !!fileSystem?.writeTextFile)
     if (fileSystem?.writeTextFile) {
@@ -601,7 +609,12 @@ function formatKind(kind: string): string {
             <div v-else-if="selectedCategory === 'widgets'" class="detail-content">
               <h3 class="detail-title">Property Widgets</h3>
               <p class="detail-description">Workspace-wide widget overrides for the generic property layout (e.g. render a feature as multiline editor).</p>
-              <component v-if="OverlaySettingsPanel" :is="OverlaySettingsPanel" />
+              <component
+                v-if="OverlaySettingsPanel"
+                :is="OverlaySettingsPanel"
+                ref="overlayPanelRef"
+                @dirty="editorConfig?.markDirty?.()"
+              />
             </div>
 
             <!-- Actions -->

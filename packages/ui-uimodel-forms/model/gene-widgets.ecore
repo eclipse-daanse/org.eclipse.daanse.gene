@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  gene-Widget-Erweiterung fuer das uimodel (Plan Abschnitt 10, emf.ts.ui#9):
+  host-spezifische String-Editor-Widgets als Extension-Paket — analog zu
+  uimodel-vega/uimodel-maps, hier auf Widget-Ebene (WidgetComponent-Subklassen).
+
+  Der Wert ist immer der String des gebundenen Features (Markdown-Quelltext
+  bzw. HTML) — keine Datasource-Kopplung. Die Renderer stellt gene ueber die
+  vue-registry (WidgetBridge → StringEditorField).
+-->
+<ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="gene.uimodel.widgets" nsURI="http://gene/uimodel/widgets/1.0" nsPrefix="genew">
+
+  <!-- Code-Editor (gerendert via Monaco): JSON, XML, OCL, Markdown-Quelle, ... -->
+  <eClassifiers xsi:type="ecore:EClass" name="CodeWidget">
+    <eSuperTypes href="http://uimodel/1.0#//WidgetComponent"/>
+    <!-- Sprach-Hint fuer Syntax-Highlighting: "json", "xml", "javascript", ... -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="language"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="rows" defaultValueLiteral="10"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lineNumbers" defaultValueLiteral="true"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- Markdown-Editor: Wert bleibt Markdown-Quelltext -->
+  <eClassifiers xsi:type="ecore:EClass" name="MarkdownWidget">
+    <eSuperTypes href="http://uimodel/1.0#//WidgetComponent"/>
+    <!-- Vorschau anbieten (Umschalter Bearbeiten/Vorschau) -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="preview" defaultValueLiteral="true"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <!-- Formatierungsleiste (Fett, Kursiv, Ueberschrift, Liste, Link, Code) -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="toolbar" defaultValueLiteral="true"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="rows" defaultValueLiteral="10"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- Rich-Text-Editor: Wert ist ein HTML-String -->
+  <eClassifiers xsi:type="ecore:EClass" name="RichTextWidget">
+    <eSuperTypes href="http://uimodel/1.0#//WidgetComponent"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="rows" defaultValueLiteral="10"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+</ecore:EPackage>

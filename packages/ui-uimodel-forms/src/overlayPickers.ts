@@ -1,9 +1,13 @@
 /**
- * Picker-Datenquellen fuer die Overlay-Settings (Plan 9, D3):
- * Features und eTypes der GELADENEN Metamodelle auswaehlbar machen —
- * konsumiert vom generischen PickerDialog aus ui-search
- * (Service ui.search.components), Daten aus der Model-Registry
- * (ui.model-browser.composables).
+ * Picker-Datenquelle fuer die Overlay-Settings (Plan 9, D3):
+ * Features der GELADENEN Metamodelle auswaehlbar machen — konsumiert vom
+ * generischen PickerDialog aus ui-search (Service ui.search.components),
+ * Daten aus der Model-Registry (ui.model-browser.composables).
+ *
+ * Eine Regel gilt immer fuer ein bestimmtes Feature; der eType wird aus dem
+ * Metamodell uebernommen, nicht separat gewaehlt. (Eine reine Typ-Regel
+ * "alle EString" gab es zwischenzeitlich, wurde aber verworfen — sie ist zu
+ * grob, um nuetzlich zu sein.)
  */
 
 // Strukturell kompatibel zu ui-search PickerItem/PickerDataSource —
@@ -42,12 +46,6 @@ interface FeatureLike {
   getEType?: () => { getName?: () => string } | null
   isContainment?: () => boolean
 }
-
-/** Ecore-Standard-Datentypen fuer die eType-Auswahl. */
-export const ECORE_DATATYPES = [
-  'EString', 'EBoolean', 'EInt', 'ELong', 'EShort', 'EByte',
-  'EFloat', 'EDouble', 'EDate', 'EBigDecimal', 'EBigInteger', 'EChar'
-]
 
 function matches(query: string, ...haystacks: Array<string | undefined>): boolean {
   const q = query.trim().toLowerCase()
@@ -91,42 +89,5 @@ export function createFeaturePickerSource(registry: RegistryLike): PickerDataSou
     loadInitial: () => collect(),
     search: (query: string) =>
       collect().filter(i => matches(query, i.label, i.secondaryLabel, i.breadcrumb))
-  }
-}
-
-/** eTypes: Ecore-Datentypen + EEnums + EClasses der Nutzer-Metamodelle. */
-export function createETypePickerSource(registry: RegistryLike): PickerDataSourceLike {
-  function collect(): PickerItemLike[] {
-    const items: PickerItemLike[] = ECORE_DATATYPES.map(name => ({
-      key: `ecore.${name}`,
-      label: name,
-      icon: 'pi pi-code',
-      groupKey: 'Ecore-Datentypen'
-    }))
-    const seen = new Set<string>()
-    for (const pkg of registry.allPackages.value) {
-      if (pkg.isBuiltIn) continue
-      const classifiers = (pkg.ePackage as { getEClassifiers?: () => Iterable<{ getName?: () => string; eClass?: () => { getName?: () => string } }> })
-        ?.getEClassifiers?.() ?? []
-      for (const classifier of classifiers) {
-        const name = classifier.getName?.()
-        if (!name || seen.has(`${pkg.name}.${name}`)) continue
-        seen.add(`${pkg.name}.${name}`)
-        const kind = classifier.eClass?.()?.getName?.()
-        items.push({
-          key: `${pkg.name}.${name}`,
-          label: name,
-          icon: kind === 'EEnum' ? 'pi pi-list' : kind === 'EDataType' ? 'pi pi-code' : 'pi pi-box',
-          breadcrumb: pkg.name,
-          groupKey: kind === 'EEnum' ? 'Enums' : kind === 'EDataType' ? 'Datentypen' : 'Klassen'
-        })
-      }
-    }
-    return items
-  }
-
-  return {
-    loadInitial: () => collect(),
-    search: (query: string) => collect().filter(i => matches(query, i.label, i.breadcrumb))
   }
 }

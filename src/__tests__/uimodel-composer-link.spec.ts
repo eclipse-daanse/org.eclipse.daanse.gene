@@ -1,17 +1,19 @@
 /**
- * Smoke test for the npm-linked @emfts/uimodel-composer package (Phase 0).
+ * Smoke test for the @emfts/uimodel-composer dependency.
  *
- * Verifies that the linked package resolves, exposes the UIModel metamodel
- * under the expected nsURI, and — crucially — shares the app's @emfts/core
- * instance (singleton trap: a second core copy from the composer's own
- * node_modules would break EPackageRegistry / eClass identity).
+ * Verifies that the package resolves, exposes the UIModel metamodel under the
+ * expected nsURI, and — crucially — shares the app's @emfts/core instance
+ * (singleton trap: a second core copy from a nested node_modules would break
+ * EPackageRegistry / eClass identity). Das bleibt auch als regulaere
+ * Dependency relevant: die Dedupe-Regeln in vite.config.ts sind das, was
+ * diese Identitaet garantiert.
  * See docs/concepts/uimodel-composer-linking.md.
  */
 import { describe, it, expect } from 'vitest'
 import { EPackageRegistry, BasicEPackage } from '@emfts/core'
 import { UimodelPackage, UimodelFactory } from '@emfts/uimodel-composer'
 
-describe('@emfts/uimodel-composer link (Phase 0)', () => {
+describe('@emfts/uimodel-composer', () => {
   it('exposes the UIModel package under nsURI http://uimodel/1.0', () => {
     expect(UimodelPackage.eINSTANCE.getNsURI()).toBe('http://uimodel/1.0')
   })

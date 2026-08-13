@@ -16,6 +16,8 @@ import { useValidation } from '@emfts/uimodel-composer'
 import type { WidgetComponent } from '@emfts/uimodel-composer'
 import { bumpModelVersion } from '../oclAdapter'
 import { createRequiredValidation } from '../defaultUiModel'
+import { isGeneStringWidget } from '../geneWidgetsPackage'
+import StringEditorField from './StringEditorField.vue'
 
 const props = defineProps<{
   eObject: EObject
@@ -47,6 +49,43 @@ const widgetHint = computed(() => {
 })
 const effectiveReadOnly = computed(() => resolvedConfig.value?.readOnly)
 const effectiveRequired = computed(() => resolvedConfig.value?.required)
+
+// gene String-Editor-Widgets (gene-widgets.ecore, Plan Abschnitt 10):
+// CodeWidget/MarkdownWidget/RichTextWidget rendert die Bridge selbst
+// (StringEditorField) statt ueber PropertyField — nur fuer EString-Attribute;
+// alles andere faellt auf den normalen Pfad zurueck.
+const isStringAttribute = computed(() => {
+  try {
+    const f: any = props.feature
+    if (typeof f?.isContainment === 'function') return false
+    const typeName = f?.getEType?.()?.getName?.()
+    return typeName === 'EString' || typeName === 'String' || !typeName
+  } catch { return false }
+})
+const geneStringWidget = computed(() =>
+  !isDerived.value && isStringAttribute.value && isGeneStringWidget(widgetHint.value)
+    ? widgetHint.value
+    : undefined
+)
+
+// Widget-Attribut aus dem genew-Prototyp (Property-Proxy; eGet-Fallback
+// fuer den Fall, dass ein Widget nicht ueber unsere Factory entstand).
+function widgetAttr<T>(name: string): T | undefined {
+  const w: any = rawWidget.value
+  if (!w) return undefined
+  const direct = w[name]
+  if (direct !== undefined && direct !== null) return direct as T
+  try {
+    const feature = w.eClass?.()?.getEStructuralFeature?.(name)
+    const v = feature ? w.eGet(feature) : undefined
+    return v === null ? undefined : (v as T)
+  } catch { return undefined }
+}
+const widgetLanguage = computed(() => widgetAttr<string>('language'))
+const widgetRows = computed(() => widgetAttr<number>('rows'))
+const widgetLineNumbers = computed(() => widgetAttr<boolean>('lineNumbers'))
+const widgetPreview = computed(() => widgetAttr<boolean>('preview'))
+const widgetToolbar = computed(() => widgetAttr<boolean>('toolbar'))
 
 const tsm = inject<any>('tsm')
 
@@ -153,6 +192,23 @@ function onOclBlocked(obj: EObject, reason: string) {
       :eObject="eObject"
       :problemsService="problemsService"
       @navigate="onNavigate"
+    />
+  </div>
+  <!-- gene String-Editor-Widgets: Code/Markdown/RichText (gene-widgets.ecore) -->
+  <div v-else-if="geneStringWidget && editorCtx" class="uimodel-property-row property-row">
+    <StringEditorField
+      :feature="feature"
+      :value="value"
+      :widgetKind="geneStringWidget"
+      :label="effectiveLabel"
+      :readonly="effectiveReadOnly"
+      :error="error"
+      :language="widgetLanguage"
+      :rows="widgetRows"
+      :lineNumbers="widgetLineNumbers"
+      :preview="widgetPreview"
+      :toolbar="widgetToolbar"
+      @update:value="onUpdateValue"
     />
   </div>
   <div v-else-if="PropertyField && editorCtx" class="uimodel-property-row property-row">

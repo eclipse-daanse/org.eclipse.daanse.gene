@@ -2,7 +2,7 @@
  * Unit-Tests fuer die Overlay-Regel-Serialisierung (Plan Abschnitt 9, D3).
  */
 import { describe, it, expect } from 'vitest'
-import { rulesToOverlayXmi, parseOverlayRules, ruleWhenBody, isValidRule, compatibleWidgets } from '../overlayRules'
+import { rulesToOverlayXmi, parseOverlayRules, ruleWhenBody, isValidRule, compatibleWidgets, WIDGET_KINDS } from '../overlayRules'
 
 describe('overlayRules', () => {
   it('ruleWhenBody kombiniert featureName und eType mit UND', () => {
@@ -55,15 +55,47 @@ describe('overlayRules', () => {
   })
 
   it('compatibleWidgets verhindert tote Kombinationen', () => {
-    expect(compatibleWidgets('EString')).toEqual(['input', 'textarea'])
+    // EString: Kern-Widgets + gene String-Editoren (gene-widgets.ecore)
+    expect(compatibleWidgets('EString')).toEqual(['input', 'textarea', 'code', 'markdown', 'richtext'])
     expect(compatibleWidgets('EDate')).toEqual(['date', 'input'])
     expect(compatibleWidgets('EBoolean')).toEqual(['checkbox', 'input'])
     expect(compatibleWidgets('EInt')).toEqual(['number', 'input'])
-    // Multiline fuer EDate ist NICHT waehlbar
+    // Multiline/Code fuer EDate ist NICHT waehlbar
     expect(compatibleWidgets('EDate')).not.toContain('textarea')
+    expect(compatibleWidgets('EDate')).not.toContain('code')
     // unbekannt/leer: alles erlaubt
-    expect(compatibleWidgets(undefined).length).toBe(7)
+    expect(compatibleWidgets(undefined).length).toBe(WIDGET_KINDS.length)
     expect(compatibleWidgets('Genre')).toContain('select')
+  })
+
+  it('gene-Widgets werden mit genew-Namespace serialisiert', () => {
+    const xmi = rulesToOverlayXmi([
+      { featureName: 'description', eTypeName: 'EString', widget: 'code' },
+      { featureName: 'summary', eTypeName: 'EString', widget: 'markdown' }
+    ])
+    expect(xmi).toContain('xmlns:genew="http://gene/uimodel/widgets/1.0"')
+    expect(xmi).toContain('xsi:type="genew:CodeWidget" xmi:id="t-code"')
+    expect(xmi).toContain('xsi:type="genew:MarkdownWidget" xmi:id="t-markdown"')
+  })
+
+  it('genew-Namespace wird nur bei Bedarf deklariert', () => {
+    const xmi = rulesToOverlayXmi([{ featureName: 'x', eTypeName: 'EString', widget: 'textarea' }])
+    expect(xmi).not.toContain('genew')
+    expect(xmi).toContain('xsi:type="uimodel:TextAreaWidget"')
+  })
+
+  it('parseOverlayRules liest Widget-Namen auch per eGet (DynamicEObject)', () => {
+    // Overlay-Cases aus dem XMI tragen keine Property-Getter, sondern nur
+    // eGet — der Fallback muss den Widget-Namen trotzdem finden.
+    const feature = { name: 'name' }
+    const widget = {
+      eClass: () => ({ getEStructuralFeature: (n: string) => (n === 'name' ? feature : undefined) }),
+      eGet: (f: unknown) => (f === feature ? 'code' : undefined)
+    }
+    const parsed = parseOverlayRules({
+      cases: [{ when: { body: "self.getName() === 'description'" }, widget }]
+    })
+    expect(parsed[0]).toEqual({ featureName: 'description', eTypeName: undefined, widget: 'code' })
   })
 
   it('Roundtrip: serialisieren → parsen liefert dieselben Regeln', () => {

@@ -1,7 +1,7 @@
 # Plan: UiModel-basierte Property-Ansicht im Instance-Editor
 
-**Status (2026-08-09):** Phasen 0–4 umgesetzt, dazu die komplette
-Design-Schleife mit dem uimodel-composer integriert (emf.ts.ui #2–#6):
+**Status (2026-08-11):** Phasen 0–4 umgesetzt, dazu die komplette
+Design-Schleife mit dem uimodel-composer integriert (emf.ts.ui #2–#9):
 AllFeatures-Platzhalter in FormView.fields, PropertyBindings (Label aus
 Ecore-Annotation http://uimodel/1.0/label), TemplateCase-Fallliste statt
 implizitem Typ-Mapping, GroupWidget/Conditional/ForEach (objektbewusste
@@ -10,13 +10,19 @@ Wert-Zugriffe fuer Element-Editing). Flag-Default ist AN
 Nachher-Abgleich bestanden: die Baseline-Suite laeuft mit `UIMODEL_FLAG=true`
 (Composer-Pfad) identisch gruen inkl. Screenshots (pixelgenau nachgemessen).
 
-**Verbleibende Blocker vor dem Merge:** EMFTs-Arbeitsstand (#2–#6)
-committen/pushen und `@emfts/uimodel-composer` veroeffentlichen (dann in
-gene: npm-Link raus, regulaere Dependency rein), manuelle Abnahme (7C).
+**Blocker erledigt (2026-08-11):** Der EMFTs-Arbeitsstand ist committet
+(#2–#9), `emf.ts.ui` ist ein Monorepo geworden und hat veroeffentlicht —
+gene nutzt jetzt `@emfts/uimodel-composer@^0.0.2-next.1` als regulaere
+Registry-Dependency statt npm-Link. Damit funktioniert auch `npm install`
+wieder (vorher scheiterte es an der unaufloesbaren Composer-Version).
+Mit 0.0.2-next.1 sind Vega/Maps/Diagram in eigene Pakete gewandert
+(Breaking); gene ist nicht betroffen, weil es diese Composer nie
+registriert hat — Nebeneffekt: OpenLayers ist komplett aus dem Build
+verschwunden (~1,3 MB Chunks weniger).
+**Verbleibender Blocker:** manuelle Abnahme (7C).
 **Upstream-Nacharbeiten** (Workarounds in gene danach entfernbar):
-https://github.com/eclipse-fennec/emf.ts.ui/issues/7 — Expression-Tick
-(Live-Reaktivitaet fuer Bindings/Visibility/Validierung/Strukturen),
-required aus lowerBound in der Expansion, Deprecated-Cleanup.
+https://github.com/eclipse-fennec/emf.ts.ui/issues/7 — Deprecated-Cleanup
+(Expression-Tick und required-Ableitung sind geliefert).
 Bewusste Abweichung von Phase 4: **Operationen** bleiben beim Panel-Rahmen —
 `uimodel.ecore` kennt nur Feature-basierte Widgets (`WidgetComponent.feature:
 EStructuralFeature [1]`), EOperations sind damit nicht abbildbar. Kandidat
@@ -73,7 +79,7 @@ als UIModel (Ecore/XMI) beschrieben und zur Laufzeit interpretiert.
 | # | Entscheidung | Begründung |
 |---|---|---|
 | E1 | **Neues Plugin-Package `packages/ui-uimodel-forms`** statt Code direkt in `ui-properties-panel` | Plugin-Modularität; ui-properties-panel konsumiert nur einen TSM-Service |
-| E2 | **Entwicklung: lokal linken** (`npm link`, erzeugt nur einen node_modules-Symlink — package.json/Lockfile bleiben unangetastet). **Vor dem Merge nach main** wird `@emfts/uimodel-composer` veröffentlicht und als reguläre Dependency eingetragen | Kein `file:`-Pfad im Lockfile (siehe früheres Problem fix/package-lock-local-paths); kein Code-Kopieren wie im verworfenen ui-forms-diagramms-Ansatz |
+| E2 | ~~Entwicklung: lokal linken~~ → **umgesetzt (2026-08-11): reguläre Dependency** `@emfts/uimodel-composer@^0.0.2-next.1` aus der npm-Registry | Kein `file:`-Pfad im Lockfile (siehe früheres Problem fix/package-lock-local-paths); kein Code-Kopieren wie im verworfenen ui-forms-diagramms-Ansatz |
 | E3 | **Eine** @emfts/core-Instanz für App + Composer (vite `resolve.dedupe` / Alias; Composer als Shared-Lib im TSM registrieren wie vue-registry) | `EPackageRegistry.INSTANCE`, `eClass`-Identitäten und Adapter funktionieren nur bei geteilter Instanz |
 | E4 | **Default-UIModel-Generator** in gene (nicht im Composer vorhanden): erzeugt zur Laufzeit aus einer EClass ein FormView-UIModel (ein Widget je Feature, Gruppen Attributes/References) | Ohne autoriertes UIModel muss sich das Panel wie heute verhalten — kein Big Bang |
 | E5 | Gene-Feldkomponenten werden als **Widgets in der vue-registry registriert** (Bridge), der Composer rendert sie | ReferenceField & Co. (Create-Child, Suche, Navigation, OCL-Filter) bleiben erhalten; kein Doppel-Implementieren |
@@ -86,11 +92,12 @@ als UIModel (Ecore/XMI) beschrieben und zur Laufzeit interpretiert.
 
 ### Phase 0 — Voraussetzungen (außerhalb von gene bzw. Setup)
 
-1. Composer **lokal linken** (noch nicht veröffentlicht):
-   `cd /mnt/.../EMFTs/uimodel-composer && npm run build && npm link`, dann in gene
-   `npm link @emfts/uimodel-composer`. Kein Eintrag in package.json/Lockfile;
-   Hinweis: jedes volle `npm install` entfernt den Link → Re-Link nötig
-   (kleines Skript/README-Notiz im Package). Veröffentlichung erst vor dem Merge.
+1. ~~Composer lokal linken~~ **ERLEDIGT (2026-08-11): reguläre Dependency.**
+   `emf.ts.ui` ist ein Monorepo geworden und hat veröffentlicht; gene nutzt
+   `@emfts/uimodel-composer@^0.0.2-next.1` aus der Registry (Eintrag in
+   `package.json` **und** `packages/ui-uimodel-forms/package.json`). Kein
+   `npm link`, keine `file:`-Pfade. Details:
+   `docs/concepts/uimodel-composer-linking.md`.
 2. In gene: `vite.config.ts`: `dedupe`/Alias für `vue` und
    `@emfts/core` prüfen (beim Link zeigt der Composer sonst auf sein eigenes
    node_modules!); Composer in `src/main.ts` als TSM-Shared-Lib registrieren
@@ -215,8 +222,9 @@ alle bisherigen E2E-Tests grün ohne Flag.
 
 ## 5. Entschiedene Fragen (2026-08-07)
 
-- **F1:** Noch nicht veröffentlichen — für die Entwicklung wird **lokal gelinkt**
-  (`npm link`, s. Phase 0). Veröffentlichung erst vor dem Merge nach main.
+- **F1:** ~~Noch nicht veröffentlichen — lokal linken.~~ **Überholt
+  (2026-08-11):** der Composer ist veröffentlicht, gene nutzt ihn als
+  reguläre Dependency (s. Phase 0).
 - **F2:** Es gibt **app-weite Default-UIModels**; später sollen Workspace-Definitionen
   die Konfiguration **feature- oder klassenspezifisch überschreiben** können
   (→ E7, Phase 3).
@@ -318,7 +326,7 @@ vermerkt.
 | B2 | **Feature-Flag:** Flag „aus" = exakt heutiges Verhalten. Alle bestehenden E2E-Suiten (`full-roundtrip`, `instance-move`, `metamodeler`, `perspectives`, `workspace`, `layout`, `app-bootstrap`) grün **mit Flag an und aus**. |
 | B3 | **Metamodeler unberührt:** EClass/EPackage-Properties und Constraint-Editor laufen weiter über den alten Pfad; `metamodeler.spec.ts` ohne Anpassung grün. |
 | B4 | **Eine Core-Instanz:** `UimodelPackage` ist über die zentrale `EPackageRegistry` (TSM-Service) auflösbar; ein geladenes UIModel referenziert die **identischen** `EStructuralFeature`-Objekte wie der Instance-Tree (Identitätsvergleich, kein Name-Matching). |
-| B5 | **Projektregeln:** `vue-tsc`/ESLint sauber; keine `window.*`-Zugriffe (TSM/DI); keine Änderungen im EMFTs-Projekt aus gene heraus; auf dem Merge-Stand keine `file:`/lokalen Pfade in package.json oder Lockfile (npm link nur lokal während der Entwicklung). |
+| B5 | **Projektregeln:** `vue-tsc`/ESLint sauber; keine `window.*`-Zugriffe (TSM/DI); keine Änderungen im EMFTs-Projekt aus gene heraus; auf dem Merge-Stand keine `file:`/lokalen Pfade in package.json oder Lockfile (erfüllt: Composer ist reguläre Registry-Dependency). |
 | B6 | **Plugin-Modularität:** `ui-uimodel-forms` hängt von keinem anderen UI-Plugin statisch ab; `ui-properties-panel` konsumiert es ausschließlich über den TSM-Service. |
 
 ### C — Manuelles Abnahme-Szenario (Nutzer)
@@ -570,9 +578,113 @@ nur Regeln — das unterscheidet sie vom UIModel und macht die Semantik klar.
   eigene gene-Iteration).
 - **D4:** Name: **`UIModelOverlay`**.
 
+### 9.5.1 Nachschaerfung der Settings-Page (2026-08-11)
+
+- **Nur noch EINE Regel-Art: „bestimmtes Feature".** Der Umschalter
+  „Bestimmtes Feature / Alle Features eines Typs" ist entfernt — eine reine
+  Typ-Regel („alle EString als Markdown") ist zu grob, um nuetzlich zu sein.
+  Der eType wird beim Auswaehlen aus dem Metamodell uebernommen und
+  praezisiert die Regel (gleichnamige Features anderen Typs bleiben
+  unberuehrt). `createETypePickerSource`/`ECORE_DATATYPES` sind damit
+  entfallen.
+- **Kein seiteneigener Speichern-Knopf mehr.** Die Seite meldet Aenderungen
+  per `@dirty` an die EditorConfig (damit wird der globale Save-Button
+  aktiv) und stellt `save()` per `defineExpose` bereit; der Dialog ruft es
+  in `handleSave()` auf — vor dem `.wsp`-Save und unabhaengig von
+  `workspaceFileEntry`, weil die Regeln in einer EIGENEN Datei liegen.
+  Regressionstest: `e2e/uimodel-settings.spec.ts`.
+
 ### 9.6 Umsetzungsreihenfolge
 
 1. EMFTs: Metamodell + ExpansionContext + widgetPrototypeFor + Tests
    (eigenes Issue, nach Entscheidung D1/D2/D4).
 2. gene: Registry-Erkennung + Context-Befuellung + E2E (klein, ~1 Session).
 3. Optional D3 (Settings-UI) als eigene Folge-Iteration.
+
+## 10. String-Editor-Widgets: CodeWidget, MarkdownWidget, RichTextWidget
+
+**Issue (umgescoped):** https://github.com/eclipse-fennec/emf.ts.ui/issues/9
+
+Ergebnis der Widget-Sichtung in org.eclipse.daanse.board.app (2026-08-10):
+die Board-Widgets (markdown/EasyMDE, code/shiki, text-rich/TipTap) sind fest
+an die Board-Laufzeit gekoppelt (datasourceId, DI-Container, Eventbus) und
+nicht direkt uebernehmbar — die Konzepte schon.
+
+**Entscheidung (2026-08-10): gene-spezifische Widgets als Extension-Paket,
+NICHT im uimodel-Kern** — analog uimodel-vega/uimodel-maps (dort auf
+Component-Ebene). Die Composer-Mechanik ist bereits generisch
+(`cloneComponent` nutzt die Factory des jeweiligen EPackage; TemplateCase/
+Overlay/PropertyBindings sind EClass-agnostisch).
+
+- **gene (`gene-widgets.ecore`, nsURI `http://gene/uimodel/widgets/1.0`):**
+  drei `WidgetComponent`-Subklassen (eSuperTypes via href auf
+  `http://uimodel/1.0#//WidgetComponent`) — `CodeWidget` (language, rows,
+  lineNumbers), `MarkdownWidget` (preview, toolbar, rows), `RichTextWidget`
+  (toolbarItems, rows); Wert = String des gebundenen Features (Markdown-
+  Quelltext bzw. HTML). Paket bei Plugin-Aktivierung in der zentralen
+  EPackageRegistry registrieren.
+- **gene-Renderer:** CodeWidget ueber **monaco-editor** (bereits vorhanden:
+  dmn-editor/FeelMonacoEditor, transformation/OclMonacoEditor) — deckt auch
+  JSON/XML/OCL ab; Markdown wahlweise Monaco oder EasyMDE; RichText via
+  TipTap (neue Dependency, zweite Welle). Integration: `WIDGET_KINDS` +
+  `compatibleWidgets('EString')` in overlayRules.ts erweitern
+  (rulesToOverlayXmi braucht dafuer Namespace-faehige xsi:type-Praefixe),
+  `widgetHint`-Kette (WidgetBridge → PropertyField → AttributeField) um die
+  neuen Editor-Varianten ergaenzen.
+- **Upstream (#9): ERLEDIGT** (0b04577) — Test fuer Widget-Extension-Pakete
+  (Expansion/TemplateCase/Overlay/Bindings mit fremder WidgetComponent-
+  Subklasse), FallbackWidget (Plaintext statt still leer, wenn die
+  vue-registry keinen Renderer liefert), README-Abschnitt.
+- **Nicht in diesem Schritt:** Read-only-Renderer (Mermaid-Vorschau,
+  URL-/Bild-Preview, Icon-Picker) — Kandidaten fuer spaeter.
+
+### 10.1 Umsetzung in gene — ERLEDIGT (2026-08-11)
+
+| Baustein | Datei |
+|---|---|
+| Metamodell | `packages/ui-uimodel-forms/model/gene-widgets.ecore` |
+| Laden/Registrieren | `src/geneWidgetsPackage.ts` (+ Aufruf in `index.ts` vor `loadAppDefaults`) |
+| Editoren | `components/MonacoStringEditor.vue`, `components/MarkdownEditor.vue`, `components/RichTextEditor.vue` |
+| Feld-Wrapper | `components/StringEditorField.vue` |
+| Bridge-Anbindung | `components/WidgetBridge.vue` (`geneStringWidget`-Zweig) |
+| Regeln/Settings | `overlayRules.ts` (WIDGET_KINDS +`ns`, genew-Namespace im XMI) |
+| App | `src/main.ts` (PrimeVue `Editor` + quill-Dependency) |
+
+Zwei Punkte, die beim Bau nicht offensichtlich waren:
+
+1. **Property-Proxy statt generierter Impls.** Der Composer greift auf
+   Widgets per Property zu (`widget.feature`, `widget.styles`, ...).
+   Upstream empfiehlt dafuer generierte Impl-Klassen; ein dynamisch
+   geladenes .ecore liefert aber DynamicEObjects. Loesung:
+   `installPropertyProxyCreators` registriert Factory-Creators, die
+   Instanzen hinter einem Proxy erzeugen, der unbekannte Properties auf
+   `eGet`/`eSet` des gleichnamigen Features abbildet — kein Codegen-Schritt
+   im Build noetig. Verifiziert in `__tests__/geneWidgetsPackage.spec.ts`
+   und E2E gegen den echten Composer.
+2. **Supertyp-Reparatur.** Der `eSuperTypes`-href auf das uimodel-Paket
+   kann als unaufgeloester Proxy stehen bleiben; ohne echten Supertyp
+   fehlten die geerbten Features und die Expansion braeche.
+   `repairSuperTypes` ersetzt ihn durch die registrierte
+   WidgetComponent-EClass.
+
+3. **MarkdownWidget braucht mehr als Syntax-Highlighting.** Erste Fassung
+   rendert Markdown nur als Monaco mit `language="markdown"` — damit war das
+   Widget nicht von `CodeWidget` unterscheidbar. Jetzt: eigener
+   `MarkdownEditor` mit Formatierungsleiste (Fett/Kursiv/Ueberschrift/
+   Liste/Link/Code ueber Monaco-`executeEdits`, also Undo-faehig) und
+   Umschalter Bearbeiten/Vorschau; die Vorschau rendert per `marked` und
+   wird mit `DOMPurify` bereinigt, bevor sie ins DOM geht. Der gespeicherte
+   Wert bleibt Markdown-Quelltext. Attribute `preview`/`toolbar` steuern
+   beides.
+4. **CRLF-Falle.** Monaco waehlt je nach Ausgangstext CRLF und schrieb
+   `\r\n` in EMF-String-Attribute — der bisherige Textarea-Pfad liefert
+   `\n`. Der gespeicherte Wert haette also davon abgehangen, welches Widget
+   zuletzt aktiv war. `MonacoStringEditor` erzwingt jetzt LF (bei Erzeugung
+   und nach jedem externen `setValue`); der E2E-Test prueft die Abwesenheit
+   von `\r`.
+
+**Bundle-Groesse:** `ui-uimodel-forms` waechst durch Monaco auf ~8,7 MB
+(gleiche Groessenordnung wie `transformation` 8,8 MB, das ebenfalls
+Startup-Modul ist und Monaco buendelt). Aufraeum-Kandidat: Monaco als
+TSM-Shared-Lib registrieren und in dmn-editor/transformation/
+ui-uimodel-forms gemeinsam nutzen (eigene Iteration).

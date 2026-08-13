@@ -17,6 +17,28 @@ function propertiesPanel(page: Page): Locator {
   return page.locator('.properties-panel').first()
 }
 
+/**
+ * Text in einen Monaco-Editor tippen und den bisherigen Inhalt ersetzen.
+ *
+ * Monaco haelt den Text im Model, nicht im (versteckten) Textarea — fill()
+ * wuerde nur einfuegen statt zu ersetzen. Ausserdem muss der Editor den Fokus
+ * WIRKLICH haben, bevor getippt wird: sonst gehen einzelne Tasten (vor allem
+ * Enter) verloren und mehrzeilige Eingaben landen auf einer Zeile.
+ * Zeilen werden einzeln mit explizitem Enter geschrieben.
+ */
+async function typeIntoMonaco(page: Page, container: Locator, lines: string[]): Promise<void> {
+  const monaco = container.locator('.monaco-editor').first()
+  await monaco.locator('.view-lines').click()
+  await expect(monaco).toHaveClass(/focused/, { timeout: 5000 })
+  await page.keyboard.press('ControlOrMeta+A')
+  for (let i = 0; i < lines.length; i++) {
+    if (i > 0) await page.keyboard.press('Enter')
+    await page.keyboard.type(lines[i], { delay: 15 })
+  }
+  // Auf die Uebernahme ins Modell warten statt auf eine feste Zeit
+  await expect(monaco).toContainText(lines[lines.length - 1].replace(/^[#\-*\s]+/, ''), { timeout: 5000 })
+}
+
 /** Wie setupBaseline (properties-baseline.spec.ts), aber mit aktiviertem Flag. */
 async function setupWithFlag(page: Page): Promise<void> {
   // Flag VOR dem App-Start setzen (localStorage wird beim Bootstrap gelesen)
@@ -489,6 +511,153 @@ test.describe('UiModel-Properties (Flag an)', () => {
     await selectByXmiId(page, 'book1')
     await expect(authorRow.locator('input')).toHaveCount(1, { timeout: 5000 })
     await expect(authorRow.locator('textarea')).toHaveCount(0)
+  })
+
+  test('gene-Widgets (Plan 10): CodeWidget rendert Monaco, Markdown/RichText greifen', async ({ page }) => {
+    const panel = propertiesPanel(page)
+
+    // Ausgangslage: 'author' ist ein normales einzeiliges Input
+    await selectByXmiId(page, 'book1')
+    const authorRow = panel.locator('.uimodel-property-row').filter({ hasText: 'Author' })
+    await expect(authorRow.locator('input')).toHaveCount(1)
+    await expect(authorRow.locator('.monaco-string-editor')).toHaveCount(0)
+
+    // Overlay mit genew:CodeWidget — exakt das XMI, das die Settings-Page
+    // ueber rulesToOverlayXmi erzeugt (inkl. genew-Namespace-Deklaration).
+    await page.evaluate(async () => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const svc = tsm.getService('ui.uimodel.forms')
+      const xmi = `<?xml version="1.0" encoding="UTF-8"?>
+<uimodel:UIModelOverlay xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:uimodel="http://uimodel/1.0"
+    xmlns:genew="http://gene/uimodel/widgets/1.0"
+    name="workspace-overrides" priority="100">
+  <templates xsi:type="genew:CodeWidget" xmi:id="t-code" name="code" language="json" rows="6"/>
+  <cases widget="#t-code">
+    <when language="JS" body="self.getName() === 'author' &amp;&amp; self.getEType()?.getName() === 'EString'"/>
+  </cases>
+</uimodel:UIModelOverlay>`
+      await svc.addUiModelsFromXmi(xmi, 'workspace-overrides.uimodel.xmi', 'workspace')
+    })
+
+    // Neuselektion, damit die Registry-Aenderung greift
+    await selectByXmiId(page, 'shelf1')
+    await selectByXmiId(page, 'book1')
+
+    // Monaco statt Input; Label + Pflicht-Semantik bleiben erhalten
+    const editor = authorRow.locator('.monaco-string-editor')
+    await expect(editor).toHaveCount(1, { timeout: 10000 })
+    await expect(editor.locator('.monaco-editor')).toBeVisible({ timeout: 10000 })
+    await expect(authorRow.locator('input')).toHaveCount(0)
+    await expect(authorRow.locator('.field-label')).toHaveText(/Author/)
+
+    // Andere String-Features bleiben unberuehrt (Regel ist feature-spezifisch)
+    const nameRow = panel.locator('.uimodel-property-row').filter({ hasText: 'Name' }).first()
+    await expect(nameRow.locator('input')).toHaveCount(1)
+
+    // Editieren durch Monaco landet am EObject (gleiche Bridge-Schreibpfade)
+    await typeIntoMonaco(page, editor, ['Kafka, Franz'])
+    await page.waitForTimeout(400)
+    const wert = await page.evaluate(() => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const it = tsm.getService('ui.instance-tree.composables')
+      const lib: any = Array.from(it.useSharedInstanceTree().getRootObjects())[0]
+      const shelves = Array.from(lib.eGet(lib.eClass().getEStructuralFeature('shelves')))
+      const book: any = Array.from((shelves[0] as any).eGet((shelves[0] as any).eClass().getEStructuralFeature('media')))[0]
+      return book.eGet(book.eClass().getEStructuralFeature('author'))
+    })
+    expect(wert).toBe('Kafka, Franz')
+
+    // Umschalten auf MarkdownWidget: derselbe Editor, aber ohne Zeilennummern
+    await page.evaluate(async () => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const svc = tsm.getService('ui.uimodel.forms')
+      const xmi = `<?xml version="1.0" encoding="UTF-8"?>
+<uimodel:UIModelOverlay xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:uimodel="http://uimodel/1.0"
+    xmlns:genew="http://gene/uimodel/widgets/1.0"
+    name="workspace-overrides" priority="100">
+  <templates xsi:type="genew:MarkdownWidget" xmi:id="t-markdown" name="markdown" rows="8"/>
+  <cases widget="#t-markdown">
+    <when language="JS" body="self.getName() === 'author' &amp;&amp; self.getEType()?.getName() === 'EString'"/>
+  </cases>
+</uimodel:UIModelOverlay>`
+      await svc.addUiModelsFromXmi(xmi, 'workspace-overrides.uimodel.xmi', 'workspace')
+    })
+    await selectByXmiId(page, 'shelf1')
+    await selectByXmiId(page, 'book1')
+    await expect(authorRow.locator('[data-widget-kind="MarkdownWidget"]')).toHaveCount(1, { timeout: 10000 })
+    // Wert aus dem Modell wird uebernommen (kein Datenverlust beim Wechsel)
+    await expect(authorRow.locator('.monaco-editor')).toContainText('Kafka, Franz', { timeout: 10000 })
+
+    // Markdown-Editor kann mehr als Syntax-Highlighting: Toolbar formatiert,
+    // Vorschau rendert. Ueberschrift ueber die Toolbar setzen ...
+    const mdEditor = authorRow.locator('.markdown-editor')
+    await typeIntoMonaco(page, mdEditor, ['# Kafka', '- Der Prozess'])
+    await page.waitForTimeout(400)
+
+    // ... und in der Vorschau als echtes HTML pruefen
+    await mdEditor.getByRole('button', { name: 'Vorschau' }).click()
+    const preview = mdEditor.locator('.markdown-editor__preview')
+    await expect(preview.locator('h1')).toHaveText('Kafka')
+    await expect(preview.locator('li')).toHaveText('Der Prozess')
+    // Quelltext bleibt Markdown (Vorschau ist reine Darstellung)
+    const mdWert = await page.evaluate(() => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const it = tsm.getService('ui.instance-tree.composables')
+      const lib: any = Array.from(it.useSharedInstanceTree().getRootObjects())[0]
+      const shelves = Array.from(lib.eGet(lib.eClass().getEStructuralFeature('shelves')))
+      const book: any = Array.from((shelves[0] as any).eGet((shelves[0] as any).eClass().getEStructuralFeature('media')))[0]
+      return book.eGet(book.eClass().getEStructuralFeature('author'))
+    })
+    expect(mdWert).toContain('# Kafka')
+    expect(mdWert).toContain('- Der Prozess')
+    // Zeilenenden sind LF wie beim Textarea-Pfad — kein CRLF im Modell
+    expect(mdWert).not.toContain('\r')
+
+    // Toolbar-Aktion: Selektion fett setzen
+    await mdEditor.getByRole('button', { name: 'Bearbeiten' }).click()
+    await typeIntoMonaco(page, mdEditor, ['Prozess'])
+    await page.keyboard.press('ControlOrMeta+A')
+    await mdEditor.locator('button[title="Fett"]').click()
+    await expect(mdEditor.locator('.monaco-editor')).toContainText('**Prozess**', { timeout: 5000 })
+
+    // RichTextWidget: PrimeVue-Editor (Quill) statt Monaco
+    await page.evaluate(async () => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const svc = tsm.getService('ui.uimodel.forms')
+      const xmi = `<?xml version="1.0" encoding="UTF-8"?>
+<uimodel:UIModelOverlay xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:uimodel="http://uimodel/1.0"
+    xmlns:genew="http://gene/uimodel/widgets/1.0"
+    name="workspace-overrides" priority="100">
+  <templates xsi:type="genew:RichTextWidget" xmi:id="t-richtext" name="richtext"/>
+  <cases widget="#t-richtext">
+    <when language="JS" body="self.getName() === 'author' &amp;&amp; self.getEType()?.getName() === 'EString'"/>
+  </cases>
+</uimodel:UIModelOverlay>`
+      await svc.addUiModelsFromXmi(xmi, 'workspace-overrides.uimodel.xmi', 'workspace')
+    })
+    await selectByXmiId(page, 'shelf1')
+    await selectByXmiId(page, 'book1')
+    await expect(authorRow.locator('[data-widget-kind="RichTextWidget"]')).toHaveCount(1, { timeout: 10000 })
+    await expect(authorRow.locator('.ql-editor, textarea')).toHaveCount(1, { timeout: 10000 })
+
+    // Regel entfernen → Default (Input) greift wieder
+    await page.evaluate(() => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      tsm.getService('ui.uimodel.forms').removeUiModelPath('workspace-overrides.uimodel.xmi')
+    })
+    await selectByXmiId(page, 'shelf1')
+    await selectByXmiId(page, 'book1')
+    await expect(authorRow.locator('input')).toHaveCount(1, { timeout: 5000 })
+    await expect(authorRow.locator('.monaco-string-editor')).toHaveCount(0)
   })
 
   test('Flag-Umschaltung ohne Reload stellt den alten Pfad wieder her', async ({ page }) => {
