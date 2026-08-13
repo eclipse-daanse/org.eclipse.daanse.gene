@@ -11,6 +11,7 @@
     }
   ],
   "dependencies": [
-    "instance-builder"
+    "instance-builder",
+    "ui-search"
   ]
 }
