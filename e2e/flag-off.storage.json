@@ -1,0 +1,13 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:5173",
+      "localStorage": [{ "name": "gene.uimodelProperties", "value": "false" }]
+    },
+    {
+      "origin": "http://localhost:5177",
+      "localStorage": [{ "name": "gene.uimodelProperties", "value": "false" }]
+    }
+  ]
+}

@@ -323,7 +323,7 @@ vermerkt.
 | # | Kriterium |
 |---|---|
 | B1 | **Fokus-Stabilität:** Beim Tippen bleibt der Fokus über mehrere Zeichen erhalten; externe Modelländerungen (z. B. Umbenennen im Baum) aktualisieren die Anzeige trotzdem reaktiv. |
-| B2 | **Feature-Flag:** Flag „aus" = exakt heutiges Verhalten. Alle bestehenden E2E-Suiten (`full-roundtrip`, `instance-move`, `metamodeler`, `perspectives`, `workspace`, `layout`, `app-bootstrap`) grün **mit Flag an und aus**. |
+| B2 | **Feature-Flag:** Flag „aus" = exakt heutiges Verhalten. Alle bestehenden E2E-Suiten (`full-roundtrip`, `instance-move`, `metamodeler`, `perspectives`, `workspace`, `layout`, `app-bootstrap`) grün **mit Flag an und aus**. → **ERFÜLLT (2026-08-11)**, s. 7.1 |
 | B3 | **Metamodeler unberührt:** EClass/EPackage-Properties und Constraint-Editor laufen weiter über den alten Pfad; `metamodeler.spec.ts` ohne Anpassung grün. |
 | B4 | **Eine Core-Instanz:** `UimodelPackage` ist über die zentrale `EPackageRegistry` (TSM-Service) auflösbar; ein geladenes UIModel referenziert die **identischen** `EStructuralFeature`-Objekte wie der Instance-Tree (Identitätsvergleich, kein Name-Matching). |
 | B5 | **Projektregeln:** `vue-tsc`/ESLint sauber; keine `window.*`-Zugriffe (TSM/DI); keine Änderungen im EMFTs-Projekt aus gene heraus; auf dem Merge-Stand keine `file:`/lokalen Pfade in package.json oder Lockfile (erfüllt: Composer ist reguläre Registry-Dependency). |
@@ -337,6 +337,37 @@ vermerkt.
 3. Kopie ins Workspace legen, Reihenfolge/Labels ändern → Panel übernimmt die
    Workspace-Variante (A5); alle Absprungpunkte durchklicken (A1).
 4. Feature-Flag ausschalten → alte Anzeige, gleiche Daten (B2).
+
+### 7.1 Nachweis B2 (2026-08-11)
+
+Die sieben Bestandssuiten setzen das Flag nicht selbst. Damit der Nachweis
+reproduzierbar ist, liest `playwright.config.ts` jetzt `E2E_STORAGE_STATE`
+und setzt darueber `localStorage` VOR dem App-Start:
+
+```bash
+# Flag AN (Default — ohne Eintrag gilt das Flag als gesetzt)
+npx playwright test e2e/app-bootstrap.spec.ts e2e/full-roundtrip.spec.ts \
+  e2e/instance-move.spec.ts e2e/layout.spec.ts e2e/metamodeler.spec.ts \
+  e2e/perspectives.spec.ts e2e/workspace.spec.ts
+
+# Flag AUS
+E2E_STORAGE_STATE=e2e/flag-off.storage.json npx playwright test <dieselben>
+```
+
+Vorher verifiziert, dass der Schalter greift (`localStorage`-Wert `null`
+vs. `"false"`) — sonst waere ein gruener Lauf ohne Aussage.
+
+Ergebnis: **33 passed / 1 skipped in beiden Stellungen.** Dazu die
+Baseline-Suite in beiden Stellungen (17/17) sowie `uimodel-properties`
+(12) und `uimodel-settings` (1).
+
+**Ein Fehlschlag war fremd:** `app-bootstrap` meldete
+`[TSM Registry] Failed to discover from SensiNact Mapping Wizard: Failed to
+fetch` — verursacht vom (nicht committeten) Repo-Eintrag auf
+`http://localhost:5399` in `src/tsm/repositories.config.ts`, dessen
+Plugin-Server nicht laeuft. Ohne diesen Eintrag laeuft die Suite gruen;
+mit laufendem Plugin-Server ebenfalls. Nicht durch diese Iteration
+verursacht.
 
 ---
 
