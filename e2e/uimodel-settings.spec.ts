@@ -72,3 +72,54 @@ test('Property-Widgets-Settings: nur Feature-Regeln, Speichern über den globale
   // ausschliesslich dort gesetzt und ist damit der Beleg fuer den Aufruf.
   await expect(panel.locator('.status.error')).toHaveText('Kein Workspace geoeffnet.', { timeout: 5000 })
 })
+
+/**
+ * Regression: die Feature-Auswahl muss auch beim nackten Einstieg gehen —
+ * Settings direkt oeffnen, ohne vorher Workspace/Modelle zu laden.
+ *
+ * Genau dieser Pfad war kaputt: der PickerDialog kommt aus `ui-search`,
+ * das nicht in den startupModules steht. Solange irgendein anderes
+ * geladenes Plugin es mitzog (lokal: cocl-editor), fiel das nicht auf — im
+ * Deployment, wo cocl-editor gar nicht ausgeliefert wird, blieb der Knopf
+ * wirkungslos. Der obige Test verdeckte es, weil er vorher ein Modell laedt.
+ *
+ * Behoben ueber die Manifest-Abhaengigkeit von ui-uimodel-forms auf
+ * ui-search (gleiches Muster wie cocl-editor).
+ */
+test('Feature-Picker oeffnet auch ohne geladenes Modell', async ({ page }) => {
+  await waitForAppReady(page)
+  await page.waitForFunction(() => {
+    const appEl = document.querySelector('#app') as any
+    const tsm = appEl?.__vue_app__?._context?.provides?.['tsm']
+    return !!tsm?.getService?.('ui.uimodel.forms')
+  }, undefined, { timeout: 60_000 })
+
+  // Der Dienst, an dem es haengt — muss ohne Zutun verfuegbar sein
+  const pickerVerfuegbar = await page.evaluate(() => {
+    const appEl = document.querySelector('#app') as any
+    const tsm = appEl?.__vue_app__?._context?.provides?.['tsm']
+    return !!tsm?.getService?.('ui.search.components')?.PickerDialog
+  })
+  expect(pickerVerfuegbar, 'ui.search.components ist nicht registriert — ui-search wurde nicht geladen').toBe(true)
+
+  // Perspektive oeffnen (die ActivityBar mit dem Zahnrad haengt daran) —
+  // aber BEWUSST ohne Modelle zu laden, denn genau das Laden zog frueher
+  // ui-search mit und verdeckte den Fehler.
+  await page.evaluate(() => {
+    const appEl = document.querySelector('#app') as any
+    const tsm = appEl?.__vue_app__?._context?.provides?.['tsm']
+    tsm.getService('ui.registry.perspectives').openWorkspace({}, '/e2e-test/workspace.xmi', 'model-editor')
+  })
+  await page.waitForTimeout(1500)
+
+  await page.locator('i.pi-cog').first().click()
+  await expect(page.locator('.settings-footer')).toBeVisible({ timeout: 10000 })
+  await page.getByText('Property Widgets', { exact: false }).first().click()
+  const panel = page.locator('.overlay-settings')
+  await expect(panel).toBeVisible({ timeout: 5000 })
+
+  // Der Klick muss den Dialog wirklich oeffnen (vorher: Flag gesetzt,
+  // Dialog nie gerendert, weil PickerDialog null war)
+  await panel.locator('.feature-picker-trigger').click()
+  await expect(page.locator('.picker-dialog')).toBeVisible({ timeout: 5000 })
+})
