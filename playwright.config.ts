@@ -19,6 +19,11 @@ export default defineConfig({
     // E2E_BASE_URL erlaubt einen Lauf gegen einen bereits laufenden Dev-Server
     // auf abweichendem Port (Vite weicht aus, wenn 5173 belegt ist).
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',
+    // E2E_STORAGE_STATE setzt localStorage VOR dem App-Start — noetig, um
+    // Suiten, die das UiModel-Flag nicht selbst setzen, in beiden
+    // Flag-Stellungen zu fahren (Abnahmekriterium B2). Siehe
+    // e2e/flag-off.storage.json.
+    storageState: process.env.E2E_STORAGE_STATE || undefined,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
