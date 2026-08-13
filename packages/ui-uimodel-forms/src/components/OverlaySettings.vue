@@ -6,7 +6,7 @@
  * Quelle der Wahrheit; die Registry laedt sie wie jede *.uimodel.xmi.
  */
 import { ref, computed, watch, onMounted, inject } from 'tsm:vue'
-import { Button, InputText, Select, SelectButton, Message, DataTable, Column } from 'tsm:primevue'
+import { Button, Select, DataTable, Column } from 'tsm:primevue'
 import {
   OVERLAY_FILE_NAME,
   WIDGET_KINDS,
@@ -18,7 +18,10 @@ import {
   type WidgetKind
 } from '../overlayRules'
 import { loadUiModelXmi, reloadWorkspaceUiModels } from '../uiModelRegistry'
-import { createFeaturePickerSource, createETypePickerSource } from '../overlayPickers'
+import { createFeaturePickerSource } from '../overlayPickers'
+
+/** Gespeichert wird ueber den globalen Save-Button des Settings-Dialogs. */
+const emit = defineEmits<{ dirty: [] }>()
 
 const tsm = inject<any>('tsm')
 const fs = computed(() => tsm?.getService('gene.filesystem'))
@@ -29,9 +32,7 @@ const fs = computed(() => tsm?.getService('gene.filesystem'))
 const PickerDialog = computed(() => tsm?.getService('ui.search.components')?.PickerDialog ?? null)
 const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry?.() ?? null
 const featurePickerVisible = ref(false)
-const eTypePickerVisible = ref(false)
 const featureSource = computed(() => modelRegistry ? createFeaturePickerSource(modelRegistry) : null)
-const eTypeSource = computed(() => modelRegistry ? createETypePickerSource(modelRegistry) : null)
 
 function onFeaturePicked(item: { label: string; secondaryLabel?: string }) {
   newRule.value.featureName = item.label
@@ -39,14 +40,6 @@ function onFeaturePicked(item: { label: string; secondaryLabel?: string }) {
   // ein widerspruechlicher Typ ergaebe eine Regel, die nie greift).
   newRule.value.eTypeName = item.secondaryLabel ?? ''
   featurePickerVisible.value = false
-}
-
-function onETypePicked(item: { label: string; groupKey?: string }) {
-  newRule.value.eTypeName = item.label
-  // sinnvoller Widget-Default je nach Typ-Art
-  if (item.groupKey === 'Enums') newRule.value.widget = 'select'
-  else if (item.groupKey === 'Klassen') newRule.value.widget = 'reference'
-  eTypePickerVisible.value = false
 }
 
 
@@ -60,20 +53,9 @@ const sourceId = ref<string | null>(null)
 
 const newRule = ref<OverlayRule>({ featureName: '', eTypeName: '', widget: 'textarea' })
 
-// ── Regel-Modus: "Bestimmtes Feature" ODER "Alle Features eines Typs" ──────
-// Die freie Kombination beider Kriterien erlaubte tote Regeln
-// (z. B. author + EDate: matcht nie). Der Modus macht die zwei sinnvollen
-// Regel-Arten explizit; im Feature-Modus ist der eType aus dem Metamodell
-// abgeleitet und nicht editierbar.
-type RuleMode = 'feature' | 'type'
-const ruleMode = ref<RuleMode>('feature')
-const modeOptions = [
-  { label: 'Bestimmtes Feature', value: 'feature' },
-  { label: 'Alle Features eines Typs', value: 'type' }
-]
-watch(ruleMode, () => {
-  newRule.value = { featureName: '', eTypeName: '', widget: newRule.value.widget }
-})
+// Eine Regel gilt immer fuer EIN bestimmtes Feature; der eType wird beim
+// Auswaehlen aus dem Metamodell uebernommen und praezisiert die Regel
+// (gleichnamige Features anderen Typs bleiben unberuehrt).
 
 // Widget-Auswahl nach eType gefiltert (kein Multiline-Datum etc.)
 const filteredWidgetOptions = computed(() => {
@@ -133,17 +115,33 @@ function addRule() {
   if (!canAdd.value) return
   rules.value = [...rules.value, { ...newRule.value }]
   newRule.value = { featureName: '', eTypeName: '', widget: 'textarea' }
+  markDirty()
 }
 
 function removeRule(index: number) {
   rules.value = rules.value.filter((_, i) => i !== index)
+  markDirty()
 }
 
+/** Dialog aktiviert damit seinen Save-Button (Button ist bei !isDirty aus). */
+function markDirty() {
+  statusText.value = ''
+  errorText.value = ''
+  emit('dirty')
+}
+
+/**
+ * Schreibt die Overlay-Datei. Wird vom Settings-Dialog ueber den globalen
+ * Save-Button aufgerufen (defineExpose) — die Seite hat keinen eigenen
+ * Speichern-Knopf mehr. Die Regeln leben in einer EIGENEN Datei, nicht im
+ * `.wsp`, deshalb reicht `editorConfig.saveToFileSystem` dafuer nicht.
+ */
 async function save() {
   statusText.value = ''
   errorText.value = ''
   const f = fs.value
   if (!f) { errorText.value = 'Kein Dateisystem-Service verfuegbar.'; return }
+  if (!hasWorkspace.value) { errorText.value = 'Kein Workspace geoeffnet.'; return }
   try {
     const xmi = rulesToOverlayXmi(rules.value)
     let entry = fileEntry.value
@@ -173,79 +171,90 @@ async function save() {
     errorText.value = `Speichern fehlgeschlagen: ${e instanceof Error ? e.message : e}`
   }
 }
+
+defineExpose({ save })
 </script>
 
 <template>
   <div class="overlay-settings">
+    <!-- Titel/Beschreibung liefert der Settings-Dialog (detail-title,
+         detail-description) — hier nur der Datei-Hinweis. -->
     <p class="hint">
-      Workspace-weite Regeln fuer die Widget-Wahl des generischen
-      Property-Layouts. Eine Regel uebersteuert das Default-Mapping fuer
-      alle Features, auf die Feature-Name und/oder eType zutreffen —
-      gespeichert als <code>{{ OVERLAY_FILE_NAME }}</code> im Workspace.
+      Eine Regel gilt fuer ein bestimmtes Feature (klassenuebergreifend, auf
+      dessen Typ begrenzt). Gespeichert als
+      <code>{{ OVERLAY_FILE_NAME }}</code> im Workspace, ueber den
+      Speichern-Knopf unten im Dialog.
     </p>
 
-    <Message v-if="!hasWorkspace" severity="warn" :closable="false">
-      Kein Workspace geoeffnet — Regeln koennen erst mit geoeffnetem
-      Workspace gespeichert werden.
-    </Message>
-    <Message v-else-if="!composerSupport" severity="info" :closable="false">
-      Die geladene uimodel-composer-Version kennt UIModelOverlay noch nicht
-      (emf.ts.ui#8) — Regeln werden gespeichert, wirken aber erst nach dem
-      Composer-Update.
-    </Message>
+    <div v-if="!hasWorkspace" class="status-message warning">
+      <i class="pi pi-exclamation-triangle"></i>
+      <span>Kein Workspace geoeffnet — Regeln koennen erst mit geoeffnetem
+        Workspace gespeichert werden.</span>
+    </div>
+    <div v-else-if="!composerSupport" class="status-message info">
+      <i class="pi pi-info-circle"></i>
+      <span>Die geladene uimodel-composer-Version kennt UIModelOverlay noch
+        nicht (emf.ts.ui#8) — Regeln werden gespeichert, wirken aber erst
+        nach dem Composer-Update.</span>
+    </div>
 
-    <DataTable :value="rules" size="small" v-if="rules.length > 0" class="rules-table">
-      <Column field="featureName" header="Feature-Name">
-        <template #body="{ data }">{{ data.featureName || '—' }}</template>
-      </Column>
-      <Column field="eTypeName" header="eType">
-        <template #body="{ data }">{{ data.eTypeName || '—' }}</template>
-      </Column>
-      <Column field="widget" header="Widget">
-        <template #body="{ data }">
-          {{ widgetOptions.find(w => w.value === data.widget)?.label ?? data.widget }}
-        </template>
-      </Column>
-      <Column header="" style="width: 3rem">
-        <template #body="{ index }">
-          <Button icon="pi pi-trash" text rounded size="small" severity="danger"
-                  @click="removeRule(index)" v-tooltip.bottom="'Regel entfernen'" />
-        </template>
-      </Column>
-    </DataTable>
-    <p v-else class="empty">Noch keine Regeln definiert.</p>
+    <!-- Neue Regel (Auswahl oben, wie bei den Icon-Mappings) -->
+    <div class="add-rule-form">
+      <div class="form-row">
+        <div class="field field-feature">
+          <label>Feature</label>
+          <Button
+            :label="newRule.featureName || 'Feature waehlen...'"
+            icon="pi pi-tag"
+            severity="secondary"
+            outlined
+            size="small"
+            class="feature-picker-trigger"
+            @click="featurePickerVisible = true"
+          />
+        </div>
+        <div class="field field-small">
+          <label>Typ</label>
+          <span class="etype-info">{{ newRule.eTypeName || '—' }}</span>
+        </div>
+        <div class="field field-widget">
+          <label>Widget</label>
+          <Select v-model="newRule.widget" :options="filteredWidgetOptions" optionLabel="label"
+                  optionValue="value" />
+        </div>
+        <div class="field-action">
+          <Button icon="pi pi-plus" label="Hinzufuegen" :disabled="!canAdd" @click="addRule" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Bestehende Regeln -->
+    <div class="rules-table" v-if="rules.length > 0">
+      <DataTable :value="rules" size="small" scrollable scrollHeight="250px">
+        <Column field="featureName" header="Feature">
+          <template #body="{ data }">{{ data.featureName || '—' }}</template>
+        </Column>
+        <Column field="eTypeName" header="Typ" style="width: 120px">
+          <template #body="{ data }">{{ data.eTypeName || '—' }}</template>
+        </Column>
+        <Column field="widget" header="Widget">
+          <template #body="{ data }">
+            {{ widgetOptions.find(w => w.value === data.widget)?.label ?? data.widget }}
+          </template>
+        </Column>
+        <Column header="" style="width: 50px">
+          <template #body="{ index }">
+            <Button icon="pi pi-trash" text rounded size="small" severity="danger"
+                    @click="removeRule(index)" v-tooltip.bottom="'Regel entfernen'" />
+          </template>
+        </Column>
+      </DataTable>
+    </div>
+    <div v-else class="empty-hint">Noch keine Regeln definiert.</div>
 
     <div v-if="rawCases.length > 0" class="raw-cases">
       <span class="raw-title">Manuell definierte Faelle in der Datei (werden beim Speichern verworfen):</span>
       <code v-for="(raw, i) in rawCases" :key="i">{{ raw }}</code>
-    </div>
-
-    <div class="add-form">
-      <SelectButton v-model="ruleMode" :options="modeOptions" optionLabel="label"
-                    optionValue="value" size="small" :allowEmpty="false" />
-
-      <template v-if="ruleMode === 'feature'">
-        <div class="picker-field">
-          <InputText v-model="newRule.featureName" placeholder="Feature waehlen..." size="small" readonly
-                     @click="featurePickerVisible = true" />
-          <Button v-if="PickerDialog && featureSource" icon="pi pi-search" text size="small"
-                  @click="featurePickerVisible = true" v-tooltip.bottom="'Feature aus Metamodell waehlen'" />
-        </div>
-        <span v-if="newRule.eTypeName" class="etype-info">Typ: {{ newRule.eTypeName }}</span>
-      </template>
-
-      <template v-else>
-        <div class="picker-field">
-          <InputText v-model="newRule.eTypeName" placeholder="eType waehlen..." size="small" readonly
-                     @click="eTypePickerVisible = true" />
-          <Button v-if="PickerDialog && eTypeSource" icon="pi pi-search" text size="small"
-                  @click="eTypePickerVisible = true" v-tooltip.bottom="'eType waehlen'" />
-        </div>
-      </template>
-
-      <Select v-model="newRule.widget" :options="filteredWidgetOptions" optionLabel="label"
-              optionValue="value" size="small" class="widget-select" />
-      <Button label="Hinzufuegen" icon="pi pi-plus" size="small" :disabled="!canAdd" @click="addRule" />
     </div>
 
     <component
@@ -258,19 +267,7 @@ async function save() {
       :data-source="featureSource"
       @select="onFeaturePicked"
     />
-    <component
-      :is="PickerDialog"
-      v-if="PickerDialog && eTypeSource"
-      v-model:visible="eTypePickerVisible"
-      header="eType waehlen"
-      placeholder="Typ suchen..."
-      display-mode="grouped"
-      :data-source="eTypeSource"
-      @select="onETypePicked"
-    />
-
-    <div class="actions">
-      <Button label="Speichern" icon="pi pi-save" size="small" :disabled="!hasWorkspace" @click="save" />
+    <div v-if="statusText || errorText" class="actions">
       <span v-if="statusText" class="status ok">{{ statusText }}</span>
       <span v-if="errorText" class="status error">{{ errorText }}</span>
     </div>
@@ -278,16 +275,105 @@ async function save() {
 </template>
 
 <style scoped>
-.overlay-settings { display: flex; flex-direction: column; gap: 0.75rem; }
-.hint { font-size: 0.85rem; color: var(--text-color-secondary); margin: 0; }
-.empty { font-size: 0.85rem; color: var(--text-color-secondary); font-style: italic; }
-.add-form { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-.picker-field { display: flex; gap: 0.15rem; align-items: center; }
-.picker-field input { cursor: pointer; }
-.etype-info { font-size: 0.8rem; color: var(--text-color-secondary); }
-.widget-select { min-width: 12rem; }
+/* Uebernimmt das Design der Icon-Mappings im selben Dialog
+   (WorkspaceSettingsDialog.vue, Kategorie "icons"): abgesetztes dunkles
+   Formularfeld oben, umrandete Tabelle darunter. Die dortigen Klassen sind
+   scoped, deshalb hier bewusst dieselben Werte statt eines Imports. */
+.overlay-settings { display: flex; flex-direction: column; gap: 16px; }
+
+.hint {
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  margin: 0;
+}
+
+.status-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+}
+
+.status-message.warning {
+  background: color-mix(in srgb, var(--yellow-500) 15%, transparent);
+  color: var(--yellow-600);
+}
+
+.status-message.info {
+  background: color-mix(in srgb, var(--blue-500) 15%, transparent);
+  color: var(--blue-600);
+}
+
+/* Das dunkle Feld fuer die Eingabe */
+.add-rule-form {
+  padding: 12px;
+  background: var(--surface-ground);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.field label {
+  font-size: 0.7rem;
+  color: var(--text-color-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Feature-Namen und Widget-Bezeichnungen brauchen Platz */
+.field-feature { flex: 2; min-width: 170px; }
+.field-widget { flex: 1.5; min-width: 150px; }
+.field-small { flex: 0 0 auto; min-width: 4rem; }
+.field-action { flex: 0 0 auto; }
+
+.feature-picker-trigger {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.etype-info {
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  /* auf Hoehe der Eingabefelder daneben halten (align-items: flex-end
+     wuerde den kurzen Text sonst tiefer setzen) */
+  display: flex;
+  align-items: center;
+  min-height: 2.25rem;
+}
+
+.rules-table {
+  border: 1px solid var(--surface-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+:deep(.p-datatable) {
+  font-size: 0.8125rem;
+  background: var(--surface-card);
+}
+
+.empty-hint {
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  font-style: italic;
+  padding: 12px 0;
+}
+
 .actions { display: flex; gap: 0.75rem; align-items: center; }
-.status { font-size: 0.8rem; }
+.status { font-size: 0.8125rem; }
 .status.ok { color: var(--green-500, #22c55e); }
 .status.error { color: var(--red-400, #f87171); }
 .raw-cases { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.8rem; }

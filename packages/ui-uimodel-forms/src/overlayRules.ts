@@ -13,15 +13,23 @@ export const OVERLAY_FILE_NAME = 'workspace-overrides.uimodel.xmi'
 
 export type WidgetKind =
   | 'input' | 'textarea' | 'checkbox' | 'number' | 'date' | 'select' | 'reference'
+  | 'code' | 'markdown' | 'richtext'
 
-export const WIDGET_KINDS: Array<{ kind: WidgetKind; label: string; eClass: string }> = [
-  { kind: 'input', label: 'Input (einzeilig)', eClass: 'InputWidget' },
-  { kind: 'textarea', label: 'Multiline (TextArea)', eClass: 'TextAreaWidget' },
+/**
+ * ns 'genew' = gene-Widget-Erweiterung (gene-widgets.ecore, Plan Abschnitt 10);
+ * ohne ns stammt die Klasse aus dem uimodel-Kernpaket.
+ */
+export const WIDGET_KINDS: Array<{ kind: WidgetKind; label: string; eClass: string; ns?: 'genew' }> = [
+  { kind: 'input', label: 'Einzeilig', eClass: 'InputWidget' },
+  { kind: 'textarea', label: 'Multiline', eClass: 'TextAreaWidget' },
   { kind: 'checkbox', label: 'Checkbox', eClass: 'CheckboxWidget' },
   { kind: 'number', label: 'Number', eClass: 'NumberWidget' },
   { kind: 'date', label: 'Date', eClass: 'DateWidget' },
   { kind: 'select', label: 'Select', eClass: 'SelectWidget' },
-  { kind: 'reference', label: 'Reference', eClass: 'ReferenceLinkWidget' }
+  { kind: 'reference', label: 'Reference', eClass: 'ReferenceLinkWidget' },
+  { kind: 'code', label: 'Code', eClass: 'CodeWidget', ns: 'genew' },
+  { kind: 'markdown', label: 'Markdown', eClass: 'MarkdownWidget', ns: 'genew' },
+  { kind: 'richtext', label: 'Rich Text', eClass: 'RichTextWidget', ns: 'genew' }
 ]
 
 export interface OverlayRule {
@@ -44,7 +52,7 @@ export function isValidRule(rule: OverlayRule): boolean {
 export function compatibleWidgets(eTypeName?: string): WidgetKind[] {
   const t = eTypeName?.trim()
   if (!t) return WIDGET_KINDS.map(w => w.kind)
-  if (t === 'EString' || t === 'EChar') return ['input', 'textarea']
+  if (t === 'EString' || t === 'EChar') return ['input', 'textarea', 'code', 'markdown', 'richtext']
   if (t === 'EBoolean' || t === 'EBooleanObject') return ['checkbox', 'input']
   if (['EInt', 'EIntegerObject', 'ELong', 'ELongObject', 'EShort', 'EShortObject',
        'EFloat', 'EFloatObject', 'EDouble', 'EDoubleObject', 'EBigDecimal',
@@ -78,14 +86,18 @@ function xmlEscape(s: string): string {
 export function rulesToOverlayXmi(rules: OverlayRule[], name = 'workspace-overrides'): string {
   const valid = rules.filter(isValidRule)
   const used = [...new Set(valid.map(r => r.widget))]
-  const templates = used.map(kind => {
-    const def = WIDGET_KINDS.find(w => w.kind === kind)!
-    return `  <templates xsi:type="uimodel:${def.eClass}" xmi:id="t-${kind}" name="${kind}"/>`
-  }).join('\n')
+  const usedDefs = used.map(kind => WIDGET_KINDS.find(w => w.kind === kind)!)
+  const templates = usedDefs.map(def =>
+    `  <templates xsi:type="${def.ns ?? 'uimodel'}:${def.eClass}" xmi:id="t-${def.kind}" name="${def.kind}"/>`
+  ).join('\n')
   const cases = valid.map(rule => {
     const body = xmlEscape(ruleWhenBody(rule))
     return `  <cases widget="#t-${rule.widget}">\n    <when language="JS" body="${body}"/>\n  </cases>`
   }).join('\n')
+  // Namespace der gene-Widget-Erweiterung nur deklarieren, wenn genutzt
+  const geneWidgetsNs = usedDefs.some(def => def.ns === 'genew')
+    ? '\n    xmlns:genew="http://gene/uimodel/widgets/1.0"'
+    : ''
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!-- Von der gene Settings-Page verwaltet (Workspace Settings > Property
@@ -95,7 +107,7 @@ export function rulesToOverlayXmi(rules: OverlayRule[], name = 'workspace-overri
     xmlns:xmi="http://www.omg.org/XMI"
     xmi:version="2.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns:uimodel="http://uimodel/1.0"
+    xmlns:uimodel="http://uimodel/1.0"${geneWidgetsNs}
     name="${xmlEscape(name)}" priority="100">
 ${templates}
 ${cases}
@@ -111,12 +123,24 @@ ${cases}
  * v1: Datei gehoert der Page (Kommentar im XMI), unbekannte Cases werden
  * als nicht-editierbare Rohtexte gelistet und beim Speichern verworfen.
  */
+/** Property-Zugriff mit eGet-Fallback (DynamicEObjects ohne Property-Proxy). */
+function readProp(obj: unknown, name: string): unknown {
+  if (!obj) return undefined
+  const direct = (obj as Record<string, unknown>)[name]
+  if (direct !== undefined && direct !== null) return direct
+  try {
+    const o = obj as { eClass?: () => { getEStructuralFeature?: (n: string) => unknown }; eGet?: (f: unknown) => unknown }
+    const feature = o.eClass?.()?.getEStructuralFeature?.(name)
+    return feature ? o.eGet?.(feature) : undefined
+  } catch { return undefined }
+}
+
 export function parseOverlayRules(overlay: unknown): Array<OverlayRule | { raw: string }> {
   const result: Array<OverlayRule | { raw: string }> = []
   const cases = (overlay as { cases?: Array<{ when?: { body?: string }; widget?: { name?: string } }> })?.cases ?? []
   for (const c of cases) {
     const body = c.when?.body ?? ''
-    const widgetName = c.widget?.name as WidgetKind | undefined
+    const widgetName = readProp(c.widget, 'name') as WidgetKind | undefined
     const featureName = /self\.getName\(\) === '([^']*)'/.exec(body)?.[1]
     const eTypeName = /self\.getEType\(\)\?\.getName\(\) === '([^']*)'/.exec(body)?.[1]
     if ((featureName || eTypeName) && widgetName && WIDGET_KINDS.some(w => w.kind === widgetName)) {

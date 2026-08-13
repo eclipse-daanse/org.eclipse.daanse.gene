@@ -20,6 +20,7 @@ import OverlaySettings from './components/OverlaySettings.vue'
 import { buildDefaultUiModel, featureDisplayName } from './defaultUiModel'
 import { useUimodelPropertiesFlag } from './featureFlag'
 import { GeneOclValidator, setOclQuery, bumpModelVersion } from './oclAdapter'
+import { registerGeneWidgetsPackage } from './geneWidgetsPackage'
 import {
   setFileSystem,
   loadAppDefaults,
@@ -73,6 +74,11 @@ export async function activate(context: ModuleContext): Promise<void> {
       }
     })
     .catch(() => context.log.warn('UiModel Forms: ui-problems-panel not available — OCL expressions fail open'))
+
+  // gene-Widget-Erweiterung (gene-widgets.ecore, Plan Abschnitt 10) VOR dem
+  // Laden von UIModel-/Overlay-XMIs registrieren — sonst waeren
+  // genew:-Widgets darin nicht instanziierbar.
+  await registerGeneWidgetsPackage()
 
   // UiModel-Registry (Phase 3): App-Defaults laden, Workspace-Scan bei
   // jedem Workspace-Load (Event kommt aus gene-app nach dem Laden aller
