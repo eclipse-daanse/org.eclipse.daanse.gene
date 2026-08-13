@@ -619,6 +619,32 @@ test.describe('UiModel-Properties (Flag an)', () => {
     // Zeilenenden sind LF wie beim Textarea-Pfad — kein CRLF im Modell
     expect(mdWert).not.toContain('\r')
 
+    // XSS: Markdown erlaubt Inline-HTML, und die Vorschau rendert per
+    // v-html — das ist der real gefaehrdete Pfad. (Quill dagegen parst
+    // eingehendes HTML in sein Delta-Format und verwirft aktive Attribute
+    // von sich aus; dort ist die Bereinigung nur Absicherung.)
+    // Der Payload wird direkt am EObject gesetzt, so wie er aus einer
+    // fremden .xmi kaeme.
+    let ausgefuehrt = false
+    await page.exposeFunction('__xssMarker', () => { ausgefuehrt = true })
+    await page.evaluate(() => {
+      const appEl = document.querySelector('#app') as any
+      const tsm = appEl.__vue_app__._context.provides['tsm']
+      const it = tsm.getService('ui.instance-tree.composables')
+      const lib: any = Array.from(it.useSharedInstanceTree().getRootObjects())[0]
+      const shelves = Array.from(lib.eGet(lib.eClass().getEStructuralFeature('shelves')))
+      const book: any = Array.from((shelves[0] as any).eGet((shelves[0] as any).eClass().getEStructuralFeature('media')))[0]
+      book.eSet(book.eClass().getEStructuralFeature('author'),
+        '# Titel\n\n<img src=x onerror="window.__xssMarker && window.__xssMarker()">')
+    })
+    await selectByXmiId(page, 'shelf1')
+    await selectByXmiId(page, 'book1')
+    await mdEditor.getByRole('button', { name: 'Vorschau' }).click()
+    await expect(preview.locator('h1')).toHaveText('Titel')
+    await page.waitForTimeout(800)
+    expect(ausgefuehrt, 'onerror aus der Modelldatei wurde in der Vorschau ausgefuehrt').toBe(false)
+    expect(await preview.innerHTML()).not.toMatch(/onerror/i)
+
     // Toolbar-Aktion: Selektion fett setzen
     await mdEditor.getByRole('button', { name: 'Bearbeiten' }).click()
     await typeIntoMonaco(page, mdEditor, ['Prozess'])

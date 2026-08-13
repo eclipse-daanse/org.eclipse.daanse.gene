@@ -10,7 +10,7 @@
  */
 import { computed, ref } from 'tsm:vue'
 import { marked } from 'marked'
-import DOMPurify from 'dompurify'
+import { sanitizeHtml } from '../sanitizeHtml'
 import MonacoStringEditor from './MonacoStringEditor.vue'
 
 const props = withDefaults(defineProps<{
@@ -43,7 +43,7 @@ const renderedHtml = computed(() => {
   if (!source.trim()) return '<p class="markdown-empty">Keine Inhalte</p>'
   try {
     const html = marked.parse(source, { async: false }) as string
-    return DOMPurify.sanitize(html)
+    return sanitizeHtml(html)
   } catch (e) {
     return `<p class="markdown-empty">Vorschau nicht moeglich: ${String(e)}</p>`
   }
