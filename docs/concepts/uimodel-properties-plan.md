@@ -692,11 +692,32 @@ Zwei Punkte, die beim Bau nicht offensichtlich waren:
    `eGet`/`eSet` des gleichnamigen Features abbildet — kein Codegen-Schritt
    im Build noetig. Verifiziert in `__tests__/geneWidgetsPackage.spec.ts`
    und E2E gegen den echten Composer.
-2. **Supertyp-Reparatur.** Der `eSuperTypes`-href auf das uimodel-Paket
-   kann als unaufgeloester Proxy stehen bleiben; ohne echten Supertyp
-   fehlten die geerbten Features und die Expansion braeche.
-   `repairSuperTypes` ersetzt ihn durch die registrierte
-   WidgetComponent-EClass.
+2. **Reihenfolge beim Start pruefen, nicht reparieren.** Der
+   `eSuperTypes`-href zeigt in ein fremdes Paket
+   (`http://uimodel/1.0#//WidgetComponent`); loest er nicht auf, fehlen den
+   genew-Klassen alle geerbten Features. Erste Fassung wollte das
+   *reparieren* — das war doppelt falsch: die Reparatur griff nie (der href
+   loest auf, weil das uimodel-Paket vorher registriert wird) und haette im
+   Ernstfall still nichts getan (`supers.clear?.()` auf einem Array).
+   Jetzt prueft `superTypesResolved()` den Supertyp selbst; schlaegt das
+   fehl, wird das Paket **gar nicht registriert** und die Konsole nennt
+   Ursache und Abhilfe. Der Fehlerfall ist damit testbar
+   (`geneWidgetsPackageOrder.spec.ts`) — der Erfolgsfall einer Reparatur,
+   die nie greift, waere es nicht gewesen.
+
+   Nebenbefund: Die Pruefung darf **nicht** ueber die geerbten Features
+   gehen — `getEStructuralFeature()` wirft bei unaufgeloestem Supertyp
+   innerhalb von @emfts/core.
+
+2b. **Keine EMF.ts-Funktionalitaet nachbauen.** Die erste Fassung enthielt
+   einen selbst deklarierten Struktur-Typ `EClassLike` und einen eigenen
+   `isEClass`, dazu handgeschriebenes ResourceSet-Setup. Alles davon gibt
+   es in `@emfts/core`: `isEClass` (und 14 weitere Guards in
+   `util/TypeGuards`), `EResourceSetImpl` (registriert die XMI-Factory fuer
+   `.ecore`/`.xmi` und das Ecore-Paket). Der Handtyp war zudem die Ursache
+   des stillen Fehlers: weil er `clear?`/`add?` selbst deklarierte, hat
+   TypeScript den falschen Aufruf akzeptiert — mit dem echten Typ
+   (`getESuperTypes(): EClass[]`) waere es ein Compile-Fehler gewesen.
 
 3. **MarkdownWidget braucht mehr als Syntax-Highlighting.** Erste Fassung
    rendert Markdown nur als Monaco mit `language="markdown"` — damit war das
