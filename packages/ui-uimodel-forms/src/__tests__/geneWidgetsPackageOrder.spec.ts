@@ -1,36 +1,45 @@
 /**
- * Negativfall der Vererbungs-Pruefung (Plan 10.1).
+ * Selbstgenuegsamkeit der Registrierung (Plan 10.1).
  *
  * Eigene Datei, weil `registerGeneWidgetsPackage()` memoisiert und die
- * EPackageRegistry ein Singleton ist — hier laeuft die Registrierung OHNE
- * vorher registriertes uimodel-Paket, die eSuperTypes-hrefs koennen also
- * nicht aufloesen.
+ * EPackageRegistry ein Singleton ist: hier laeuft die Registrierung OHNE
+ * jedes Setup — kein vorher registriertes uimodel-Paket, kein Bootstrap.
  *
- * Genau dieser Fall war mit der frueheren "Supertyp-Reparatur" nicht
- * pruefbar: sie griff nie und haette im Ernstfall still nichts getan.
+ * Das ist der Ersatz fuer die frueheren Konstrukte an dieser Stelle: erst
+ * eine "Supertyp-Reparatur" (griff nie), dann eine Laufzeit-Pruefung der
+ * Startreihenfolge (pruefte eine Bedingung, die gene selbst garantiert).
+ * Stattdessen stellt das Modul seine Voraussetzung selbst her — dann gibt
+ * es keine Reihenfolge, die man verletzen kann, und genau das haelt dieser
+ * Test fest.
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { EPackageRegistry } from '@emfts/core'
 import { registerGeneWidgetsPackage, GENE_WIDGETS_NS_URI } from '../geneWidgetsPackage'
 
-describe('geneWidgetsPackage — Reihenfolge beim Start', () => {
-  it('registriert NICHT, wenn das uimodel-Paket fehlt, und sagt warum', async () => {
+describe('geneWidgetsPackage — ohne Setup', () => {
+  it('registriert sich selbst, auch wenn das uimodel-Paket noch fehlt', async () => {
+    // Ausgangslage: leere Registry (kein main.ts-Bootstrap gelaufen)
     expect(EPackageRegistry.INSTANCE.getEPackage('http://uimodel/1.0')).toBeFalsy()
-    const errors: string[] = []
-    const spy = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-      errors.push(args.join(' '))
-    })
 
     const pkg = await registerGeneWidgetsPackage()
-    spy.mockRestore()
 
-    // Kein halb funktionsfaehiges Paket in der Registry
-    expect(pkg).toBeNull()
-    expect(EPackageRegistry.INSTANCE.getEPackage(GENE_WIDGETS_NS_URI)).toBeFalsy()
+    expect(pkg).toBeTruthy()
+    expect(EPackageRegistry.INSTANCE.getEPackage(GENE_WIDGETS_NS_URI)).toBe(pkg)
+    // das uimodel-Paket wurde dabei mit registriert
+    expect(EPackageRegistry.INSTANCE.getEPackage('http://uimodel/1.0')).toBeTruthy()
+  })
 
-    // Die Meldung nennt Ursache und Abhilfe
-    expect(errors.length).toBeGreaterThan(0)
-    expect(errors.join('\n')).toMatch(/eSuperTypes nicht aufgeloest/)
-    expect(errors.join('\n')).toMatch(/uimodel-Paket muss VOR/)
+  it('die genew-Klassen erben trotzdem von WidgetComponent', async () => {
+    const pkg = await registerGeneWidgetsPackage() as {
+      getEClassifier: (n: string) => any
+    } | null
+    expect(pkg).toBeTruthy()
+    for (const name of ['CodeWidget', 'MarkdownWidget', 'RichTextWidget']) {
+      const eClass = pkg!.getEClassifier(name)
+      expect([...eClass.getESuperTypes()].map((s: any) => s.getName?.()), name)
+        .toContain('WidgetComponent')
+      // geerbte Features erreichbar — wirft, wenn der Supertyp ein Proxy waere
+      expect(eClass.getEStructuralFeature('feature'), `${name}.feature`).toBeTruthy()
+    }
   })
 })

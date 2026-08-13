@@ -22,6 +22,7 @@
 
 import { EResourceSetImpl, URI, EPackageRegistry, isEClass } from '@emfts/core'
 import type { EClass, EObject, EPackage } from '@emfts/core'
+import { UimodelPackage, UimodelFactory } from '@emfts/uimodel-composer'
 import geneWidgetsEcore from '../model/gene-widgets.ecore?raw'
 
 export const GENE_WIDGETS_NS_URI = 'http://gene/uimodel/widgets/1.0'
@@ -65,35 +66,27 @@ function eClassesOf(pkg: EPackage): EClass[] {
 }
 
 /**
- * Prueft, dass die eSuperTypes-hrefs auf
- * `http://uimodel/1.0#//WidgetComponent` aufgeloest haben.
+ * Voraussetzung fuer die Supertyp-Auflösung HERSTELLEN, nicht pruefen: die
+ * eSuperTypes der genew-Klassen sind hrefs auf
+ * `http://uimodel/1.0#//WidgetComponent` und brauchen das uimodel-Paket in
+ * der Registry.
  *
- * Nicht ueber die geerbten Features pruefen: `getEStructuralFeature()` wirft
- * bei unaufgeloestem Supertyp innerhalb von @emfts/core
- * ("eClass.getESuperTypes is not a function"), weil der Proxy die
- * EClass-API nicht hat. Geprueft wird deshalb der Supertyp selbst.
+ * `main.ts` tut das beim Bootstrap ohnehin (und damit vor jedem
+ * Plugin-`activate`) — hier idempotent wiederholt, damit dieses Modul nicht
+ * von der Startreihenfolge abhaengt. Eine Laufzeit-Pruefung braucht es
+ * dadurch nicht: die Bedingung kann nicht mehr verletzt werden.
  *
- * Pruefen statt reparieren: eine Reparatur wuerde die eigentliche Ursache
- * — falsche Reihenfolge beim Start — verdecken, und ihr Erfolgsfall waere
- * nicht testbar.
+ * `void UimodelFactory.eINSTANCE` verdrahtet die Factory mit dem Paket —
+ * ohne das liefert das XMI-Laden generische DynamicEObjects statt der
+ * generierten Impls mit Property-Zugriff.
  */
-function superTypesResolved(pkg: EPackage): boolean {
-  let ok = true
-  for (const eClass of eClassesOf(pkg)) {
-    const superTypes = [...eClass.getESuperTypes()]
-    // isEClass faellt bei einem Proxy durch (ihm fehlt die EClass-API)
-    const unresolved = superTypes.filter(s => !isEClass(s) || s.eIsProxy())
-    if (superTypes.length > 0 && unresolved.length === 0) continue
-    ok = false
-    console.error(
-      `[GeneWidgets] ${eClass.getName()}: eSuperTypes nicht aufgeloest ` +
-      `(${superTypes.length} Supertyp(en), davon ${unresolved.length} unaufgeloest). ` +
-      'Das uimodel-Paket muss VOR registerGeneWidgetsPackage() in der ' +
-      'EPackageRegistry stehen — sonst fehlen den Widgets alle geerbten ' +
-      'Features (feature, label, validations, ...).'
-    )
+function ensureUimodelPackageRegistered(): void {
+  const uimodel = UimodelPackage.eINSTANCE
+  void UimodelFactory.eINSTANCE
+  const nsURI = uimodel.getNsURI()
+  if (nsURI && !EPackageRegistry.INSTANCE.getEPackage(nsURI)) {
+    EPackageRegistry.INSTANCE.set(nsURI, uimodel)
   }
-  return ok
 }
 
 /** Factory des Pakets so verdrahten, dass genew-Instanzen Property-Zugriff bieten. */
@@ -113,15 +106,18 @@ function installPropertyProxyCreators(pkg: EPackage): void {
 let registration: Promise<EPackage | null> | null = null
 
 /**
- * Paket laden und registrieren (idempotent). Muss laufen, NACHDEM das
- * uimodel-Paket registriert wurde (sonst loesen die Supertypen nicht auf)
- * und BEVOR Overlay-/UIModel-XMIs mit genew:-Widgets geladen werden.
+ * Paket laden und registrieren (idempotent). Muss laufen, BEVOR Overlay-/
+ * UIModel-XMIs mit genew:-Widgets geladen werden. Das uimodel-Paket wird
+ * selbst sichergestellt (ensureUimodelPackageRegistered).
  */
 export function registerGeneWidgetsPackage(): Promise<EPackage | null> {
   if (registration) return registration
   registration = (async () => {
     const existing = EPackageRegistry.INSTANCE.getEPackage(GENE_WIDGETS_NS_URI)
     if (existing) return existing as EPackage
+
+    // Voraussetzung herstellen, bevor geladen wird (s.o.)
+    ensureUimodelPackageRegistered()
 
     const resourceSet = new EResourceSetImpl()
     const resource = resourceSet.createResource(URI.createURI('gene://uimodel/gene-widgets.ecore'))
@@ -132,10 +128,6 @@ export function registerGeneWidgetsPackage(): Promise<EPackage | null> {
       console.error('[GeneWidgets] gene-widgets.ecore konnte nicht geladen werden')
       return null
     }
-
-    // Nicht registrieren, wenn die Vererbung nicht steht — sonst entstuenden
-    // Widget-Prototypen ohne Feature-Bindung und der Fehler bliebe unsichtbar.
-    if (!superTypesResolved(pkg)) return null
 
     installPropertyProxyCreators(pkg)
     EPackageRegistry.INSTANCE.set(GENE_WIDGETS_NS_URI, pkg)

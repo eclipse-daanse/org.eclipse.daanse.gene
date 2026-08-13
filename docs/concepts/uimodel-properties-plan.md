@@ -692,22 +692,26 @@ Zwei Punkte, die beim Bau nicht offensichtlich waren:
    `eGet`/`eSet` des gleichnamigen Features abbildet — kein Codegen-Schritt
    im Build noetig. Verifiziert in `__tests__/geneWidgetsPackage.spec.ts`
    und E2E gegen den echten Composer.
-2. **Reihenfolge beim Start pruefen, nicht reparieren.** Der
-   `eSuperTypes`-href zeigt in ein fremdes Paket
-   (`http://uimodel/1.0#//WidgetComponent`); loest er nicht auf, fehlen den
-   genew-Klassen alle geerbten Features. Erste Fassung wollte das
-   *reparieren* — das war doppelt falsch: die Reparatur griff nie (der href
-   loest auf, weil das uimodel-Paket vorher registriert wird) und haette im
-   Ernstfall still nichts getan (`supers.clear?.()` auf einem Array).
-   Jetzt prueft `superTypesResolved()` den Supertyp selbst; schlaegt das
-   fehl, wird das Paket **gar nicht registriert** und die Konsole nennt
-   Ursache und Abhilfe. Der Fehlerfall ist damit testbar
-   (`geneWidgetsPackageOrder.spec.ts`) — der Erfolgsfall einer Reparatur,
-   die nie greift, waere es nicht gewesen.
+2. **Voraussetzung herstellen statt pruefen.** Der `eSuperTypes`-href zeigt
+   in ein fremdes Paket (`http://uimodel/1.0#//WidgetComponent`); loest er
+   nicht auf, fehlen den genew-Klassen alle geerbten Features. Zwei
+   Zwischenschritte waren falsch:
 
-   Nebenbefund: Die Pruefung darf **nicht** ueber die geerbten Features
-   gehen — `getEStructuralFeature()` wirft bei unaufgeloestem Supertyp
-   innerhalb von @emfts/core.
+   - *Reparieren* (`repairSuperTypes`): griff nie, weil der href aufloest,
+     und haette im Ernstfall still nichts getan (`supers.clear?.()` auf
+     einem Array).
+   - *Pruefen* (`superTypesResolved`): pruefte eine Bedingung, die gene
+     selbst garantiert — `main.ts` registriert das uimodel-Paket in
+     Schritt 5, Plugins werden erst in Schritt 7/8 geladen. Eine
+     Laufzeit-Pruefung fuer eine fixe Programmeigenschaft ist Ballast; ein
+     Verstoss waere ohnehin aufgefallen, weil `getEStructuralFeature()` bei
+     unaufgeloestem Supertyp innerhalb von @emfts/core wirft.
+
+   Jetzt stellt `ensureUimodelPackageRegistered()` die Voraussetzung selbst
+   her (idempotent; `main.ts` tut dasselbe beim Bootstrap). Damit gibt es
+   keine Reihenfolge, die man verletzen kann — und die Unit-Tests brauchen
+   kein Bootstrap-Setup mehr, was sie zugleich strenger macht:
+   `geneWidgetsPackageOrder.spec.ts` registriert gegen eine LEERE Registry.
 
 2b. **Keine EMF.ts-Funktionalitaet nachbauen.** Die erste Fassung enthielt
    einen selbst deklarierten Struktur-Typ `EClassLike` und einen eigenen

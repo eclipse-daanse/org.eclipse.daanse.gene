@@ -8,7 +8,6 @@
  */
 import { describe, it, expect, beforeAll } from 'vitest'
 import { EPackageRegistry } from '@emfts/core'
-import { UimodelPackage, UimodelFactory } from '@emfts/uimodel-composer'
 import {
   registerGeneWidgetsPackage,
   GENE_WIDGETS_NS_URI,
@@ -19,13 +18,9 @@ import { loadUiModelXmi } from '../uiModelRegistry'
 
 describe('geneWidgetsPackage', () => {
   beforeAll(async () => {
-    // Setup wie main.ts: uimodel-Kernpaket registrieren (damit die
-    // eSuperTypes-hrefs aufloesen) UND die Factory verdrahten — ohne
-    // `void UimodelFactory.eINSTANCE` liefert das XMI-Laden generische
-    // DynamicEObjects statt der generierten Impls mit Property-Zugriff.
-    const uimodel = UimodelPackage.eINSTANCE
-    void UimodelFactory.eINSTANCE
-    EPackageRegistry.INSTANCE.set(uimodel.getNsURI()!, uimodel)
+    // Kein Setup noetig: registerGeneWidgetsPackage stellt das
+    // uimodel-Paket und die Factory-Verdrahtung selbst her
+    // (ensureUimodelPackageRegistered).
     await registerGeneWidgetsPackage()
   })
 
