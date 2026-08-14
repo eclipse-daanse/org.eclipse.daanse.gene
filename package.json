@@ -36,7 +36,7 @@
     "@eclipse-daanse/org.eclipse.daanse.feel.lsp.worker": "^0.0.1-next.2",
     "@eclipse-daanse/tsm": "^0.0.1-next.2",
     "@emfts/codec.jsonschema": "^0.0.1-next.1",
-    "@emfts/core": "^0.1.1-next.16",
+    "@emfts/core": "^0.1.1-next.18",
     "@emfts/ocl.engine": "^0.0.1-next.1",
     "@emfts/ocl.langium": "^0.0.1-next.1",
     "@emfts/ocl.lsp.worker": "^0.0.1-next.2",
@@ -50,11 +50,11 @@
     "@vue-flow/core": "^1.48.2",
     "@vue-flow/minimap": "^1.5.4",
     "core": "*",
+    "dompurify": "^3.4.13",
     "feelin": "^6.2.0",
     "instance-builder": "*",
-    "monaco-editor": "^0.52.2",
-    "dompurify": "^3.4.13",
     "marked": "^16.4.2",
+    "monaco-editor": "^0.52.2",
     "primeicons": "^7.0.0",
     "primevue": "^4.3.3",
     "quill": "^2.0.3",
@@ -101,6 +101,6 @@
     "vue-tsc": "^3.2.2"
   },
   "overrides": {
-    "@emfts/core": "^0.1.1-next.16"
+    "@emfts/core": "^0.1.1-next.18"
   }
 }

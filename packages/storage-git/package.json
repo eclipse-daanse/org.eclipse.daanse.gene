@@ -12,12 +12,14 @@
   },
   "dependencies": {
     "storage-model": "*",
-    "storage-core": "*",
-    "@emfts/core": "^0.1.1-next.12"
+    "storage-core": "*"
   },
   "devDependencies": {
     "typescript": "~5.9.3",
     "vite": "^7.3.5",
     "vitest": "^4.1.0"
+  },
+  "peerDependencies": {
+    "@emfts/core": "*"
   }
 }
