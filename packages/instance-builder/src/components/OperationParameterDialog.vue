@@ -17,6 +17,7 @@ import { InputNumber } from 'tsm:primevue'
 import { Checkbox } from 'tsm:primevue'
 import { Select } from 'tsm:primevue'
 import type { EObject, EOperation, EParameter, EDataType, EEnum, EClass } from '@emfts/core'
+import { readLiteralFeature } from '../composables/enumLiterals'
 
 const props = defineProps<{
   visible: boolean
@@ -183,6 +184,23 @@ function getEnumLiterals(eEnum: any): any[] {
   }
 
   return []
+}
+
+/**
+ * Enum-Literale fuer das Dropdown aufbereiten. Das Label muss ueber die Getter
+ * gelesen werden — typisierte Literale halten ihren Namen privat, eine
+ * optionLabel="name"-Bindung liefert dort undefined. Als Wert bleibt das
+ * Literal-Objekt, denn genau das erwartet die Operation als Parameter.
+ */
+function getEnumOptions(literals: any[] | undefined): Array<{ label: string; value: any }> {
+  return (literals ?? []).map(literal => ({
+    label: String(
+      readLiteralFeature(literal, 'getLiteral', 'literal') ??
+        readLiteralFeature(literal, 'getName', 'name') ??
+        ''
+    ),
+    value: literal
+  }))
 }
 
 // Get parameters from operation
@@ -492,8 +510,9 @@ function handleCancel() {
         <Select
           v-else-if="getParameterTypeInfo(param).type === 'enum'"
           v-model="parameterValues[getElementName(param)]"
-          :options="getParameterTypeInfo(param).literals"
-          optionLabel="name"
+          :options="getEnumOptions(getParameterTypeInfo(param).literals)"
+          optionLabel="label"
+          optionValue="value"
           class="w-full"
           :placeholder="`Select ${getElementName(param)}...`"
         />
