@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lib:Library xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:lib="http://www.gene.org/uimodel-baseline/library/1.0" xmi:id="lib1" name="Stadtbibliothek" code="LIB-001" founded="2001-05-14T12:00:00.000Z" rating="4.5" maxMembers="350" open="true" tags="klassik modern" featuredMedium="book1" highlights="book2 dvd1" librarian="member1">
+  <shelves xmi:id="shelf1" name="Belletristik" capacity="120">
+    <media xsi:type="lib:Book" xmi:id="book1" name="Der Prozess" genre="2" author="Franz Kafka" pages="240"/>
+    <media xsi:type="lib:Dvd" xmi:id="dvd1" name="Metropolis" genre="1" runtimeMinutes="153"/>
+  </shelves>
+  <shelves xmi:id="shelf2" name="Sachbuecher" capacity="60">
+    <media xsi:type="lib:Book" xmi:id="book2" name="Kosmos" genre="0" author="Carl Sagan" pages="380"/>
+  </shelves>
+  <members xmi:id="member1" name="Ada Admin" email="ada.admin@lib.example" isStaff="true"/>
+  <members xmi:id="member2" name="Bela Besucher" email="bela.besucher@lib.example"/>
+</lib:Library>

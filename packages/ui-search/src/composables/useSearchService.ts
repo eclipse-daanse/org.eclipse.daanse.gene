@@ -117,6 +117,11 @@ function valueToString(value: any): string {
   if (Array.isArray(value)) {
     return value.map(v => valueToString(v)).join(' ')
   }
+  // Enum values are EEnumLiteral objects — index the literal, not the
+  // generic "EEnumLiteral: x" object label
+  if (typeof value === 'object' && typeof value.getLiteral === 'function') {
+    return value.getLiteral() ?? value.getName?.() ?? ''
+  }
   // For EObjects (references), get their label
   if (typeof value === 'object' && typeof value.eClass === 'function') {
     return getObjectLabel(value as EObject)
