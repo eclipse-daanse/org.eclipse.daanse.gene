@@ -77,7 +77,7 @@ strukturell ausgeschlossen.
 dann `createTsmExternals(manifest)` statt der Listenform. Die Listenform
 bleibt als „older arrangement" erhalten — inkrementell machbar.
 
-### 3. Kardinalität und Ranking — vorhanden, für gene aber noch ohne Nutzen
+### 3. Kardinalität, Ranking und Dynamik — vollständig, und für gene direkt nutzbar
 
 `cardinality.ts` und `ServiceRegistry` sind fertig: mehrere Provider pro ID
 („same ID are two providers, not one replacing the other"), `ranking`, bei
@@ -85,21 +85,47 @@ Gleichstand gewinnt die letzte Registrierung, `optional` als ältere
 Schreibweise von `0..1`. Dazu `getServiceReferences(id, target?)` und
 LDAP-Filter.
 
-gene braucht das **heute nicht**: 75 `services.register`-Aufrufe, jede ID
-genau einmal. Der 0..n-Bedarf existiert, wird aber außerhalb der Registry
-gelöst — drei handgeschriebene Registries (`PanelRegistry`,
-`PerspectiveRegistry`, `ActivityRegistry`) plus `iconProviderRegistry`,
-jeweils hinter *einer* Service-ID.
+**Und `policy: 'dynamic'` ist implementiert** — an vier Stellen im
+`ModuleLoader`, abgedeckt von acht Verwendungen in `ModuleLifecycle.test.ts`:
 
-**Wichtig:** `policy?: 'static' | 'dynamic'` ist deklariert, aber
-„*Only 'static' is implemented; 'dynamic' is accepted and behaves as
-'static'*". Ein Umzug dieser Registries auf `0..n` setzt Dynamik voraus —
-sie halten ihre Map als Vue-`reactive`, damit Konsumenten Nachregistrierungen
-sehen. Mit `static` würde bei jeder Mengenänderung neu gebaut.
+| Stelle | Was sie tut |
+|---|---|
+| `:381` | Eine dynamische Anforderung muss zur Aktivierung da sein, ihr späteres Verschwinden reißt das Modul aber nicht ab |
+| `:473` | Provider-Wechsel bei `greedy` wird als Paar `onServiceUnbound`/`onServiceBound` gemeldet, ohne Neubau |
+| `:526–545` | Mengenänderung erkennen (Provider-Zählung vorher/nachher) und die Hooks feuern |
+| `:572–576` | Ausgangszählung beim Laden, damit ein bei Aktivierung vorhandener Provider nicht als „neu" gemeldet wird |
 
-→ **Diese Migration lohnt erst, wenn `policy: 'dynamic'` implementiert ist.**
-Der imperative Weg (`addListener`) wäre schon heute nutzbar, ist aber kein
-Ersatz für deklaratives Rebinding.
+Der Konsument bekommt `onServiceBound(context, serviceId)` bzw.
+`onServiceUnbound(...)` als Lifecycle-Hooks; wirft ein Hook, bleibt das Modul
+aktiv („A failing hook must not stop the cascade").
+
+Der für gene entscheidende Test ist
+`should notify a dynamic collector when the set grows or shrinks`: ein
+Konsument mit `cardinality: '0..n', policy: 'dynamic'` wird über Zu- und
+Abgänge benachrichtigt und **bleibt dabei aktiv**
+(`expect(loader.getModule('palette')?.state).toBe('active')`). Genau die
+Semantik, die gene's Registries brauchen. Ergänzend zeigt
+`should let a collector enumerate providers without instantiating them`, dass
+das Einsammeln ohne Instanziierung geht.
+
+**Korrektur:** Eine frühere Fassung dieses Dokuments stufte die
+Registry-Migration als „erst wenn Dynamik implementiert ist" ein. Das beruhte
+auf dem Kommentar in `types.ts:122` — „*Only 'static' is implemented;
+'dynamic' is accepted and behaves as 'static'*" — der nicht mehr stimmt. Diese
+Blockade existiert nicht.
+
+Was gene heute stattdessen tut: 75 `services.register`-Aufrufe, jede ID genau
+einmal. Der 0..n-Bedarf wird außerhalb der Registry gelöst — drei
+handgeschriebene Registries (`PanelRegistry`, `PerspectiveRegistry`,
+`ActivityRegistry`) plus `iconProviderRegistry`, jeweils hinter *einer*
+Service-ID, mit Vue-`reactive` als Änderungsmelder. Das ist die Menge, die
+`0..n` + `dynamic` ersetzen kann.
+
+**Aufwand:** je Registry die Provider-Seite auf `services.register(id, …)`
+umstellen und die Konsumenten von `registry.getAll()` auf
+`getServiceReferences()` plus `onServiceBound`/`onServiceUnbound`. Kein Big
+Bang nötig — eine Registry als Pilot reicht, um das Muster zu prüfen.
+Bezugspunkt: `PanelRegistryImpl` ist 60 Zeilen.
 
 ## Was der neue TSM in gene aufdeckt
 
@@ -141,7 +167,7 @@ sonst startet ein Konsument mit unvollständiger Menge oder gar nicht.
 | Die 14 Manifest-Abweichungen bereinigen | klein, mechanisch | **zuerst**, unabhängig vom Rest; macht die Warnungen leer und ist Voraussetzung für alles Weitere |
 | `whenAvailable()` für die zwei Poll-Schleifen | wenige Zeilen | danach; sofortiger Gewinn |
 | `sharedDependencies` in die Manifeste + `createTsmExternals(manifest)` | 32 Manifeste, ein Build-Skript | danach; verhindert die Fehlerklasse aus PR #121 |
-| Eigene Registries auf `0..n` umziehen | groß | **erst wenn `policy: 'dynamic'` implementiert ist** |
+| Eine eigene Registry als Pilot auf `0..n` + `dynamic` umziehen | mittel | jederzeit möglich — Dynamik ist implementiert und getestet |
 
 Die Version im Repo (`0.0.1-next.1`) hängt hinter der publizierten
 (`next: 0.0.1-next.2`) — wie bei `@emfts/core` wird das Versionsfeld nicht
