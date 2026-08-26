@@ -58,23 +58,45 @@
       </div>
     </div>
 
-    <!-- Category Chips -->
+    <!-- Kategorien: erst die Top-Ebene, Unterkategorien nur fuer die Auswahl.
+         Flach waeren es bei den CWM-Icons 57 Chips (835 px hoch) und das
+         Icon-Raster waere aus dem Dialog geschoben. -->
     <div class="category-chips">
       <span
         class="category-chip"
-        :class="{ active: activeCategory === null }"
-        @click="activeCategory = null"
+        :class="{ active: activeGroup === null }"
+        @click="activeGroup = null"
       >
         Alle
       </span>
       <span
-        v-for="category in categories"
-        :key="category"
+        v-for="group in categoryGroups"
+        :key="group"
         class="category-chip"
-        :class="{ active: category === activeCategory }"
-        @click="activeCategory = category"
+        :class="{ active: group === activeGroup }"
+        @click="activeGroup = group"
       >
-        {{ formatCategory(category) }}
+        {{ formatCategory(group) }}
+      </span>
+    </div>
+
+    <div v-if="subCategories.length > 0" class="category-chips category-chips--sub">
+      <span
+        class="category-chip"
+        :class="{ active: activeSubCategory === null }"
+        @click="activeSubCategory = null"
+      >
+        Alle {{ formatCategory(activeGroup!) }}
+      </span>
+      <span
+        v-for="sub in subCategories"
+        :key="sub"
+        class="category-chip"
+        :class="{ active: sub === activeSubCategory }"
+        :title="sub"
+        @click="activeSubCategory = sub"
+      >
+        {{ formatSubCategory(sub) }}
       </span>
     </div>
 
@@ -136,7 +158,10 @@ const emit = defineEmits<{
 // State
 const searchQuery = ref('')
 const activeProviderId = ref('')
-const activeCategory = ref<string | null>(null)
+/** Top-Ebene der Kategorie ('analysis'), null = alle */
+const activeGroup = ref<string | null>(null)
+/** Volle Kategorie innerhalb der Gruppe ('analysis/olap'), null = ganze Gruppe */
+const activeSubCategory = ref<string | null>(null)
 
 // Custom icon upload form
 const showUploadForm = ref(false)
@@ -194,15 +219,39 @@ const categories = computed<string[]>(() => {
   return activeProvider.value.getCategories()
 })
 
+/**
+ * Top-Ebene der Kategorien ('analysis/olap' -> 'analysis'), dedupliziert.
+ * Anbieter mit flachen Kategorien (PrimeIcons: 'actions', 'data', ...)
+ * liefern hier unveraendert ihre eigene Liste — dort gibt es dann keine
+ * zweite Zeile, weil jede Gruppe nur sich selbst enthaelt.
+ */
+const categoryGroups = computed<string[]>(() =>
+  [...new Set(categories.value.map(c => c.split('/')[0]))]
+)
+
+/** Unterkategorien der gewaehlten Gruppe; leer, wenn es keine gibt. */
+const subCategories = computed<string[]>(() => {
+  if (!activeGroup.value) return []
+  const subs = categories.value.filter(
+    c => c.startsWith(activeGroup.value + '/')
+  )
+  return subs
+})
+
 // Filtered icons
 const filteredIcons = computed<IconDefinition[]>(() => {
   if (!activeProvider.value) return []
 
   let icons: IconDefinition[]
 
-  // Start with category filter
-  if (activeCategory.value) {
-    icons = activeProvider.value.getIconsByCategory(activeCategory.value)
+  // Unterkategorie schlaegt Gruppe; ohne Gruppe alles
+  if (activeSubCategory.value) {
+    icons = activeProvider.value.getIconsByCategory(activeSubCategory.value)
+  } else if (activeGroup.value) {
+    const gruppe = activeGroup.value
+    icons = activeProvider.value
+      .getIcons()
+      .filter(i => i.category === gruppe || i.category.startsWith(gruppe + '/'))
   } else {
     icons = activeProvider.value.getIcons()
   }
@@ -286,6 +335,18 @@ function formatCategory(category: string): string {
   return category.charAt(0).toUpperCase() + category.slice(1)
 }
 
+/**
+ * Unterkategorie ohne den Gruppen-Praefix: 'analysis/datamining/miningcore'
+ * wird zu 'datamining/miningcore'. Der Praefix steht schon als aktives Chip
+ * daroben und wuerde die Zeile nur verbreitern.
+ */
+function formatSubCategory(category: string): string {
+  const rest = activeGroup.value && category.startsWith(activeGroup.value + '/')
+    ? category.slice(activeGroup.value.length + 1)
+    : category
+  return rest.charAt(0).toUpperCase() + rest.slice(1)
+}
+
 // Initialize active provider
 onMounted(() => {
   if (providers.value.length > 0 && !activeProviderId.value) {
@@ -300,7 +361,14 @@ onMounted(() => {
 
 // Watch for provider changes to reset category
 watch(activeProviderId, () => {
-  activeCategory.value = null
+  activeGroup.value = null
+  activeSubCategory.value = null
+})
+
+// Gruppe gewechselt -> Unterauswahl faellt weg, sonst zeigte der Filter
+// weiter auf eine Kategorie ausserhalb der neuen Gruppe
+watch(activeGroup, () => {
+  activeSubCategory.value = null
 })
 </script>
 
@@ -481,6 +549,22 @@ watch(activeProviderId, () => {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  /* Sicherheitsnetz: selbst wenn ein Anbieter viele Gruppen auf einer Ebene
+     hat, darf die Zeile das Icon-Raster nicht aus dem Dialog schieben */
+  max-height: 5.5rem;
+  overflow-y: auto;
+  flex: 0 0 auto;
+}
+
+/* Zweite Ebene abgesetzt, damit die Zugehoerigkeit sichtbar bleibt */
+.category-chips--sub {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--surface-border);
+}
+
+.category-chips--sub .category-chip {
+  font-size: 0.75rem;
 }
 
 .category-chip {
