@@ -1,7 +1,8 @@
 /**
  * CWM Icons Provider
  *
- * Serves the 143 hand-drawn Common Warehouse Metamodel (CWM 1.1) class icons.
+ * Serves the 630 hand-drawn class icons of the Common Warehouse Metamodel
+ * (OMG CWM 1.1) and the cwmx and daanse extension models.
  *
  * Unlike font-based providers (Material, PrimeIcons), each CWM icon is a full
  * SVG that carries its own colours: the border hue encodes the source package

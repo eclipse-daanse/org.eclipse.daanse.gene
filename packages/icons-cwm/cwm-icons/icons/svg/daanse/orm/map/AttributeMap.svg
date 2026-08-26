@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">daanse.orm.map.AttributeMap</title>
+<style>:root{--stroke:#E11D48}@media(prefers-color-scheme:dark){:root{--stroke:#FECDD3}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx='7.4' cy='12' r='1.2' fill='currentColor' stroke='none'/><path d='M9.2 12h3.2'/><path d='M11.4 10.9 12.5 12l-1.1 1.1'/><path d='M15.4 9v6'/><path d='M14.2 9h2.4M14.2 15h2.4' opacity='.55'/></g>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">daanse.sql.select.QualifiedAsterisk</title>
+<style>:root{--stroke:#9D174D}@media(prefers-color-scheme:dark){:root{--stroke:#F472B6}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx='7.2' cy='15.4' r='1' fill='currentColor' stroke='none'/><circle cx='9.5' cy='15.4' r='.5' fill='currentColor' stroke='none'/><path d='M14 7.6v6.4M11.2 9.2l5.6 3.2M11.2 12.4l5.6-3.2'/></g>
+</svg>

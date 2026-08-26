@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">daanse.governance.transparency.TransparencyFieldRating</title>
+<style>:root{--stroke:#7F1D1D}@media(prefers-color-scheme:dark){:root{--stroke:#FECACA}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M7.6 9c1.2-2 6-2 7.2 0-1.2 2-6 2-7.2 0z'/><circle cx='11.2' cy='9' r='.7' fill='currentColor' stroke='none'/><circle cx='7.8' cy='14.8' r='1.1' fill='currentColor' stroke='none'/><path d='M9.8 14.8h7.4'/></g>
+</svg>

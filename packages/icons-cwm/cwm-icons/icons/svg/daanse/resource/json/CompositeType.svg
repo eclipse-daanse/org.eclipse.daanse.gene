@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">daanse.resource.json.CompositeType</title>
+<style>:root{--stroke:#86198F}@media(prefers-color-scheme:dark){:root{--stroke:#D946EF}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M8.8 6.4c-1.7 0-1.2 4.2-3.2 5.6 2 1.4 1.5 5.6 3.2 5.6M15.2 6.4c1.7 0 1.2 4.2 3.2 5.6-2 1.4-1.5 5.6-3.2 5.6'/><path d='M11.3 9.4c-.9 0-.6 2-1.7 2.6 1.1.6.8 2.6 1.7 2.6M12.7 9.4c.9 0 .6 2 1.7 2.6-1.1.6-.8 2.6-1.7 2.6' opacity='.8'/></g>
+</svg>

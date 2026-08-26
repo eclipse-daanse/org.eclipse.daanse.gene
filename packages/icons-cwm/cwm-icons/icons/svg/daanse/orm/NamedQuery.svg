@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">daanse.orm.NamedQuery</title>
+<style>:root{--stroke:#BE123C}@media(prefers-color-scheme:dark){:root{--stroke:#FB7185}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M7.6 6.4h5.2v7L10.2 11.6 7.6 13.4z'/><circle cx='14.4' cy='14.2' r='2.4'/><path d='M16.1 15.9l1.7 1.7'/></g>
+</svg>

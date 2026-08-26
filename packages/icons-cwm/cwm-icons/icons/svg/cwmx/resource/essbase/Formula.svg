@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">cwmx.resource.essbase.Formula</title>
+<style>:root{--stroke:#1D4ED8}@media(prefers-color-scheme:dark){:root{--stroke:#60A5FA}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M13.4 6.6c-1.7 0-2.1 1.1-2.3 2.5l-.9 5.8c-.2 1.4-.7 2.5-2.3 2.5'/><path d='M8.6 10.4h4.6'/><path d='M13.8 12.6l3.4 3.4M17.2 12.6l-3.4 3.4'/></g>
+</svg>

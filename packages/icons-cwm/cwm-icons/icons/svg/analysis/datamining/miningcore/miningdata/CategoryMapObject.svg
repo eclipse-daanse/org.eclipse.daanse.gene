@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">analysis.datamining.miningcore.miningdata.CategoryMapObject</title>
+<style>:root{--stroke:#7E22CE}@media(prefers-color-scheme:dark){:root{--stroke:#D8B4FE}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M6.9 6.4h6.2l4 4v7.2H6.9z'/><path d='M13.1 6.4v4h4'/><circle cx='9.6' cy='13.6' r='.9' fill='currentColor' stroke='none'/><path d='M11.2 13.6h1.4'/><path d='M12 12.7l.9.9-.9.9'/><circle cx='14.4' cy='13.6' r='.9'/></g>
+</svg>

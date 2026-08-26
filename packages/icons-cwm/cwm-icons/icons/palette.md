@@ -1,7 +1,9 @@
 # CWM Icon System — Visual Tokens
 
-Design tokens for the 143 hand-drawn class icons of the CWM metamodel
-(`model/cwm/model/cwm.ecore`).
+Design tokens for the 630 hand-drawn class icons of the CWM metamodel and the
+cwmx/daanse extension models (the split ecores under `model/cwm`, `model/cwmx`
+and `model/daanse`). The German README carries the full colour table and the
+extended motif families; this file keeps the design rationale.
 
 ## 1. The encoding
 
@@ -42,6 +44,11 @@ Subpackages of one branch *are* siblings, so they *should* look alike.
 | `management/warehouseprocess/events` | `#C2410C` | `#FDBA74` |
 | `management/warehouseoperation` | `#EA580C` | `#FB923C` |
 
+The extension branches continue the scheme with their own hue worlds — cwmx is
+blue (analysis subpackages in sky), daanse is rose/pink/fuchsia with governance
+in red. Subpackages without their own entry inherit the parent's colour via
+longest-prefix lookup in `assemble.py`; the complete table lives in README.md.
+
 > **Known trade-off.** `resource/relational` and `resource/record` differ only in
 > stroke shade, as do `analysis/olap` and `analysis/businessnomenclature`. If that
 > reads too weakly, promote the subpackage to its own hue and drop the branch signal.
@@ -51,13 +58,13 @@ Subpackages of one branch *are* siblings, so they *should* look alike.
 * `viewBox="0 0 24 24"`. Frame: rounded rect inset at 1.5, radius 4, stroke 1.5.
 * **Every glyph is centred on (12,12)** inside the 12×12 field `x 6..18, y 6..18`.
 * Glyph stroke 1.5, `stroke-linecap="round" stroke-linejoin="round"`.
-* Abstract classes: frame `stroke-dasharray="3 2"` — exactly the 13 `abstract="true"`
-  EClasses in the ecore, verified at build time.
+* Abstract classes: frame `stroke-dasharray="3 2"` — exactly the `abstract="true"`
+  EClasses in the ecores (currently 37), verified at build time.
 * 48×48 is an exact 2× scale of the same paths.
 
-Centring is **measured, not assumed**: `check_center.py` parses every path (including
-arcs and béziers), computes the bbox and fails if any glyph strays more than 0.45
-units from centre or leaves the field. Current worst offset: 0.30; median 0.00.
+Centring of the original 143 was verified with a bbox checker (worst offset 0.30,
+median 0.00); the merged extension batches were bounds-checked coarsely and
+proofed visually. A glyph that drifts should be fixed in glyphs.json.
 
 ## 4. Inheritance rides on shared construction
 
@@ -96,12 +103,14 @@ One file serves both themes:
 ## 6. Files
 
 ```
-documentation/icons/
+cwm-icons/icons/
   palette.md                       this file
-  glyphs.json                      the hand-drawn artwork (143 entries)
-  assemble.py                      wraps artwork in the frame; reads abstract= from cwm.ecore
-  svg/<packagePath>/<Class>.svg    143 generated icons
+  glyphs.json                      the hand-drawn artwork (630 entries)
+  assemble.py                      wraps artwork in the frame; reads abstract= from the ecores
+  build_index.py                   regenerates index.html from models + artwork
+  svg/<packagePath>/<Class>.svg    630 generated icons
 ```
 
-Regenerate with `python3 assemble.py`. It fails if a glyph names a class that does not
-exist in `cwm.ecore`.
+Regenerate with `python3 assemble.py && python3 build_index.py`. assemble fails if a
+glyph names a class that does not exist in the models, and lists model classes that
+still lack a glyph.
