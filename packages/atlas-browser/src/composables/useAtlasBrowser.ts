@@ -175,7 +175,10 @@ function createAtlasBrowser() {
 
     const children: TreeNode[] = registries.map(registry => {
       const regName = registry.name || 'unknown'
-      const isSchema = regName === 'schema'
+      // Der Server weist Schema-Registries ueber Registry.type aus; frueher
+      // wurde am Namen geraten, was nur bei einer Registry namens 'schema'
+      // zutraf (nicht z. B. bei 'atlas-schema-registry').
+      const isSchema = (registry as { type?: string }).type === 'SCHEMA' || regName === 'schema'
       const stages = registry.stages || []
 
       const stageChildren: TreeNode[] = stages.map(stage => {
@@ -477,7 +480,7 @@ function createAtlasBrowser() {
     connectionId: string,
     stageName: string,
     content: string,
-    options?: { nsUri?: string; name?: string; version?: string; overwrite?: boolean }
+    options?: { nsUri?: string; name?: string; version?: string; overwrite?: boolean; registryName?: string }
   ): Promise<{ success: boolean; error?: string }> {
     const client = clients.get(connectionId)
     if (!client) {
@@ -497,6 +500,29 @@ function createAtlasBrowser() {
     } catch (e: any) {
       return { success: false, error: e.message || 'Upload failed' }
     }
+  }
+
+  /**
+   * Schema-Registries des Scopes einer Verbindung.
+   *
+   * Der Scope ist der Mandant und steht mit der Verbindung fest; die Registry
+   * dagegen wird je Vorgang gewaehlt. Frueher schrieb der Upload fest auf
+   * '/schema' — ein Pfad, den nicht jeder Server kennt.
+   */
+  function getSchemaRegistries(connectionId: string): Array<{ name: string; stages: Array<{ name: string; final: boolean }> }> {
+    const scopeNode = treeNodes.value.find(n => (n.data as AtlasTreeNodeData).connectionId === connectionId)
+    if (!scopeNode?.children) return []
+    return scopeNode.children
+      .filter(n => (n.data as AtlasTreeNodeData).isSchemaRegistry)
+      .map(registryNode => ({
+        name: (registryNode.data as AtlasTreeNodeData).registryName || 'unknown',
+        stages: (registryNode.children ?? []).map(stageNode => {
+          const data = stageNode.data as AtlasTreeNodeData
+          // 'final' steht nicht in den Knotendaten, wohl aber im Icon —
+          // dieselbe Ableitung wie in getSchemaStages
+          return { name: data.stageName || 'unknown', final: stageNode.icon === 'pi pi-lock' }
+        })
+      }))
   }
 
   /**
@@ -734,6 +760,7 @@ function createAtlasBrowser() {
     getContentForWorkspace,
     uploadSchema,
     getSchemaStages,
+    getSchemaRegistries,
     getAllLoadedMetadata,
     showGraph,
     showSchemaTree,

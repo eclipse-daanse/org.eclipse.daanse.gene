@@ -19,12 +19,14 @@ import { WorkflowApiPackage } from './WorkflowApiPackage';
 export class RegistryImpl extends BasicEObject implements Registry {
   // Feature ID Constants (eLiterals)
   static readonly NAME: number = 0;
-  static readonly DESCRIPTION: number = 1;
-  static readonly STAGES: number = 2;
-  static readonly ALLOWED_TRANSITIONS: number = 3;
+  static readonly TYPE: number = 1;
+  static readonly DESCRIPTION: number = 2;
+  static readonly STAGES: number = 3;
+  static readonly ALLOWED_TRANSITIONS: number = 4;
 
   // Private fields
   private _name?: string;
+  private _type?: string;
   private _description?: string;
   private _stages: Stage[] = [];
   private _allowedTransitions: StageTransition[] = [];
@@ -56,6 +58,30 @@ export class RegistryImpl extends BasicEObject implements Registry {
         isTouch: () => false,
         isReset: () => false,
         getFeatureID: () => RegistryImpl.NAME,
+        merge: () => false
+      });
+    }
+  }
+
+  get type(): string {
+    return this._type!;
+  }
+
+  set type(value: string) {
+    const oldValue = this._type;
+    this._type = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(RegistryImpl.TYPE),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => RegistryImpl.TYPE,
         merge: () => false
       });
     }
@@ -143,6 +169,8 @@ export class RegistryImpl extends BasicEObject implements Registry {
     switch (featureID) {
       case RegistryImpl.NAME:
         return this.name;
+      case RegistryImpl.TYPE:
+        return this.type;
       case RegistryImpl.DESCRIPTION:
         return this.description;
       case RegistryImpl.STAGES:
@@ -162,6 +190,10 @@ export class RegistryImpl extends BasicEObject implements Registry {
     switch (featureID) {
       case RegistryImpl.NAME:
         this.name = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case RegistryImpl.TYPE:
+        this.type = newValue as string;
         super.eSet(feature, newValue);
         break;
       case RegistryImpl.DESCRIPTION:
@@ -189,6 +221,8 @@ export class RegistryImpl extends BasicEObject implements Registry {
     switch (featureID) {
       case RegistryImpl.NAME:
         return this._name !== undefined;
+      case RegistryImpl.TYPE:
+        return this._type !== undefined;
       case RegistryImpl.DESCRIPTION:
         return this._description !== undefined;
       case RegistryImpl.STAGES:
@@ -208,6 +242,9 @@ export class RegistryImpl extends BasicEObject implements Registry {
     switch (featureID) {
       case RegistryImpl.NAME:
         this._name = undefined;
+        return;
+      case RegistryImpl.TYPE:
+        this._type = undefined;
         return;
       case RegistryImpl.DESCRIPTION:
         this._description = undefined;

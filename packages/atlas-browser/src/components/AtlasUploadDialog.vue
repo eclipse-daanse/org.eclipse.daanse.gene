@@ -22,6 +22,10 @@ const emit = defineEmits<{
 
 // Form state
 const selectedConnectionId = ref<string | null>(null)
+// Der Scope ist der Mandant und haengt an der Verbindung; die Registry wird
+// je Vorgang gewaehlt. Ohne sie schrieb der Upload fest auf '/schema' — ein
+// Pfad, den nicht jeder Server kennt (z. B. 'atlas-schema-registry').
+const selectedRegistry = ref<string | null>(null)
 const selectedStage = ref<string | null>(null)
 const schemaName = ref('')
 const overwrite = ref(false)
@@ -43,12 +47,20 @@ const connections = computed(() => {
   return service.getConnections().filter((c: any) => c.status === 'connected')
 })
 
-// Available stages for selected connection
+// Schema-Registries des Scopes dieser Verbindung
+const registries = computed(() => {
+  if (!selectedConnectionId.value) return []
+  const service = getUploadService()
+  return service?.getSchemaRegistries?.(selectedConnectionId.value) ?? []
+})
+
+// Stufen der gewaehlten Registry; ohne Auswahl die des Kurzwegs
 const stages = computed(() => {
   if (!selectedConnectionId.value) return []
   const service = getUploadService()
   if (!service) return []
-  const allStages = service.getSchemaStages(selectedConnectionId.value)
+  const registry = registries.value.find((r: any) => r.name === selectedRegistry.value)
+  const allStages = registry?.stages ?? service.getSchemaStages(selectedConnectionId.value)
   // Only show writable (non-final) stages
   return allStages.filter((s: any) => !s.final)
 })
@@ -58,10 +70,23 @@ const connectionOptions = computed(() =>
   connections.value.map((c: any) => ({ label: c.label, value: c.id }))
 )
 
+// Registry options for dropdown
+const registryOptions = computed(() =>
+  registries.value.map((r: any) => ({ label: r.name, value: r.name }))
+)
+
 // Stage options for dropdown
 const stageOptions = computed(() =>
   stages.value.map((s: any) => ({ label: s.name, value: s.name }))
 )
+
+// Registry gewechselt -> Stufe neu waehlen, sie gehoert zur Registry
+watch(selectedRegistry, () => { selectedStage.value = null })
+
+// Auto-select bei genau einer Registry
+watch(registries, (regs) => {
+  if (regs.length === 1 && !selectedRegistry.value) selectedRegistry.value = regs[0].name
+}, { immediate: true })
 
 // Auto-select when only one option
 watch(connections, (conns) => {
@@ -125,7 +150,8 @@ async function handleUpload() {
     props.content,
     {
       name: schemaName.value || undefined,
-      overwrite: overwrite.value
+      overwrite: overwrite.value,
+      registryName: selectedRegistry.value || undefined
     }
   )
 
@@ -176,6 +202,25 @@ function handleClose() {
             placeholder="Select connection..."
             class="w-full"
           />
+        </div>
+
+        <!-- Registry: welche Schema-Registry des Scopes -->
+        <div class="field">
+          <label for="upload-registry">Registry</label>
+          <Dropdown
+            id="upload-registry"
+            v-model="selectedRegistry"
+            :options="registryOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Registry wählen..."
+            :disabled="!selectedConnectionId || registryOptions.length === 0"
+            class="w-full"
+          />
+          <small v-if="selectedConnectionId && registryOptions.length === 0" class="hinweis">
+            Keine Schema-Registry im Scope gefunden — es wird der Kurzweg
+            <code>/schema</code> benutzt.
+          </small>
         </div>
 
         <!-- Stage -->

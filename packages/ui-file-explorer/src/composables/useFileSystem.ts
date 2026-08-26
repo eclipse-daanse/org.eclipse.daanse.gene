@@ -391,8 +391,20 @@ export function useFileSystem() {
 
     // Get registries and stages from the parsed Scope EObject
     const registries = scope.registries || []
-    const registryNames = registries.map((r: any) => r.name)
-    if (!registryNames.includes('schema')) registryNames.unshift('schema')
+
+    // Ob eine Registry Schemas oder Objekte fuehrt, sagt der Server ueber
+    // Registry.type ('SCHEMA'). Frueher wurde das am Namen geraten
+    // (registryName === 'schema'), was nur bei Servern zutraf, die ihre
+    // Schema-Registry genau so nennen — bei 'atlas-schema-registry' landeten
+    // Ecore-Schemas als .xmi im Baum und die Modell-Aktionen fehlten.
+    const istSchemaRegistry = (r: any): boolean => r?.type === 'SCHEMA'
+
+    const registryNames: string[] = registries.map((r: any) => r.name)
+    // Nur wenn der Scope keine Schema-Registry ausweist, den Kurzweg
+    // '/schema' als eigenen Ordner anbieten — sonst waere er leer.
+    if (!registries.some(istSchemaRegistry) && !registryNames.includes('schema')) {
+      registryNames.unshift('schema')
+    }
 
     const entries: FileEntry[] = []
 
@@ -408,6 +420,15 @@ export function useFileSystem() {
       // Get stages from registry definition or use defaults
       const registry = registries.find((r: any) => r.name === registryName)
       const stages: string[] = registry?.stages?.map((s: any) => s.name) || ['draft', 'review', 'approved', 'release']
+      // Zwei verschiedene Fragen, die frueher ein Flag beantworten musste:
+      //   isSchema        -> ist der Inhalt ein Metamodell? (Endung, Aktionen)
+      //   nutztKurzweg    -> ueber '/schema/...' abrufen oder ueber
+      //                      '/registries/<name>/...'?
+      // Der Kurzweg gilt nur fuer die synthetische 'schema'-Registry; eine
+      // echte Registry wird immer ueber ihren Namen angesprochen, auch wenn
+      // sie Schemas fuehrt.
+      const isSchema = registry ? istSchemaRegistry(registry) : registryName === 'schema'
+      const nutztKurzweg = !registry && registryName === 'schema'
 
       for (const stageName of stages) {
         const stageEntry: FileEntry = {
@@ -420,7 +441,7 @@ export function useFileSystem() {
 
         try {
           let metadataXmi: string
-          if (registryName === 'schema') {
+          if (nutztKurzweg) {
             metadataXmi = await client.listSchemas(scopeName, stageName)
           } else {
             metadataXmi = await client.listObjects(scopeName, registryName, stageName)
@@ -430,7 +451,6 @@ export function useFileSystem() {
           const metadataList = parseMetadataListXmi(metadataXmi)
 
           for (const meta of metadataList) {
-            const isSchema = registryName === 'schema'
             const fileName = meta.objectName
               ? `${meta.objectName}${isSchema ? '.ecore' : '.xmi'}`
               : `${meta.objectId}${isSchema ? '.ecore' : '.xmi'}`
@@ -446,7 +466,7 @@ export function useFileSystem() {
               handle: {
                 atlasBaseUrl: baseUrl, scopeName, token,
                 registryName, stage: stageName,
-                objectId: meta.objectId, isSchema,
+                objectId: meta.objectId, isSchema, nutztKurzweg,
                 metadata: meta
               }
             })
@@ -493,8 +513,10 @@ export function useFileSystem() {
         const headers: Record<string, string> = { 'Accept': 'application/xml' }
         if (h.token) headers['Authorization'] = `Bearer ${h.token}`
 
+        // Kurzweg '/schema' nur fuer die synthetische Registry; eine echte
+        // Schema-Registry wird ueber ihren Namen angesprochen (sonst 400).
         let url: string
-        if (h.isSchema) {
+        if (h.nutztKurzweg) {
           const nsUriB64 = btoa(h.objectId).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
           url = `${h.atlasBaseUrl}/${encodeURIComponent(h.scopeName)}/schema/stages/${encodeURIComponent(h.stage)}/content?nsUri=${nsUriB64}`
         } else {
@@ -541,8 +563,10 @@ export function useFileSystem() {
         const headers: Record<string, string> = { 'Content-Type': 'application/xml', 'Accept': 'application/json' }
         if (h.token) headers['Authorization'] = `Bearer ${h.token}`
 
+        // Kurzweg '/schema' nur fuer die synthetische Registry; eine echte
+        // Schema-Registry wird ueber ihren Namen angesprochen (sonst 400).
         let url: string
-        if (h.isSchema) {
+        if (h.nutztKurzweg) {
           const nsUriB64 = btoa(h.objectId).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
           url = `${h.atlasBaseUrl}/${encodeURIComponent(h.scopeName)}/schema/stages/${encodeURIComponent(h.stage)}/content?nsUri=${nsUriB64}`
         } else {

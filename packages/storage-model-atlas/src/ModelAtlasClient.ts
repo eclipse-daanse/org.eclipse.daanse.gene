@@ -112,11 +112,19 @@ export class ModelAtlasClient {
     return null
   }
 
+  /**
+   * Ein Schema veroeffentlichen.
+   *
+   * `options.registryName` waehlt die Ziel-Registry. Ohne Angabe wird der
+   * Kurzweg `/schema` benutzt — den kennt nicht jeder Server: heisst die
+   * Schema-Registry etwa `atlas-schema-registry`, antwortet er dort mit 400.
+   * Die Registry kommt aus dem Scope (Registry.type === 'SCHEMA').
+   */
   async uploadSchema(
     scopeName: string,
     stage: string,
     content: string,
-    options?: { nsUri?: string; name?: string; version?: string; overwrite?: boolean }
+    options?: { nsUri?: string; name?: string; version?: string; overwrite?: boolean; registryName?: string }
   ): Promise<string> {
     const params = new URLSearchParams()
     if (options?.nsUri) params.set('nsUri', options.nsUri)
@@ -125,7 +133,10 @@ export class ModelAtlasClient {
     if (options?.overwrite) params.set('overwrite', 'true')
 
     const qs = params.toString()
-    const path = `/${enc(scopeName)}/schema/stages/${enc(stage)}${qs ? '?' + qs : ''}`
+    const ziel = options?.registryName
+      ? `registries/${enc(options.registryName)}`
+      : 'schema'
+    const path = `/${enc(scopeName)}/${ziel}/stages/${enc(stage)}${qs ? '?' + qs : ''}`
 
     const resp = await this.post(path, content)
     if (resp.status === 201 || resp.status === 200) return await resp.text()
