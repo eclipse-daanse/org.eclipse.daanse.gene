@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">daanse.orm.map.AssociationTableMap</title>
+<style>:root{--stroke:#E11D48}@media(prefers-color-scheme:dark){:root{--stroke:#FECDD3}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx='7.6' cy='8.2' r='1' fill='currentColor' stroke='none'/><path d='M9.1 8.2h5.8'/><circle cx='16.4' cy='8.2' r='1'/><path d='M12 10v1.6'/><path d='M10.9 10.8 12 12 13.1 10.8'/><rect x='8.6' y='13.2' width='6.8' height='4.2' rx='.6'/><path d='M12 13.2v4.2'/></g>
+</svg>

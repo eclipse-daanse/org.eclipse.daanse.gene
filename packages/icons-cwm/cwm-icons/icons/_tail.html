@@ -1,0 +1,37 @@
+<p class="empty" id="empty" hidden>Nichts gefunden.</p>
+
+<footer>
+  Quelle: model/cwm/model/cwm.ecore · Artwork: glyphs.json · Dateien: svg/&lt;paket&gt;/&lt;Klasse&gt;.svg<br>
+  Diese Seite zeichnet die Icons inline, damit der Themenschalter greift.
+  Die ausgelieferten .svg-Dateien schalten selbst über prefers-color-scheme.
+</footer>
+</div>
+<script>
+const root=document.documentElement, q=document.getElementById('q'),
+      hits=document.getElementById('hits'), empty=document.getElementById('empty');
+document.querySelectorAll('[data-theme-btn]').forEach(b=>b.onclick=()=>{
+  root.setAttribute('data-theme',b.dataset.themeBtn);
+  document.querySelectorAll('[data-theme-btn]').forEach(x=>
+    x.setAttribute('aria-pressed',String(x===b)));});
+document.querySelectorAll('[data-size]').forEach(b=>b.onclick=()=>{
+  root.style.setProperty('--size',b.dataset.size+'px');
+  document.querySelectorAll('[data-size]').forEach(x=>
+    x.setAttribute('aria-pressed',String(x===b)));});
+function filter(){
+  const t=q.value.trim().toLowerCase(); let n=0;
+  document.querySelectorAll('.pkg').forEach(sec=>{
+    let vis=0;
+    sec.querySelectorAll('.tile').forEach(a=>{
+      const m=!t||a.dataset.search.includes(t);
+      a.hidden=!m; if(m){vis++;n++;}
+    });
+    sec.hidden=vis===0;
+  });
+  hits.textContent=n+' / 143';
+  empty.hidden=n>0;
+}
+q.addEventListener('input',filter); filter();
+q.addEventListener('keydown',e=>{if(e.key==='Escape'){q.value='';filter();}});
+</script>
+</body>
+</html>

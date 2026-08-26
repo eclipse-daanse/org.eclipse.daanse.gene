@@ -1,7 +1,8 @@
 /**
  * CWM Icons Plugin
  *
- * Provides the 143 Common Warehouse Metamodel (CWM 1.1) class icons for GenE.
+ * Provides 630 class icons for GenE: the Common Warehouse Metamodel
+ * (OMG CWM 1.1) plus the cwmx and daanse extension models.
  * The icons are hand-drawn SVGs bundled with the plugin; the border colour of
  * each icon encodes its source package and each file handles dark mode itself.
  */

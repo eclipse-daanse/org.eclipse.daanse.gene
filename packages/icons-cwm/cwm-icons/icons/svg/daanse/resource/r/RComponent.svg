@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">daanse.resource.r.RComponent</title>
+<style>:root{--stroke:#701A75}@media(prefers-color-scheme:dark){:root{--stroke:#F5D0FE}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M9 7.2H7.2v9.6H9M15 7.2h1.8v9.6H15'/><rect x='10.2' y='9.8' width='3.6' height='4.4' rx='.7'/></g>
+</svg>

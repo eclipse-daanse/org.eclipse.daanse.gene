@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">analysis.datamining.attributeimportance.AttributeImportanceSettings</title>
+<style>:root{--stroke:#7E22CE}@media(prefers-color-scheme:dark){:root{--stroke:#D8B4FE}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M6.4 7.8h11.2' opacity='.35'/><circle cx='9.6' cy='7.8' r='1.4'/><path d='M6.4 10.6h11.2' opacity='.35'/><circle cx='13.8' cy='10.6' r='1.4'/><path d='M6.8 13.8h9.2M6.8 16.2h4.6' stroke-width='2'/></g>
+</svg>

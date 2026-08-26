@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-labelledby="t">
+<title id="t">daanse.orm.map.InheritanceMap</title>
+<style>:root{--stroke:#E11D48}@media(prefers-color-scheme:dark){:root{--stroke:#FECDD3}}</style>
+<path d="M5.5 1.5h13a4 4 0 0 1 4 4v13a4 4 0 0 1-4 4h-13a4 4 0 0 1-4-4v-13a4 4 0 0 1 4-4z" fill="none" stroke="var(--stroke)" stroke-width="1.5"/>
+<g style="color:var(--stroke)" fill="none" stroke="var(--stroke)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d='M8.6 6.8l1.7 2.3H6.9z'/><path d='M8.6 9.4v1.8M8.6 11.2h-1.8v1.6M8.6 11.2h1.8v1.6'/><circle cx='6.8' cy='14.2' r='.9'/><circle cx='10.4' cy='14.2' r='.9'/><path d='M12.4 12h1'/><path d='M12.9 10.9 14 12l-1.1 1.1'/><rect x='15' y='9.2' width='3' height='5.6' rx='.6'/></g>
+</svg>
