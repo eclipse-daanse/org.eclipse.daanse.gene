@@ -38,6 +38,7 @@ export class WorkflowApiPackage extends BasicEPackage {
     STAGE__FINAL: null as unknown as EAttribute | EReference,
     REGISTRY: null as unknown as EClass,
     REGISTRY__NAME: null as unknown as EAttribute | EReference,
+    REGISTRY__TYPE: null as unknown as EAttribute | EReference,
     REGISTRY__DESCRIPTION: null as unknown as EAttribute | EReference,
     REGISTRY__STAGES: null as unknown as EAttribute | EReference,
     REGISTRY__ALLOWED_TRANSITIONS: null as unknown as EAttribute | EReference,
@@ -113,6 +114,14 @@ export class WorkflowApiPackage extends BasicEPackage {
     registry_name.setUpperBound(1);
     registryClass.getEStructuralFeatures().push(registry_name);
     WorkflowApiPackage.Literals.REGISTRY__NAME = registry_name;
+
+    // Create type feature
+    const registry_type = new BasicEAttribute();
+    registry_type.setName('type');
+    registry_type.setLowerBound(0);
+    registry_type.setUpperBound(1);
+    registryClass.getEStructuralFeatures().push(registry_type);
+    WorkflowApiPackage.Literals.REGISTRY__TYPE = registry_type;
 
     // Create description feature
     const registry_description = new BasicEAttribute();

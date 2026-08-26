@@ -15,6 +15,7 @@ import type { StageTransition } from './StageTransition';
  */
 export interface Registry extends EObject {
   name?: string;
+  type?: string;
   description?: string;
   stages: Stage[];
   allowedTransitions: StageTransition[];

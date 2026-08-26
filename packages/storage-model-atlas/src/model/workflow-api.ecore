@@ -13,6 +13,11 @@
   <eClassifiers xsi:type="ecore:EClass" name="Registry">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="name"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Registry-Art laut Server, z. B. SCHEMA oder COCL. Bewusst EString
+         statt Enum: der Server kennt mehr Werte als hier aufzaehlbar waeren,
+         und ein Enum wuerde unbekannte still verwerfen. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="type"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="description"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="stages" upperBound="-1"
