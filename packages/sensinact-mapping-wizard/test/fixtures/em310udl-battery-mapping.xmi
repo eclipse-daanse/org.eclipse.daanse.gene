@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mapping:ProviderMapping
+    xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    xmlns:mapping="https://fennec.eclipse.org/event.atlas/mapping/1.0"
+    xsi:schemaLocation="https://fennec.eclipse.org/event.atlas/mapping/1.0 ../../sensinact-mapping.ecore"
+    mid="em310udl-battery-sensor">
+  <timestamp>
+    <featurePath
+        xsi:type="ecore:EAttribute"
+        href="../../lorawan-uplink.ecore#//UplinkMessage/time"/>
+  </timestamp>
+  <name name="EM310UDL Battery Sensor">
+    <featurePath
+        xsi:type="ecore:EAttribute"
+        href="../../lorawan-uplink.ecore#//UplinkMessage/deduplicationId"/>
+  </name>
+  <providerClasses
+      href="../../em310udl-message.ecore#//EM310UDLUplink"/>
+  <services
+      mid="battery">
+    <name name="Battery"/>
+    <resources
+        name="BatteryLevel"
+        unit="V"
+        timestamp="//@timestamp"
+        mid="level">
+      <eType
+          xsi:type="ecore:EDataType"
+          href="http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <valueFeature
+          xsi:type="ecore:EReference"
+          href="../../em310udl-message.ecore#//EM310UDLUplink/object"/>
+      <valueFeature
+          xsi:type="ecore:EAttribute"
+          href="../../em310udl-message.ecore#//DecodedObject/battery"/>
+    </resources>
+  </services>
+  <admin mid="admin">
+    <name name="Admin"/>
+    <friendlyNameFeature
+        xsi:type="ecore:EReference"
+        href="../../lorawan-uplink.ecore#//UplinkMessage/deviceInfo"/>
+    <friendlyNameFeature
+        xsi:type="ecore:EAttribute"
+        href="../../lorawan-uplink.ecore#//DeviceInfo/deviceProfileName"/>
+    <providerPackage
+        href="../../em310udl-message.ecore#/"/>
+  </admin>
+  <profile href="battery-sensor-profile.xmi#battery-sensor"/>
+</mapping:ProviderMapping>

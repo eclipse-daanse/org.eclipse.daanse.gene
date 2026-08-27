@@ -1,0 +1,28 @@
+diff --git a/src/tsm/repositories.config.ts b/src/tsm/repositories.config.ts
+index 0c0dc5f..3db38a1 100644
+--- a/src/tsm/repositories.config.ts
++++ b/src/tsm/repositories.config.ts
+@@ -30,6 +30,15 @@ export const repositories: PluginRepository[] = [
+     url: '/plugins',
+     enabled: true,
+     priority: 10
++  },
++  // SensiNact Mapping Wizard (externes Plugin-Repo,
++  // sensinact-mapping-wizard: npm run build:plugin && npm run serve:plugin)
++  {
++    id: 'sensinact-mapping-wizard',
++    name: 'SensiNact Mapping Wizard',
++    url: 'http://localhost:5399',
++    enabled: true,
++    priority: 20
+   }
+ ]
+ 
+@@ -86,5 +95,6 @@ export const startupModules = [
+   'cocl-editor',        // C-OCL constraint editor
+   //'dmn-editor',         // DMN Decision Table Editor
+   'atlas-browser',       // Model Atlas Browser
+-  'data-generator'       // Data generator for test data (must load after atlas-browser)
++  'data-generator',      // Data generator for test data (must load after atlas-browser)
++  'sensinact-mapping-wizard' // SensiNact Mapping Wizard (externes Plugin-Repo)
+ ]

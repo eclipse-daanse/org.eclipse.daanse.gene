@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uimodel:UIModel
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmi:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:uimodel="http://uimodel/1.0"
+    name="TimestampStep">
+
+  <components xsi:type="uimodel:FormView" name="TimestampForm">
+    <targetClasses href="http://fennec/sensinact/mapping-wizard/1.0#//TimestampChoice"/>
+
+    <fields xsi:type="uimodel:SelectWidget"
+        name="source"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//TimestampChoice/source"
+        label="Woher kommt der Messzeitpunkt?"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="path"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//TimestampChoice/path"
+        label="Feld mit dem Messzeitpunkt">
+      <visibilityCondition language="JS" body="self.source === 'DEVICE_TIME'"/>
+    </fields>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="formatHint"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//TimestampChoice/formatHint"
+        label="Formatmuster (nur bei Text-Zeitstempeln)"
+        placeholder="z. B. yyyy-MM-dd'T'HH:mm:ssX">
+      <visibilityCondition language="JS" body="self.source === 'DEVICE_TIME'"/>
+    </fields>
+  </components>
+</uimodel:UIModel>

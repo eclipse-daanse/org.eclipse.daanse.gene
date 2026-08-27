@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="waterpark_domain" nsURI="http://data-in-motion.biz/waterparc/domain"
+    nsPrefix="wp">
+  <eClassifiers xsi:type="ecore:EEnum" name="PersonState">
+    <eLiterals name="ENTER"/>
+    <eLiterals name="TO_WATER" value="1"/>
+    <eLiterals name="SWIM" value="2"/>
+    <eLiterals name="TO_REST" value="3"/>
+    <eLiterals name="REST" value="4"/>
+    <eLiterals name="TO_EXIT" value="5"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Person">
+    <eOperations name="enter">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="self.current_locker_id = locker_id&#xA;if water_area_id is not None:&#xA;    self.target_area_id = water_area_id&#xA;    self.state = PersonState.TO_WATER&#xA;    return&#xA;if zone_id is not None:&#xA;    self.target_area_id = zone_id&#xA;    self.state = PersonState.TO_REST&#xA;    return&#xA;self.target_area_id = None&#xA;self.state = PersonState.TO_EXIT"/>
+      </eAnnotations>
+      <eParameters name="locker_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eParameters name="water_area_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eParameters name="zone_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+    <eOperations name="on_arrive_water">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="if occupied:&#xA;    self.current_area_id = self.target_area_id&#xA;    self.state = PersonState.SWIM&#xA;    self.dwell = dwell_value&#xA;    return&#xA;self.target_area_id = fallback_zone_id&#xA;self.state = PersonState.TO_REST"/>
+      </eAnnotations>
+      <eParameters name="occupied" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+      <eParameters name="dwell_value" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+      <eParameters name="fallback_zone_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+    <eOperations name="on_arrive_rest">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="self.current_area_id = self.target_area_id&#xA;self.state = PersonState.REST&#xA;self.dwell = dwell_value"/>
+      </eAnnotations>
+      <eParameters name="dwell_value" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"/>
+    </eOperations>
+    <eOperations name="on_arrive_exit">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="self.current_locker_id = None&#xA;self.done = True"/>
+      </eAnnotations>
+    </eOperations>
+    <eOperations name="tick_swim" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="if self.state is not PersonState.SWIM:&#xA;    return None&#xA;return self.build_event(area_id, x, y, temp, clock_now, clock_start)"/>
+      </eAnnotations>
+      <eParameters name="area_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eParameters name="x" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <eParameters name="y" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <eParameters name="temp" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <eParameters name="clock_now" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eParameters name="clock_start" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+    <eOperations name="after_swim" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="if self.state is not PersonState.SWIM:&#xA;    return False&#xA;self.dwell -= 1&#xA;if self.dwell > 0:&#xA;    return False&#xA;self.current_area_id = None&#xA;self.target_area_id = zone_id&#xA;self.state = PersonState.TO_REST&#xA;return True"/>
+      </eAnnotations>
+      <eParameters name="zone_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+    <eOperations name="leave" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="if self.state is not PersonState.REST:&#xA;    return False&#xA;self.dwell -= 1&#xA;if self.dwell > 0:&#xA;    return False&#xA;self.current_area_id = None&#xA;self.target_area_id = None&#xA;self.state = PersonState.TO_EXIT&#xA;return True"/>
+      </eAnnotations>
+    </eOperations>
+    <eOperations name="return_to_water" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="if self.state is not PersonState.REST:&#xA;    return False&#xA;self.dwell -= 1&#xA;if self.dwell > 0:&#xA;    return False&#xA;self.current_area_id = None&#xA;if water_area_id is not None:&#xA;    self.target_area_id = water_area_id&#xA;    self.state = PersonState.TO_WATER&#xA;else:&#xA;    self.target_area_id = None&#xA;    self.state = PersonState.TO_EXIT&#xA;return True"/>
+      </eAnnotations>
+      <eParameters name="water_area_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+    <eOperations name="report_emergency" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="if self.state is not PersonState.SWIM:&#xA;    return None&#xA;event = self.build_event(area_id, x, y, temp, clock_now, clock_start)&#xA;event[&quot;health&quot;][&quot;stateOfLife&quot;] = &quot;EMERGENCY&quot;&#xA;event[&quot;health&quot;][&quot;emergency&quot;] = True&#xA;return event"/>
+      </eAnnotations>
+      <eParameters name="area_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eParameters name="x" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <eParameters name="y" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <eParameters name="temp" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <eParameters name="clock_now" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eParameters name="clock_start" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+    <eOperations name="build_event" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="return {&#xA;    &quot;swimmerId&quot;: self.swimmer_id,&#xA;    &quot;sensorData&quot;: {&#xA;        &quot;sensorId&quot;: f&quot;{area_id}-cam&quot;,&#xA;        &quot;time&quot;: clock_now,&#xA;        &quot;metadata&quot;: {&#xA;            &quot;position&quot;: {&quot;x&quot;: x, &quot;y&quot;: y, &quot;z&quot;: 0.0},&#xA;            &quot;angleOfView&quot;: 60.0,&#xA;            &quot;temp&quot;: temp,&#xA;            &quot;state&quot;: &quot;READY&quot;,&#xA;        },&#xA;    },&#xA;    &quot;location&quot;: {&#xA;        &quot;poolId&quot;: area_id,&#xA;        &quot;startLane&quot;: area_id,&#xA;        &quot;endLane&quot;: area_id,&#xA;        &quot;laneChanged&quot;: False,&#xA;        &quot;laneTurned&quot;: False,&#xA;    },&#xA;    &quot;health&quot;: {&quot;puls&quot;: self.puls, &quot;stateOfLife&quot;: &quot;OK&quot;, &quot;emergency&quot;: False},&#xA;    &quot;time&quot;: {&quot;start&quot;: clock_start, &quot;end&quot;: clock_now},&#xA;}"/>
+      </eAnnotations>
+      <eParameters name="area_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eParameters name="x" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <eParameters name="y" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <eParameters name="temp" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <eParameters name="clock_now" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <eParameters name="clock_start" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="swimmer_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="state" eType="ecore:EEnum waterpark_domain.ecore#//PersonState"
+        defaultValueLiteral="ENTER"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dwell" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        defaultValueLiteral="0"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="puls" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        defaultValueLiteral="70"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="done" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="false"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="current_area_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="current_locker_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="target_area_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="LockerState">
+    <eLiterals name="FREE"/>
+    <eLiterals name="OCCUPIED" value="1"/>
+    <eLiterals name="FAULT" value="2"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Locker">
+    <eOperations name="occupy">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="self.state = LockerState.OCCUPIED"/>
+      </eAnnotations>
+    </eOperations>
+    <eOperations name="release">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="if self.state is not LockerState.FAULT:&#xA;    self.state = LockerState.FREE"/>
+      </eAnnotations>
+    </eOperations>
+    <eOperations name="report_fault">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="if self.state is not LockerState.OCCUPIED:&#xA;    return&#xA;self.state = LockerState.FAULT"/>
+      </eAnnotations>
+    </eOperations>
+    <eOperations name="repair">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="if self.state is not LockerState.FAULT:&#xA;    return&#xA;self.state = LockerState.FREE"/>
+      </eAnnotations>
+    </eOperations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="locker_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="state" eType="ecore:EEnum waterpark_domain.ecore#//LockerState"
+        defaultValueLiteral="FREE"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="WaterTemperature">
+    <eAnnotations source="http://eclipse.org/fennec/codec/typeMapping/jena-sensors">
+      <details key="typeDiscriminator" value="waterpark-water-temperature"/>
+      <details key="typeDiscriminatorPath" value="deduplicationId"/>
+      <details key="fallbackStrategy" value="SKIP"/>
+    </eAnnotations>
+    <eOperations name="measure" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="self.value = reading&#xA;return {&#xA;    &quot;sensorId&quot;: self.sensor_id,&#xA;    &quot;sensorData&quot;: {&#xA;        &quot;sensorId&quot;: self.sensor_id,&#xA;        &quot;time&quot;: clock_now,&#xA;        &quot;metadata&quot;: {&quot;temp&quot;: reading, &quot;state&quot;: &quot;READY&quot;},&#xA;    },&#xA;    &quot;location&quot;: {&quot;poolId&quot;: self.area_id},&#xA;    &quot;time&quot;: {&quot;start&quot;: clock_now, &quot;end&quot;: clock_now},&#xA;}"/>
+      </eAnnotations>
+      <eParameters name="reading" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <eParameters name="clock_now" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="deduplicationId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sensor_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="area_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="x" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="y" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="WaterQualityStatus">
+    <eLiterals name="OK"/>
+    <eLiterals name="WARN" value="1"/>
+    <eLiterals name="CRIT" value="2"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="WaterQuality">
+    <eAnnotations source="http://eclipse.org/fennec/codec/typeMapping/jena-sensors">
+      <details key="typeDiscriminator" value="waterpark-water-quality"/>
+      <details key="typeDiscriminatorPath" value="deduplicationId"/>
+      <details key="fallbackStrategy" value="SKIP"/>
+    </eAnnotations>
+    <eOperations name="measure" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EJavaObject">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="self.ph = ph_reading&#xA;self.free_chlorine = chlorine_reading&#xA;self.redox = redox_reading&#xA;self.status = self.evaluate_status()&#xA;return {&#xA;    &quot;sensorId&quot;: self.sensor_id,&#xA;    &quot;sensorData&quot;: {&#xA;        &quot;sensorId&quot;: self.sensor_id,&#xA;        &quot;time&quot;: clock_now,&#xA;        &quot;metadata&quot;: {&#xA;            &quot;ph&quot;: ph_reading,&#xA;            &quot;freeChlorine&quot;: chlorine_reading,&#xA;            &quot;redox&quot;: redox_reading,&#xA;            &quot;state&quot;: &quot;READY&quot;,&#xA;        },&#xA;    },&#xA;    &quot;location&quot;: {&quot;poolId&quot;: self.area_id},&#xA;    &quot;quality&quot;: {&quot;status&quot;: self.status.name},&#xA;    &quot;time&quot;: {&quot;start&quot;: clock_now, &quot;end&quot;: clock_now},&#xA;}"/>
+      </eAnnotations>
+      <eParameters name="ph_reading" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <eParameters name="chlorine_reading" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <eParameters name="redox_reading" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+      <eParameters name="clock_now" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eOperations>
+    <eOperations name="evaluate_status" eType="ecore:EEnum waterpark_domain.ecore#//WaterQualityStatus">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="body" value="if self.ph &lt; 6.5 or self.ph > 7.6:&#xA;    return WaterQualityStatus.CRIT&#xA;if self.free_chlorine &lt; 0.3 or self.free_chlorine > 0.6:&#xA;    return WaterQualityStatus.CRIT&#xA;if self.redox &lt; 750.0:&#xA;    return WaterQualityStatus.CRIT&#xA;if self.ph &lt; 6.7 or self.ph > 7.4:&#xA;    return WaterQualityStatus.WARN&#xA;if self.free_chlorine &lt; 0.35 or self.free_chlorine > 0.55:&#xA;    return WaterQualityStatus.WARN&#xA;if self.redox &lt; 765.0:&#xA;    return WaterQualityStatus.WARN&#xA;return WaterQualityStatus.OK"/>
+      </eAnnotations>
+    </eOperations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="deduplicationId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sensor_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="area_id" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="x" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="y" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="ph" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"
+        defaultValueLiteral="7.2"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="free_chlorine" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"
+        defaultValueLiteral="0.45"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="redox" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"
+        defaultValueLiteral="760.0"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="status" eType="ecore:EEnum waterpark_domain.ecore#//WaterQualityStatus"
+        defaultValueLiteral="OK"/>
+  </eClassifiers>
+</ecore:EPackage>

@@ -86,5 +86,7 @@ export const startupModules = [
   'cocl-editor',        // C-OCL constraint editor
   //'dmn-editor',         // DMN Decision Table Editor
   'atlas-browser',       // Model Atlas Browser
-  'data-generator'       // Data generator for test data (must load after atlas-browser)
+  'data-generator',      // Data generator for test data (must load after atlas-browser)
+  'sensinact-mapping-wizard', // SensiNact Mapping Wizard
+  'eorm-wizard'          // eorm Mapping Wizard
 ]

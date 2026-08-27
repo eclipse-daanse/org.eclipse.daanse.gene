@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="mappingwizard" nsURI="http://fennec/sensinact/mapping-wizard/1.0" nsPrefix="mappingwizard">
+
+  <!-- Fassadenmodell des Mapping-Assistenten: beschreibt die Nutzereingaben
+       in Fachsprache. Ein Transformer erzeugt daraus das konforme
+       ProviderMapping-XMI (sensinact-mapping.ecore). -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="SensorMappingSetup">
+    <!-- Technischer Bezeichner des Mappings; wird auch Provider-Modellname. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="mappingId" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Die Nachricht/Wurzelklasse, die der Sensor sendet. -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="sensorClass" lowerBound="1"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+    <!-- "Woher kommt der Name des Sensors?" — Feld ODER fester Text. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="nameSource" lowerBound="1"
+        eType="#//NameSource" defaultValueLiteral="FROM_FIELD"/>
+    <!-- "Wählen Sie das Feld mit dem Namen des Sensors." -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="namePath"
+        eType="#//FeaturePath" containment="true"/>
+    <!-- Fester Name (bei nameSource=STATIC). -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="nameFallback"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- "Woher kommt der Anzeigename?" — keiner, Feld oder fester Text. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="friendlyNameSource" lowerBound="1"
+        eType="#//FriendlyNameSource" defaultValueLiteral="NONE"/>
+    <!-- Optionales Feld für einen menschenlesbaren Anzeigenamen. -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="friendlyNamePath"
+        eType="#//FeaturePath" containment="true"/>
+    <!-- Fester Anzeigename (bei friendlyNameSource=STATIC). -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="friendlyName"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="timestamp" lowerBound="1"
+        eType="#//TimestampChoice" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="location"
+        eType="#//LocationChoice" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="measurements" upperBound="-1"
+        eType="#//Measurement" containment="true"/>
+  </eClassifiers>
+
+  <!-- Ein Navigationspfad durch das Sensormodell zu einem Wert. -->
+  <eClassifiers xsi:type="ecore:EClass" name="FeaturePath">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="segments" upperBound="-1"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature"/>
+    <!-- Bei Sammlungen im Pfad: welches Element (0-basiert). -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="collectionIndex"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt" defaultValueLiteral="0"/>
+    <!-- Anzeigetext, z. B. "Gerätedaten → Batterie → Spannung". -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="label"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- "Woher kommt der Messzeitpunkt?" -->
+  <eClassifiers xsi:type="ecore:EClass" name="TimestampChoice">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="source" lowerBound="1"
+        eType="#//TimestampSource" defaultValueLiteral="RECEIVE_TIME"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="path"
+        eType="#//FeaturePath" containment="true"/>
+    <!-- Formatmuster für textuelle Zeitstempel, z. B. yyyy-MM-dd'T'HH:mm:ssX -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="formatHint"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="TimestampSource">
+    <!-- Empfangszeit im Gateway verwenden -->
+    <eLiterals name="RECEIVE_TIME" value="0"/>
+    <!-- Zeitpunkt steht in den Sensordaten -->
+    <eLiterals name="DEVICE_TIME" value="1"/>
+  </eClassifiers>
+
+  <!-- "Woher kommt der Name des Sensors?" -->
+  <eClassifiers xsi:type="ecore:EEnum" name="NameSource">
+    <eLiterals name="FROM_FIELD" value="0"/>
+    <eLiterals name="STATIC" value="1"/>
+  </eClassifiers>
+
+  <!-- "Woher kommt der Anzeigename?" -->
+  <eClassifiers xsi:type="ecore:EEnum" name="FriendlyNameSource">
+    <eLiterals name="NONE" value="0"/>
+    <eLiterals name="FROM_FIELD" value="1"/>
+    <eLiterals name="STATIC" value="2"/>
+  </eClassifiers>
+
+  <!-- "Wo befindet sich der Sensor?" -->
+  <eClassifiers xsi:type="ecore:EClass" name="LocationChoice">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="mode" lowerBound="1"
+        eType="#//LocationMode" defaultValueLiteral="NONE"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="latitude"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="longitude"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="elevation"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="latitudePath"
+        eType="#//FeaturePath" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="longitudePath"
+        eType="#//FeaturePath" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="elevationPath"
+        eType="#//FeaturePath" containment="true"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="LocationMode">
+    <eLiterals name="NONE" value="0"/>
+    <eLiterals name="STATIC" value="1"/>
+    <eLiterals name="FROM_DATA" value="2"/>
+  </eClassifiers>
+
+  <!-- Ein Messwert, den der Sensor liefern soll. -->
+  <eClassifiers xsi:type="ecore:EClass" name="Measurement">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="selected"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="valuePath" lowerBound="1"
+        eType="#//FeaturePath" containment="true"/>
+    <!-- Anzeigename des Messwerts, z. B. "Batteriespannung". -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="label"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="unit"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Optional: Die Einheit steht in den Sensordaten (dynamische Einheit).
+         Wird zu ResourceMapping.unitFeature; hat Vorrang vor 'unit'. -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="unitPath"
+        eType="#//FeaturePath" containment="true"/>
+    <!-- Gruppe/Kategorie; wird ein Service im Provider. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="serviceGroup"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" defaultValueLiteral="data"/>
+    <!-- Ziel-Datentyp; ohne Angabe wird der Typ des Quellfelds übernommen. -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="targetType"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EDataType"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="storagePreset"
+        eType="#//StoragePreset" defaultValueLiteral="EVERY_CHANGE"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="retentionPreset"
+        eType="#//RetentionPreset" defaultValueLiteral="FOREVER"/>
+  </eClassifiers>
+
+  <!-- "Wie oft soll gespeichert werden?" -->
+  <eClassifiers xsi:type="ecore:EEnum" name="StoragePreset">
+    <eLiterals name="EVERY_CHANGE" value="0"/>
+    <eLiterals name="CHANGED_5_PERCENT" value="1"/>
+    <eLiterals name="MAX_ONCE_10MIN" value="2"/>
+  </eClassifiers>
+
+  <!-- "Wie lange sollen Werte aufbewahrt werden?" -->
+  <eClassifiers xsi:type="ecore:EEnum" name="RetentionPreset">
+    <eLiterals name="FOREVER" value="0"/>
+    <eLiterals name="DAYS_90" value="1"/>
+    <eLiterals name="YEAR_1" value="2"/>
+  </eClassifiers>
+
+</ecore:EPackage>

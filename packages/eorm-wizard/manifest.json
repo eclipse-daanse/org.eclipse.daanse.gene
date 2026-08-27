@@ -1,0 +1,15 @@
+{
+  "id": "eorm-wizard",
+  "name": "eorm Mapping Wizard",
+  "version": "0.1.0",
+  "description": "Assistent: EMF-Modell → eorm-Mapping (JPA/Datenbank) für emf.persistence-jpa",
+  "entry": "src/plugin/index.ts",
+  "dependencies": ["gene-app", "ui-layout"],
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" },
+    { "id": "@emfts/core", "versionRange": ">=0.1.0" },
+    { "id": "@emfts/vue-registry", "versionRange": ">=0.0.1" },
+    { "id": "@emfts/uimodel-composer", "versionRange": ">=0.0.1" }
+  ],
+  "provides": [{ "id": "ui.eorm-wizard.open", "description": "Öffnet die eorm-Perspective" }]
+}

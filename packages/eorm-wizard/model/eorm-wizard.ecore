@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="eormwizard" nsURI="http://fennec/persistence/eorm-wizard/1.0" nsPrefix="eormwizard">
+
+  <!-- Fassadenmodell des eorm-Assistenten: die Zuordnungsentscheidungen in
+       Fachsprache. Ein Transformer erzeugt daraus das konforme
+       EntityMappings-XMI (eorm.ecore, nsURI
+       https://eclipse.org/fennec/persistence/eorm/1.0.0). -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="EormSetup">
+    <!-- Name des Mappings (= EntityMappings.name); Default: EPackage-Name. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="mappingName" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Datenbank-Schema (= EntityMappings.schema); Default: NAME in Großbuchstaben. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="schema"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Das gemappte EMF-Package (dessen nsURI wird EntityMappings.package). -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="modelPackage" lowerBound="1"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EPackage"/>
+    <!-- Bezeichner in Anführungszeichen setzen — nötig, wenn Namen wie
+         "order" oder "user" verwendet werden (SQL-Schlüsselwörter). -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="delimitedIdentifiers"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="false"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="entities" upperBound="-1"
+        eType="#//EntityConfig" containment="true"/>
+  </eClassifiers>
+
+  <!-- Eine Klasse, die als Tabelle gespeichert wird. -->
+  <eClassifiers xsi:type="ecore:EClass" name="EntityConfig">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="selected"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="targetClass" lowerBound="1"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="entityName"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="tableName"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Vererbung: nur an der Wurzel einer Klassenhierarchie relevant. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="inheritance"
+        eType="#//InheritanceStrategy" defaultValueLiteral="NONE"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="discriminatorColumn"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="attributes" upperBound="-1"
+        eType="#//AttributeConfig" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="relations" upperBound="-1"
+        eType="#//RelationConfig" containment="true"/>
+  </eClassifiers>
+
+  <!-- Ein Attribut, das zu einer Spalte wird. -->
+  <eClassifiers xsi:type="ecore:EClass" name="AttributeConfig">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="selected"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="feature" lowerBound="1"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature"/>
+    <!-- Rolle der Spalte: Schlüssel, normale Spalte oder Versionszähler. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="role" lowerBound="1"
+        eType="#//AttributeRole" defaultValueLiteral="BASIC"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="columnName"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="nullable"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="unique"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="false"/>
+    <!-- Feldlänge; 0 = nicht angeben (Datenbank-Default). -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="length"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        defaultValueLiteral="0"/>
+    <!-- Wie der Schlüsselwert entsteht (nur bei role=ID). -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="idStrategy"
+        eType="#//IdStrategy" defaultValueLiteral="NONE"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sequenceName"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- Eine Referenz, die zu einer Beziehung zwischen Tabellen wird. -->
+  <eClassifiers xsi:type="ecore:EClass" name="RelationConfig">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="selected"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="feature" lowerBound="1"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EReference"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind" lowerBound="1"
+        eType="#//RelationKind" defaultValueLiteral="ONE_TO_MANY"/>
+    <!-- Fremdschlüssel-Spalte oder Zwischentabelle. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="joinStrategy" lowerBound="1"
+        eType="#//JoinStrategy" defaultValueLiteral="JOIN_COLUMN"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="joinName"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="fetch" lowerBound="1"
+        eType="#//FetchMode" defaultValueLiteral="LAZY"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="cascadeAll"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="false"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="orphanRemoval"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="false"/>
+    <!-- Gegenseite besitzt die Beziehung (mappedBy). -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="mappedBy"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="batch"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="false"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="AttributeRole">
+    <eLiterals name="BASIC" value="0"/>
+    <eLiterals name="ID" value="1"/>
+    <eLiterals name="VERSION" value="2"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="IdStrategy">
+    <eLiterals name="NONE" value="0"/>
+    <eLiterals name="SEQUENCE" value="1"/>
+    <eLiterals name="UUID" value="2"/>
+    <eLiterals name="IDENTITY" value="3"/>
+    <eLiterals name="TABLE" value="4"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="InheritanceStrategy">
+    <eLiterals name="NONE" value="0"/>
+    <eLiterals name="SINGLE_TABLE" value="1"/>
+    <eLiterals name="JOINED" value="2"/>
+    <eLiterals name="TABLE_PER_CLASS" value="3"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="RelationKind">
+    <eLiterals name="ONE_TO_ONE" value="0"/>
+    <eLiterals name="ONE_TO_MANY" value="1"/>
+    <eLiterals name="MANY_TO_ONE" value="2"/>
+    <eLiterals name="MANY_TO_MANY" value="3"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="JoinStrategy">
+    <eLiterals name="JOIN_COLUMN" value="0"/>
+    <eLiterals name="JOIN_TABLE" value="1"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="FetchMode">
+    <eLiterals name="LAZY" value="0"/>
+    <eLiterals name="EAGER" value="1"/>
+  </eClassifiers>
+
+</ecore:EPackage>

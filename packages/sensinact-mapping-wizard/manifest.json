@@ -1,0 +1,41 @@
+{
+  "id": "sensinact-mapping-wizard",
+  "name": "SensiNact Mapping Wizard",
+  "version": "0.1.0",
+  "description": "Assistent: Sensor-Ecore (Modelatlas/Upload) → SensiNact-ProviderMapping-XMI",
+  "entry": "src/plugin/index.ts",
+  "dependencies": [
+    "gene-app",
+    "ui-layout"
+  ],
+  "sharedDependencies": [
+    {
+      "id": "vue",
+      "versionRange": "^3.5.0"
+    },
+    {
+      "id": "@emfts/core",
+      "versionRange": ">=0.1.0"
+    },
+    {
+      "id": "@emfts/vue-registry",
+      "versionRange": ">=0.0.1"
+    },
+    {
+      "id": "@emfts/uimodel-composer",
+      "versionRange": ">=0.0.1"
+    }
+  ],
+  "provides": [
+    {
+      "id": "ui.sensinact-wizard.open",
+      "description": "Öffnet die SensiNact-Mapping-Perspective"
+    }
+  ],
+  "optionalDependencies": [
+    "atlas-browser",
+    "storage-model-atlas",
+    "ui-model-browser",
+    "ui-file-explorer"
+  ]
+}
