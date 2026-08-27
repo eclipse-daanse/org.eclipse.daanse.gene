@@ -84,7 +84,12 @@ export default defineConfig({
   plugins: [
     tidPlugin(),
     vue(),
-    vueDevTools(),
+    // Im Testlauf ohne DevTools: Der schwebende Anker-Button
+    // (.vue-devtools__anchor-btn) liegt ueber der Seite und faengt Klicks ab,
+    // die Playwright auf darunterliegende Elemente richtet — zuletzt auf eine
+    // Auswahl-Option im Metamodeler ("subtree intercepts pointer events").
+    // Das trifft je nach Layout mal diesen, mal jenen Test.
+    ...(process.env.CI ? [] : [vueDevTools()]),
     importMapPlugin(),
     tsmPlugin({ useRenderChunk: false }),
     // Serve TSM plugins from discovered modules
