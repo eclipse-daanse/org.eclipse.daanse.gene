@@ -544,9 +544,14 @@ function createAtlasBrowser() {
     }
 
     try {
-      // Atlas server expects '_type' instead of 'eType' as attribute name
-      const atlasContent = content.replace(/ eType="/g, ' _type="')
-      await client.uploadSchema(connection.scopeName, stageName, atlasContent, options)
+      // Inhalt unveraendert senden. Frueher wurde hier ' eType="' durch
+      // ' _type="' ersetzt -- '_type' ist die Typangabe der JSON-Form des
+      // Atlas, im XML-Pfad (Content-Type application/xml) kennt Ecore das
+      // Attribut nicht. Der Server verwarf es beim Parsen und legte das
+      // Schema typlos ab: Ein Modell mit 25 typisierten Features kam als 0
+      // von 25 wieder heraus, womit jede Auswertung ueber den eType ins
+      // Leere lief.
+      await client.uploadSchema(connection.scopeName, stageName, content, options)
       return { success: true }
     } catch (e: any) {
       return { success: false, error: e.message || 'Upload failed' }
