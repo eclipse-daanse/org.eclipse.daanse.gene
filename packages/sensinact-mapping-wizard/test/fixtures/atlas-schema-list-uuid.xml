@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="ASCII"?>
+<mgmt:ObjectMetadataContainer xmlns:mgmt="http://eclipse.org/fennec/model/atlas/management/1.0.0">
+  <metadata uploadTime="2026-08-24T15:12:57.600391259Z" contentHash="8443b2b8beae40f2423efaa2d407fa64d72fc85c5a890b0349d7ab48887d0127" objectType="http://www.eclipse.org/emf/2002/Ecore#//EPackage" lastChangeTime="2026-08-24T15:12:58.070627172Z" version="1.0.0" objectId="d0f65b94-f8b2-40c8-ac51-38b1bdf6b6c3" objectName="m5airq" stage="release" scope="jena" registry="schema" fingerprint="fp1:ca43369c6d337640f2244f4f7592ac68535c46bd1fa65a001fdfac92adc64b3c">
+    <properties key="nsUri" value="ACED000574002768747470733A2F2F64617461696E6D6F74696F6E2E64652F64656D6F2F6D35616972712F312E30"/>
+  </metadata>
+  <metadata uploadTime="2026-08-27T06:18:28.468031310Z" contentHash="6c16e2fb12cd4eafcff9d20a3ef389da8871857120492b35622184dd12b71ec0" objectType="http://www.eclipse.org/emf/2002/Ecore#//EPackage" lastChangeTime="2026-08-27T07:48:26.742929628Z" objectId="b168324d-8cab-4180-82f0-ee8b8f358cf5" objectName="waterpark_domain" stage="release" scope="jena" registry="schema" fingerprint="fp1:ea1a498b61518e4a1675e97a354815a1579cf410179ea76cdfed4a930aa232ca">
+    <properties key="nsUri" value="ACED000574002A687474703A2F2F646174612D696E2D6D6F74696F6E2E62697A2F7761746572706172632F646F6D61696E"/>
+  </metadata>
+</mgmt:ObjectMetadataContainer>

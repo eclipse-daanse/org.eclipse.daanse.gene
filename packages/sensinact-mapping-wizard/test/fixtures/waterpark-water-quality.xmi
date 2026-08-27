@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="ASCII"?>
+<mapping:ProviderMapping xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" xmlns:mapping="https://fennec.eclipse.org/event.atlas/mapping/1.0" mid="waterpark-water-quality" providerClasses="http://data-in-motion.biz/waterparc/domain#//WaterQuality">
+  <name featurePath="ecore:EAttribute http://data-in-motion.biz/waterparc/domain#//WaterQuality/sensor_id"/>
+  <services mid="quality">
+    <timestamp/>
+    <name name="Water Quality"/>
+    <resources name="ph" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble" valueFeature="ecore:EAttribute http://data-in-motion.biz/waterparc/domain#//WaterQuality/ph" mid="ph"/>
+    <resources name="freeChlorine" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble" unit="mg/l" valueFeature="ecore:EAttribute http://data-in-motion.biz/waterparc/domain#//WaterQuality/free_chlorine" mid="freeChlorine"/>
+    <resources name="redox" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble" unit="mV" valueFeature="ecore:EAttribute http://data-in-motion.biz/waterparc/domain#//WaterQuality/redox" mid="redox"/>
+    <resources name="status" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" defaultValueLiteral="OK" valueFeature="ecore:EAttribute http://data-in-motion.biz/waterparc/domain#//WaterQuality/status" mid="status"/>
+    <resources name="area" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" valueFeature="ecore:EAttribute http://data-in-motion.biz/waterparc/domain#//WaterQuality/area_id" mid="area"/>
+  </services>
+  <admin mid="admin">
+    <timestamp/>
+    <name name="Admin"/>
+  </admin>
+</mapping:ProviderMapping>

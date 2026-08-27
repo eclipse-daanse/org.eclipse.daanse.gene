@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="ASCII"?>
+<eorm:EntityMappings xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" xmlns:eorm="https://eclipse.org/fennec/persistence/eorm/1.0.0" package="https://civitas.org/glt/1.0.0" schema="GLT" name="glt">
+  <entity access="FIELD" name="Building">
+    <accessibleObject xsi:type="eorm:EClassObject" name="org.civitas.glt.model.glt.Building">
+      <eclass href="https://civitas.org/glt/1.0.0#//Building"/>
+    </accessibleObject>
+    <table name="BUILDING"/>
+    <attributes>
+      <id access="FIELD" name="id">
+        <accessibleObject xsi:type="eorm:EFeatureObject" name="id">
+          <feature xsi:type="ecore:EAttribute" href="https://civitas.org/glt/1.0.0#//Building/id"/>
+        </accessibleObject>
+        <column insertable="true" name="id" nullable="false" updatable="true" unique="true"/>
+      </id>
+      <basic access="FIELD" name="id" fetch="EAGER" optional="false">
+        <accessibleObject xsi:type="eorm:EFeatureObject" name="id">
+          <feature xsi:type="ecore:EAttribute" href="https://civitas.org/glt/1.0.0#//Building/id"/>
+        </accessibleObject>
+        <column insertable="true" name="id" nullable="false" updatable="true" unique="true"/>
+      </basic>
+      <basic access="FIELD" name="city" fetch="EAGER" optional="true">
+        <accessibleObject xsi:type="eorm:EFeatureObject" name="city">
+          <feature xsi:type="ecore:EAttribute" href="https://civitas.org/glt/1.0.0#//Building/city"/>
+        </accessibleObject>
+        <column insertable="true" name="city" nullable="true" updatable="true" unique="true"/>
+      </basic>
+      <basic access="FIELD" name="zip" fetch="EAGER" optional="true">
+        <accessibleObject xsi:type="eorm:EFeatureObject" name="zip">
+          <feature xsi:type="ecore:EAttribute" href="https://civitas.org/glt/1.0.0#//Building/zip"/>
+        </accessibleObject>
+        <column insertable="true" name="zip" nullable="true" updatable="true" unique="true"/>
+      </basic>
+      <basic access="FIELD" name="street" fetch="EAGER" optional="true">
+        <accessibleObject xsi:type="eorm:EFeatureObject" name="street">
+          <feature xsi:type="ecore:EAttribute" href="https://civitas.org/glt/1.0.0#//Building/street"/>
+        </accessibleObject>
+        <column insertable="true" name="street" nullable="true" updatable="true" unique="true"/>
+      </basic>
+      <oneToMany access="FIELD" name="contacts" orphanRemoval="false">
+        <accessibleObject xsi:type="eorm:EFeatureObject" name="contacts">
+          <feature xsi:type="ecore:EReference" href="https://civitas.org/glt/1.0.0#//Building/contacts"/>
+        </accessibleObject>
+        <cascade>
+          <cascadeAll/>
+        </cascade>
+        <joinTable name="BUILDING__CONTACT">
+          <joinColumn name="contacts" referencedColumnName="BUILDING.id"/>
+          <foreignKey constraintMode="CONSTRAINT" foreignKeyDefinition="contacts" name="contacts"/>
+          <inverseJoinColumn name="contacts" referencedColumnName="CONTACT.PK_CONTACT"/>
+          <inverseForeignKey constraintMode="CONSTRAINT" foreignKeyDefinition="contacts" name="contacts"/>
+        </joinTable>
+      </oneToMany>
+    </attributes>
+    <class xsi:type="ecore:EClass" href="https://civitas.org/glt/1.0.0#//Building"/>
+  </entity>
+  <entity access="FIELD" name="Contact">
+    <accessibleObject xsi:type="eorm:EClassObject" name="org.civitas.glt.model.glt.Contact">
+      <eclass href="https://civitas.org/glt/1.0.0#//Contact"/>
+    </accessibleObject>
+    <table name="CONTACT"/>
+    <attributes>
+      <id name="pk_Contact">
+        <column insertable="true" name="PK_CONTACT" nullable="false" updatable="true" unique="true"/>
+      </id>
+      <basic access="FIELD" name="building_id" fetch="EAGER" optional="false">
+        <accessibleObject xsi:type="eorm:EFeatureObject" name="buildingId">
+          <feature xsi:type="ecore:EAttribute" href="https://civitas.org/glt/1.0.0#//Contact/buildingId"/>
+        </accessibleObject>
+        <column insertable="true" name="building_id" nullable="false" updatable="true" unique="true"/>
+      </basic>
+      <basic access="FIELD" name="first_name" fetch="EAGER" optional="true">
+        <accessibleObject xsi:type="eorm:EFeatureObject" name="firstName">
+          <feature xsi:type="ecore:EAttribute" href="https://civitas.org/glt/1.0.0#//Contact/firstName"/>
+        </accessibleObject>
+        <column insertable="true" name="first_name" nullable="true" updatable="true" unique="true"/>
+      </basic>
+      <basic access="FIELD" name="last_name" fetch="EAGER" optional="true">
+        <accessibleObject xsi:type="eorm:EFeatureObject" name="lastName">
+          <feature xsi:type="ecore:EAttribute" href="https://civitas.org/glt/1.0.0#//Contact/lastName"/>
+        </accessibleObject>
+        <column insertable="true" name="last_name" nullable="true" updatable="true" unique="true"/>
+      </basic>
+      <basic access="FIELD" name="role" fetch="EAGER" optional="true">
+        <accessibleObject xsi:type="eorm:EFeatureObject" name="role">
+          <feature xsi:type="ecore:EAttribute" href="https://civitas.org/glt/1.0.0#//Contact/role"/>
+        </accessibleObject>
+        <column insertable="true" name="role" nullable="true" updatable="true" unique="true"/>
+      </basic>
+      <basic access="FIELD" name="email" fetch="EAGER" optional="true">
+        <accessibleObject xsi:type="eorm:EFeatureObject" name="email">
+          <feature xsi:type="ecore:EAttribute" href="https://civitas.org/glt/1.0.0#//Contact/email"/>
+        </accessibleObject>
+        <column insertable="true" name="email" nullable="true" updatable="true" unique="true"/>
+      </basic>
+      <basic access="FIELD" name="phonenumber" fetch="EAGER" optional="true">
+        <accessibleObject xsi:type="eorm:EFeatureObject" name="phoneNumber">
+          <feature xsi:type="ecore:EAttribute" href="https://civitas.org/glt/1.0.0#//Contact/phoneNumber"/>
+        </accessibleObject>
+        <column insertable="true" name="phonenumber" nullable="true" updatable="true" unique="true"/>
+      </basic>
+    </attributes>
+    <class xsi:type="ecore:EClass" href="https://civitas.org/glt/1.0.0#//Contact"/>
+  </entity>
+</eorm:EntityMappings>

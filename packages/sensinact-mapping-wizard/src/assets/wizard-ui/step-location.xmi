@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uimodel:UIModel
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmi:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:uimodel="http://uimodel/1.0"
+    name="LocationStep">
+
+  <components xsi:type="uimodel:FormView" name="LocationForm">
+    <targetClasses href="http://fennec/sensinact/mapping-wizard/1.0#//LocationChoice"/>
+
+    <fields xsi:type="uimodel:SelectWidget"
+        name="mode"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//LocationChoice/mode"
+        label="Wo befindet sich der Sensor?"/>
+
+    <fields xsi:type="uimodel:NumberWidget"
+        name="latitude"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//LocationChoice/latitude"
+        label="Breitengrad" step="0.000001">
+      <visibilityCondition language="JS" body="self.mode === 'STATIC'"/>
+    </fields>
+    <fields xsi:type="uimodel:NumberWidget"
+        name="longitude"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//LocationChoice/longitude"
+        label="Längengrad" step="0.000001">
+      <visibilityCondition language="JS" body="self.mode === 'STATIC'"/>
+    </fields>
+    <fields xsi:type="uimodel:NumberWidget"
+        name="elevation"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//LocationChoice/elevation"
+        label="Höhe (m, optional)">
+      <visibilityCondition language="JS" body="self.mode === 'STATIC'"/>
+    </fields>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="latitudePath"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//LocationChoice/latitudePath"
+        label="Feld mit dem Breitengrad">
+      <visibilityCondition language="JS" body="self.mode === 'FROM_DATA'"/>
+    </fields>
+    <fields xsi:type="uimodel:InputWidget"
+        name="longitudePath"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//LocationChoice/longitudePath"
+        label="Feld mit dem Längengrad">
+      <visibilityCondition language="JS" body="self.mode === 'FROM_DATA'"/>
+    </fields>
+    <fields xsi:type="uimodel:InputWidget"
+        name="elevationPath"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//LocationChoice/elevationPath"
+        label="Feld mit der Höhe (optional)">
+      <visibilityCondition language="JS" body="self.mode === 'FROM_DATA'"/>
+    </fields>
+  </components>
+</uimodel:UIModel>

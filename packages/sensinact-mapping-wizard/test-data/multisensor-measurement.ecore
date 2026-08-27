@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Nachrichtentyp 1: periodischer Mess-Uplink des Multisensors.
+     Erbt die Geräte-Identifikation aus multisensor-base.ecore (nsURI-Referenz,
+     wird beim Atlas-Bezug automatisch nachgeladen). -->
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="multisensormeasurement" nsURI="https://example.org/demo/multisensor/measurement"
+    nsPrefix="msmeas">
+
+  <eClassifiers xsi:type="ecore:EClass" name="MeasurementUplink"
+      eSuperTypes="https://example.org/demo/multisensor/base#//BaseUplink">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="readings" eType="#//Readings"
+        containment="true"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="Readings">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="temperature"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Umgebungstemperatur"/>
+      </eAnnotations>
+      <eAnnotations source="sensinact.mapping">
+        <details key="sensinact.mapping.unit" value="°C"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="humidity"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Relative Luftfeuchte"/>
+      </eAnnotations>
+      <eAnnotations source="sensinact.mapping">
+        <details key="sensinact.mapping.unit" value="%"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="co2"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt">
+      <eAnnotations source="sensinact.mapping">
+        <details key="sensinact.mapping.unit" value="ppm"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+</ecore:EPackage>

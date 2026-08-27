@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uimodel:UIModel
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmi:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:uimodel="http://uimodel/1.0"
+    name="IdentificationStep">
+
+  <components xsi:type="uimodel:FormView" name="IdentificationForm">
+    <targetClasses href="http://fennec/sensinact/mapping-wizard/1.0#//SensorMappingSetup"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="mappingId"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//SensorMappingSetup/mappingId"
+        label="Technischer Name des Mappings"
+        placeholder="z. B. em310udl-fuellstand"
+        required="true">
+      <validations language="JS"
+          body="self.mappingId != null &amp;&amp; self.mappingId.length > 0"
+          defaultMessage="Bitte geben Sie einen technischen Namen an."
+          severity="ERROR"/>
+    </fields>
+
+    <!-- Name des Sensors: entweder aus einem Feld ODER fester Text -->
+    <fields xsi:type="uimodel:SelectWidget"
+        name="nameSource"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//SensorMappingSetup/nameSource"
+        label="Woher kommt der Name des Sensors?"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="namePath"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//SensorMappingSetup/namePath"
+        label="Feld mit dem Namen des Sensors">
+      <visibilityCondition language="JS" body="self.nameSource !== 'STATIC'"/>
+    </fields>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="nameFallback"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//SensorMappingSetup/nameFallback"
+        label="Fester Name des Sensors"
+        placeholder="z. B. Füllstandssensor Halle 3">
+      <visibilityCondition language="JS" body="self.nameSource === 'STATIC'"/>
+    </fields>
+
+    <!-- Anzeigename (optional): keiner, aus einem Feld oder fester Text -->
+    <fields xsi:type="uimodel:SelectWidget"
+        name="friendlyNameSource"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//SensorMappingSetup/friendlyNameSource"
+        label="Anzeigename im Zwilling (optional)"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="friendlyNamePath"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//SensorMappingSetup/friendlyNamePath"
+        label="Feld mit dem Anzeigenamen">
+      <visibilityCondition language="JS" body="self.friendlyNameSource === 'FROM_FIELD'"/>
+    </fields>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="friendlyName"
+        feature="http://fennec/sensinact/mapping-wizard/1.0#//SensorMappingSetup/friendlyName"
+        label="Fester Anzeigename"
+        placeholder="z. B. Halle 3 – Nordseite">
+      <visibilityCondition language="JS" body="self.friendlyNameSource === 'STATIC'"/>
+    </fields>
+  </components>
+</uimodel:UIModel>
