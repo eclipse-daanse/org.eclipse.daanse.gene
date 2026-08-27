@@ -36,6 +36,11 @@ export async function activate(context: ModuleContext): Promise<void> {
   const sharedFS = useSharedFileSystem()
   context.services.register('gene.filesystem', sharedFS)
 
+  // Contribution point: plugins can offer actions on workspace files
+  // (e.g. "open this mapping XMI in the mapping wizard").
+  const { fileActionRegistry } = await import('./fileActions')
+  context.services.register('gene.file.actions', fileActionRegistry)
+
   // Note: restoreLocalSources() requires a user gesture for requestPermission().
   // It is called from the Recent Workspaces list on click, not automatically.
 
@@ -146,6 +151,7 @@ export async function deactivate(context: ModuleContext): Promise<void> {
   }
 
   context.services.unregister('gene.filesystem')
+  context.services.unregister('gene.file.actions')
   context.services.unregister('ui.file-explorer.components')
   context.services.unregister('ui.file-explorer.composables')
 

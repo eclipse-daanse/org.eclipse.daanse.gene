@@ -29,6 +29,24 @@ export interface ModelAtlasClientOptions {
   token?: string
 }
 
+/**
+ * Body eines StageTransitionRequest als XMI.
+ *
+ * Der Atlas erwartet an `actions/transition` ein EMF-Modell, kein JSON — mit
+ * JSON antwortet er `500 [StageTransitionRequest] Error de-serializing incoming
+ * data`. Ebenso stolpert er über die `xmi:version`/`xmlns:xmi`-Deklaration, die
+ * `Resource.saveToString()` schreibt; deshalb hier der minimale Payload.
+ */
+const REST_NS_URI = 'http://eclipse.org/fennec/model/atlas/rest/1.0'
+
+function transitionRequestXmi(objectId: string, targetStage: string): string {
+  const esc = (value: string) =>
+    value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<rest:StageTransitionRequest xmlns:rest="${REST_NS_URI}"` +
+    ` objectId="${esc(objectId)}" targetStage="${esc(targetStage)}"/>`
+}
+
 export class ModelAtlasClient {
   private baseUrl: string
   private token?: string
@@ -115,10 +133,14 @@ export class ModelAtlasClient {
   /**
    * Ein Schema veroeffentlichen.
    *
-   * `options.registryName` waehlt die Ziel-Registry. Ohne Angabe wird der
-   * Kurzweg `/schema` benutzt — den kennt nicht jeder Server: heisst die
-   * Schema-Registry etwa `atlas-schema-registry`, antwortet er dort mit 400.
-   * Die Registry kommt aus dem Scope (Registry.type === 'SCHEMA').
+   * Schemas nimmt der Server unter dem Kurzweg `/{scope}/schema/stages/{stage}`
+   * entgegen; der Objekt-Pfad `/{scope}/registries/{registry}/stages/{stage}`
+   * erlaubt dort **kein POST** (HTTP 405, `Allow: HEAD,DELETE,GET,OPTIONS`) —
+   * er ist den Objekt-Registries vorbehalten.
+   *
+   * `options.registryName` bleibt nutzbar für Server, deren Schema-Registry
+   * anders heisst: Dann wird der Registry-Pfad zuerst versucht und bei
+   * 405/404/400 auf den Kurzweg zurueckgefallen.
    */
   async uploadSchema(
     scopeName: string,
@@ -133,12 +155,18 @@ export class ModelAtlasClient {
     if (options?.overwrite) params.set('overwrite', 'true')
 
     const qs = params.toString()
-    const ziel = options?.registryName
-      ? `registries/${enc(options.registryName)}`
-      : 'schema'
-    const path = `/${enc(scopeName)}/${ziel}/stages/${enc(stage)}${qs ? '?' + qs : ''}`
+    const suffix = `/stages/${enc(stage)}${qs ? '?' + qs : ''}`
+    const shortPath = `/${enc(scopeName)}/schema${suffix}`
+    const registry = options?.registryName
+    const custom = registry && registry !== 'schema'
+      ? `/${enc(scopeName)}/registries/${enc(registry)}${suffix}`
+      : null
 
-    const resp = await this.post(path, content)
+    let resp = await this.post(custom ?? shortPath, content)
+    // Der Registry-Pfad kennt POST fuer Schemas nicht ueberall — dann Kurzweg.
+    if (custom && [400, 404, 405].includes(resp.status)) {
+      resp = await this.post(shortPath, content)
+    }
     if (resp.status === 201 || resp.status === 200) return await resp.text()
     const errorText = await resp.text()
     throw new Error(`Upload schema failed (${resp.status}): ${errorText}`)
@@ -178,12 +206,11 @@ export class ModelAtlasClient {
     objectId: string,
     targetStage: string
   ): Promise<string | null> {
-    const body = JSON.stringify({ objectId, targetStage })
     const resp = await this.request(
       'POST',
       `/${enc(scopeName)}/schema/stages/${enc(fromStage)}/actions/transition`,
-      body,
-      { contentType: 'application/json' }
+      transitionRequestXmi(objectId, targetStage),
+      { contentType: ATLAS_MEDIA_TYPES.ECORE_XMI }
     )
     if (resp.ok) {
       if (resp.status === 204) return ''
@@ -252,7 +279,13 @@ export class ModelAtlasClient {
     const qs = params.toString()
     const path = `/${enc(scopeName)}/registries/${enc(registryName)}/stages/${enc(stage)}/${enc(objectId)}${qs ? '?' + qs : ''}`
 
-    const resp = await this.post(path, content)
+    // Objekte (z. B. ProviderMappings) nimmt der Server nur als
+    // `application/xmi` an; mit `application/xml` antwortet er
+    // `500 [org.eclipse.emf.ecore.EObject] Error de-serializing incoming data`.
+    // Für Schemas gilt umgekehrt `application/xml` (siehe uploadSchema).
+    const resp = await this.request('POST', path, content, {
+      contentType: ATLAS_MEDIA_TYPES.XMI,
+    })
     if (resp.status === 201 || resp.status === 200) return await resp.text()
     const errorText = await resp.text()
     throw new Error(`Upload object failed (${resp.status}): ${errorText}`)
@@ -271,7 +304,9 @@ export class ModelAtlasClient {
     if (options?.version) params.set('version', options.version || '1.0.0')
 
     const path = `/${enc(scopeName)}/registries/${enc(registryName)}/stages/${enc(stage)}/content?${params.toString()}`
-    const resp = await this.put(path, content)
+    const resp = await this.request('PUT', path, content, {
+      contentType: ATLAS_MEDIA_TYPES.XMI,
+    })
     if (resp.status === 200) return await resp.text()
     const errorText = await resp.text()
     throw new Error(`Update object failed (${resp.status}): ${errorText}`)
@@ -299,12 +334,11 @@ export class ModelAtlasClient {
     objectId: string,
     targetStage: string
   ): Promise<string | null> {
-    const body = JSON.stringify({ objectId, targetStage })
     const resp = await this.request(
       'POST',
       `/${enc(scopeName)}/registries/${enc(registryName)}/stages/${enc(fromStage)}/actions/transition`,
-      body,
-      { contentType: 'application/json' }
+      transitionRequestXmi(objectId, targetStage),
+      { contentType: ATLAS_MEDIA_TYPES.ECORE_XMI }
     )
     if (resp.ok) {
       if (resp.status === 204) return ''

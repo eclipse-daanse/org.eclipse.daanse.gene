@@ -44,13 +44,21 @@ export async function activate(context: ModuleContext): Promise<void> {
   const uploadService = {
     uploadSchema: sharedBrowser.uploadSchema,
     getConnections: () => sharedBrowser.connections.value,
-    getSchemaStages: sharedBrowser.getSchemaStages
+    getSchemaStages: sharedBrowser.getSchemaStages,
+    // Ohne diese Durchreichung blieb die Registry-Auswahl im Upload-Dialog
+    // leer, und der Upload lief immer auf die erstbeste Schema-Registry.
+    getSchemaRegistries: sharedBrowser.getSchemaRegistries
   }
   context.services.register('ui.atlas-browser.upload', uploadService)
   context.services.register('gene.atlas.upload', uploadService)
 
   // Register the browser instance directly so other plugins can use it
   context.services.register('gene.atlas.browser', sharedBrowser)
+
+  // Contribution point: plugins can offer actions on Atlas objects
+  // (e.g. "open this ProviderMapping in the mapping wizard").
+  const { objectActionRegistry } = await import('./objectActions')
+  context.services.register('gene.atlas.objectActions', objectActionRegistry)
 
   // Register cascade resolver service
   const { createAtlasURIConverter } = await import('./composables/atlasURIConverter')
@@ -255,11 +263,18 @@ export async function activate(context: ModuleContext): Promise<void> {
 
   // Expose opener function globally
   const openAtlasBrowser = () => {
+    // The switch has to go through the manager from `ui.registry.perspectives`.
+    // `ui.perspectives.usePerspective()` hands out a fresh composable instance
+    // whose switchTo does not change the active UI.
+    const manager = context.services.get<any>('ui.registry.perspectives')
+    if (manager?.switchTo) {
+      void manager.switchTo('model-atlas')
+      context.log.info('Switched to Model Atlas perspective')
+      return
+    }
     const perspectiveService = context.services.get<any>('ui.perspectives')
     if (perspectiveService?.usePerspective) {
-      const perspective = perspectiveService.usePerspective()
-      perspective.switchTo('model-atlas')
-      context.log.info('Switched to Model Atlas perspective')
+      perspectiveService.usePerspective().switchTo('model-atlas')
     }
   }
 
@@ -496,6 +511,7 @@ export async function deactivate(context: ModuleContext): Promise<void> {
 
   context.services.unregister('ui.atlas-browser.open')
   context.services.unregister('gene.atlas.upload')
+  context.services.unregister('gene.atlas.objectActions')
 
   context.services.unregister('ui.atlas-browser.open')
   context.services.unregister('ui.atlas-browser.upload')

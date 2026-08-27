@@ -18,6 +18,8 @@ import { Dialog } from 'tsm:primevue'
 import { InputText } from 'tsm:primevue'
 import { Message } from 'tsm:primevue'
 import { useSharedFileSystem } from '../composables/useFileSystem'
+import { fileActionRegistry } from '../fileActions'
+import type { FileAction } from '../fileActions'
 import { addRecentWorkspace } from '../composables/useRecentWorkspaces'
 import type { FileEntry, FileTreeNode, FileSource } from '../types'
 import { isWorkspaceFile } from '../types'
@@ -164,6 +166,18 @@ const contextMenuItems = computed(() => {
       })
       items.push({ separator: true })
     }
+    // Von Plugins beigesteuerte Aktionen (siehe fileActions.ts)
+    for (const action of fileActionRegistry.matching(entry)) {
+      items.push({
+        label: action.label,
+        icon: action.icon || 'pi pi-external-link',
+        command: () => runFileAction(action, entry)
+      })
+    }
+    if (fileActionRegistry.matching(entry).length > 0) {
+      items.push({ separator: true })
+    }
+
     if (isQvtrFile(entry)) {
       items.push({
         label: 'Load Transformation',
@@ -551,6 +565,16 @@ async function handleEditMetamodel() {
 }
 
 // Handle publishing .ecore to Atlas
+/** Plugin-Aktion ausführen — der Explorer liefert den Dateiinhalt. */
+async function runFileAction(action: FileAction, entry: FileEntry) {
+  try {
+    const content = await fileSystem.readTextFile(entry)
+    await action.run({ entry, content: content ?? '' })
+  } catch (e: any) {
+    console.error('[FileExplorer] File action failed:', action.id, e)
+  }
+}
+
 async function handlePublishToAtlas() {
   if (!contextMenuNode.value || contextMenuNode.value.type !== 'file') return
 
