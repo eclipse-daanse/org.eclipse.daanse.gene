@@ -181,16 +181,19 @@ function addAnotherType(): void {
   emit('add-type');
 }
 
-const error = ref('');
-const result = computed<ArtifactResult | undefined>(() => {
-  error.value = '';
+// Ergebnis und Fehlermeldung entstehen in einem Rechenschritt und werden
+// daraus abgeleitet. Frueher schrieb dieses computed `error.value` selbst —
+// ein Seiteneffekt waehrend der Berechnung, den Vue nicht garantiert
+// konsistent einordnet (vue/no-side-effects-in-computed-properties).
+const berechnet = computed<{ wert: ArtifactResult | undefined; fehler: string }>(() => {
   try {
-    return buildArtifacts();
+    return { wert: buildArtifacts(), fehler: '' };
   } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e);
-    return undefined;
+    return { wert: undefined, fehler: e instanceof Error ? e.message : String(e) };
   }
 });
+const result = computed<ArtifactResult | undefined>(() => berechnet.value.wert);
+const error = computed<string>(() => berechnet.value.fehler);
 
 const publishable = computed(() => canPublish());
 
