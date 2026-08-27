@@ -278,9 +278,7 @@ function handleContextMenu(event: MouseEvent, node: TreeNode) {
       icon: 'pi pi-pencil',
       command: () => openInModeler(data)
     })
-    if (!isStageWritable(node)) {
-      // Final stage — no delete
-    } else {
+    if (isStageWritable(node)) {
       items.push({ separator: true })
       items.push({
         label: 'Delete from Atlas',
@@ -348,13 +346,21 @@ async function addToWorkspace(data: AtlasTreeNodeData, isSchema: boolean) {
 function isStageWritable(node: TreeNode): boolean {
   const data = node.data as AtlasTreeNodeData
   if (!data) return false
-  // Schema/object nodes: check parent stage node's icon (pi-lock = final)
+  // Schema/object nodes: writable-Flag der Stage aus den Scope-Daten des Servers
   if (data.type === 'schema' || data.type === 'object') {
     // Find stage info from registry info
     const info = browser.getRegistryInfo(data.connectionId, data.registryName || (data.isSchemaRegistry ? 'schema' : ''))
     if (info) {
       const stage = info.stages.find((s: any) => s.name === data.stageName)
-      if (stage) return !stage.final
+      // `writable` und `final` sind zweierlei: `final` heisst nur, dass von
+      // hier keine Transition mehr weiterfuehrt — geschrieben und geloescht
+      // werden darf trotzdem. Der Fennec-Atlas meldet fuer `release` beides
+      // (writable=true, final=true) und beantwortet ein DELETE dort mit 200.
+      // Zuvor stand hier `!stage.final`, womit gene das Loeschen in genau
+      // diesen Stages ausblendete, obwohl der Server es erlaubt.
+      // Der Server liefert die Flags als Strings ('true'/'false'), nicht als
+      // Booleans — ein blosses `!== false` wuerde 'false' als wahr lesen.
+      if (stage) return stage.writable !== false && String(stage.writable) !== 'false'
     }
     return true // default: writable
   }
