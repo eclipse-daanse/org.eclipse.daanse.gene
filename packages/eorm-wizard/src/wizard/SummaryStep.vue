@@ -105,21 +105,23 @@ const setupValue = computed(() => {
   return setup.value;
 });
 
-const error = ref('');
-const result = computed<EormResult | undefined>(() => {
+// Ergebnis und Fehlermeldung entstehen in einem Rechenschritt und werden
+// daraus abgeleitet. Frueher schrieb dieses computed `error.value` selbst —
+// ein Seiteneffekt waehrend der Berechnung, den Vue nicht garantiert
+// konsistent einordnet (vue/no-side-effects-in-computed-properties).
+const berechnet = computed<{ wert: EormResult | undefined; fehler: string }>(() => {
   void version.value;
-  error.value = '';
   if (!setup.value) {
-    error.value = 'Es wurde noch kein Modell geladen.';
-    return undefined;
+    return { wert: undefined, fehler: 'Es wurde noch kein Modell geladen.' };
   }
   try {
-    return buildEormXmi(setup.value);
+    return { wert: buildEormXmi(setup.value), fehler: '' };
   } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e);
-    return undefined;
+    return { wert: undefined, fehler: e instanceof Error ? e.message : String(e) };
   }
 });
+const result = computed<EormResult | undefined>(() => berechnet.value.wert);
+const error = computed<string>(() => berechnet.value.fehler);
 
 const tableSummary = computed(() => {
   const entities = (setupValue.value?.entities ?? []).filter((e) => e.selected);
