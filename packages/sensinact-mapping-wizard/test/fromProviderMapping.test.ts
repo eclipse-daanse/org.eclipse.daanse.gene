@@ -4,7 +4,7 @@
  * handgeschriebenen event.atlas-Beispiels (Datei-hrefs).
  */
 import { describe, it, expect, beforeAll } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import {
@@ -34,8 +34,13 @@ import {
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const FIXTURES = path.join(__dirname, 'fixtures');
+// Handgeschriebene Beispiele aus event.atlas. Sie liegen ausserhalb dieses
+// Repos, weshalb die Tests, die sie lesen, uebersprungen werden, wo der Pfad
+// nicht existiert (CI, fremde Arbeitsplatzrechner). Wo er existiert, laufen
+// sie unveraendert.
 const EXAMPLES =
   '/mnt/be46e9e8-fa36-463c-8885-99892ace2ab9/dim_xdp/event.atlas/org.eclipse.fennec.event.atlas.mapping/model/examples/battery';
+const MIT_BEISPIELEN = existsSync(EXAMPLES);
 const LORAWAN_NS = 'https://eclipse.org/fennec/lorawan';
 const EM310_NS = 'http://www.example.org/lorawan/specific/em310udl';
 
@@ -167,7 +172,7 @@ function fullSetup() {
 }
 
 describe('analyzeMappingXmi', () => {
-  it('trennt nsURIs, .ecore-Dateien und Nachbar-Artefakte', () => {
+  it.skipIf(!MIT_BEISPIELEN)('trennt nsURIs, .ecore-Dateien und Nachbar-Artefakte', () => {
     const raw = readFileSync(path.join(EXAMPLES, 'em310udl-battery-mapping.xmi'), 'utf-8');
     const analysis = analyzeMappingXmi(raw);
     expect(analysis.rootType).toBe('ProviderMapping');
@@ -188,7 +193,7 @@ describe('analyzeMappingXmi', () => {
 });
 
 describe('rewriteEcoreFileHrefs', () => {
-  it('bildet Dateipfad-hrefs über die registrierten Packages auf nsURIs ab', () => {
+  it.skipIf(!MIT_BEISPIELEN)('bildet Dateipfad-hrefs über die registrierten Packages auf nsURIs ab', () => {
     const raw = readFileSync(path.join(EXAMPLES, 'em310udl-battery-mapping.xmi'), 'utf-8');
     const result = rewriteEcoreFileHrefs(raw, [lorawanPkg, em310Pkg]);
     expect(result.rewritten['../../lorawan-uplink.ecore']).toBe(LORAWAN_NS);
@@ -258,7 +263,7 @@ describe('restoreSetupFromMappingXmi', () => {
     expect(new Set(labels).size).toBe(labels.length);
   });
 
-  it('öffnet das handgeschriebene event.atlas-Beispiel (Datei-hrefs, statischer Name)', () => {
+  it.skipIf(!MIT_BEISPIELEN)('öffnet das handgeschriebene event.atlas-Beispiel (Datei-hrefs, statischer Name)', () => {
     const raw = readFileSync(path.join(EXAMPLES, 'em310udl-battery-mapping.xmi'), 'utf-8');
     const { setup, profile, warnings } = restoreSetupFromMappingXmi(raw, {
       packages: [em310Pkg, lorawanPkg],
@@ -316,7 +321,7 @@ describe('restoreSetupFromMappingXmi', () => {
     expect(buildProviderMappingXmi(restored.setup).mappingXmi).toBe(original.mappingXmi);
   });
 
-  it('lehnt Objekte ab, die keine Sensor-Mappings sind', () => {
+  it.skipIf(!MIT_BEISPIELEN)('lehnt Objekte ab, die keine Sensor-Mappings sind', () => {
     const profile = readFileSync(path.join(EXAMPLES, 'battery-sensor-profile.xmi'), 'utf-8');
     expect(() => restoreSetupFromMappingXmi(profile)).toThrow(/kein Sensor-Mapping/);
   });

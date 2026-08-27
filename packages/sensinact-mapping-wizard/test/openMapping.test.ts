@@ -3,7 +3,14 @@
  * öffnen, Herkunft im Kontext festhalten, fehlende Modelle melden.
  */
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+
+// Handgeschriebenes Beispiel aus event.atlas, ausserhalb dieses Repos. Der
+// zugehoerige Test wird uebersprungen, wo der Pfad nicht existiert (CI,
+// fremde Arbeitsplatzrechner).
+const PROFIL_BEISPIEL =
+  '/mnt/be46e9e8-fa36-463c-8885-99892ace2ab9/dim_xdp/event.atlas/org.eclipse.fennec.event.atlas.mapping/model/examples/battery/battery-sensor-profile.xmi';
+const MIT_BEISPIEL = existsSync(PROFIL_BEISPIEL);
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import {
@@ -104,11 +111,8 @@ describe('openMappingContent', () => {
     ).rejects.toThrow(/Sensorklasse/);
   });
 
-  it('lehnt Dateien ab, die keine Sensor-Mappings sind', async () => {
-    const profile = readFileSync(
-      '/mnt/be46e9e8-fa36-463c-8885-99892ace2ab9/dim_xdp/event.atlas/org.eclipse.fennec.event.atlas.mapping/model/examples/battery/battery-sensor-profile.xmi',
-      'utf-8',
-    );
+  it.skipIf(!MIT_BEISPIEL)('lehnt Dateien ab, die keine Sensor-Mappings sind', async () => {
+    const profile = readFileSync(PROFIL_BEISPIEL, 'utf-8');
     await expect(
       openMappingContent({
         content: profile,
