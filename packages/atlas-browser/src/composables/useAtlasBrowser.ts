@@ -30,11 +30,56 @@ let connectionCounter = 0
  * Decode a Base64 / Base64-URL encoded objectId to the plain nsUri.
  * Falls back to the original string if decoding fails.
  */
-function safeAtob(encoded: string): string {
+/**
+ * Decode a Base64-encoded object id — but only when the result actually looks
+ * like one.
+ *
+ * Schema object ids differ per server: some encode the nsURI in Base64, the
+ * Fennec Atlas hands out UUIDs. A UUID survives the URL-safe replacement
+ * ('-' → '+') as valid Base64 and decodes to binary garbage instead of
+ * throwing, which then travelled into transition/delete/content requests.
+ * So decode, and keep the result only if it reads as a URI.
+ */
+/**
+ * Der Atlas legt die nsURI eines Schemas als Property `nsUri` ab — allerdings
+ * Java-serialisiert und hexkodiert (`ACED0005 74 <len:2> <UTF-8>`). Ohne
+ * Dekodierung fehlt der Wert, den die Schema-Endpunkte brauchen.
+ */
+function decodeJavaSerializedString(hex: string): string | null {
+  if (!/^[0-9A-Fa-f]+$/.test(hex) || hex.length < 16) return null
+  const bytes = new Uint8Array(hex.length / 2)
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.substr(i * 2, 2), 16)
+  }
+  // AC ED 00 05 = Stream-Magic + Version, 74 = TC_STRING
+  if (bytes[0] !== 0xac || bytes[1] !== 0xed || bytes[4] !== 0x74) return null
+  const length = (bytes[5] << 8) | bytes[6]
+  const value = new TextDecoder().decode(bytes.subarray(7, 7 + length))
+  return value || null
+}
+
+/**
+ * nsURI eines Schemas aus seinen Metadaten. Reihenfolge: Property `nsUri`
+ * (Java-serialisiert oder Klartext), sonst die Base64-objectId älterer Server.
+ */
+export function schemaNsUri(metadata: ObjectMetadata | null | undefined, objectId?: string): string {
+  const raw = metadata?.properties?.find(p => p.key === 'nsUri')?.value
+  if (typeof raw === 'string' && raw) {
+    const decoded = decodeJavaSerializedString(raw)
+    if (decoded) return decoded
+    if (raw.includes(':')) return raw
+  }
+  return safeAtob(objectId ?? metadata?.objectId ?? '')
+}
+
+export function safeAtob(encoded: string): string {
+  if (!encoded) return encoded
   try {
     // Restore standard Base64 from URL-safe variant
     const b64 = encoded.replace(/-/g, '+').replace(/_/g, '/')
-    return atob(b64)
+    const decoded = atob(b64)
+    if (/^[\x20-\x7E]+$/.test(decoded) && decoded.includes(':')) return decoded
+    return encoded
   } catch {
     // Not valid Base64 — return as-is
     return encoded
@@ -391,7 +436,9 @@ function createAtlasBrowser() {
       let content: string | null = null
 
       // Only Base64-decode for schema registry (nsURI-based IDs)
-      const resolvedId = data.isSchemaRegistry ? safeAtob(data.objectId) : data.objectId
+      const resolvedId = data.isSchemaRegistry
+        ? schemaNsUri(data.metadata, data.objectId)
+        : data.objectId
       if (data.isSchemaRegistry) {
         console.log('[useAtlasBrowser] getSchemaContent:', data.scopeName, data.stageName, resolvedId, '(raw:', data.objectId, ')')
         content = await client.getSchemaContent(
@@ -435,8 +482,12 @@ function createAtlasBrowser() {
     try {
       let content: string | null = null
 
-      // Only Base64-decode for schema registry (nsURI-based IDs)
-      const resolvedId = nodeData.isSchemaRegistry ? safeAtob(nodeData.objectId) : nodeData.objectId
+      // Schemas werden per nsURI adressiert, Objekte per objectId. Die
+      // objectId ist bei Schemas serverabhängig (UUID oder Base64 der nsURI) —
+      // mit ihr antwortet der Content-Endpunkt mit 204 und leerem Body.
+      const resolvedId = nodeData.isSchemaRegistry
+        ? schemaNsUri(nodeData.metadata, nodeData.objectId)
+        : nodeData.objectId
       if (nodeData.isSchemaRegistry) {
         console.log('[useAtlasBrowser] getSchemaContent:', nodeData.scopeName, nodeData.stageName, resolvedId, '(raw:', nodeData.objectId, ')')
         content = await client.getSchemaContent(
@@ -671,8 +722,10 @@ function createAtlasBrowser() {
 
     try {
       const isSchema = registryName === 'schema'
-      // Only Base64-decode for schema registry (nsURI-based IDs)
-      const resolvedId = isSchema ? safeAtob(objectId) : objectId
+      // Anders als beim Content-Endpunkt erwartet `actions/transition` die
+      // objectId — mit der nsURI antwortet der Server nicht (gemessen am
+      // Fennec-Atlas: Transition mit UUID → 200).
+      const resolvedId = objectId
 
       let resultXml: string | null
       if (isSchema) {

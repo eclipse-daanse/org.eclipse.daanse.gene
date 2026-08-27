@@ -88,6 +88,18 @@ const atlasUploadContent = ref('')
 const atlasUploadFilename = ref('')
 
 function openAtlasUploadDialog(content: string, filename: string) {
+  // Die Dialog-Komponente kommt aus dem Atlas-Browser-Plugin. Sie wird sonst
+  // nur vom Service-Polling eingesammelt, das stoppt, sobald die Kern-Module
+  // stehen — lädt atlas-browser danach, blieb der Dialog für immer leer und
+  // „Publish to Atlas" wirkungslos. Deshalb hier nachziehen.
+  if (!atlasBrowserComponents.value) {
+    const abc = tsm.getService<any>('ui.atlas-browser.components')
+    if (abc) atlasBrowserComponents.value = abc
+  }
+  if (!atlasBrowserComponents.value?.AtlasUploadDialog) {
+    console.warn('[App] Atlas Browser plugin not loaded — cannot open upload dialog')
+    return
+  }
   atlasUploadContent.value = content
   atlasUploadFilename.value = filename
   showAtlasUploadDialog.value = true

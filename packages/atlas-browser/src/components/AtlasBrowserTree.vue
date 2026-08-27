@@ -8,7 +8,7 @@
 
 import { ref, computed, inject, onMounted } from 'tsm:vue'
 import { Tree, Button, Dialog, InputText, ContextMenu, ProgressSpinner } from 'tsm:primevue'
-import { useSharedAtlasBrowser } from '../composables/useAtlasBrowser'
+import { useSharedAtlasBrowser, schemaNsUri } from '../composables/useAtlasBrowser'
 import type { AtlasTreeNodeData, ConnectFormData } from '../types'
 
 /** PrimeVue-compatible tree node */
@@ -366,9 +366,11 @@ async function handleDeleteFromAtlas(data: AtlasTreeNodeData) {
   const client = browser.getClient(data.connectionId)
   if (!client) return
 
-  // Decode Base64 object ID (Atlas uses Base64-encoded nsUri/objectId)
-  let decodedId = data.objectId || ''
-  try { decodedId = atob(decodedId) } catch { /* not encoded */ }
+  // Schemas werden per nsURI gelöscht, Objekte per objectId. Die nsURI steht
+  // in den Metadaten (Property `nsUri`), nicht in der objectId.
+  const decodedId = data.isSchemaRegistry
+    ? schemaNsUri(data.metadata, data.objectId)
+    : (data.objectId || '')
 
   try {
     let success = false

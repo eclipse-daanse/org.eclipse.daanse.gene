@@ -9,6 +9,8 @@
 import { ref, computed, inject } from 'tsm:vue'
 import { Button, ProgressSpinner, Tag } from 'tsm:primevue'
 import { useSharedAtlasBrowser } from '../composables/useAtlasBrowser'
+import { objectActionRegistry } from '../objectActions'
+import type { AtlasObjectAction } from '../objectActions'
 
 // TSM for service access
 const tsm = inject<any>('tsm')
@@ -54,6 +56,33 @@ function statusSeverity(status: string | undefined): string {
 
 // Error display
 const actionError = ref<string | null>(null)
+
+// Actions contributed by other plugins for this kind of object
+const pluginActions = computed<AtlasObjectAction[]>(() =>
+  objectActionRegistry.matching(detail.value, nodeData.value)
+)
+const runningAction = ref<string | null>(null)
+
+async function handlePluginAction(action: AtlasObjectAction) {
+  actionError.value = null
+  const data = nodeData.value
+  const meta = detail.value
+  if (!data || !meta) return
+  runningAction.value = action.id
+  try {
+    const result = await browser.getContentForWorkspace(data)
+    if (!result) {
+      actionError.value = 'Failed to load content from Atlas server'
+      return
+    }
+    await action.run({ detail: meta, nodeData: data, content: result.content })
+  } catch (e: any) {
+    console.error('[AtlasDetailPanel] plugin action failed:', action.id, e)
+    actionError.value = e?.message || `Action "${action.label}" failed`
+  } finally {
+    runningAction.value = null
+  }
+}
 
 // Add to workspace
 async function handleAddToWorkspace() {
@@ -215,6 +244,17 @@ async function handleOpenInModeler() {
           severity="secondary"
           size="small"
           @click="handleOpenInModeler"
+        />
+        <!-- Actions contributed by other plugins (see objectActions.ts) -->
+        <Button
+          v-for="action in pluginActions"
+          :key="action.id"
+          :label="action.label"
+          :icon="action.icon || 'pi pi-external-link'"
+          :loading="runningAction === action.id"
+          severity="secondary"
+          size="small"
+          @click="handlePluginAction(action)"
         />
       </div>
 

@@ -243,6 +243,14 @@ export default defineConfig({
       '/rest': {
         target: 'http://localhost:8185',
         changeOrigin: true,
+      },
+      // Fennec Model Atlas. Its REST API sends no CORS headers, so a direct
+      // http://localhost:8086 call from the browser is blocked. Proxying keeps
+      // it same-origin: enter '/atlas/rest' as the AtlasConnection baseUrl.
+      // The prefix maps 1:1 -- the Atlas' own context path is /atlas.
+      '/atlas': {
+        target: 'http://localhost:8086',
+        changeOrigin: true,
       }
     }
   }
