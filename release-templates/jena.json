@@ -7,7 +7,6 @@
   "plugins": [
     "core",
     "core-extension",
-    "eorm-wizard",
     "gene-app",
     "icons-cwm",
     "icons-material",
@@ -18,7 +17,6 @@
     "storage-indexeddb",
     "storage-model",
     "storage-model-atlas",
-    "test-plugin",
     "tsm-devtools",
     "ui-actions",
     "ui-file-explorer",
