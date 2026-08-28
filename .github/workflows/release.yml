@@ -14,6 +14,10 @@ on:
         description: 'Komma-separierte Plugin-IDs (leer = release-plugins.json)'
         required: false
         type: string
+      image_tags:
+        description: 'Zusaetzliche Image-Tags, komma-separiert (z.B. "dim,jena" oder Freitext)'
+        required: false
+        type: string
       create_release:
         description: 'GitHub Release erstellen'
         type: boolean
@@ -59,10 +63,15 @@ jobs:
           echo "plugin_list=$PLUGINS" >> "$GITHUB_OUTPUT"
           echo "Plugins für Release: $PLUGINS"
 
-          # Sanitize release name for Docker tag (lowercase, no spaces)
+          # Release-Namen zu einem Docker-Tag machen. LC_ALL=C ist wesentlich:
+          # ohne es zaehlen Umlaute in der UTF-8-Locale als Buchstaben und
+          # ueberleben die Ersetzung, womit "Demo Maerz" (das eigene Beispiel
+          # dieser Eingabe) ein ungueltiges Tag ergaebe und der Push scheitert.
           RELEASE_NAME="${{ inputs.release_name }}"
           if [ -n "$RELEASE_NAME" ]; then
-            DOCKER_TAG=$(echo "$RELEASE_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g')
+            DOCKER_TAG=$(printf '%s' "$RELEASE_NAME" | LC_ALL=C tr '[:upper:]' '[:lower:]' \
+              | LC_ALL=C sed -e 's/[^a-z0-9._-]/-/g' -e 's/-\{2,\}/-/g' -e 's/^[.-]*//' -e 's/-*$//' \
+              | cut -c1-128)
             echo "release_tag=$DOCKER_TAG" >> "$GITHUB_OUTPUT"
           fi
 
@@ -184,6 +193,28 @@ jobs:
             TAGS="${TAGS},docker.io/eclipsedaanse/gene:${{ steps.meta.outputs.release_tag }}"
             TAGS="${TAGS},ghcr.io/eclipse-daanse/gene:${{ steps.meta.outputs.release_tag }}"
           fi
+
+          # Zusaetzliche Tags aus der Eingabe (z. B. "dim,jena" oder Freitext).
+          # Docker erlaubt nur [A-Za-z0-9._-] und kein fuehrendes '.' oder '-';
+          # alles andere wird zu '-'. Was danach leer bleibt, wird verworfen,
+          # statt ein kaputtes Tag an die Registry zu schicken.
+          EXTRA_INPUT="${{ inputs.image_tags }}"
+          if [ -n "$EXTRA_INPUT" ]; then
+            IFS=',' read -ra EXTRA_TAGS <<< "$EXTRA_INPUT"
+            for raw in "${EXTRA_TAGS[@]}"; do
+              tag=$(printf '%s' "$raw" | LC_ALL=C tr '[:upper:]' '[:lower:]' \
+                | LC_ALL=C sed -e 's/[^a-z0-9._-]/-/g' -e 's/-\{2,\}/-/g' -e 's/^[.-]*//' -e 's/-*$//' \
+                | cut -c1-128)
+              if [ -z "$tag" ]; then
+                echo "Uebersprungen (nach Bereinigung leer): '$raw'"
+                continue
+              fi
+              echo "Zusaetzliches Tag: $tag"
+              TAGS="${TAGS},docker.io/eclipsedaanse/gene:${tag}"
+              TAGS="${TAGS},ghcr.io/eclipse-daanse/gene:${tag}"
+            done
+          fi
+
           echo "tags=$TAGS" >> "$GITHUB_OUTPUT"
           echo "Docker tags: $TAGS"
 

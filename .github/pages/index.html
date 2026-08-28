@@ -45,6 +45,19 @@
     .branch-select select { padding: 0.4rem 0.6rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.875rem; }
     .branch-select label { color: var(--muted); font-size: 0.875rem; }
     .count { color: var(--muted); font-size: 0.8rem; }
+    .section { margin: 1rem 0; }
+    .section-title { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .templates { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .template-btn { padding: 0.35rem 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.85rem; cursor: pointer; }
+    .template-btn:hover { border-color: var(--accent); }
+    .template-btn.active { border-color: var(--accent); color: var(--accent); }
+    .template-btn small { display: block; color: var(--muted); font-size: 0.7rem; }
+    .tags { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
+    .tags label { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.875rem; }
+    .tags input[type=text] { flex: 1; min-width: 12rem; padding: 0.4rem 0.6rem; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.875rem; }
+    .tag-preview { margin-top: 0.5rem; font-size: 0.8rem; color: var(--muted); }
+    .tag-preview code { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 0.1rem 0.35rem; margin-right: 0.3rem; color: var(--text); }
+    .tag-preview .verworfen { color: #e5484d; }
   </style>
 </head>
 <body>
@@ -64,6 +77,21 @@
       <label>
         <input type="checkbox" id="create-release"> Release erstellen
       </label>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Vorlage</div>
+      <div class="templates" id="templates"><span class="count">wird geladen…</span></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Zusätzliche Image-Tags</div>
+      <div class="tags">
+        <label><input type="checkbox" class="tag-preset" value="dim"> dim</label>
+        <label><input type="checkbox" class="tag-preset" value="jena"> jena</label>
+        <input type="text" id="tag-free" placeholder="Freitext, mehrere durch Komma getrennt">
+      </div>
+      <div class="tag-preview" id="tag-preview"></div>
     </div>
 
     <div id="categories"></div>
@@ -91,8 +119,102 @@
     const createReleaseEl = document.getElementById('create-release')
     const selectDefaultsBtn = document.getElementById('select-defaults')
 
+    const templatesEl = document.getElementById('templates')
+    const tagFreeEl = document.getElementById('tag-free')
+    const tagPreviewEl = document.getElementById('tag-preview')
+
     let allPlugins = []
     let defaultPlugins = new Set()
+    let templates = []
+
+    // --- Image-Tags ---
+
+    /**
+     * Bereinigt ein Tag nach denselben Regeln wie release.yml: Docker erlaubt
+     * nur [A-Za-z0-9._-] und kein fuehrendes '.' oder '-'. Wird hier gespiegelt,
+     * damit die Vorschau zeigt, was spaeter wirklich am Image landet — statt
+     * dass der Build es still anders schreibt oder daran scheitert.
+     */
+    function bereinigeTag(roh) {
+      return roh
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]/g, '-')
+        .replace(/-{2,}/g, '-')
+        .replace(/^[.-]+/, '')
+        .replace(/-+$/, '')
+        .slice(0, 128)
+    }
+
+    /** Ausgewaehlte Tags als Rohwerte (Checkboxen + Freitext). */
+    function tagsRoh() {
+      const presets = Array.from(document.querySelectorAll('.tag-preset:checked')).map(cb => cb.value)
+      const frei = tagFreeEl.value.split(',').map(t => t.trim()).filter(Boolean)
+      return [...presets, ...frei]
+    }
+
+    function aktualisiereTagVorschau() {
+      const roh = tagsRoh()
+      if (roh.length === 0) {
+        tagPreviewEl.innerHTML = '<span class="count">Keine zusätzlichen Tags — das Image bekommt nur latest und die Version.</span>'
+        return
+      }
+      const teile = roh.map(r => {
+        const sauber = bereinigeTag(r)
+        if (!sauber) return `<span class="verworfen">„${r}" wird verworfen (kein gültiges Zeichen)</span>`
+        return sauber === r ? `<code>${sauber}</code>` : `<code>${sauber}</code><span class="count">(aus „${r}")</span> `
+      })
+      tagPreviewEl.innerHTML = 'Am Image: ' + teile.join(' ')
+    }
+
+    document.querySelectorAll('.tag-preset').forEach(cb => cb.addEventListener('change', aktualisiereTagVorschau))
+    tagFreeEl.addEventListener('input', aktualisiereTagVorschau)
+
+    // --- Vorlagen ---
+
+    /** Setzt Plugin-Auswahl und Tags einer Vorlage. */
+    window.waehleVorlage = function(name) {
+      const vorlage = templates.find(t => t.datei === name)
+      if (!vorlage) return
+
+      const gewaehlt = new Set(vorlage.plugins || [])
+      for (const p of allPlugins) {
+        const cb = document.getElementById(`p-${p.id}`)
+        if (cb) cb.checked = gewaehlt.has(p.id)
+      }
+
+      const tags = vorlage.imageTags || []
+      document.querySelectorAll('.tag-preset').forEach(cb => { cb.checked = tags.includes(cb.value) })
+      // Tags der Vorlage, fuer die es keine Checkbox gibt, landen im Freitext.
+      tagFreeEl.value = tags.filter(t => !['dim', 'jena'].includes(t)).join(', ')
+
+      // Plugins, die die Vorlage nennt, es im Branch aber nicht (mehr) gibt —
+      // sonst faellt es erst im Build auf, wo sie stillschweigend fehlen.
+      const vorhanden = new Set(allPlugins.map(p => p.id))
+      const fehlend = (vorlage.plugins || []).filter(id => !vorhanden.has(id))
+
+      document.querySelectorAll('.template-btn').forEach(b => b.classList.toggle('active', b.dataset.datei === name))
+      aktualisiereTagVorschau()
+      updateCount()
+
+      if (fehlend.length) {
+        resultEl.className = 'result error'
+        resultEl.style.display = 'block'
+        resultEl.textContent = `Vorlage „${vorlage.name}" nennt Plugins, die es in diesem Branch nicht gibt: ${fehlend.join(', ')}`
+      }
+    }
+
+    function renderVorlagen() {
+      if (templates.length === 0) {
+        templatesEl.innerHTML = '<span class="count">Keine Vorlagen in release-templates/ gefunden.</span>'
+        return
+      }
+      templatesEl.innerHTML = templates.map(t => `
+        <button class="template-btn" data-datei="${t.datei}" onclick="waehleVorlage('${t.datei}')" title="${(t.description || '').replace(/"/g, '&quot;')}">
+          ${t.name}
+          <small>${(t.plugins || []).length} Plugins${(t.imageTags || []).length ? ' · ' + t.imageTags.join(', ') : ''}</small>
+        </button>
+      `).join('')
+    }
 
     // --- Kategorien ---
     function categorize(id) {
@@ -159,6 +281,25 @@
           defaultPlugins = new Set(config.plugins)
         } catch { defaultPlugins = new Set() }
 
+        // Vorlagen aus release-templates/ laden. Fehlt das Verzeichnis,
+        // bleibt die Seite ohne Vorlagen benutzbar wie bisher.
+        try {
+          const eintraege = await api(`repos/${REPO}/contents/release-templates?ref=${branchSelect.value}`)
+          const dateien = eintraege.filter(e => e.type === 'file' && e.name.endsWith('.json'))
+          templates = []
+          for (const d of dateien) {
+            try {
+              const blob = await api(`repos/${REPO}/git/blobs/${d.sha}`)
+              const inhalt = JSON.parse(decodeURIComponent(escape(atob(blob.content))))
+              templates.push({ datei: d.name, name: inhalt.name || d.name.replace(/\.json$/, ''), ...inhalt })
+            } catch (e) {
+              console.warn('Vorlage nicht lesbar:', d.name, e)
+            }
+          }
+          templates.sort((a, b) => a.name.localeCompare(b.name))
+        } catch { templates = [] }
+        renderVorlagen()
+
         // Alle manifest.json finden
         const tree = await api(`repos/${REPO}/git/trees/${branchSelect.value}?recursive=1`)
         const manifests = tree.tree.filter(f =>
@@ -214,6 +355,7 @@
         categoriesEl.appendChild(section)
       }
       updateCount()
+      aktualisiereTagVorschau()
     }
 
     window.toggleCategory = function(cat) {
@@ -262,6 +404,9 @@
             inputs: {
               release_name: document.getElementById('release-name').value.trim(),
               plugins: selected.join(','),
+              // Rohwerte senden: release.yml bereinigt sie selbst, und so steht
+              // im Workflow-Protokoll, was eingegeben wurde.
+              image_tags: tagsRoh().join(','),
               create_release: String(createReleaseEl.checked)
             }
           })
