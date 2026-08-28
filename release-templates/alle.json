@@ -1,6 +1,6 @@
 {
   "name": "Alle Plugins",
-  "description": "Jedes Plugin mit manifest.json in packages/. Gegenueber release-plugins.json zusaetzlich: test-plugin, ui-uimodel-forms. Enthaelt damit auch test-plugin — vor einer echten Auslieferung pruefen.",
+  "description": "Jedes Plugin mit manifest.json in packages/. Gegenueber release-plugins.json zusaetzlich: eorm-wizard, sensinact-mapping-wizard, test-plugin, ui-uimodel-forms. sensinact-mapping-wizard und eorm-wizard gibt es erst mit PR #126 auf main — bis dahin meldet der Release Builder sie als fehlend. Enthaelt auch test-plugin, das fuer eine echte Auslieferung vermutlich nicht gewollt ist.",
   "imageTags": [],
   "plugins": [
     "atlas-browser",
@@ -9,11 +9,13 @@
     "core-extension",
     "data-generator",
     "dmn-editor",
+    "eorm-wizard",
     "gene-app",
     "icons-cwm",
     "icons-material",
     "instance-builder",
     "metamodeler",
+    "sensinact-mapping-wizard",
     "storage-core",
     "storage-git",
     "storage-indexeddb",
