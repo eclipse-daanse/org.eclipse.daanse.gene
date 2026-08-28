@@ -1,0 +1,39 @@
+{
+  "name": "Jena",
+  "description": "Baut zusaetzlich das Image-Tag \"jena\". Die Plugin-Auswahl entspricht vorerst dem Standard und ist noch abzustimmen.",
+  "imageTags": [
+    "jena"
+  ],
+  "plugins": [
+    "gene-app",
+    "core",
+    "core-extension",
+    "storage-core",
+    "storage-model",
+    "storage-model-atlas",
+    "storage-indexeddb",
+    "storage-git",
+    "ui-actions",
+    "ui-file-explorer",
+    "ui-instance-tree",
+    "ui-layout",
+    "ui-model-browser",
+    "ui-model-view",
+    "ui-perspectives",
+    "ui-problems-panel",
+    "ui-properties-panel",
+    "ui-search",
+    "ui-workspace",
+    "ui-xmi-viewer",
+    "instance-builder",
+    "icons-material",
+    "icons-cwm",
+    "metamodeler",
+    "transformation",
+    "cocl-editor",
+    "data-generator",
+    "dmn-editor",
+    "atlas-browser",
+    "tsm-devtools"
+  ]
+}
