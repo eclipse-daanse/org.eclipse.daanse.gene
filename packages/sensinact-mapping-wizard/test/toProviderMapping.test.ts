@@ -361,16 +361,7 @@ describe('buildMappingProfileXmi (UNIFIED-Provider, B1/#146)', () => {
     expect(xmi).toContain('requiresFriendlyName="true"');
   });
 
-  // Bekannt fehlschlagend seit @emfts/core 0.1.1-next.18 (mit next.16 gruen,
-  // gene erzwingt per overrides next.18). Geschrieben wird richtig — der Test
-  // eine Ebene hoeher prueft den XMI-Text und besteht. Beim Zuruecklesen
-  // liefert eGet fuer das Enum-Attribut aber ein EEnumLiteral-Objekt, dessen
-  // toString() nicht mehr den Literalnamen ergibt: erwartet 'UNIFIED', kommt
-  // 'EEnumLiteral@n112rg'.
-  //
-  // `it.fails` statt `skip`, damit der Test sich meldet, sobald es behoben ist:
-  // Besteht er wieder, schlaegt dieser Lauf fehl und die Markierung faellt auf.
-  it.fails('verlinkt Mappings über profile-href und lädt im Round-Trip', () => {
+  it('verlinkt Mappings über profile-href und lädt im Round-Trip', () => {
     const setups = [batterySetup(), draginoSetup()];
     const profile = buildMappingProfileXmi('Batterie Sensoren', setups);
     const ref = { fileName: profile.profileFileName, profileId: profile.profileId };
