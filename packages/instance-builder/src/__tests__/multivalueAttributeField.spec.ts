@@ -30,9 +30,11 @@ function createPrimeVueStub(vue: typeof import('vue')) {
           emits: ['update:modelValue'],
           setup: (props, { attrs }) =>
             () => vue.h(prop === 'Button' ? 'button' : 'input', {
-              class: `stub-${prop}`,
               value: props.modelValue,
-              ...attrs
+              ...attrs,
+              // eigenes Attribut statt einer Klasse: die Komponenten geben
+              // class="w-full" mit, was einen Klassen-Marker ueberschreibt
+              'data-stub': prop
             }, prop === 'Button' ? props.label : undefined)
         }))
       }
@@ -43,15 +45,18 @@ function createPrimeVueStub(vue: typeof import('vue')) {
 
 let AttributeField: any
 
-function stringAttribut(name: string, mehrwertig: boolean): BasicEAttribute {
+function attributMitTyp(name: string, typName: string, mehrwertig: boolean): BasicEAttribute {
   const typ = new BasicEDataType()
-  typ.setName('EString')
+  typ.setName(typName)
   const attr = new BasicEAttribute()
   attr.setName(name)
   attr.setEType(typ as never)
   attr.setUpperBound(mehrwertig ? -1 : 1)
   return attr
 }
+
+const stringAttribut = (name: string, mehrwertig: boolean) =>
+  attributMitTyp(name, 'EString', mehrwertig)
 
 beforeAll(async () => {
   const vue = await import('vue')
@@ -111,6 +116,28 @@ describe('AttributeField bei mehrwertigen Attributen (#133)', () => {
     eintraege[1].vm.$emit('update:value', 'geaendert')
     await w.vm.$nextTick()
     expect(w.emitted('update:value')?.at(-1)?.[0]).toEqual(['alpha', 'geaendert'])
+  })
+
+  // Der Listen-Editor darf nicht auf EString beschraenkt sein: die Zeilen
+  // rendern dieselbe Komponente, also muss jeder Datentyp seinen gewohnten
+  // Editor bekommen und ein passender Startwert entstehen.
+  it.each([
+    ['EString',  '',    'InputText'],
+    ['EInt',     0,     'InputNumber'],
+    ['EDouble',  0,     'InputNumber'],
+    ['EBoolean', false, 'Checkbox'],
+    ['EDate',    null,  'Calendar'],
+  ])('%s: Listeneintraege bekommen den passenden Editor und Startwert', async (typ, startwert, widget) => {
+    const attr = attributMitTyp('werte', typ as string, true)
+    const w = mount(AttributeField, { props: { feature: attr, value: [] } })
+
+    await w.find('.value-add').trigger('click')
+    const emittiert = w.emitted('update:value')?.at(-1)?.[0] as unknown[]
+    expect(emittiert).toEqual([startwert])
+
+    const gefuellt = mount(AttributeField, { props: { feature: attr, value: [startwert] } })
+    expect(gefuellt.findAll('.value-row')).toHaveLength(1)
+    expect(gefuellt.find(`.value-row [data-stub="${widget}"]`).exists()).toBe(true)
   })
 
   it('einwertige Attribute bleiben ein einzelnes Feld', () => {
