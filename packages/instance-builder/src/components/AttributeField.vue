@@ -150,6 +150,20 @@ const werte = computed<any[]>(() => {
   return [v]
 })
 
+/**
+ * Obergrenze aus dem Metamodell. -1 heisst unbegrenzt; darunter begrenzt
+ * upperBound die Zahl der Eintraege. Ohne diese Pruefung liesse sich ueber
+ * "Hinzufuegen" beliebig weit ueber die Grenze hinaus schreiben, die das
+ * Modell setzt.
+ */
+const obergrenze = computed<number>(() => {
+  const grenze = props.feature.getUpperBound?.()
+  return typeof grenze === 'number' ? grenze : -1
+})
+
+const unbegrenzt = computed(() => obergrenze.value === -1)
+const grenzeErreicht = computed(() => !unbegrenzt.value && werte.value.length >= obergrenze.value)
+
 /** Startwert eines neuen Eintrags, passend zum Eingabetyp. */
 function neuerEintrag(): any {
   switch (inputType.value) {
@@ -173,6 +187,7 @@ function entferneEintrag(index: number) {
 }
 
 function fuegeEintragHinzu() {
+  if (grenzeErreicht.value) return
   emit('update:value', [...werte.value, neuerEintrag()])
 }
 
@@ -227,16 +242,21 @@ const isRequired = computed(() => {
         />
       </div>
       <div v-if="werte.length === 0" class="value-empty">Keine Einträge</div>
-      <Button
-        type="button"
-        label="Hinzufügen"
-        icon="pi pi-plus"
-        text
-        size="small"
-        :disabled="readonly"
-        class="value-add"
-        @click="fuegeEintragHinzu"
-      />
+      <div class="value-footer">
+        <Button
+          type="button"
+          label="Hinzufügen"
+          icon="pi pi-plus"
+          text
+          size="small"
+          :disabled="readonly || grenzeErreicht"
+          class="value-add"
+          @click="fuegeEintragHinzu"
+        />
+        <span v-if="!unbegrenzt" class="value-count" :class="{ 'value-count--voll': grenzeErreicht }">
+          {{ werte.length }} / {{ obergrenze }}
+        </span>
+      </div>
     </div>
 
     <!-- String input -->
@@ -397,8 +417,23 @@ const isRequired = computed(() => {
   font-style: italic;
 }
 
+.value-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .value-add {
   align-self: flex-start;
+}
+
+.value-count {
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+}
+
+.value-count--voll {
+  color: var(--p-orange-500, #f59e0b);
 }
 
 :deep(.p-invalid.p-inputtext),
