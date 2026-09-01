@@ -8,7 +8,7 @@
  */
 
 import { ref, computed, shallowRef, type Ref, type ComputedRef } from 'tsm:vue'
-import type { EObject, EPackage, Resource, EClass, Notifier } from '@emfts/core'
+import type { EObject, EPackage, Resource, EClass, EStructuralFeature, Notifier } from '@emfts/core'
 import type {
   OclValidationIssue,
   OclServiceState,
@@ -209,6 +209,91 @@ function constraintToIssue(
     object,
     objectLabel: getObjectLabel(object),
     eClassName: eClass.getName() || 'Unknown',
+    timestamp: new Date()
+  }
+}
+
+/**
+ * Kardinalitaet eines Objekts gegen sein Metamodell pruefen (#139).
+ *
+ * upperBound und lowerBound wurden bisher nirgends durchgesetzt: `isMany`
+ * liest upperBound nur als Ja/Nein, `isRequired` fragt lowerBound > 0 — ob
+ * genug oder zu viele Werte da sind, prueft niemand. Instanzen entstehen
+ * ausserdem ueber Wege ohne Editor (Import, Datengenerator, Model Atlas),
+ * wo eine Sperre in der Eingabemaske ohnehin nicht greift.
+ *
+ * Bewusst ohne OCL: Die Pruefung ist reine Introspektion und muss auch dann
+ * laufen, wenn kein Constraint-Dokument geladen ist.
+ */
+function pruefeKardinalitaet(obj: EObject): OclValidationIssue[] {
+  const issues: OclValidationIssue[] = []
+  const eClass = obj.eClass()
+  if (!eClass) return issues
+
+  let features: EStructuralFeature[]
+  try {
+    features = [...(eClass.getEAllStructuralFeatures() ?? [])] as EStructuralFeature[]
+  } catch {
+    return issues
+  }
+
+  for (const feature of features) {
+    try {
+      // Abgeleitete und transiente Werte gehoeren dem Modell nicht; sie
+      // werden berechnet und nicht gespeichert.
+      if (feature.isDerived?.() || feature.isTransient?.()) continue
+
+      const upper = feature.getUpperBound?.() ?? 1
+      const lower = feature.getLowerBound?.() ?? 0
+      if (upper === 1 && lower === 0) continue   // nichts zu pruefen
+
+      const wert = obj.eGet(feature)
+      const anzahl = zaehleWerte(wert)
+
+      const name = feature.getName() ?? 'unbenannt'
+      if (upper !== -1 && anzahl > upper) {
+        issues.push(kardinalitaetsIssue(obj, feature,
+          `'${name}' hat ${anzahl} Werte, erlaubt sind hoechstens ${upper}`))
+      }
+      if (anzahl < lower) {
+        issues.push(kardinalitaetsIssue(obj, feature,
+          `'${name}' hat ${anzahl} Werte, verlangt sind mindestens ${lower}`))
+      }
+    } catch (e) {
+      console.warn('[Kardinalitaet] Feature nicht pruefbar:', feature?.getName?.(), e)
+    }
+  }
+  return issues
+}
+
+/** Zahl der belegten Werte eines Features — einwertig wie mehrwertig. */
+function zaehleWerte(wert: unknown): number {
+  if (wert === null || wert === undefined) return 0
+  if (Array.isArray(wert)) return wert.length
+  const alsListe = wert as { size?: () => number }
+  if (typeof alsListe.size === 'function') return alsListe.size()
+  if (typeof (wert as any)[Symbol.iterator] === 'function' && typeof wert !== 'string') {
+    return Array.from(wert as Iterable<unknown>).length
+  }
+  // Ein leerer String ist ein gesetzter Wert, keine Leerstelle — nur
+  // null/undefined zaehlen als unbelegt.
+  return 1
+}
+
+function kardinalitaetsIssue(
+  obj: EObject,
+  feature: EStructuralFeature,
+  message: string
+): OclValidationIssue {
+  return {
+    id: generateIssueId(),
+    severity: 'error',
+    message,
+    source: 'ecore-validation',
+    constraintName: `Kardinalitaet: ${feature.getName() ?? 'unbenannt'}`,
+    object: obj,
+    objectLabel: getObjectLabel(obj),
+    eClassName: obj.eClass()?.getName() || 'Unknown',
     timestamp: new Date()
   }
 }
@@ -608,10 +693,13 @@ export function useProblemsService(options: OclServiceOptions = {}) {
    * Validate a single EObject
    */
   async function validateObject(obj: EObject): Promise<OclValidationIssue[]> {
-    if (!await loadOclModules() || allConstraintDocs.length === 0) return []
+    // Kardinalitaet zuerst: Sie braucht kein OCL und muss auch dann laufen,
+    // wenn kein Constraint-Dokument geladen ist (#139).
+    const newIssues: OclValidationIssue[] = pruefeKardinalitaet(obj)
+
+    if (!await loadOclModules() || allConstraintDocs.length === 0) return newIssues
 
     const className = obj.eClass().getName()
-    const newIssues: OclValidationIssue[] = []
 
     for (const entry of allConstraintDocs) {
       // Filter by context class if available
@@ -648,7 +736,8 @@ export function useProblemsService(options: OclServiceOptions = {}) {
    * Validate multiple EObjects
    */
   async function validateObjects(objects: EObject[]): Promise<OclValidationIssue[]> {
-    if (!await loadOclModules()) return []
+    // Kein frueher Ausstieg ohne OCL: validateObject prueft die Kardinalitaet
+    // auch dann, und die gilt unabhaengig von Constraints.
     const allIssues: OclValidationIssue[] = []
 
     for (const obj of objects) {
