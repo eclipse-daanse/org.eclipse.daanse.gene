@@ -8,7 +8,7 @@
 
 import { ref, computed, inject, onMounted } from 'tsm:vue'
 import { Tree, Button, Dialog, InputText, ContextMenu, ProgressSpinner } from 'tsm:primevue'
-import { useSharedAtlasBrowser, schemaNsUri } from '../composables/useAtlasBrowser'
+import { useSharedAtlasBrowser, schemaNsUri, istWahr } from '../composables/useAtlasBrowser'
 import type { AtlasTreeNodeData, ConnectFormData } from '../types'
 
 /** PrimeVue-compatible tree node */
@@ -358,9 +358,7 @@ function isStageWritable(node: TreeNode): boolean {
       // (writable=true, final=true) und beantwortet ein DELETE dort mit 200.
       // Zuvor stand hier `!stage.final`, womit gene das Loeschen in genau
       // diesen Stages ausblendete, obwohl der Server es erlaubt.
-      // Der Server liefert die Flags als Strings ('true'/'false'), nicht als
-      // Booleans — ein blosses `!== false` wuerde 'false' als wahr lesen.
-      if (stage) return stage.writable !== false && String(stage.writable) !== 'false'
+      if (stage) return istWahr(stage.writable, true)
     }
     return true // default: writable
   }

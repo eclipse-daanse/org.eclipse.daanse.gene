@@ -45,6 +45,16 @@ export interface AtlasTreeNodeData {
   stageName?: string
   /** Whether this is a schema registry */
   isSchemaRegistry?: boolean
+  /**
+   * Stage-Flags des Servers, wie gemeldet (nur an Stage-Knoten).
+   *
+   * `writable` und `final` bedeuten Verschiedenes: `final` heisst nur, dass
+   * von dieser Stage keine Transition mehr weiterfuehrt — geschrieben und
+   * geloescht werden darf trotzdem. Der Fennec-Atlas meldet fuer `release`
+   * beides zugleich.
+   */
+  stageWritable?: boolean
+  stageFinal?: boolean
   /** Schema/Object nsURI or objectId */
   objectId?: string
   /** Full metadata (for schema/object nodes) */
