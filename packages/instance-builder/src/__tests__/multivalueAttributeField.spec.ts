@@ -31,6 +31,9 @@ function createPrimeVueStub(vue: typeof import('vue')) {
           setup: (props, { attrs }) =>
             () => vue.h(prop === 'Button' ? 'button' : 'input', {
               value: props.modelValue,
+              // als Prop deklariert, deshalb nicht in attrs — muss ausdruecklich
+              // ans Element, sonst laesst sich der gesperrte Zustand nicht pruefen
+              disabled: props.disabled || undefined,
               ...attrs,
               // eigenes Attribut statt einer Klasse: die Komponenten geben
               // class="w-full" mit, was einen Klassen-Marker ueberschreibt
@@ -138,6 +141,47 @@ describe('AttributeField bei mehrwertigen Attributen (#133)', () => {
     const gefuellt = mount(AttributeField, { props: { feature: attr, value: [startwert] } })
     expect(gefuellt.findAll('.value-row')).toHaveLength(1)
     expect(gefuellt.find(`.value-row [data-stub="${widget}"]`).exists()).toBe(true)
+  })
+
+  // upperBound ist eine Obergrenze, nicht nur ein Ja/Nein fuer "mehrwertig".
+  // Vorher las sie nur isMany(), womit sich beliebig weit ueber die vom
+  // Modell gesetzte Grenze hinaus schreiben liess.
+  describe('Obergrenze aus upperBound', () => {
+    it('sperrt Hinzufuegen, sobald die Grenze erreicht ist', async () => {
+      const attr = attributMitTyp('werte', 'EString', true)
+      attr.setUpperBound(2)
+      const w = mount(AttributeField, { props: { feature: attr, value: ['a', 'b'] } })
+
+      const knopf = w.find('.value-add')
+      expect(knopf.attributes('disabled')).toBeDefined()
+
+      await knopf.trigger('click')
+      expect(w.emitted('update:value')).toBeUndefined()
+    })
+
+    it('erlaubt Hinzufuegen, solange Platz ist', async () => {
+      const attr = attributMitTyp('werte', 'EString', true)
+      attr.setUpperBound(2)
+      const w = mount(AttributeField, { props: { feature: attr, value: ['a'] } })
+
+      expect(w.find('.value-add').attributes('disabled')).toBeUndefined()
+      await w.find('.value-add').trigger('click')
+      expect(w.emitted('update:value')?.at(-1)?.[0]).toEqual(['a', ''])
+    })
+
+    it('zeigt den Stand gegen die Grenze', () => {
+      const attr = attributMitTyp('werte', 'EString', true)
+      attr.setUpperBound(3)
+      const w = mount(AttributeField, { props: { feature: attr, value: ['a', 'b'] } })
+      expect(w.find('.value-count').text()).toBe('2 / 3')
+    })
+
+    it('zeigt keinen Zaehler bei unbegrenzten Listen', () => {
+      const attr = attributMitTyp('werte', 'EString', true)   // upperBound -1
+      const w = mount(AttributeField, { props: { feature: attr, value: ['a', 'b'] } })
+      expect(w.find('.value-count').exists()).toBe(false)
+      expect(w.find('.value-add').attributes('disabled')).toBeUndefined()
+    })
   })
 
   it('einwertige Attribute bleiben ein einzelnes Feld', () => {
