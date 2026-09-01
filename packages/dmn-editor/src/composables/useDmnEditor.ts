@@ -339,9 +339,8 @@ export function useDmnEditor() {
       // Remove existing resource if any
       const existingRes = rs.getResource(uri, false)
       if (existingRes) {
-        const resources = rs.getResources()
-        const idx = resources.indexOf(existingRes)
-        if (idx >= 0) resources.splice(idx, 1)
+        // `remove` statt indexOf/splice — splice gehoert nicht zur EList-API
+        rs.getResources().remove(existingRes)
       }
 
       const newResource = rs.createResource(uri) as XMIResource

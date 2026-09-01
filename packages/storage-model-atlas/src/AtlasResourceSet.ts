@@ -72,8 +72,9 @@ export function parseXMI(xmiString: string): EObject[] {
     : Array.from(contents)
 
   // Remove resource from ResourceSet to avoid memory accumulation
-  const idx = rs.getResources().indexOf(resource)
-  if (idx >= 0) rs.getResources().splice(idx, 1)
+  // `remove` statt indexOf/splice: splice gehoert nicht zur EList-API und
+  // ist seit @emfts/core 0.2 auch nicht mehr typisiert.
+  rs.getResources().remove(resource)
 
   return result
 }
@@ -156,8 +157,9 @@ export function serializeTransitionXmi(objectId: string, targetStage: string): s
   const xmi = resource.saveToString()
 
   // Cleanup
-  const idx = rs.getResources().indexOf(resource)
-  if (idx >= 0) rs.getResources().splice(idx, 1)
+  // `remove` statt indexOf/splice: splice gehoert nicht zur EList-API und
+  // ist seit @emfts/core 0.2 auch nicht mehr typisiert.
+  rs.getResources().remove(resource)
 
   return xmi
 }

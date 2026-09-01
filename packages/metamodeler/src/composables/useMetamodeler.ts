@@ -1010,11 +1010,8 @@ export function useMetamodeler() {
       // Check if resource already exists and remove it
       const existingRes = rs.getResource(uri, false)
       if (existingRes) {
-        const resources = rs.getResources()
-        const idx = resources.indexOf(existingRes)
-        if (idx >= 0) {
-          resources.splice(idx, 1)
-        }
+        // `remove` statt indexOf/splice — splice gehoert nicht zur EList-API
+        rs.getResources().remove(existingRes)
       }
 
       const newResource = new XMIResource(uri)
@@ -1556,10 +1553,9 @@ export function useMetamodeler() {
    * Remove a super type from an EClass
    */
   function removeSuperType(eClass: EClass, superType: EClass): void {
-    const superTypes = eClass.getESuperTypes()
-    const idx = superTypes.indexOf(superType)
-    if (idx >= 0) {
-      superTypes.splice(idx, 1)
+    // `remove` meldet selbst, ob etwas entfernt wurde — das ersetzt die
+    // vorherige indexOf-Pruefung; splice gehoert nicht zur EList-API.
+    if (eClass.getESuperTypes().remove(superType)) {
       dirty.value = true
     }
   }
