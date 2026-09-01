@@ -250,21 +250,27 @@ export function useInstanceEditor(options: UseInstanceEditorOptions): UseInstanc
           // For multi-valued features, modify the existing EMF list
           const existingList = eObject.eGet(feature) as any
 
+          // Ein Einzelwert fuer ein mehrwertiges Feature war bisher ein stiller
+          // Datenverlust: Die Liste wurde geleert, und weil `Array.isArray`
+          // nicht griff, kam nichts zurueck (#133). Statt zu loeschen, was der
+          // Aufrufer gar nicht loeschen wollte, wird der Wert als einelementige
+          // Liste gelesen. Ein leerer Wert bleibt dabei das Leeren der Liste.
+          const werte: any[] = Array.isArray(value)
+            ? value
+            : value === null || value === undefined || value === ''
+              ? []
+              : [value]
+
           if (existingList && typeof existingList.clear === 'function') {
             // EMF EList - clear and add all
             existingList.clear()
-            if (Array.isArray(value)) {
-              for (let i = 0; i < value.length; i++) {
-                const item = value[i]
-                existingList.add(item)
-              }
+            for (let i = 0; i < werte.length; i++) {
+              existingList.add(werte[i])
             }
           } else if (existingList && typeof existingList.addAll === 'function') {
             // EMF EList with addAll
             existingList.clear()
-            if (Array.isArray(value)) {
-              existingList.addAll(value)
-            }
+            existingList.addAll(werte)
           } else {
             // Fallback to eSet
             eObject.eSet(feature, value)
