@@ -228,8 +228,8 @@ function createAtlasBrowser() {
 
       const stageChildren: TreeNode[] = stages.map(stage => {
         const stageName = stage.name || 'unknown'
-        const isWritable = stage.writable !== false
-        const isFinal = !!stage.final
+        const isWritable = istWahr(stage.writable, true)
+        const isFinal = istWahr(stage.final, false)
         const stageLabel = !isWritable ? `${stageName} (read-only)` : stageName
         return {
           key: `${connectionId}/${scopeName}/${regName}/${stageName}`,
@@ -242,7 +242,9 @@ function createAtlasBrowser() {
             scopeName,
             registryName: regName,
             stageName,
-            isSchemaRegistry: isSchema
+            isSchemaRegistry: isSchema,
+            stageWritable: isWritable,
+            stageFinal: isFinal
           } as AtlasTreeNodeData,
           children: [] // lazy loaded
         }
@@ -574,9 +576,7 @@ function createAtlasBrowser() {
         name: (registryNode.data as AtlasTreeNodeData).registryName || 'unknown',
         stages: (registryNode.children ?? []).map(stageNode => {
           const data = stageNode.data as AtlasTreeNodeData
-          // 'final' steht nicht in den Knotendaten, wohl aber im Icon —
-          // dieselbe Ableitung wie in getSchemaStages
-          return { name: data.stageName || 'unknown', final: stageNode.icon === 'pi pi-lock' }
+          return { name: data.stageName || 'unknown', final: data.stageFinal === true }
         })
       }))
   }
@@ -601,7 +601,7 @@ function createAtlasBrowser() {
       const data = stageNode.data as AtlasTreeNodeData
       return {
         name: data.stageName || 'unknown',
-        final: stageNode.icon === 'pi pi-lock'
+        final: data.stageFinal === true
       }
     })
   }
@@ -842,6 +842,19 @@ function createAtlasBrowser() {
 
 // Singleton instance for shared state
 let sharedInstance: ReturnType<typeof createAtlasBrowser> | null = null
+
+/**
+ * Liest ein Flag der Atlas-Antwort als Boolean.
+ *
+ * Der Server liefert sie als Strings ('true'/'false'), nicht als Booleans.
+ * Ein blosses `!!wert` liest deshalb 'false' als wahr, und `wert !== false`
+ * ebenso. Fehlt das Flag, gilt der Vorgabewert.
+ */
+export function istWahr(wert: unknown, vorgabe: boolean): boolean {
+  if (wert === undefined || wert === null) return vorgabe
+  if (typeof wert === 'boolean') return wert
+  return String(wert).toLowerCase() === 'true'
+}
 
 export function useAtlasBrowser() {
   return createAtlasBrowser()
