@@ -11,7 +11,9 @@ import { InputNumber } from 'tsm:primevue'
 import { Checkbox } from 'tsm:primevue'
 import { Calendar } from 'tsm:primevue'
 import { Textarea } from 'tsm:primevue'
+import { Button } from 'tsm:primevue'
 import type { EAttribute, EDataType } from '@emfts/core'
+import { isMany } from '../types'
 import EnumField from './EnumField.vue'
 
 const props = defineProps<{
@@ -23,6 +25,13 @@ const props = defineProps<{
   label?: string
   /** Optional widget-type hint (UIModel widget EClass name, e.g. 'TextAreaWidget') */
   widgetHint?: string
+  /**
+   * Erzwingt den Einzelwert-Modus. Die Liste eines mehrwertigen Attributs
+   * rendert je Eintrag wieder diese Komponente — so gilt fuer Listeneintraege
+   * dieselbe Typ-Verzweigung wie fuer einwertige Attribute, ohne sie ein
+   * zweites Mal zu schreiben.
+   */
+  einzelwert?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -121,6 +130,52 @@ const inputType = computed(() => {
   }
 })
 
+/**
+ * Mehrwertiges Attribut (upperBound != 1). Ohne diese Verzweigung bekam auch
+ * eine Liste ein einzelnes Eingabefeld: angezeigt wurde die JS-Stringform des
+ * Arrays ("alpha,beta"), und beim Tippen ging ein String an setValue, wo
+ * `Array.isArray` nicht greift — die Liste wurde geleert und der Wert
+ * verworfen (#133).
+ */
+const istMehrwertig = computed(() => !props.einzelwert && isMany(props.feature))
+
+/** Der aktuelle Wert als Array — eGet kann eine EList statt eines Arrays liefern. */
+const werte = computed<any[]>(() => {
+  const v = props.value
+  if (v == null) return []
+  if (Array.isArray(v)) return v
+  if (typeof v === 'object' && typeof (v as any)[Symbol.iterator] === 'function') {
+    return Array.from(v as Iterable<any>)
+  }
+  return [v]
+})
+
+/** Startwert eines neuen Eintrags, passend zum Eingabetyp. */
+function neuerEintrag(): any {
+  switch (inputType.value) {
+    case 'integer':
+    case 'decimal': return 0
+    case 'boolean': return false
+    case 'date': return null
+    default: return ''
+  }
+}
+
+/** Aenderungen an der Liste gehen immer als vollstaendiges Array hinaus. */
+function aendereEintrag(index: number, neu: any) {
+  const kopie = [...werte.value]
+  kopie[index] = neu
+  emit('update:value', kopie)
+}
+
+function entferneEintrag(index: number) {
+  emit('update:value', werte.value.filter((_, i) => i !== index))
+}
+
+function fuegeEintragHinzu() {
+  emit('update:value', [...werte.value, neuerEintrag()])
+}
+
 // Handle value updates
 function onUpdate(newValue: any) {
   emit('update:value', newValue)
@@ -142,14 +197,51 @@ const isRequired = computed(() => {
 
 <template>
   <div class="attribute-field">
-    <label :for="feature.getName()" class="field-label">
+    <label v-if="!einzelwert" :for="feature.getName()" class="field-label">
       {{ displayName }}
       <span v-if="isRequired" class="required-indicator">*</span>
     </label>
 
+    <!-- Mehrwertiges Attribut: eine Zeile je Eintrag. Jede Zeile rendert diese
+         Komponente erneut im Einzelwert-Modus, damit die Typ-Verzweigung
+         (String, Zahl, Datum, Enum …) nur an einer Stelle steht. -->
+    <div v-if="istMehrwertig" class="value-list">
+      <div v-for="(eintrag, i) in werte" :key="i" class="value-row">
+        <AttributeField
+          class="value-row-field"
+          :feature="feature"
+          :value="eintrag"
+          :readonly="readonly"
+          :widgetHint="widgetHint"
+          :einzelwert="true"
+          @update:value="(neu: any) => aendereEintrag(i, neu)"
+        />
+        <Button
+          type="button"
+          icon="pi pi-times"
+          text
+          severity="secondary"
+          :disabled="readonly"
+          :aria-label="`Eintrag ${i + 1} entfernen`"
+          @click="entferneEintrag(i)"
+        />
+      </div>
+      <div v-if="werte.length === 0" class="value-empty">Keine Einträge</div>
+      <Button
+        type="button"
+        label="Hinzufügen"
+        icon="pi pi-plus"
+        text
+        size="small"
+        :disabled="readonly"
+        class="value-add"
+        @click="fuegeEintragHinzu"
+      />
+    </div>
+
     <!-- String input -->
     <InputText
-      v-if="inputType === 'string'"
+      v-else-if="inputType === 'string'"
       :id="feature.getName()"
       :modelValue="value ?? ''"
       @update:modelValue="onUpdate"
@@ -280,6 +372,33 @@ const isRequired = computed(() => {
 .field-error {
   color: var(--p-red-500, #ef4444);
   font-size: 0.75rem;
+}
+
+.value-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.value-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.value-row-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.value-empty {
+  font-size: 0.8125rem;
+  color: var(--text-color-secondary);
+  font-style: italic;
+}
+
+.value-add {
+  align-self: flex-start;
 }
 
 :deep(.p-invalid.p-inputtext),
