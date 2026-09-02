@@ -37,13 +37,14 @@ describe('Instanzbaum-Zwischenablage (#63)', () => {
   let library: EObject
   let book: EObject
   let tree: ReturnType<typeof useInstanceTree>
+  let rs: BasicResourceSet
 
   const buecher = (feature: string) =>
     Array.from((library.eGet(library.eClass().getEStructuralFeature(feature)!) ?? []) as Iterable<EObject>)
 
   beforeEach(() => {
     registerEcorePackage()
-    const rs = new BasicResourceSet()
+    rs = new BasicResourceSet()
     const f = new XMIResourceFactory()
     const map = rs.getResourceFactoryRegistry().getExtensionToFactoryMap()
     map.set('xmi', f); map.set('ecore', f)
@@ -105,6 +106,37 @@ describe('Instanzbaum-Zwischenablage (#63)', () => {
 
   it('ohne Inhalt meldet canPasteInto den Grund', () => {
     const ergebnis = tree.canPasteInto(library)
+    expect(ergebnis.ok).toBe(false)
+    expect(ergebnis.reason).toMatch(/leer/i)
+  })
+
+  it('Einfuegen auf einer Resource macht das Element zum Wurzelobjekt', () => {
+    const zweite = rs.createResource(URI.createURI('lib2.xmi')) as Resource
+    tree.copyToClipboard(book)
+    expect(tree.canPasteIntoResource(zweite).ok).toBe(true)
+    expect(tree.pasteIntoResource(zweite)).toBe(true)
+
+    const wurzeln = Array.from(zweite.getContents() as Iterable<EObject>)
+    expect(wurzeln).toHaveLength(1)
+    expect(wurzeln[0]).not.toBe(book)   // Kopie, nicht das Original
+    expect(getXmiId(wurzeln[0])).not.toBe(getXmiId(book))
+    // Das Original bleibt, wo es war
+    expect(buecher('books')).toHaveLength(1)
+  })
+
+  it('Ausschneiden auf eine andere Resource verschiebt das Original', () => {
+    const zweite = rs.createResource(URI.createURI('lib3.xmi')) as Resource
+    tree.cutToClipboard(book)
+    expect(tree.pasteIntoResource(zweite)).toBe(true)
+
+    expect(Array.from(zweite.getContents() as Iterable<EObject>)[0]).toBe(book)
+    expect(buecher('books')).toHaveLength(0)
+    expect(tree.hasClipboardContent.value).toBe(false)
+  })
+
+  it('ohne Inhalt meldet canPasteIntoResource den Grund', () => {
+    const zweite = rs.createResource(URI.createURI('lib4.xmi')) as Resource
+    const ergebnis = tree.canPasteIntoResource(zweite)
     expect(ergebnis.ok).toBe(false)
     expect(ergebnis.reason).toMatch(/leer/i)
   })

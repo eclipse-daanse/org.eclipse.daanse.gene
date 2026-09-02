@@ -277,6 +277,8 @@ export interface EditorContext {
   hasClipboardContent?: { value: boolean }
   canPasteInto?: (target: EObject) => { ok: boolean; refs: EReference[]; reason?: string }
   pasteInto?: (target: EObject) => boolean
+  canPasteIntoResource?: (target: Resource) => { ok: boolean; reason?: string }
+  pasteIntoResource?: (target: Resource) => boolean
   isResourceDirty?: (res: Resource) => boolean
   /** Serialize one resource → { filename, content } (caller writes the file) */
   saveResource?: (res: Resource) => Promise<SerializedResource>
