@@ -90,10 +90,23 @@ export function acceptingReferences(
   return containmentReferences(targetClass).filter(ref => {
     if (!referenceAcceptsType(ref, elementClass)) return false
     if (typeof ref.isMany === 'function' && ref.isMany()) return true
-    const occupied = target.eGet(ref)
-    return occupied === null || occupied === undefined ||
-      (Array.isArray(occupied) && occupied.length === 0)
+    // Einwertige Referenz: nur eine noch leere nimmt etwas auf, eine belegte
+    // wird nie überschrieben.
+    return countValues(target.eGet(ref)) === 0
   })
+}
+
+/**
+ * Zahl der belegten Werte. eGet liefert je nach Feature einen Einzelwert, ein
+ * Array oder eine EList — ein blosses `Array.isArray` uebersieht die EList und
+ * haelt jede gefuellte Liste faelschlich fuer belegt.
+ */
+function countValues(value: unknown): number {
+  if (value === null || value === undefined) return 0
+  if (Array.isArray(value)) return value.length
+  const list = value as { size?: () => number }
+  if (typeof list.size === 'function') return list.size()
+  return 1
 }
 
 export interface ContainmentResult {

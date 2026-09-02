@@ -271,6 +271,12 @@ export interface EditorContext {
   canDropInto?: (dragged: EObject, targetParent: EObject) => { ok: boolean; refs: EReference[]; reason?: string }
   /** Move an object into a parent's specific containment reference. */
   moveInto?: (dragged: EObject, targetParent: EObject, ref: EReference) => boolean
+  /** Zwischenablage: Kopieren, Ausschneiden, Einfügen (#63) */
+  copyToClipboard?: (element: EObject) => void
+  cutToClipboard?: (element: EObject) => void
+  hasClipboardContent?: { value: boolean }
+  canPasteInto?: (target: EObject) => { ok: boolean; refs: EReference[]; reason?: string }
+  pasteInto?: (target: EObject) => boolean
   isResourceDirty?: (res: Resource) => boolean
   /** Serialize one resource → { filename, content } (caller writes the file) */
   saveResource?: (res: Resource) => Promise<SerializedResource>

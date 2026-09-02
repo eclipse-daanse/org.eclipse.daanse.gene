@@ -2132,7 +2132,9 @@ export function useMetamodeler() {
    * Fehlerquelle als Nutzen. Geteilt wird die Logik (model-editing), nicht
    * der Zustand.
    */
-  const clipboard = ref<{ element: ENamedElement; cut: boolean } | null>(null)
+  // shallowRef, nicht ref: Ein tiefes ref verpackt das Element in einen Proxy,
+  // und dann scheitern die Identitätsvergleiche in der Containment-Prüfung.
+  const clipboard = shallowRef<{ element: ENamedElement; cut: boolean } | null>(null)
 
   const hasClipboardContent = computed(() => clipboard.value !== null)
 
