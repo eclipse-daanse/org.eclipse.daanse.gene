@@ -1296,6 +1296,63 @@ export function useInstanceTree(
     return checkContainment(entry.element, toRaw(target), { checkCycle: entry.cut })
   }
 
+  /**
+   * Einfügen auf einer Resource: Das Element wird dort ein Wurzelobjekt.
+   * Anders als bei einem Objekt gibt es keine Containment-Referenz zu
+   * prüfen — eine Resource nimmt jeden Typ als Wurzel auf, genau wie
+   * moveToResource es tut.
+   */
+  function canPasteIntoResource(target: Resource): { ok: boolean; reason?: string } {
+    const entry = clipboard.value
+    if (!entry) return { ok: false, reason: 'Die Zwischenablage ist leer.' }
+    if (!target) return { ok: false, reason: 'Keine Resource.' }
+    if (entry.cut) {
+      const quelle = (entry.element as any).eResource?.()
+      if (quelle && toRaw(quelle) === toRaw(target)) {
+        // Ein Ausschneiden in dieselbe Resource, aus der es stammt, wäre
+        // ein Zug ohne Wirkung — als Wurzel liegt es dort schon.
+        const container = (entry.element as any).eContainer?.()
+        if (!container) return { ok: false, reason: 'Liegt dort bereits als Wurzelobjekt.' }
+      }
+    }
+    return { ok: true }
+  }
+
+  function pasteIntoResource(target: Resource): boolean {
+    const entry = clipboard.value
+    if (!entry || !canPasteIntoResource(target).ok) return false
+    const targetRaw: any = toRaw(target)
+
+    try {
+      let element: EObject
+      if (entry.cut) {
+        element = entry.element
+        detachObject(element as any)
+      } else {
+        element = copyDeep(entry.element)
+      }
+
+      const contents: any = toRaw(targetRaw.getContents())
+      if (typeof contents.add === 'function') contents.add(element)
+      else if (typeof contents.push === 'function') contents.push(element)
+      else return false
+
+      const vergebeIds = (o: EObject): void => {
+        assignXmiId(o)
+        for (const child of o.eContents()) vergebeIds(child)
+      }
+      vergebeIds(element)
+
+      markDirty(targetRaw)
+      if (entry.cut) clipboard.value = null
+      triggerUpdate()
+      return true
+    } catch (e) {
+      console.warn('[InstanceTree] Einfügen in Resource fehlgeschlagen:', e)
+      return false
+    }
+  }
+
   function pasteInto(target: EObject): boolean {
     const entry = clipboard.value
     if (!entry) return false
@@ -1344,6 +1401,8 @@ export function useInstanceTree(
     clearClipboard,
     canPasteInto,
     pasteInto,
+    canPasteIntoResource,
+    pasteIntoResource,
 
     // State
     treeNodes,

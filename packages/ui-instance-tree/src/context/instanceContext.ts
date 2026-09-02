@@ -168,6 +168,8 @@ export function createInstanceContext(): EditorContext {
     hasClipboardContent: instanceTree.hasClipboardContent,
     canPasteInto: (target: EObject) => instanceTree.canPasteInto(target),
     pasteInto: (target: EObject) => instanceTree.pasteInto(target),
+    canPasteIntoResource: (target: Resource) => instanceTree.canPasteIntoResource(target),
+    pasteIntoResource: (target: Resource) => instanceTree.pasteIntoResource(target),
     isResourceDirty: (res: Resource) => instanceTree.isResourceDirty(res),
     saveResource: async (res: Resource): Promise<SerializedResource> => {
       const content = await instanceTree.serializeResource(res)

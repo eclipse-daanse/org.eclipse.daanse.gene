@@ -705,8 +705,17 @@ const contextMenuItems = computed(() => {
   // Resource-node menu (New / Save / Rename / Delete)
   if (menuNode?.kind === 'resource') {
     const res = menuNode.resource
+    // Einfügen auf einer Resource macht das Element zum Wurzelobjekt (#63).
+    const paste = (ctx as any).canPasteIntoResource?.(res) ?? { ok: false, reason: 'Nicht verfügbar.' }
     return [
       { label: 'New Resource…', icon: 'pi pi-plus', command: () => createResourcePrompt() },
+      { separator: true },
+      {
+        label: paste.ok ? 'Paste' : `Paste (${paste.reason ?? 'nicht möglich'})`,
+        icon: 'pi pi-clipboard',
+        disabled: !paste.ok,
+        command: () => { (ctx as any).pasteIntoResource?.(res) }
+      },
       { separator: true },
       { label: 'Save…', icon: 'pi pi-save', command: () => eventBus?.emit('save-instances-request') },
       { label: 'Rename…', icon: 'pi pi-pencil', command: () => renameResourcePrompt(res) },
