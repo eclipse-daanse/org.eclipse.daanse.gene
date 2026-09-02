@@ -602,6 +602,14 @@ function handleNodeDrop(event: any): void {
  * jemand in einem Eingabefeld eines Dialogs Text kopiert. Der Container hat
  * tabindex, damit er den Fokus halten kann.
  */
+/** Holt den Fokus in den Baum, damit Tastenkürzel dort ankommen. */
+function focusTree(event: PointerEvent): void {
+  const ziel = event.currentTarget as HTMLElement | null
+  // Eingaben in Dialogen nicht stören
+  if ((event.target as HTMLElement)?.closest?.('input, textarea, [contenteditable="true"]')) return
+  if (ziel && !ziel.contains(document.activeElement)) ziel.focus({ preventScroll: true })
+}
+
 function handleClipboardShortcut(event: KeyboardEvent): void {
   if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey) return
   const node = selectedNode.value
@@ -669,7 +677,15 @@ async function exportJsonSchema() {
 </script>
 
 <template>
-  <div class="metamodeler-tree" tabindex="-1" @keydown="handleClipboardShortcut">
+  <!-- pointerdown holt den Fokus in den Baum: Ohne das liegt er nach einem
+       Klick auf einen Knoten beim body, und die Tastenkuerzel unten kaemen
+       nie an (#63). -->
+  <div
+    class="metamodeler-tree"
+    tabindex="-1"
+    @pointerdown="focusTree"
+    @keydown="handleClipboardShortcut"
+  >
     <!-- Empty state -->
     <div v-if="!metamodeler.rootPackage.value" class="empty-state">
       <i class="pi pi-box"></i>
