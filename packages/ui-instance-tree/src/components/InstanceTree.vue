@@ -275,6 +275,52 @@ function onTreeNodeDrop(event: any) {
   performMove(() => !!(ctx as any).moveObjectBeside?.(draggedObj, dropNode.data, zone === 'after'))
 }
 
+/**
+ * Tastenkürzel für die Zwischenablage (#63).
+ *
+ * Am Baum-Container statt am Dokument: Sonst griffe Strg+C auch, während
+ * jemand in einem Eingabefeld Text kopiert. Eingabefelder werden zusätzlich
+ * ausgenommen, weil der Fokus dort innerhalb des Containers liegen kann.
+ */
+/** Holt den Fokus in den Baum, damit Tastenkürzel dort ankommen. */
+function focusTree(event: PointerEvent): void {
+  const ziel = event.currentTarget as HTMLElement | null
+  if ((event.target as HTMLElement)?.closest?.('input, textarea, [contenteditable="true"]')) return
+  if (ziel && !ziel.contains(document.activeElement)) ziel.focus({ preventScroll: true })
+}
+
+function handleClipboardShortcut(event: KeyboardEvent): void {
+  if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey) return
+
+  const ziel = event.target as HTMLElement | null
+  if (ziel?.closest?.('input, textarea, [contenteditable="true"]')) return
+
+  const taste = event.key.toLowerCase()
+  const knoten = ctxSelectedNode.value
+  const objekt = knoten?.data as any
+
+  // Auf einem Resource-Knoten fügt Strg+V als Wurzelobjekt ein
+  const resource = (knoten as any)?.kind === 'resource' ? (knoten as any).resource : null
+
+  if (taste === 'c' || taste === 'x') {
+    if (!objekt) return
+    if (taste === 'c') (ctx as any).copyToClipboard?.(objekt)
+    else (ctx as any).cutToClipboard?.(objekt)
+  } else if (taste === 'v') {
+    if (resource) {
+      if (!((ctx as any).canPasteIntoResource?.(resource)?.ok)) return
+      (ctx as any).pasteIntoResource?.(resource)
+    } else {
+      if (!objekt) return
+      if (!((ctx as any).canPasteInto?.(objekt)?.ok)) return
+      (ctx as any).pasteInto?.(objekt)
+    }
+  } else {
+    return
+  }
+  event.preventDefault()
+}
+
 // ── "Insert into" dialog (when a target has several matching containment refs) ──
 const showIntoDialog = ref(false)
 const intoDragged = ref<any>(null)
@@ -1127,7 +1173,17 @@ watch(ctxSelectedObject, (obj) => {
     </div>
 
     <!-- Instance tree -->
-    <div v-else class="tree-container" ref="treeContainerRef" @dragend.capture="clearDragFeedback">
+    <!-- pointerdown holt den Fokus in den Baum, sonst kommen die
+         Tastenkuerzel nach einem Klick nicht an (#63) -->
+    <div
+      v-else
+      class="tree-container"
+      ref="treeContainerRef"
+      tabindex="-1"
+      @pointerdown="focusTree"
+      @keydown="handleClipboardShortcut"
+      @dragend.capture="clearDragFeedback"
+    >
       <Tree
         :value="ctxTreeNodes"
         v-model:selectionKeys="ctxSelectedKeys"
