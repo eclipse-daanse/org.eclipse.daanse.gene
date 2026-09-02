@@ -34,7 +34,7 @@ export function referenceAcceptsType(ref: EReference, eClass: EClass): boolean {
  * Ecore-eigenen Wege, sonst bricht jeder Aufstieg bei den Klassifizierern ab
  * und die Zyklus-Pruefung waere wirkungslos.
  */
-export function elternteil(obj: EObject): EObject | null {
+export function parentOf(obj: EObject): EObject | null {
   const o = obj as unknown as {
     eContainer?: () => EObject | null
     getEContainingClass?: () => EObject | null
@@ -48,80 +48,80 @@ export function elternteil(obj: EObject): EObject | null {
     ?? null
 }
 
-/** Läge `moeglicherNachfahre` innerhalb des Teilbaums von `vorfahre`? */
-export function istNachfahre(vorfahre: EObject, moeglicherNachfahre: EObject): boolean {
-  let lauf: EObject | null = moeglicherNachfahre
+/** Läge `candidate` innerhalb des Teilbaums von `ancestor`? */
+export function isDescendant(ancestor: EObject, candidate: EObject): boolean {
+  let current: EObject | null = candidate
   // Tiefenbegrenzung: Ein Modell mit einem Zyklus in den Containern wuerde
   // hier sonst haengen.
-  for (let tiefe = 0; lauf && tiefe < 1000; tiefe++) {
-    if (lauf === vorfahre) return true
-    lauf = elternteil(lauf)
+  for (let depth = 0; current && depth < 1000; depth++) {
+    if (current === ancestor) return true
+    current = parentOf(current)
   }
   return false
 }
 
-export interface AufnahmeOptionen {
+export interface ContainmentOptions {
   /**
    * Beim Verschieben darf das Ziel nicht im eigenen Teilbaum liegen, sonst
    * hinge der Baum in sich selbst. Beim Einfügen einer Kopie entfällt das:
    * Die Kopie ist ein neues Objekt und in keinem Teilbaum enthalten.
    */
-  zyklusPruefen?: boolean
+  checkCycle?: boolean
 }
 
 /**
- * Containment-Referenzen von `ziel`, die `element` aufnehmen können:
+ * Containment-Referenzen von `target`, die `element` aufnehmen können:
  * typverträglich, und entweder mehrwertig oder eine noch leere einwertige
  * Referenz — eine belegte einwertige wird nie überschrieben.
  */
-export function aufnehmendeReferenzen(
+export function acceptingReferences(
   element: EObject,
-  ziel: EObject,
-  optionen: AufnahmeOptionen = {}
+  target: EObject,
+  optionen: ContainmentOptions = {}
 ): EReference[] {
-  const { zyklusPruefen = true } = optionen
-  if (!element || !ziel || element === ziel) return []
-  if (zyklusPruefen && istNachfahre(element, ziel)) return []
+  const { checkCycle = true } = optionen
+  if (!element || !target || element === target) return []
+  if (checkCycle && isDescendant(element, target)) return []
 
-  const zielKlasse = ziel.eClass?.()
-  const elementKlasse = element.eClass?.()
-  if (!zielKlasse || !elementKlasse) return []
+  const targetClass = target.eClass?.()
+  const elementClass = element.eClass?.()
+  if (!targetClass || !elementClass) return []
 
-  return containmentReferences(zielKlasse).filter(ref => {
-    if (!referenceAcceptsType(ref, elementKlasse)) return false
+  return containmentReferences(targetClass).filter(ref => {
+    if (!referenceAcceptsType(ref, elementClass)) return false
     if (typeof ref.isMany === 'function' && ref.isMany()) return true
-    const belegt = ziel.eGet(ref)
-    return belegt === null || belegt === undefined ||
-      (Array.isArray(belegt) && belegt.length === 0)
+    const occupied = target.eGet(ref)
+    return occupied === null || occupied === undefined ||
+      (Array.isArray(occupied) && occupied.length === 0)
   })
 }
 
-export interface AufnahmeErgebnis {
+export interface ContainmentResult {
   ok: boolean
   refs: EReference[]
-  grund?: string
+  reason?: string
 }
 
-/** Wie `aufnehmendeReferenzen`, aber mit Begründung für die Oberfläche. */
-export function pruefeAufnahme(
+/** Wie `acceptingReferences`, aber mit Begründung für die Oberfläche. */
+export function checkContainment(
   element: EObject,
-  ziel: EObject,
-  optionen: AufnahmeOptionen = {}
-): AufnahmeErgebnis {
-  const refs = aufnehmendeReferenzen(element, ziel, optionen)
+  target: EObject,
+  optionen: ContainmentOptions = {}
+): ContainmentResult {
+  const refs = acceptingReferences(element, target, optionen)
   if (refs.length === 0) {
-    return { ok: false, refs, grund: 'Kann hier nicht eingefügt werden (kein passender Container).' }
+    return { ok: false, refs, reason: 'Kann hier nicht eingefügt werden (kein passender Container).' }
   }
   return { ok: true, refs }
 }
 
-/** Fügt `element` in die Containment-Referenz `ref` von `ziel` ein. */
-export function fuegeEin(element: EObject, ziel: EObject, ref: EReference): boolean {
+/** Fügt `element` in die Containment-Referenz `ref` von `target` ein. */
+export function addToContainment(element: EObject, target: EObject, ref: EReference): boolean {
   try {
-    const liste = ziel.eGet(ref) as unknown as { add?: (v: unknown) => void; push?: (v: unknown) => void } | null
-    if (liste && typeof liste.add === 'function') liste.add(element)
-    else if (liste && typeof liste.push === 'function') liste.push(element)
-    else ziel.eSet(ref, element)   // leere einwertige Containment-Referenz
+    const list = target.eGet(ref) as unknown as { add?: (v: unknown) => void; push?: (v: unknown) => void } | null
+    if (list && typeof list.add === 'function') list.add(element)
+    else if (list && typeof list.push === 'function') list.push(element)
+    else target.eSet(ref, element)   // leere einwertige Containment-Referenz
     return true
   } catch (e) {
     console.warn('[model-editing] Einfügen fehlgeschlagen:', e)

@@ -16,20 +16,20 @@
  */
 import type { EObject, EReference, EStructuralFeature } from '@emfts/core'
 
-type Roh = EObject & {
+type Raw = EObject & {
   eClass: () => any
   eGet: (f: EStructuralFeature) => unknown
   eSet: (f: EStructuralFeature, v: unknown) => void
 }
 
-function istReferenz(f: EStructuralFeature): f is EReference {
+function isReference(f: EStructuralFeature): f is EReference {
   return typeof (f as EReference).isContainment === 'function'
 }
 
-function alsListe(wert: unknown): unknown[] | null {
-  if (wert === null || wert === undefined) return null
-  if (Array.isArray(wert)) return wert
-  const l = wert as { size?: () => number; get?: (i: number) => unknown }
+function asArray(value: unknown): unknown[] | null {
+  if (value === null || value === undefined) return null
+  if (Array.isArray(value)) return value
+  const l = value as { size?: () => number; get?: (i: number) => unknown }
   if (typeof l.size === 'function' && typeof l.get === 'function') {
     const out: unknown[] = []
     for (let i = 0; i < l.size(); i++) out.push(l.get(i))
@@ -38,92 +38,92 @@ function alsListe(wert: unknown): unknown[] | null {
   return null
 }
 
-function leereUndFuelle(ziel: Roh, feature: EStructuralFeature, werte: unknown[]): void {
-  const liste = ziel.eGet(feature) as unknown as {
+function replaceAll(target: Raw, feature: EStructuralFeature, values: unknown[]): void {
+  const list = target.eGet(feature) as unknown as {
     clear?: () => void
     add?: (v: unknown) => void
   } | null
-  if (!liste || typeof liste.add !== 'function') return
-  liste.clear?.()
-  for (const w of werte) liste.add(w)
+  if (!list || typeof list.add !== 'function') return
+  list.clear?.()
+  for (const w of values) list.add(w)
 }
 
 /**
- * Kopiert `original` samt Containment-Kindern.
+ * Kopiert `source` samt Containment-Kindern.
  *
- * @param zuordnung sammelt Original → Kopie; wird für das Umbiegen der
+ * @param mapping sammelt Original → Kopie; wird für das Umbiegen der
  *   Querverweise gebraucht und kann von Aufrufern mitgelesen werden.
  */
-export function kopiereTief(original: EObject, zuordnung = new Map<EObject, EObject>()): EObject {
-  const kopie = ersteDurchgang(original as Roh, zuordnung)
-  zweiterDurchgang(zuordnung)
-  return kopie
+export function copyDeep(source: EObject, mapping = new Map<EObject, EObject>()): EObject {
+  const copy = firstPass(source as Raw, mapping)
+  secondPass(mapping)
+  return copy
 }
 
 /** Mehrere Objekte in einem Zug — Querverweise zwischen ihnen werden umgebogen. */
-export function kopiereAlle(originale: EObject[]): EObject[] {
-  const zuordnung = new Map<EObject, EObject>()
-  const kopien = originale.map(o => ersteDurchgang(o as Roh, zuordnung))
-  zweiterDurchgang(zuordnung)
+export function copyAll(sources: EObject[]): EObject[] {
+  const mapping = new Map<EObject, EObject>()
+  const kopien = sources.map(o => firstPass(o as Raw, mapping))
+  secondPass(mapping)
   return kopien
 }
 
 /** Erster Durchgang: Struktur und Attribute, Querverweise noch nicht. */
-function ersteDurchgang(original: Roh, zuordnung: Map<EObject, EObject>): EObject {
-  const eClass = original.eClass()
+function firstPass(source: Raw, mapping: Map<EObject, EObject>): EObject {
+  const eClass = source.eClass()
   const factory = eClass?.getEPackage?.()?.getEFactoryInstance?.()
   if (!factory) throw new Error('Kein EFactory für ' + (eClass?.getName?.() ?? 'unbekannte Klasse'))
 
-  const kopie = factory.create(eClass) as Roh
-  zuordnung.set(original, kopie)
+  const copy = factory.create(eClass) as Raw
+  mapping.set(source, copy)
 
   for (const feature of eClass.getEAllStructuralFeatures()) {
     if (feature.isDerived?.() || feature.isTransient?.()) continue
     // Nicht änderbare Merkmale (z. B. berechnete) übergehen
     if (typeof feature.isChangeable === 'function' && !feature.isChangeable()) continue
 
-    const wert = original.eGet(feature)
+    const value = source.eGet(feature)
 
-    if (istReferenz(feature) && feature.isContainment()) {
-      const kinder = alsListe(wert)
-      if (kinder) {
-        leereUndFuelle(kopie, feature, kinder.map(k => ersteDurchgang(k as Roh, zuordnung)))
-      } else if (wert) {
-        kopie.eSet(feature, ersteDurchgang(wert as Roh, zuordnung))
+    if (isReference(feature) && feature.isContainment()) {
+      const children = asArray(value)
+      if (children) {
+        replaceAll(copy, feature, children.map(k => firstPass(k as Raw, mapping)))
+      } else if (value) {
+        copy.eSet(feature, firstPass(value as Raw, mapping))
       }
       continue
     }
 
-    if (istReferenz(feature)) continue   // Querverweise erst im zweiten Durchgang
+    if (isReference(feature)) continue   // Querverweise erst im zweiten Durchgang
 
     // Attribut
-    const werte = alsListe(wert)
-    if (werte) leereUndFuelle(kopie, feature, werte)
-    else if (wert !== null && wert !== undefined) kopie.eSet(feature, wert)
+    const values = asArray(value)
+    if (values) replaceAll(copy, feature, values)
+    else if (value !== null && value !== undefined) copy.eSet(feature, value)
   }
-  return kopie
+  return copy
 }
 
 /**
  * Zweiter Durchgang: Querverweise setzen. Zeigt ein Verweis auf etwas, das
  * mitkopiert wurde, bekommt die Kopie die Kopie — sonst das Original.
  */
-function zweiterDurchgang(zuordnung: Map<EObject, EObject>): void {
-  for (const [original, kopie] of zuordnung) {
-    const eClass = (original as Roh).eClass()
+function secondPass(mapping: Map<EObject, EObject>): void {
+  for (const [source, copy] of mapping) {
+    const eClass = (source as Raw).eClass()
     for (const feature of eClass.getEAllStructuralFeatures()) {
-      if (!istReferenz(feature) || feature.isContainment()) continue
+      if (!isReference(feature) || feature.isContainment()) continue
       if (feature.isDerived?.() || feature.isTransient?.()) continue
       if (typeof feature.isChangeable === 'function' && !feature.isChangeable()) continue
       // eOpposite wird von der Gegenseite mitgesetzt; eigenes Setzen doppelt
       if (typeof feature.getEOpposite === 'function' && feature.getEOpposite()) continue
 
-      const wert = (original as Roh).eGet(feature)
-      const ziel = (o: unknown) => zuordnung.get(o as EObject) ?? o
+      const value = (source as Raw).eGet(feature)
+      const target = (o: unknown) => mapping.get(o as EObject) ?? o
 
-      const werte = alsListe(wert)
-      if (werte) leereUndFuelle(kopie as Roh, feature, werte.map(ziel))
-      else if (wert !== null && wert !== undefined) (kopie as Roh).eSet(feature, ziel(wert))
+      const values = asArray(value)
+      if (values) replaceAll(copy as Raw, feature, values.map(target))
+      else if (value !== null && value !== undefined) (copy as Raw).eSet(feature, target(value))
     }
   }
 }

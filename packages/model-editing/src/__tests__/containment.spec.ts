@@ -13,8 +13,8 @@ import {
   type EPackage, type EClass, type EObject
 } from '@emfts/core'
 import {
-  aufnehmendeReferenzen, pruefeAufnahme, istNachfahre,
-  containmentReferences, fuegeEin
+  acceptingReferences, checkContainment, isDescendant,
+  containmentReferences, addToContainment
 } from '../containment'
 
 const ECORE = `<?xml version="1.0" encoding="UTF-8"?>
@@ -54,43 +54,43 @@ describe('Containment-Pruefung', () => {
   })
 
   it('ein Attribut passt in eine andere Klasse', () => {
-    const refs = aufnehmendeReferenzen(attribut, klasseB as unknown as EObject)
+    const refs = acceptingReferences(attribut, klasseB as unknown as EObject)
     expect(refs.length).toBeGreaterThan(0)
     expect(refs.map(r => r.getName())).toContain('eStructuralFeatures')
   })
 
   it('ein Attribut passt nicht in ein Package', () => {
-    const ergebnis = pruefeAufnahme(attribut, pkg as unknown as EObject)
+    const ergebnis = checkContainment(attribut, pkg as unknown as EObject)
     expect(ergebnis.ok).toBe(false)
-    expect(ergebnis.grund).toMatch(/kein passender Container/i)
+    expect(ergebnis.reason).toMatch(/kein passender Container/i)
   })
 
   it('eine Klasse passt in ein Package', () => {
-    const refs = aufnehmendeReferenzen(klasseA as unknown as EObject, pkg as unknown as EObject)
+    const refs = acceptingReferences(klasseA as unknown as EObject, pkg as unknown as EObject)
     expect(refs.map(r => r.getName())).toContain('eClassifiers')
   })
 
   it('ein Package passt in ein Package (Unterpakete)', () => {
-    const refs = aufnehmendeReferenzen(unterpaket, pkg as unknown as EObject)
+    const refs = acceptingReferences(unterpaket, pkg as unknown as EObject)
     expect(refs.map(r => r.getName())).toContain('eSubpackages')
   })
 
   it('nichts passt in sich selbst', () => {
-    expect(aufnehmendeReferenzen(klasseA as unknown as EObject, klasseA as unknown as EObject)).toHaveLength(0)
+    expect(acceptingReferences(klasseA as unknown as EObject, klasseA as unknown as EObject)).toHaveLength(0)
   })
 
   it('ein Element kann nicht in seinen eigenen Teilbaum wandern', () => {
     // Das Package in seine eigene Klasse zu schieben wuerde den Baum
     // in sich selbst haengen
-    expect(istNachfahre(pkg as unknown as EObject, klasseA as unknown as EObject)).toBe(true)
-    expect(aufnehmendeReferenzen(pkg as unknown as EObject, klasseA as unknown as EObject)).toHaveLength(0)
+    expect(isDescendant(pkg as unknown as EObject, klasseA as unknown as EObject)).toBe(true)
+    expect(acceptingReferences(pkg as unknown as EObject, klasseA as unknown as EObject)).toHaveLength(0)
   })
 
   it('beim Einfuegen einer Kopie entfaellt die Zyklus-Pruefung', () => {
     // Eine Kopie ist ein neues Objekt und in keinem Teilbaum enthalten —
     // die Pruefung wuerde hier nur falsch verneinen.
-    const refs = aufnehmendeReferenzen(
-      pkg as unknown as EObject, klasseA as unknown as EObject, { zyklusPruefen: false }
+    const refs = acceptingReferences(
+      pkg as unknown as EObject, klasseA as unknown as EObject, { checkCycle: false }
     )
     // Ein Package passt trotzdem nicht in eine Klasse — aber aus dem
     // richtigen Grund (Typ), nicht wegen des Zyklus
@@ -98,15 +98,15 @@ describe('Containment-Pruefung', () => {
   })
 
   it('containmentReferences liefert die Ecore-Container einer EClass', () => {
-    const namen = containmentReferences(klasseA.eClass()).map(r => r.getName())
-    expect(namen).toContain('eStructuralFeatures')
-    expect(namen).toContain('eOperations')
+    const names = containmentReferences(klasseA.eClass()).map(r => r.getName())
+    expect(names).toContain('eStructuralFeatures')
+    expect(names).toContain('eOperations')
   })
 
-  it('fuegeEin haengt das Element wirklich ein', () => {
+  it('addToContainment haengt das Element wirklich ein', () => {
     const vorher = klasseB.getEStructuralFeatures().size()
-    const ref = aufnehmendeReferenzen(attribut, klasseB as unknown as EObject)[0]
-    expect(fuegeEin(attribut, klasseB as unknown as EObject, ref)).toBe(true)
+    const ref = acceptingReferences(attribut, klasseB as unknown as EObject)[0]
+    expect(addToContainment(attribut, klasseB as unknown as EObject, ref)).toBe(true)
     expect(klasseB.getEStructuralFeatures().size()).toBe(vorher + 1)
   })
 })
