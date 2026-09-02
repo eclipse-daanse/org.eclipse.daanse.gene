@@ -16,6 +16,7 @@ import {
   Diagnostician, EcoreValidator, EValidatorRegistry,
   type Notification, type Diagnostic
 } from '@emfts/core'
+import { copyDeep, checkContainment, addToContainment, parentOf, type ContainmentResult } from 'model-editing'
 import type { MetamodelerState, MetaTreeNode, OclConstraintInfo, ConstraintSeverity, ConstraintRole } from '../types'
 import { META_ICONS, OCL_ANNOTATION_SOURCES, getClassifierIcon, DEFAULT_CONSTRAINT_SEVERITY, DEFAULT_CONSTRAINT_ROLE } from '../types'
 
@@ -2117,7 +2118,141 @@ export function useMetamodeler() {
     nodeCache.clear()
   }
 
+  // ── Zwischenablage: Kopieren, Ausschneiden, Einfügen (#63) ────────────────
+  /**
+   * Was in der Zwischenablage liegt, und ob es beim Einfügen verschoben
+   * (ausgeschnitten) oder vervielfältigt wird.
+   *
+   * Die Ablage bleibt im Metamodeler: Ecore-Elemente in einen Instanzbaum
+   * einzufügen ergibt keinen Sinn, ein gemeinsamer Speicher wäre eher
+   * Fehlerquelle als Nutzen. Geteilt wird die Logik (model-editing), nicht
+   * der Zustand.
+   */
+  const clipboard = ref<{ element: ENamedElement; cut: boolean } | null>(null)
+
+  const hasClipboardContent = computed(() => clipboard.value !== null)
+
+  function copyToClipboard(element: ENamedElement): void {
+    clipboard.value = { element, cut: false }
+  }
+
+  function cutToClipboard(element: ENamedElement): void {
+    clipboard.value = { element, cut: true }
+  }
+
+  function clearClipboard(): void {
+    clipboard.value = null
+  }
+
+  /**
+   * Darf das Element aus der Ablage hier hinein?
+   *
+   * Beim Ausschneiden gilt die Zyklus-Prüfung — ein Element darf nicht in
+   * seinen eigenen Teilbaum wandern. Beim Kopieren entfällt sie: Die Kopie
+   * ist ein neues Objekt und in keinem Teilbaum enthalten.
+   */
+  function canPasteInto(target: ENamedElement): ContainmentResult {
+    const entry = clipboard.value
+    if (!entry) return { ok: false, refs: [], reason: 'Die Zwischenablage ist leer.' }
+    return checkContainment(
+      toRaw(entry.element) as unknown as EObject,
+      toRaw(target) as unknown as EObject,
+      { checkCycle: entry.cut }
+    )
+  }
+
+  /**
+   * Sucht einen freien Namen im Ziel. Ecore erlaubt zwei Klassifizierer
+   * gleichen Namens in einem Package nicht sinnvoll — ohne das entstünde beim
+   * Einfügen ein Modell, das sich nicht mehr laden lässt.
+   */
+  function findFreeName(base: string, siblings: Iterable<unknown>): string {
+    const taken = new Set<string>()
+    for (const s of siblings) {
+      const n = (s as { getName?: () => string | null })?.getName?.()
+      if (n) taken.add(n)
+    }
+    if (!taken.has(base)) return base
+    for (let i = 2; i < 1000; i++) {
+      const kandidat = `${base}${i}`
+      if (!taken.has(kandidat)) return kandidat
+    }
+    return `${base}_${Date.now()}`
+  }
+
+  /**
+   * Fügt den Inhalt der Ablage in `target` ein. Beim Ausschneiden wird das
+   * Original vorher aus seinem Container gelöst, beim Kopieren eine Tiefkopie
+   * angelegt (Attribute kommen mit, Typverweise zeigen weiter auf dieselben
+   * Datentypen).
+   */
+  function pasteInto(target: ENamedElement): boolean {
+    const entry = clipboard.value
+    if (!entry) return false
+
+    const pruefung = canPasteInto(target)
+    if (!pruefung.ok || pruefung.refs.length === 0) return false
+    const ref = pruefung.refs[0]
+    const zielRoh = toRaw(target) as unknown as EObject
+
+    try {
+      let einzufuegen: EObject
+      if (entry.cut) {
+        einzufuegen = toRaw(entry.element) as unknown as EObject
+        if (!detachFromParent(einzufuegen)) return false
+      } else {
+        einzufuegen = copyDeep(toRaw(entry.element) as unknown as EObject)
+      }
+
+      // Namenskollision im Ziel vermeiden
+      const named = einzufuegen as unknown as { getName?: () => string | null; setName?: (v: string) => void }
+      const bisher = named.getName?.()
+      if (bisher && named.setName) {
+        const vorhandene = zielRoh.eGet(ref) as unknown as Iterable<unknown> | null
+        if (vorhandene) named.setName(findFreeName(bisher, vorhandene))
+      }
+
+      if (!addToContainment(einzufuegen, zielRoh, ref)) return false
+
+      if (entry.cut) clipboard.value = null
+      markDirtyAndUpdate()
+      return true
+    } catch (e) {
+      console.warn('[Metamodeler] Einfügen fehlgeschlagen:', e)
+      return false
+    }
+  }
+
+  /** Löst ein Element aus seinem Container — für das Ausschneiden. */
+  function detachFromParent(element: EObject): boolean {
+    const parent = parentOf(element)
+    if (!parent) return false
+    const parentClass = parent.eClass?.()
+    if (!parentClass) return false
+    for (const feature of parentClass.getEAllStructuralFeatures()) {
+      const ref = feature as unknown as { isContainment?: () => boolean }
+      if (typeof ref.isContainment !== 'function' || !ref.isContainment()) continue
+      const list = parent.eGet(feature) as unknown as { remove?: (v: unknown) => boolean } | null
+      if (list && typeof list.remove === 'function' && list.remove(element)) return true
+    }
+    return false
+  }
+
+  /** Modell als geändert markieren und die Ansicht auffrischen. */
+  function markDirtyAndUpdate(): void {
+    dirty.value = true
+    triggerUpdate()
+  }
+
   return {
+    // Zwischenablage (#63)
+    clipboard,
+    hasClipboardContent,
+    copyToClipboard,
+    cutToClipboard,
+    clearClipboard,
+    canPasteInto,
+    pasteInto,
     // State
     resource,
     rootPackage,
