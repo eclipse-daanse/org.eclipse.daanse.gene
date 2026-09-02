@@ -173,6 +173,40 @@ function handleReferenceTargetSelect(selection: { eClass: any; className: string
 }
 
 // Context menu items based on selected node type
+/**
+ * Kopieren/Ausschneiden/Einfügen für jeden Knotentyp (#63).
+ *
+ * "Einfügen" ist nur aktiv, wo das Metamodell es zulässt — ein Attribut
+ * gehört in eine Klasse, nicht in ein Package. Die Prüfung dafür ist
+ * dieselbe wie beim Verschieben, sie liegt in `model-editing`.
+ */
+function clipboardMenuItems(node: MetaTreeNode) {
+  const element = node.data as ENamedElement
+  const paste = metamodeler.canPasteInto(element)
+  return [
+    { separator: true },
+    {
+      label: 'Copy',
+      icon: 'pi pi-copy',
+      command: () => metamodeler.copyToClipboard(element)
+    },
+    {
+      label: 'Cut',
+      icon: 'pi pi-scissors',
+      command: () => metamodeler.cutToClipboard(element)
+    },
+    {
+      label: 'Paste',
+      icon: 'pi pi-clipboard',
+      disabled: !paste.ok,
+      // Der Grund steht im Menü: sonst ist ein ausgegrauter Eintrag ohne
+      // Erklärung, und der Nutzer probiert weiter.
+      ...(paste.ok ? {} : { label: `Paste (${paste.reason ?? 'nicht möglich'})` }),
+      command: () => { metamodeler.pasteInto(element) }
+    }
+  ]
+}
+
 const contextMenuItems = computed(() => {
   if (!selectedNode.value) return []
 
@@ -206,7 +240,8 @@ const contextMenuItems = computed(() => {
         icon: 'pi pi-trash',
         disabled: true, // Can't delete root package
         command: () => {}
-      }
+      },
+      ...clipboardMenuItems(node)
     ]
   }
 
@@ -232,7 +267,8 @@ const contextMenuItems = computed(() => {
         label: 'Delete Class',
         icon: 'pi pi-trash',
         command: () => handleDelete()
-      }
+      },
+      ...clipboardMenuItems(node)
     ]
   }
 
@@ -252,7 +288,8 @@ const contextMenuItems = computed(() => {
           label: 'Delete Enum',
           icon: 'pi pi-trash',
           command: () => handleDelete()
-        }
+        },
+        ...clipboardMenuItems(node)
       ]
     }
     return [
@@ -260,7 +297,8 @@ const contextMenuItems = computed(() => {
         label: 'Delete',
         icon: 'pi pi-trash',
         command: () => handleDelete()
-      }
+      },
+      ...clipboardMenuItems(node)
     ]
   }
 
@@ -270,7 +308,8 @@ const contextMenuItems = computed(() => {
         label: 'Delete',
         icon: 'pi pi-trash',
         command: () => handleDelete()
-      }
+      },
+      ...clipboardMenuItems(node)
     ]
   }
 
@@ -506,6 +545,37 @@ async function handleSaveAs() {
   }
 }
 
+/**
+ * Tastenkürzel für die Zwischenablage (#63).
+ *
+ * Am Baum-Container statt am Dokument: Sonst griffe Strg+C auch, während
+ * jemand in einem Eingabefeld eines Dialogs Text kopiert. Der Container hat
+ * tabindex, damit er den Fokus halten kann.
+ */
+function handleClipboardShortcut(event: KeyboardEvent): void {
+  if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey) return
+  const node = selectedNode.value
+  if (!node?.data) return
+
+  // In Eingabefeldern gilt die normale Textbearbeitung
+  const ziel = event.target as HTMLElement | null
+  if (ziel?.closest?.('input, textarea, [contenteditable="true"]')) return
+
+  const element = node.data as ENamedElement
+  const taste = event.key.toLowerCase()
+  if (taste === 'c') {
+    metamodeler.copyToClipboard(element)
+  } else if (taste === 'x') {
+    metamodeler.cutToClipboard(element)
+  } else if (taste === 'v') {
+    if (!metamodeler.canPasteInto(element).ok) return
+    metamodeler.pasteInto(element)
+  } else {
+    return
+  }
+  event.preventDefault()
+}
+
 onMounted(() => {
   const eb = tsm?.getService('gene.eventbus')
   eb?.on?.('metamodeler:new-package', () => handleCreateInitialPackage())
@@ -549,7 +619,7 @@ async function exportJsonSchema() {
 </script>
 
 <template>
-  <div class="metamodeler-tree">
+  <div class="metamodeler-tree" tabindex="-1" @keydown="handleClipboardShortcut">
     <!-- Empty state -->
     <div v-if="!metamodeler.rootPackage.value" class="empty-state">
       <i class="pi pi-box"></i>
