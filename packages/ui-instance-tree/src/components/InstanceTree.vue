@@ -704,6 +704,32 @@ const contextMenuItems = computed(() => {
     command: handleDelete
   })
 
+  // Zwischenablage (#63) — dieselbe Containment-Prüfung wie beim Ziehen,
+  // damit Einfügen und Verschieben nicht unterschiedlich urteilen.
+  const clipObj = ctxSelectedNode.value?.data
+  if (clipObj) {
+    const paste = (ctx as any).canPasteInto?.(clipObj) ?? { ok: false, reason: 'Nicht verfügbar.' }
+    items.push({ separator: true })
+    items.push({
+      label: 'Copy',
+      icon: 'pi pi-copy',
+      command: () => (ctx as any).copyToClipboard?.(clipObj)
+    })
+    items.push({
+      label: 'Cut',
+      icon: 'pi pi-scissors',
+      command: () => (ctx as any).cutToClipboard?.(clipObj)
+    })
+    items.push({
+      // Der Grund steht im Eintrag: ein ausgegrauter Menüpunkt ohne
+      // Erklärung lässt den Nutzer weiter probieren.
+      label: paste.ok ? 'Paste' : `Paste (${paste.reason ?? 'nicht möglich'})`,
+      icon: 'pi pi-clipboard',
+      disabled: !paste.ok,
+      command: () => { (ctx as any).pasteInto?.(clipObj) }
+    })
+  }
+
   // Set Icon — opens the icon settings prefilled with this object's class.
   // Routed through the command framework (instance.setIcon, scope OBJECT).
   const setIconData = ctxSelectedNode.value?.data

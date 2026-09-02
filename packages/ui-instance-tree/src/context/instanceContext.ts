@@ -163,6 +163,11 @@ export function createInstanceContext(): EditorContext {
     canMoveBeside: (dragged: EObject, target: EObject) => instanceTree.canMoveBeside(dragged, target),
     canDropInto: (dragged: EObject, targetParent: EObject) => instanceTree.canDropInto(dragged, targetParent),
     moveInto: (dragged: EObject, targetParent: EObject, ref: EReference) => instanceTree.moveInto(dragged, targetParent, ref),
+    copyToClipboard: (element: EObject) => instanceTree.copyToClipboard(element),
+    cutToClipboard: (element: EObject) => instanceTree.cutToClipboard(element),
+    hasClipboardContent: instanceTree.hasClipboardContent,
+    canPasteInto: (target: EObject) => instanceTree.canPasteInto(target),
+    pasteInto: (target: EObject) => instanceTree.pasteInto(target),
     isResourceDirty: (res: Resource) => instanceTree.isResourceDirty(res),
     saveResource: async (res: Resource): Promise<SerializedResource> => {
       const content = await instanceTree.serializeResource(res)

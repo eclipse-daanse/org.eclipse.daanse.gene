@@ -5,9 +5,10 @@
  * Uses EMF notifications (EContentAdapter) to automatically react to model changes.
  */
 
-import { ref, computed, triggerRef, toRaw, type Ref } from 'tsm:vue'
+import { ref, shallowRef, computed, triggerRef, toRaw, type Ref } from 'tsm:vue'
 import type { EObject, EClass, EReference, Resource } from '@emfts/core'
 import { XMIResource, URI, BasicResourceSet, EContentAdapter, type Notification } from '@emfts/core'
+import { copyDeep, checkContainment, addToContainment, acceptingReferences, type ContainmentResult } from 'model-editing'
 import type { InstanceTreeNode, TreeSelection, AnyTreeNode } from '../types'
 import { getObjectId, getObjectLabel, getObjectIcon, getObjectIconInfo } from '../types'
 import { useSharedViews } from './useViews'
@@ -1261,7 +1262,89 @@ export function useInstanceTree(
       || 'instance'
   }
 
+  // ── Zwischenablage: Kopieren, Ausschneiden, Einfügen (#63) ────────────────
+  /**
+   * Eigene Ablage je Baum: Ecore-Elemente gehören nicht in einen Instanzbaum
+   * und umgekehrt. Geteilt wird die Logik (model-editing), nicht der Zustand.
+   */
+  // shallowRef, nicht ref: Ein tiefes ref verpackt das EObject in einen Proxy,
+  // und dann scheitern die Identitätsvergleiche in der Containment-Prüfung
+  // (refType === elementClass) — Proxy und Original sind nicht dasselbe.
+  const clipboard = shallowRef<{ element: EObject; cut: boolean } | null>(null)
+  const hasClipboardContent = computed(() => clipboard.value !== null)
+
+  function copyToClipboard(element: EObject): void {
+    clipboard.value = { element: toRaw(element), cut: false }
+  }
+
+  function cutToClipboard(element: EObject): void {
+    clipboard.value = { element: toRaw(element), cut: true }
+  }
+
+  function clearClipboard(): void {
+    clipboard.value = null
+  }
+
+  /**
+   * Beim Ausschneiden gilt die Zyklus-Prüfung — ein Objekt darf nicht in
+   * seinen eigenen Teilbaum. Beim Kopieren entfällt sie: Die Kopie ist ein
+   * neues Objekt und in keinem Teilbaum enthalten.
+   */
+  function canPasteInto(target: EObject): ContainmentResult {
+    const entry = clipboard.value
+    if (!entry) return { ok: false, refs: [], reason: 'Die Zwischenablage ist leer.' }
+    return checkContainment(entry.element, toRaw(target), { checkCycle: entry.cut })
+  }
+
+  function pasteInto(target: EObject): boolean {
+    const entry = clipboard.value
+    if (!entry) return false
+    const ziel = toRaw(target)
+    const refs = acceptingReferences(entry.element, ziel, { checkCycle: entry.cut })
+    if (refs.length === 0) return false
+
+    try {
+      let element: EObject
+      if (entry.cut) {
+        element = entry.element
+        detachObject(element as any)
+      } else {
+        element = copyDeep(entry.element)
+      }
+      if (!addToContainment(element, ziel, refs[0])) return false
+
+      // Kopien brauchen eine eigene xmi:id — sonst stünden zwei Objekte mit
+      // derselben in der Datei, und Verweise darauf wären nicht mehr
+      // eindeutig auflösbar. Vergebene IDs bleiben (beim Ausschneiden
+      // behält das Objekt seine).
+      const vergebeIds = (o: EObject): void => {
+        assignXmiId(o)
+        for (const child of o.eContents()) vergebeIds(child)
+      }
+      vergebeIds(element)
+
+      const res: any = (ziel as any).eResource?.()
+      if (res) markDirty(res)
+      if (entry.cut) clipboard.value = null
+      triggerUpdate()
+      return true
+    } catch (e) {
+      console.warn('[InstanceTree] Einfügen fehlgeschlagen:', e)
+      return false
+    }
+  }
+
+
   return {
+    // Zwischenablage (#63)
+    clipboard,
+    hasClipboardContent,
+    copyToClipboard,
+    cutToClipboard,
+    clearClipboard,
+    canPasteInto,
+    pasteInto,
+
     // State
     treeNodes,
     selectedKeys,
