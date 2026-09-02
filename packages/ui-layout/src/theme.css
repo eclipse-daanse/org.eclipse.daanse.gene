@@ -684,6 +684,43 @@ button.p-button,
   list-style: none !important;
 }
 
+/*
+ * Lange Menülisten scrollbar halten (#88).
+ *
+ * PrimeVue setzt weder max-height noch overflow. Ein Untermenü mit vielen
+ * Einträgen — etwa "Add Child" bei einer Referenz mit 40 möglichen Klassen —
+ * wird dadurch höher als das Fenster: gemessen 1288px bei 1000px Fensterhöhe,
+ * Beginn bei -947px. Die oberen Einträge liegen dann außerhalb und sind
+ * unerreichbar, weil auch nicht gescrollt werden kann.
+ *
+ * 60vh statt einer festen Pixelzahl: Auf kleinen Fenstern bliebe eine feste
+ * Höhe zu groß, auf großen verschenkte sie Platz. Der Rest des Fensters bleibt
+ * frei, damit das Menü nicht bündig an den Rändern klebt.
+ *
+ * Die :has()-Bedingung ist wesentlich: Untermenüs liegen rechts ausserhalb der
+ * Elternbox, und ein overflow-y schneidet sie dort ab — ein aufgeklapptes
+ * Untermenü wäre dann ein leerer Kasten. Eine Liste, die gerade ein Untermenü
+ * offen hat, bleibt deshalb unbegrenzt; begrenzt wird nur, was tatsächlich
+ * Einträge zeigt.
+ */
+.p-contextmenu-root-list:not(:has(> li[aria-expanded='true'])),
+.p-contextmenu-submenu:not(:has(> li[aria-expanded='true'])),
+.p-contextmenu ul:not(:has(> li[aria-expanded='true'])) {
+  max-height: 60vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Schlanke Bildlaufleiste, damit sie im Menü nicht dominiert */
+.p-contextmenu ul::-webkit-scrollbar {
+  width: 8px;
+}
+
+.p-contextmenu ul::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, currentColor 25%, transparent);
+  border-radius: 4px;
+}
+
 /* PrimeVue 4 uses p-contextmenu-item instead of p-menuitem */
 .p-contextmenu .p-contextmenu-item,
 .p-contextmenu .p-menuitem {
