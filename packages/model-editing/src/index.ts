@@ -1,13 +1,13 @@
 export {
   containmentReferences,
   referenceAcceptsType,
-  istNachfahre,
-  elternteil,
-  aufnehmendeReferenzen,
-  pruefeAufnahme,
-  fuegeEin,
-  type AufnahmeOptionen,
-  type AufnahmeErgebnis
+  isDescendant,
+  parentOf,
+  acceptingReferences,
+  checkContainment,
+  addToContainment,
+  type ContainmentOptions,
+  type ContainmentResult
 } from './containment'
 
-export { kopiereTief, kopiereAlle } from './copy'
+export { copyDeep, copyAll } from './copy'

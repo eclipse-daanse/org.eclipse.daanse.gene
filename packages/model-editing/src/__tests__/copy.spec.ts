@@ -13,17 +13,17 @@ import {
   registerEcorePackage, EPackageRegistry,
   type EPackage, type EClass, type EObject
 } from '@emfts/core'
-import { kopiereTief, kopiereAlle } from '../copy'
+import { copyDeep, copyAll } from '../copy'
 
 const ECORE = `<?xml version="1.0" encoding="UTF-8"?>
 <ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
-    name="p" nsURI="kopie-spec" nsPrefix="p">
+    name="p" nsURI="copy-spec" nsPrefix="p">
   <eClassifiers xsi:type="ecore:EClass" name="Sensor">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="name"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="wert"
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EDouble"/>
     <!-- Querverweis auf eine Klasse desselben Packages -->
     <eStructuralFeatures xsi:type="ecore:EReference" name="standort" eType="#//Ort"/>
@@ -55,15 +55,15 @@ describe('Tiefkopie', () => {
 
   it('nimmt die Containment-Kinder mit', () => {
     expect(sensor.getEStructuralFeatures().size()).toBe(3)
-    const kopie = kopiereTief(sensor as unknown as EObject) as unknown as EClass
-    expect(kopie.getEStructuralFeatures().size()).toBe(3)
-    expect(kopie.getName()).toBe('Sensor')
+    const copy = copyDeep(sensor as unknown as EObject) as unknown as EClass
+    expect(copy.getEStructuralFeatures().size()).toBe(3)
+    expect(copy.getName()).toBe('Sensor')
   })
 
   it('die Kinder sind eigene Objekte, keine geteilten', () => {
-    const kopie = kopiereTief(sensor as unknown as EObject) as unknown as EClass
+    const copy = copyDeep(sensor as unknown as EObject) as unknown as EClass
     const originalAttr = sensor.getEStructuralFeatures().get(0)
-    const kopieAttr = kopie.getEStructuralFeatures().get(0)
+    const kopieAttr = copy.getEStructuralFeatures().get(0)
     expect(kopieAttr).not.toBe(originalAttr)
     expect(kopieAttr.getName()).toBe(originalAttr.getName())
 
@@ -73,9 +73,9 @@ describe('Tiefkopie', () => {
   })
 
   it('Typverweise zeigen weiter auf dieselben Datentypen', () => {
-    const kopie = kopiereTief(sensor as unknown as EObject) as unknown as EClass
+    const copy = copyDeep(sensor as unknown as EObject) as unknown as EClass
     const originalTyp = (sensor.getEStructuralFeatures().get(0) as any).getEType()
-    const kopieTyp = (kopie.getEStructuralFeatures().get(0) as any).getEType()
+    const kopieTyp = (copy.getEStructuralFeatures().get(0) as any).getEType()
     // EString wird nicht mitkopiert — sonst haette das Modell plötzlich
     // einen zweiten, eigenen EString
     expect(kopieTyp).toBe(originalTyp)
@@ -83,15 +83,15 @@ describe('Tiefkopie', () => {
   })
 
   it('Verweise nach aussen bleiben auf dem Original', () => {
-    const kopie = kopiereTief(sensor as unknown as EObject) as unknown as EClass
-    const standort = [...kopie.getEStructuralFeatures()].find((f: any) => f.getName() === 'standort') as any
+    const copy = copyDeep(sensor as unknown as EObject) as unknown as EClass
+    const standort = [...copy.getEStructuralFeatures()].find((f: any) => f.getName() === 'standort') as any
     expect(standort.getEType()).toBe(ort)
   })
 
-  it('kopiereAlle biegt Verweise zwischen den kopierten Objekten um', () => {
+  it('copyAll biegt Verweise zwischen den kopierten Objekten um', () => {
     // Sensor.standort zeigt auf Ort; werden beide zusammen kopiert, soll die
     // Sensor-Kopie auf die Ort-Kopie zeigen, nicht auf das Original.
-    const [sensorKopie, ortKopie] = kopiereAlle([
+    const [sensorKopie, ortKopie] = copyAll([
       sensor as unknown as EObject,
       ort as unknown as EObject
     ]) as unknown as EClass[]
@@ -103,9 +103,9 @@ describe('Tiefkopie', () => {
 
   it('kopiert auch Attributwerte einfacher Objekte', () => {
     const attr = sensor.getEStructuralFeatures().get(0) as any
-    const kopie = kopiereTief(attr) as any
-    expect(kopie.getName()).toBe('name')
-    expect(kopie.getEType()).toBe(attr.getEType())
-    expect(kopie).not.toBe(attr)
+    const copy = copyDeep(attr) as any
+    expect(copy.getName()).toBe('name')
+    expect(copy.getEType()).toBe(attr.getEType())
+    expect(copy).not.toBe(attr)
   })
 })
