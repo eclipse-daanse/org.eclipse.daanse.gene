@@ -11,3 +11,5 @@ export {
 } from './containment'
 
 export { copyDeep, copyAll } from './copy'
+
+export { detach, moveInto, moveBeside, canMoveBeside, type MoveCheck } from './move'

@@ -16,7 +16,11 @@ import {
   Diagnostician, EcoreValidator, EValidatorRegistry,
   type Notification, type Diagnostic
 } from '@emfts/core'
-import { copyDeep, checkContainment, addToContainment, parentOf, type ContainmentResult } from 'model-editing'
+import {
+  copyDeep, checkContainment, addToContainment, parentOf, acceptingReferences,
+  moveInto as moveIntoContainment, moveBeside as moveBesideTarget, canMoveBeside,
+  type ContainmentResult, type MoveCheck
+} from 'model-editing'
 import type { MetamodelerState, MetaTreeNode, OclConstraintInfo, ConstraintSeverity, ConstraintRole } from '../types'
 import { META_ICONS, OCL_ANNOTATION_SOURCES, getClassifierIcon, DEFAULT_CONSTRAINT_SEVERITY, DEFAULT_CONSTRAINT_ROLE } from '../types'
 
@@ -2244,7 +2248,51 @@ export function useMetamodeler() {
     triggerUpdate()
   }
 
+  // ── Verschieben per Drag & Drop (#63) ─────────────────────────────────────
+  /** Darf `dragged` als Kind unter `target`? */
+  function canDropInto(dragged: ENamedElement, target: ENamedElement): ContainmentResult {
+    return checkContainment(
+      toRaw(dragged) as unknown as EObject,
+      toRaw(target) as unknown as EObject
+    )
+  }
+
+  /** Darf `dragged` neben `target`? */
+  function canDropBeside(dragged: ENamedElement, target: ENamedElement): MoveCheck {
+    return canMoveBeside(
+      toRaw(dragged) as unknown as EObject,
+      toRaw(target) as unknown as EObject
+    )
+  }
+
+  /** Hängt `dragged` als Kind unter `target`. */
+  function dropInto(dragged: ENamedElement, target: ENamedElement): boolean {
+    const element = toRaw(dragged) as unknown as EObject
+    const ziel = toRaw(target) as unknown as EObject
+    const refs = acceptingReferences(element, ziel)
+    if (refs.length === 0) return false
+    if (!moveIntoContainment(element, ziel, refs[0])) return false
+    markDirtyAndUpdate()
+    return true
+  }
+
+  /** Setzt `dragged` vor oder hinter `target`. */
+  function dropBeside(dragged: ENamedElement, target: ENamedElement, after: boolean): boolean {
+    const ok = moveBesideTarget(
+      toRaw(dragged) as unknown as EObject,
+      toRaw(target) as unknown as EObject,
+      after
+    )
+    if (ok) markDirtyAndUpdate()
+    return ok
+  }
+
   return {
+    // Drag & Drop (#63)
+    canDropInto,
+    canDropBeside,
+    dropInto,
+    dropBeside,
     // Zwischenablage (#63)
     clipboard,
     hasClipboardContent,
