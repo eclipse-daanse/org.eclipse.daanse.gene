@@ -299,8 +299,18 @@ function handleClipboardShortcut(event: KeyboardEvent): void {
   const knoten = ctxSelectedNode.value
   const objekt = knoten?.data as any
 
-  // Auf einem Resource-Knoten fügt Strg+V als Wurzelobjekt ein
-  const resource = (knoten as any)?.kind === 'resource' ? (knoten as any).resource : null
+  /*
+   * Ist gerade ein Resource-Knoten ausgewählt? `selectNode` setzt dafür
+   * selectedNode und selectedObject auf null und merkt sich nur die aktive
+   * Resource — an den Knoten selbst kommt man hier also nicht. Die Auswahl
+   * erkennt man daran, dass ein Schlüssel gesetzt, aber kein Objekt gewählt
+   * ist. (Ohne diese Unterscheidung fiele Strg+V auf einer Resource ins
+   * Leere, weil `knoten` null bleibt.)
+   */
+  const hatAuswahl = Object.keys((ctx as any).selectedKeys?.value ?? {}).length > 0
+  const resource = (!knoten && hatAuswahl)
+    ? ((ctx as any).activeResource?.value ?? null)
+    : null
 
   if (taste === 'c' || taste === 'x') {
     if (!objekt) return
