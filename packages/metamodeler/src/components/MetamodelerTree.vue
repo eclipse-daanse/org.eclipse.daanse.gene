@@ -545,6 +545,56 @@ async function handleSaveAs() {
   }
 }
 
+// ── Drag & Drop (#63) ───────────────────────────────────────────────────────
+/**
+ * PrimeVue meldet beim Ablegen nicht, *wo* abgelegt wurde — `dropPosition`
+ * bleibt intern. Die Zone wird deshalb aus der Zeigerposition abgeleitet, mit
+ * denselben Schwellen wie PrimeVues eigene Anzeige (oberes und unteres
+ * Viertel = daneben, Mitte = hinein). Sonst zeigte die Linie etwas anderes,
+ * als danach passiert.
+ */
+function getDropZone(event: any): 'before' | 'into' | 'after' {
+  const oe = event?.originalEvent
+  const y = oe?.clientY
+  const tgt = oe?.target as HTMLElement | undefined
+  if (typeof y !== 'number' || !tgt?.closest) return 'after'
+  const nodeEl = tgt.closest('.p-tree-node') as HTMLElement | null
+  const rowEl = (nodeEl?.querySelector(':scope > .p-tree-node-content') as HTMLElement | null) || nodeEl
+  const rect = rowEl?.getBoundingClientRect?.()
+  if (!rect || !rect.height) return 'after'
+  const rel = (y - rect.top) / rect.height
+  if (rel < 0.25) return 'before'
+  if (rel > 0.75) return 'after'
+  return 'into'
+}
+
+/** Kurze Rückmeldung, wenn ein Zug abgelehnt wurde. */
+const dropMessage = ref<string | null>(null)
+let dropMessageTimer: number | undefined
+function showDropMessage(reason?: string) {
+  dropMessage.value = reason || 'Verschieben an dieser Stelle nicht möglich.'
+  if (dropMessageTimer) window.clearTimeout(dropMessageTimer)
+  dropMessageTimer = window.setTimeout(() => { dropMessage.value = null }, 3000)
+}
+
+function handleNodeDrop(event: any): void {
+  const dragged = event?.dragNode?.data as ENamedElement | undefined
+  const target = event?.dropNode?.data as ENamedElement | undefined
+  if (!dragged || !target || dragged === target) return
+
+  const zone = getDropZone(event)
+  if (zone === 'into') {
+    const pruefung = metamodeler.canDropInto(dragged, target)
+    if (!pruefung.ok) { showDropMessage(pruefung.reason); return }
+    if (!metamodeler.dropInto(dragged, target)) showDropMessage()
+    return
+  }
+
+  const pruefung = metamodeler.canDropBeside(dragged, target)
+  if (!pruefung.ok) { showDropMessage(pruefung.reason); return }
+  if (!metamodeler.dropBeside(dragged, target, zone === 'after')) showDropMessage()
+}
+
 /**
  * Tastenkürzel für die Zwischenablage (#63).
  *
@@ -639,7 +689,10 @@ async function exportJsonSchema() {
         v-model:selectionKeys="selectedKey"
         v-model:expandedKeys="expandedKeys"
         selectionMode="single"
+        :draggableNodes="true"
+        :droppableNodes="true"
         @node-select="handleNodeSelect"
+        @node-drop="handleNodeDrop"
         class="meta-tree"
       >
         <template #default="{ node }">
@@ -670,6 +723,14 @@ async function exportJsonSchema() {
 
     <!-- Context Menu -->
     <ContextMenu ref="contextMenu" :model="contextMenuItems" />
+
+    <!-- Rückmeldung, wenn ein Zug abgelehnt wurde (#63) -->
+    <transition name="drop-msg">
+      <div v-if="dropMessage" class="drop-message">
+        <i class="pi pi-ban"></i>
+        <span>{{ dropMessage }}</span>
+      </div>
+    </transition>
 
     <!-- New Package Dialog -->
     <Dialog
@@ -919,6 +980,8 @@ async function exportJsonSchema() {
   flex-direction: column;
   height: 100%;
   background: var(--surface-ground);
+  /* Bezug für die absolut positionierte Drop-Meldung (#63) */
+  position: relative;
 }
 
 .tree-header {
@@ -1179,4 +1242,29 @@ async function exportJsonSchema() {
   flex: 1 1 auto;
   min-width: 0;
 }
+
+/* Rückmeldung bei abgelehntem Zug (#63) — gleiche Gestalt wie im Instanzbaum */
+.drop-message {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 0.75rem;
+  right: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--red-50, #fef2f2);
+  color: var(--red-700, #b91c1c);
+  border: 1px solid var(--red-200, #fecaca);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+}
+.drop-message i { flex-shrink: 0; }
+.drop-msg-enter-active,
+.drop-msg-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.drop-msg-enter-from,
+.drop-msg-leave-to { opacity: 0; transform: translateY(0.5rem); }
+
 </style>
