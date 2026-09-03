@@ -19,6 +19,10 @@ export { repairLegacyEcoreHrefs, needsLegacyHrefRepair } from './composables/rep
 // Re-export components
 export { ModelBrowser, ClassPickerDialog } from './components'
 
+// Beschriftung von Klassen mit ihrem Package-Pfad (#104)
+export { packagePathOf, classLabelWithPackage, collectClassesDeep } from './components/classPickerSource'
+import { packagePathOf, classLabelWithPackage } from './components/classPickerSource'
+
 // Import for service registration
 import * as components from './components'
 import { useModelRegistry, useSharedModelRegistry, setViewsService, setCanonicalPackageRegistry } from './composables/useModelRegistry'
@@ -97,7 +101,12 @@ export async function activate(context: ModuleContext): Promise<void> {
     // Legacy .ecore repair — lives with the loader so every load path can offer
     // "repair & reload" for old files with absolute self-nsURI hrefs.
     repairLegacyEcoreHrefs,
-    needsLegacyHrefRepair
+    needsLegacyHrefRepair,
+    // Beschriftung von Klassen mit ihrem Package-Pfad (#104). Über den Dienst
+    // statt per Import: Andere Module dürfen ui-model-browser nicht statisch
+    // einbinden (siehe __tests__/tsm-module-dependencies.test.ts).
+    packagePathOf,
+    classLabelWithPackage
   })
 
   // Register with panel registry

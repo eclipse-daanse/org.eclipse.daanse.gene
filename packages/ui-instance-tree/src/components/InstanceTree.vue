@@ -610,6 +610,70 @@ function resolveReferenceType(ref: EReference): EClass | null {
 /**
  * Get all valid concrete classes for a containment reference
  */
+/*
+ * Klassenbeschriftung mit Package-Pfad kommt über den Model-Browser-Dienst.
+ * Ein statischer Import waere kuerzer, ist aber verboten: Kein Modul darf
+ * ui-model-browser als Wert einbinden (__tests__/tsm-module-dependencies).
+ * Fehlt der Dienst, bleibt es beim Klassennamen — der Baum funktioniert dann
+ * weiter, nur ohne Pfadangabe.
+ */
+function modelBrowser(): any {
+  return tsm?.getService('ui.model-browser.composables')
+}
+
+function classLabelWithPackage(eClass: any): string {
+  return modelBrowser()?.classLabelWithPackage?.(eClass) ?? eClass?.getName?.() ?? 'unknown'
+}
+
+function packagePathOf(eClass: any): string {
+  return modelBrowser()?.packagePathOf?.(eClass) ?? ''
+}
+
+/**
+ * Ab wie vielen Klassen der Auswahl-Dialog statt der Menueliste erscheint.
+ * Darunter waeren zwei Klicks statt einem laestig, darueber ist die Liste
+ * ohne Suche nicht mehr zu ueberblicken (#104).
+ */
+const MAX_KLASSEN_IM_MENUE = 5
+
+/** Alphabetisch, damit die Reihenfolge nicht von der Ladereihenfolge abhaengt. */
+function sortiereKlassen(klassen: EClass[]): EClass[] {
+  return [...klassen].sort((a, b) =>
+    classLabelWithPackage(a).localeCompare(classLabelWithPackage(b), 'de')
+  )
+}
+
+// Auswahl-Dialog fuer lange Klassenlisten (#104)
+const zeigeKlassenauswahl = ref(false)
+const klassenauswahlRef = ref<EReference | null>(null)
+const klassenauswahlKlassen = ref<EClass[]>([])
+
+function oeffneKlassenauswahl(ref: EReference, klassen: EClass[]): void {
+  klassenauswahlRef.value = ref
+  klassenauswahlKlassen.value = sortiereKlassen(klassen)
+  klassenSuche.value = ''
+  zeigeKlassenauswahl.value = true
+}
+
+const klassenSuche = ref('')
+
+/** Filtert über Klassenname und Paketpfad — beides ist zum Finden nützlich. */
+const gefilterteKlassen = computed<EClass[]>(() => {
+  const suche = klassenSuche.value.trim().toLowerCase()
+  if (!suche) return klassenauswahlKlassen.value
+  return klassenauswahlKlassen.value.filter(c =>
+    classLabelWithPackage(c).toLowerCase().includes(suche)
+  )
+})
+
+function waehleKlasse(eClass: EClass): void {
+  const ref = klassenauswahlRef.value
+  zeigeKlassenauswahl.value = false
+  if (ref && eClass) handleAddChild(eClass, ref)
+  klassenauswahlRef.value = null
+  klassenauswahlKlassen.value = []
+}
+
 function getValidClassesForRef(ref: EReference): EClass[] {
   const refType = resolveReferenceType(ref)
   if (!refType) return []
@@ -680,12 +744,26 @@ const contextMenuItems = computed(() => {
           }
         }
 
-        // Multiple classes - create nested submenu
+        /*
+         * Ab einer gewissen Laenge wird die Liste im Menue unbrauchbar: Sie ist
+         * nicht durchsuchbar, und bei mehreren Modellen im Workspace stehen dort
+         * gleichnamige Klassen nebeneinander (#104). Darueber deshalb der
+         * Auswahl-Dialog, der Suche und Gruppierung nach Paket mitbringt.
+         */
+        if (validClasses.length > MAX_KLASSEN_IM_MENUE) {
+          return {
+            label: `${getElementName(ref)} … (${validClasses.length})`,
+            icon: 'pi pi-arrow-right',
+            command: () => oeffneKlassenauswahl(ref, validClasses)
+          }
+        }
+
+        // Wenige Klassen: direkt im Menue, sortiert und mit Paketpfad
         return {
           label: getElementName(ref),
           icon: 'pi pi-arrow-right',
-          items: validClasses.map(eClass => ({
-            label: getElementName(eClass),
+          items: sortiereKlassen(validClasses).map(eClass => ({
+            label: classLabelWithPackage(eClass),
             icon: 'pi pi-file',
             command: () => handleAddChild(eClass, ref)
           }))
@@ -1074,6 +1152,42 @@ watch(ctxSelectedObject, (obj) => {
 
     <!-- Context Menu -->
     <ContextMenu ref="contextMenu" :model="contextMenuItems" />
+
+    <!-- Auswahl-Dialog für lange Klassenlisten (#104) -->
+    <Dialog
+      v-model:visible="zeigeKlassenauswahl"
+      modal
+      header="Klasse auswählen"
+      :style="{ width: '32rem' }"
+    >
+      <div class="klassenauswahl">
+        <InputText
+          v-model="klassenSuche"
+          placeholder="Suchen…"
+          class="klassenauswahl__suche"
+          autofocus
+        />
+        <div class="klassenauswahl__liste">
+          <button
+            v-for="eClass in gefilterteKlassen"
+            :key="classLabelWithPackage(eClass)"
+            type="button"
+            class="klassenauswahl__eintrag"
+            @click="waehleKlasse(eClass)"
+          >
+            <i class="pi pi-file"></i>
+            <span class="klassenauswahl__name">{{ eClass.getName() }}</span>
+            <span class="klassenauswahl__paket">{{ packagePathOf(eClass) }}</span>
+          </button>
+          <div v-if="gefilterteKlassen.length === 0" class="klassenauswahl__leer">
+            Keine Klasse passt zu „{{ klassenSuche }}"
+          </div>
+        </div>
+        <div class="klassenauswahl__zaehler">
+          {{ gefilterteKlassen.length }} von {{ klassenauswahlKlassen.length }}
+        </div>
+      </div>
+    </Dialog>
 
     <!-- "+" add menu (New Instance / New Resource) -->
     <Menu ref="addMenu" :model="addMenuItems" :popup="true" />
@@ -1633,4 +1747,65 @@ watch(ctxSelectedObject, (obj) => {
 [data-pc-section='drag-image'] .p-tree-node-toggle-button {
   display: none !important;
 }
+
+/* Auswahl-Dialog für lange Klassenlisten (#104) */
+.klassenauswahl {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.klassenauswahl__suche {
+  width: 100%;
+}
+
+.klassenauswahl__liste {
+  display: flex;
+  flex-direction: column;
+  max-height: 22rem;
+  overflow-y: auto;
+  border: 1px solid var(--surface-border, #dee2e6);
+  border-radius: 6px;
+}
+
+.klassenauswahl__eintrag {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--surface-border, #dee2e6);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.klassenauswahl__eintrag:last-child { border-bottom: none; }
+
+.klassenauswahl__eintrag:hover,
+.klassenauswahl__eintrag:focus-visible {
+  background: var(--surface-hover, rgba(0, 0, 0, 0.04));
+}
+
+.klassenauswahl__name { font-weight: 600; }
+
+/* Der Paketpfad steht gedämpft daneben: Er unterscheidet gleichnamige
+   Klassen, soll den Namen aber nicht überlagern. */
+.klassenauswahl__paket {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary, #6c757d);
+}
+
+.klassenauswahl__leer,
+.klassenauswahl__zaehler {
+  padding: 0.5rem 0.7rem;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary, #6c757d);
+}
+
+.klassenauswahl__zaehler { padding: 0; text-align: right; }
+
 </style>

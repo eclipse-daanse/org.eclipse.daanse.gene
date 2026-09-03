@@ -51,6 +51,17 @@ const emit = defineEmits<{
 // TSM for accessing services (injected by gene-app)
 const tsm = inject<{ getService: <T>(id: string) => T | undefined }>('tsm')
 
+/**
+ * Klassen mit Paketpfad beschriften (#104) — bei mehreren Modellen im
+ * Workspace ist der Name allein nicht unterscheidbar. Ueber den Dienst, weil
+ * instance-builder ui-model-browser nicht statisch einbinden darf; fehlt er,
+ * bleibt es beim Klassennamen.
+ */
+function klassenBeschriftung(eClass: any): string {
+  const mb = tsm?.getService<any>('ui.model-browser.composables')
+  return mb?.classLabelWithPackage?.(eClass) ?? eClass?.getName?.() ?? ''
+}
+
 // For new instances without a class, track selected class
 const selectedClass = ref<EClass | undefined>(props.eClass)
 
@@ -432,6 +443,7 @@ watch(selectedClass, (newClass) => {
         :classes="availableClasses"
         label="Class"
         placeholder="Select class to create..."
+        :labelFor="klassenBeschriftung"
       />
     </div>
 

@@ -15,21 +15,29 @@ const props = defineProps<{
   modelValue?: EClass
   label?: string
   placeholder?: string
+  /** Beschriftung je Klasse; ohne sie bleibt es beim Klassennamen (#104) */
+  labelFor?: (eClass: EClass) => string
 }>()
 
 const emit = defineEmits<{
   'update:modelValue': [eClass: EClass | undefined]
 }>()
 
-// Filter out abstract classes and build options
+/*
+ * Beschriftung kommt optional von aussen (#104): Bei mehreren Modellen im
+ * Workspace ist der Klassenname allein nicht unterscheidbar, der Paketpfad
+ * gehoert dazu. Die Komponente holt ihn nicht selbst — instance-builder darf
+ * ui-model-browser nicht einbinden (__tests__/tsm-module-dependencies).
+ */
 const options = computed(() => {
+  const beschriftung = props.labelFor ?? ((c: EClass) => c.getName() ?? '')
   return props.classes
     .filter(eClass => !eClass.isAbstract())
     .map(eClass => ({
-      label: eClass.getName(),
+      label: beschriftung(eClass),
       value: eClass
     }))
-    .sort((a, b) => a.label.localeCompare(b.label))
+    .sort((a, b) => a.label.localeCompare(b.label, 'de'))
 })
 
 function onUpdate(eClass: EClass | undefined) {
