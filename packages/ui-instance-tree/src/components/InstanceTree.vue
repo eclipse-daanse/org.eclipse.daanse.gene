@@ -629,13 +629,6 @@ function packagePathOf(eClass: any): string {
   return modelBrowser()?.packagePathOf?.(eClass) ?? ''
 }
 
-/**
- * Ab wie vielen Klassen der Auswahl-Dialog statt der Menueliste erscheint.
- * Darunter waeren zwei Klicks statt einem laestig, darueber ist die Liste
- * ohne Suche nicht mehr zu ueberblicken (#104).
- */
-const MAX_KLASSEN_IM_MENUE = 5
-
 /** Alphabetisch, damit die Reihenfolge nicht von der Ladereihenfolge abhaengt. */
 function sortiereKlassen(klassen: EClass[]): EClass[] {
   return [...klassen].sort((a, b) =>
@@ -745,28 +738,27 @@ const contextMenuItems = computed(() => {
         }
 
         /*
-         * Ab einer gewissen Laenge wird die Liste im Menue unbrauchbar: Sie ist
-         * nicht durchsuchbar, und bei mehreren Modellen im Workspace stehen dort
-         * gleichnamige Klassen nebeneinander (#104). Darueber deshalb der
-         * Auswahl-Dialog, der Suche und Gruppierung nach Paket mitbringt.
+         * Die vollstaendige Liste bleibt im Menue — der kurze Weg soll kurz
+         * bleiben. Ganz oben steht zusaetzlich der Suchdialog, der ueber Name
+         * und Paketpfad filtert; bei vielen gleichnamigen Klassen aus
+         * verschiedenen Modellen ist er der schnellere Weg (#104).
          */
-        if (validClasses.length > MAX_KLASSEN_IM_MENUE) {
-          return {
-            label: `${getElementName(ref)} … (${validClasses.length})`,
-            icon: 'pi pi-arrow-right',
-            command: () => oeffneKlassenauswahl(ref, validClasses)
-          }
-        }
-
-        // Wenige Klassen: direkt im Menue, sortiert und mit Paketpfad
         return {
           label: getElementName(ref),
           icon: 'pi pi-arrow-right',
-          items: sortiereKlassen(validClasses).map(eClass => ({
-            label: classLabelWithPackage(eClass),
-            icon: 'pi pi-file',
-            command: () => handleAddChild(eClass, ref)
-          }))
+          items: [
+            {
+              label: `Suchen… (${validClasses.length})`,
+              icon: 'pi pi-search',
+              command: () => oeffneKlassenauswahl(ref, validClasses)
+            },
+            { separator: true },
+            ...sortiereKlassen(validClasses).map(eClass => ({
+              label: classLabelWithPackage(eClass),
+              icon: 'pi pi-file',
+              command: () => handleAddChild(eClass, ref)
+            }))
+          ]
         }
       })
     })
