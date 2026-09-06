@@ -754,7 +754,10 @@ const contextMenuItems = computed(() => {
             },
             { separator: true },
             ...sortiereKlassen(validClasses).map(eClass => ({
-              label: classLabelWithPackage(eClass),
+              label: eClass.getName?.() ?? 'unknown',
+              // Der Paketpfad reist getrennt mit: Das Item-Template stellt ihn
+              // gedaempft daneben, statt ihn in den Namen zu mischen (#104).
+              paketPfad: packagePathOf(eClass),
               icon: 'pi pi-file',
               command: () => handleAddChild(eClass, ref)
             }))
@@ -1143,7 +1146,21 @@ watch(ctxSelectedObject, (obj) => {
     </div>
 
     <!-- Context Menu -->
-    <ContextMenu ref="contextMenu" :model="contextMenuItems" />
+    <ContextMenu ref="contextMenu" :model="contextMenuItems">
+      <!--
+        Eigenes Item-Template nur fuer Klassen-Eintraege: Name links, Paketpfad
+        rechts und gedaempft. Alle anderen Eintraege behalten die Standard-
+        Darstellung, damit sich das Menue sonst nicht veraendert (#104).
+      -->
+      <template #item="{ item, props }">
+        <a v-bind="props.action" class="menue-eintrag">
+          <span v-if="item.icon" :class="item.icon" class="menue-eintrag__icon"></span>
+          <span class="menue-eintrag__label">{{ item.label }}</span>
+          <span v-if="item.paketPfad" class="menue-eintrag__paket">{{ item.paketPfad }}</span>
+          <span v-if="item.items" class="pi pi-angle-right menue-eintrag__pfeil"></span>
+        </a>
+      </template>
+    </ContextMenu>
 
     <!-- Auswahl-Dialog für lange Klassenlisten (#104) -->
     <Dialog
@@ -1799,5 +1816,43 @@ watch(ctxSelectedObject, (obj) => {
 }
 
 .klassenauswahl__zaehler { padding: 0; text-align: right; }
+
+
+/* Klassen-Eintraege im Kontextmenue (#104) */
+.menue-eintrag {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.menue-eintrag__icon { flex-shrink: 0; }
+
+.menue-eintrag__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Der Pfad ordnet ein, ohne den Namen zu verdraengen: rechtsbuendig,
+   kleiner, gedaempft — und er darf schrumpfen, bevor der Name es tut. */
+.menue-eintrag__paket {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--text-color-secondary, #6c757d);
+  padding-left: 1rem;
+}
+
+.menue-eintrag__pfeil {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary, #6c757d);
+}
 
 </style>
