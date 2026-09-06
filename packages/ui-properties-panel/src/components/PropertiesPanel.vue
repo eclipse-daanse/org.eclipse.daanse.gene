@@ -1018,7 +1018,15 @@ function getValidChildClasses(feature: EStructuralFeature): EClass[] {
     }
   }
 
-  return validClasses
+  /*
+   * Alphabetisch, mit Paketpfad im Vergleich (#104): Ohne Sortierung haengt
+   * die Reihenfolge an der Ladereihenfolge der Modelle, und bei mehreren
+   * Modellen stehen gleichnamige Klassen unvermittelt nebeneinander.
+   */
+  const beschriftung = (c: EClass) =>
+    tsm?.getService('ui.model-browser.composables')?.classLabelWithPackage?.(c)
+      ?? c.getName?.() ?? ''
+  return validClasses.sort((a, b) => beschriftung(a).localeCompare(beschriftung(b), 'de'))
 }
 
 // Save handler

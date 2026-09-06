@@ -51,6 +51,35 @@ export function deriveRootEPackages(
  * Mirrors the dialog's display rules: only classifiers that look like EClasses
  * (have attribute accessors), named, and abstract ones filtered out when requested.
  */
+/**
+ * Package-Pfad einer Klasse, punktgetrennt: "waterpark.domain".
+ *
+ * Steigt über getESuperPackage() auf, damit auch Unterpakete im Pfad stehen —
+ * bei gleichnamigen Klassen aus verschiedenen Modellen ist der Name allein
+ * nicht unterscheidbar (#104).
+ */
+export function packagePathOf(eClass: any): string {
+  const teile: string[] = []
+  let pkg = eClass?.getEPackage?.()
+  // Tiefenbegrenzung gegen ein Modell mit zyklischen Paketverweisen
+  for (let i = 0; pkg && i < 50; i++) {
+    const name = pkg.getName?.()
+    if (name) teile.unshift(name)
+    pkg = pkg.getESuperPackage?.()
+  }
+  return teile.join('.')
+}
+
+/**
+ * Klassenname mit Package-Pfad für Listen und Menüs (#104): "Sensor — waterpark.domain".
+ * Ohne Package bleibt es beim Namen.
+ */
+export function classLabelWithPackage(eClass: any): string {
+  const name = eClass?.getName?.() || 'unknown'
+  const pfad = packagePathOf(eClass)
+  return pfad ? `${name} — ${pfad}` : name
+}
+
 export function collectClassesDeep(rootEPackages: any[], includeAbstract = true): PickerClass[] {
   const result: PickerClass[] = []
   const visit = (pkg: any, pkgLabel: string) => {
