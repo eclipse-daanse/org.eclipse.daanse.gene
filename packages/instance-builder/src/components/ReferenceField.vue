@@ -8,7 +8,7 @@
  * - Containment: Create new button (with subclass selection for abstract types)
  */
 
-import { computed, ref, watch, onMounted } from 'tsm:vue'
+import { computed, ref, watch, onMounted, inject } from 'tsm:vue'
 import { Button } from 'tsm:primevue'
 import { Dropdown } from 'tsm:primevue'
 import { Menu } from 'tsm:primevue'
@@ -340,12 +340,35 @@ const concreteClasses = computed(() => {
 })
 
 // Menu items for subclass selection
+const tsm = inject<{ getService: <T>(id: string) => T | undefined }>('tsm')
+
+/*
+ * Klassen mit Paketpfad beschriften und alphabetisch ordnen (#104). Dieselbe
+ * Stelle wie im Baum-Kontextmenue, nur ueber den "Add…"-Knopf erreicht — hier
+ * fehlte beides. Ueber den Dienst, weil instance-builder ui-model-browser
+ * nicht statisch einbinden darf; fehlt er, bleibt es beim Klassennamen.
+ */
+function klassenBeschriftung(eClass: any): string {
+  const mb = tsm?.getService<any>('ui.model-browser.composables')
+  return mb?.classLabelWithPackage?.(eClass) ?? eClass?.getName?.() ?? ''
+}
+
+function paketPfad(eClass: any): string {
+  const mb = tsm?.getService<any>('ui.model-browser.composables')
+  return mb?.packagePathOf?.(eClass) ?? ''
+}
+
 const createMenuItems = computed(() => {
-  return concreteClasses.value.map(eClass => ({
-    label: eClass.getName(),
-    icon: 'pi pi-file',
-    command: () => emit('create', eClass)
-  }))
+  return [...concreteClasses.value]
+    .sort((a, b) => klassenBeschriftung(a).localeCompare(klassenBeschriftung(b), 'de'))
+    .map(eClass => ({
+      label: eClass.getName(),
+      // Der Pfad reist getrennt mit, damit das Item-Template ihn gedaempft
+      // daneben stellen kann statt ihn in den Namen zu mischen.
+      paketPfad: paketPfad(eClass),
+      icon: 'pi pi-file',
+      command: () => emit('create', eClass)
+    }))
 })
 
 // Can create new instances?
@@ -613,7 +636,16 @@ const addMenuItems = computed(() => {
     <small v-if="error" class="field-error">{{ error }}</small>
 
     <!-- Subclass selection menu -->
-    <Menu ref="createMenu" :model="createMenuItems" :popup="true" />
+    <Menu ref="createMenu" :model="createMenuItems" :popup="true">
+      <!-- Name links, Paketpfad rechts und gedämpft (#104) -->
+      <template #item="{ item, props }">
+        <a v-bind="props.action" class="ref-menue-eintrag">
+          <span v-if="item.icon" :class="item.icon"></span>
+          <span class="ref-menue-eintrag__label">{{ item.label }}</span>
+          <span v-if="item.paketPfad" class="ref-menue-eintrag__paket">{{ item.paketPfad }}</span>
+        </a>
+      </template>
+    </Menu>
     <Menu ref="addMenu" :model="addMenuItems" :popup="true" class="add-ref-menu" />
   </div>
 </template>
@@ -819,4 +851,33 @@ const addMenuItems = computed(() => {
   font-size: 0.75rem;
   margin-left: 0.5rem;
 }
+
+/* Klassen im "Add…"-Menü einer Referenz (#104) */
+.ref-menue-eintrag {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.ref-menue-eintrag__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Der Pfad ordnet ein, ohne den Namen zu verdrängen — und schrumpft zuerst */
+.ref-menue-eintrag__paket {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.78rem;
+  color: var(--text-color-secondary, #6c757d);
+  padding-left: 1rem;
+}
+
 </style>

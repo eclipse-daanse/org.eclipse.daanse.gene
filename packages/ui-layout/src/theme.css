@@ -705,18 +705,32 @@ button.p-button,
  */
 .p-contextmenu-root-list:not(:has(> li[aria-expanded='true'])),
 .p-contextmenu-submenu:not(:has(> li[aria-expanded='true'])),
-.p-contextmenu ul:not(:has(> li[aria-expanded='true'])) {
+.p-contextmenu ul:not(:has(> li[aria-expanded='true'])),
+/*
+ * Auch für Menu und TieredMenu: Der "Add…"-Knopf bei einer Referenz benutzt
+ * ein p-menu, nicht p-contextmenu — dort war die Begrenzung zunächst
+ * wirkungslos. Gemessen an einem CWM-Modell: 221 Einträge, 7522px hoch,
+ * beginnend bei -527px. Von den Klassen war ein Bruchteil erreichbar.
+ */
+.p-menu ul:not(:has(> li[aria-expanded='true'])),
+.p-menu-list:not(:has(> li[aria-expanded='true'])),
+.p-tieredmenu ul:not(:has(> li[aria-expanded='true'])),
+.p-tieredmenu-root-list:not(:has(> li[aria-expanded='true'])) {
   max-height: 60vh;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
 /* Schlanke Bildlaufleiste, damit sie im Menü nicht dominiert */
-.p-contextmenu ul::-webkit-scrollbar {
+.p-contextmenu ul::-webkit-scrollbar,
+.p-menu ul::-webkit-scrollbar,
+.p-tieredmenu ul::-webkit-scrollbar {
   width: 8px;
 }
 
-.p-contextmenu ul::-webkit-scrollbar-thumb {
+.p-contextmenu ul::-webkit-scrollbar-thumb,
+.p-menu ul::-webkit-scrollbar-thumb,
+.p-tieredmenu ul::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, currentColor 25%, transparent);
   border-radius: 4px;
 }
