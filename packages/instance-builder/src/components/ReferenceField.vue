@@ -12,6 +12,8 @@ import { computed, ref, watch, onMounted, inject } from 'tsm:vue'
 import { Button } from 'tsm:primevue'
 import { Dropdown } from 'tsm:primevue'
 import { Menu } from 'tsm:primevue'
+import { Dialog } from 'tsm:primevue'
+import { InputText } from 'tsm:primevue'
 import type { EObject, EReference, EClass } from '@emfts/core'
 import { isMany, isRequired } from '../types'
 
@@ -348,28 +350,68 @@ const tsm = inject<{ getService: <T>(id: string) => T | undefined }>('tsm')
  * fehlte beides. Ueber den Dienst, weil instance-builder ui-model-browser
  * nicht statisch einbinden darf; fehlt er, bleibt es beim Klassennamen.
  */
-function klassenBeschriftung(eClass: any): string {
+function classLabel(eClass: any): string {
   const mb = tsm?.getService<any>('ui.model-browser.composables')
   return mb?.classLabelWithPackage?.(eClass) ?? eClass?.getName?.() ?? ''
 }
 
-function paketPfad(eClass: any): string {
+function packagePathFor(eClass: any): string {
   const mb = tsm?.getService<any>('ui.model-browser.composables')
   return mb?.packagePathOf?.(eClass) ?? ''
 }
 
 const createMenuItems = computed(() => {
-  return [...concreteClasses.value]
-    .sort((a, b) => klassenBeschriftung(a).localeCompare(klassenBeschriftung(b), 'de'))
-    .map(eClass => ({
+  const classes = [...concreteClasses.value]
+    .sort((a, b) => classLabel(a).localeCompare(classLabel(b), 'de'))
+  return [
+    /*
+     * Suche als erster Eintrag (#104): Bei 200 Klassen aus mehreren Modellen
+     * reicht eine scrollbare Liste nicht — man muss den Namen eingeben
+     * koennen. Die vollstaendige Liste bleibt darunter, damit der kurze Weg
+     * kurz bleibt.
+     */
+    {
+      label: `Suchen… (${classes.length})`,
+      icon: 'pi pi-search',
+      command: () => openClassSearch(classes)
+    },
+    { separator: true },
+    ...classes.map(eClass => ({
       label: eClass.getName(),
       // Der Pfad reist getrennt mit, damit das Item-Template ihn gedaempft
       // daneben stellen kann statt ihn in den Namen zu mischen.
-      paketPfad: paketPfad(eClass),
+      packagePath: packagePathFor(eClass),
       icon: 'pi pi-file',
       command: () => emit('create', eClass)
     }))
+  ]
 })
+
+// Suchdialog fuer lange Klassenlisten (#104)
+const showClassSearch = ref(false)
+const searchableClasses = ref<EClass[]>([])
+const classSearchText = ref('')
+
+function openClassSearch(classes: EClass[]): void {
+  searchableClasses.value = classes
+  classSearchText.value = ''
+  showClassSearch.value = true
+}
+
+/** Filtert ueber Name und Paketpfad — beides ist zum Finden nuetzlich. */
+const matchingClasses = computed<EClass[]>(() => {
+  const query = classSearchText.value.trim().toLowerCase()
+  if (!query) return searchableClasses.value
+  return searchableClasses.value.filter(c =>
+    classLabel(c).toLowerCase().includes(query)
+  )
+})
+
+function selectSearchedClass(eClass: EClass): void {
+  showClassSearch.value = false
+  searchableClasses.value = []
+  emit('create', eClass)
+}
 
 // Can create new instances?
 const canCreate = computed(() => concreteClasses.value.length > 0)
@@ -642,11 +684,47 @@ const addMenuItems = computed(() => {
         <a v-bind="props.action" class="ref-menue-eintrag">
           <span v-if="item.icon" :class="item.icon"></span>
           <span class="ref-menue-eintrag__label">{{ item.label }}</span>
-          <span v-if="item.paketPfad" class="ref-menue-eintrag__paket">{{ item.paketPfad }}</span>
+          <span v-if="item.packagePath" class="ref-menue-eintrag__paket">{{ item.packagePath }}</span>
         </a>
       </template>
     </Menu>
     <Menu ref="addMenu" :model="addMenuItems" :popup="true" class="add-ref-menu" />
+
+    <!-- Suchdialog für lange Klassenlisten (#104) -->
+    <Dialog
+      v-model:visible="showClassSearch"
+      modal
+      header="Klasse auswählen"
+      :style="{ width: '32rem' }"
+    >
+      <div class="class-search">
+        <InputText
+          v-model="classSearchText"
+          placeholder="Suchen…"
+          class="class-search__input"
+          autofocus
+        />
+        <div class="class-search__list">
+          <button
+            v-for="eClass in matchingClasses"
+            :key="classLabel(eClass)"
+            type="button"
+            class="class-search__entry"
+            @click="selectSearchedClass(eClass)"
+          >
+            <i class="pi pi-file"></i>
+            <span class="class-search__name">{{ eClass.getName() }}</span>
+            <span class="class-search__package">{{ packagePathFor(eClass) }}</span>
+          </button>
+          <div v-if="matchingClasses.length === 0" class="class-search__empty">
+            Keine Klasse passt zu „{{ classSearchText }}"
+          </div>
+        </div>
+        <div class="class-search__count">
+          {{ matchingClasses.length }} von {{ searchableClasses.length }}
+        </div>
+      </div>
+    </Dialog>
   </div>
 </template>
 
@@ -879,5 +957,65 @@ const addMenuItems = computed(() => {
   color: var(--text-color-secondary, #6c757d);
   padding-left: 1rem;
 }
+
+/* Suchdialog für lange Klassenlisten (#104) */
+.class-search {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.class-search__input {
+  width: 100%;
+}
+
+.class-search__list {
+  display: flex;
+  flex-direction: column;
+  max-height: 22rem;
+  overflow-y: auto;
+  border: 1px solid var(--surface-border, #dee2e6);
+  border-radius: 6px;
+}
+
+.class-search__entry {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--surface-border, #dee2e6);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.class-search__entry:last-child { border-bottom: none; }
+
+.class-search__entry:hover,
+.class-search__entry:focus-visible {
+  background: var(--surface-hover, rgba(0, 0, 0, 0.04));
+}
+
+.class-search__name { font-weight: 600; }
+
+/* Der Paketpfad steht gedämpft daneben: Er unterscheidet gleichnamige
+   Klassen, soll den Namen aber nicht überlagern. */
+.class-search__package {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary, #6c757d);
+}
+
+.class-search__empty,
+.class-search__count {
+  padding: 0.5rem 0.7rem;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary, #6c757d);
+}
+
+.class-search__count { padding: 0; text-align: right; }
 
 </style>
