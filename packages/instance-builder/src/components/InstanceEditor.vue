@@ -57,7 +57,7 @@ const tsm = inject<{ getService: <T>(id: string) => T | undefined }>('tsm')
  * instance-builder ui-model-browser nicht statisch einbinden darf; fehlt er,
  * bleibt es beim Klassennamen.
  */
-function klassenBeschriftung(eClass: any): string {
+function classLabel(eClass: any): string {
   const mb = tsm?.getService<any>('ui.model-browser.composables')
   return mb?.classLabelWithPackage?.(eClass) ?? eClass?.getName?.() ?? ''
 }
@@ -443,7 +443,7 @@ watch(selectedClass, (newClass) => {
         :classes="availableClasses"
         label="Class"
         placeholder="Select class to create..."
-        :labelFor="klassenBeschriftung"
+        :labelFor="classLabel"
       />
     </div>
 
