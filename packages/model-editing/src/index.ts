@@ -6,6 +6,7 @@ export {
   acceptingReferences,
   checkContainment,
   addToContainment,
+  containingReferenceOf,
   type ContainmentOptions,
   type ContainmentResult
 } from './containment'

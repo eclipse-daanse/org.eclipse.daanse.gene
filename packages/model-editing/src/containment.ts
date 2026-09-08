@@ -60,6 +60,35 @@ export function isDescendant(ancestor: EObject, candidate: EObject): boolean {
   return false
 }
 
+/**
+ * Die Containment-Referenz, in der `element` derzeit steckt.
+ *
+ * `eContainingFeature()` liefert bei einem Containment-Kind die Referenz des
+ * Elterns; bei einem Wurzelobjekt und bei Ecore-Metaobjekten (emf.ts#80) ist
+ * sie leer.
+ */
+export function containingReferenceOf(element: EObject): EReference | null {
+  const e = element as unknown as {
+    eContainmentFeature?: () => EReference | null
+    eContainingFeature?: () => EReference | null
+  }
+  const ref = e.eContainmentFeature?.() ?? e.eContainingFeature?.() ?? null
+  if (!ref) return null
+  return typeof (ref as EReference).isContainment === 'function' && ref.isContainment() ? ref : null
+}
+
+/**
+ * Dieselbe Referenz? Ueber die Identitaet, denn eine geerbte Referenz ist in
+ * jeder Unterklasse dasselbe EReference-Objekt. Der Namensvergleich fasst den
+ * Fall, dass Quelle und Ziel aus verschiedenen Modellen stammen und die
+ * Referenz nur gleich heisst.
+ */
+function isSameReference(a: EReference, b: EReference): boolean {
+  if (a === b) return true
+  const nameA = a.getName?.()
+  return !!nameA && nameA === b.getName?.()
+}
+
 export interface ContainmentOptions {
   /**
    * Beim Verschieben darf das Ziel nicht im eigenen Teilbaum liegen, sonst
@@ -87,13 +116,33 @@ export function acceptingReferences(
   const elementClass = element.eClass?.()
   if (!targetClass || !elementClass) return []
 
-  return containmentReferences(targetClass).filter(ref => {
+  const refs = containmentReferences(targetClass).filter(ref => {
     if (!referenceAcceptsType(ref, elementClass)) return false
     if (typeof ref.isMany === 'function' && ref.isMany()) return true
     // Einwertige Referenz: nur eine noch leere nimmt etwas auf, eine belegte
     // wird nie überschrieben.
     return countValues(target.eGet(ref)) === 0
   })
+
+  return withSourceReferenceFirst(element, refs)
+}
+
+/**
+ * Stellt die Referenz nach vorn, in der das Element bisher steckte.
+ *
+ * Ohne das entscheidet die Reihenfolge von `getEAllStructuralFeatures()`, und
+ * die faengt bei den geerbten Referenzen an. In CWM landete deshalb die Kopie
+ * eines als `feature` enthaltenen Attributes in `ownedElement` — beides nimmt
+ * ein ModelElement auf, `ownedElement` steht nur weiter vorn (#148). Wer eine
+ * Auswahl anbietet, zeigt damit zugleich die naheliegende Wahl oben.
+ */
+function withSourceReferenceFirst(element: EObject, refs: EReference[]): EReference[] {
+  if (refs.length < 2) return refs
+  const source = containingReferenceOf(element)
+  if (!source) return refs
+  const index = refs.findIndex(ref => isSameReference(ref, source))
+  if (index <= 0) return refs
+  return [refs[index]!, ...refs.slice(0, index), ...refs.slice(index + 1)]
 }
 
 /**
