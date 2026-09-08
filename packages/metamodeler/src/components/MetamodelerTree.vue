@@ -14,7 +14,7 @@ import { ContextMenu } from 'tsm:primevue'
 import { Dialog } from 'tsm:primevue'
 import { InputText } from 'tsm:primevue'
 import { Checkbox } from 'tsm:primevue'
-import type { EPackage, EClass, ENamedElement, EClassifier, EDataType, EEnum } from '@emfts/core'
+import type { EPackage, EClass, ENamedElement, EClassifier, EDataType, EEnum, EReference } from '@emfts/core'
 import { getEcorePackage } from '@emfts/core'
 import { Select } from 'tsm:primevue'
 import { Textarea } from 'tsm:primevue'
@@ -202,7 +202,7 @@ function clipboardMenuItems(node: MetaTreeNode) {
       // Der Grund steht im Menü: sonst ist ein ausgegrauter Eintrag ohne
       // Erklärung, und der Nutzer probiert weiter.
       ...(paste.ok ? {} : { label: `Paste (${paste.reason ?? 'nicht möglich'})` }),
-      command: () => { metamodeler.pasteInto(element) }
+      command: () => { pasteIntoElement(element) }
     }
   ]
 }
@@ -586,6 +586,10 @@ function handleNodeDrop(event: any): void {
   if (zone === 'into') {
     const pruefung = metamodeler.canDropInto(dragged, target)
     if (!pruefung.ok) { showDropMessage(pruefung.reason); return }
+    if (pruefung.refs.length > 1 && !pruefung.origin) {
+      openIntoDialog(dragged, target, pruefung.refs, 'move')
+      return
+    }
     if (!metamodeler.dropInto(dragged, target)) showDropMessage()
     return
   }
@@ -593,6 +597,80 @@ function handleNodeDrop(event: any): void {
   const pruefung = metamodeler.canDropBeside(dragged, target)
   if (!pruefung.ok) { showDropMessage(pruefung.reason); return }
   if (!metamodeler.dropBeside(dragged, target, zone === 'after')) showDropMessage()
+}
+
+// ── Auswahl der Zielreferenz (#148) ────────────────────────────────────────
+/*
+ * In welche Containment-Referenz soll das Element? Meist ist die Frage
+ * entschieden: Ein EAttribute passt nur in `eStructuralFeatures`. Bei einer
+ * EAnnotation als Ziel passt aber alles doppelt — `contents` nimmt jedes
+ * EObject auf, `eAnnotations` jede Annotation. Dann entscheidet der Nutzer,
+ * statt dass stillschweigend die erste Referenz gewinnt.
+ */
+const showIntoDialog = ref(false)
+const intoDragged = ref<ENamedElement | null>(null)
+const intoTarget = ref<ENamedElement | null>(null)
+const intoRefs = ref<EReference[]>([])
+// Dieselbe Frage, zwei Wege: gezogen wird verschoben, aus der Ablage eingefügt.
+const intoMode = ref<'move' | 'paste'>('move')
+
+function openIntoDialog(
+  dragged: ENamedElement | null,
+  target: ENamedElement,
+  refs: EReference[],
+  mode: 'move' | 'paste'
+): void {
+  intoDragged.value = dragged
+  intoTarget.value = target
+  intoRefs.value = refs
+  intoMode.value = mode
+  showIntoDialog.value = true
+}
+
+function closeIntoDialog(): void {
+  showIntoDialog.value = false
+  intoDragged.value = null
+  intoTarget.value = null
+  intoRefs.value = []
+}
+
+function chooseIntoRef(ref: EReference): void {
+  const dragged = intoDragged.value
+  const target = intoTarget.value
+  const mode = intoMode.value
+  closeIntoDialog()
+  if (!target) return
+  if (mode === 'paste') {
+    if (!metamodeler.pasteInto(target, ref)) showDropMessage()
+    return
+  }
+  if (dragged && !metamodeler.dropInto(dragged, target, ref)) showDropMessage()
+}
+
+function refLabel(ref: EReference): string {
+  return ref?.getName?.() ?? 'Referenz'
+}
+
+function refTypeLabel(ref: EReference): string {
+  const typ = typeof ref?.getEReferenceType === 'function' ? ref.getEReferenceType() : null
+  return typ?.getName?.() ?? ''
+}
+
+/**
+ * Einfügen in ein Element (#148).
+ *
+ * Steckte das Element schon einmal in einer der passenden Referenzen, kommt es
+ * dorthin zurück — das braucht keine Rückfrage. Passen mehrere und ist keine
+ * die Herkunft, entscheidet der Nutzer.
+ */
+function pasteIntoElement(target: ENamedElement): void {
+  const pruefung = metamodeler.canPasteInto(target)
+  if (!pruefung.ok) { showDropMessage(pruefung.reason); return }
+  if (pruefung.refs.length > 1 && !pruefung.origin) {
+    openIntoDialog(null, target, pruefung.refs, 'paste')
+    return
+  }
+  if (!metamodeler.pasteInto(target)) showDropMessage()
 }
 
 /**
@@ -626,8 +704,9 @@ function handleClipboardShortcut(event: KeyboardEvent): void {
   } else if (taste === 'x') {
     metamodeler.cutToClipboard(element)
   } else if (taste === 'v') {
-    if (!metamodeler.canPasteInto(element).ok) return
-    metamodeler.pasteInto(element)
+    // Die Prüfung samt Begründung steckt in pasteIntoElement — hier nicht
+    // doppelt urteilen.
+    pasteIntoElement(element)
   } else {
     return
   }
@@ -747,6 +826,32 @@ async function exportJsonSchema() {
         <span>{{ dropMessage }}</span>
       </div>
     </transition>
+
+    <!-- Auswahl der Zielreferenz, wenn mehrere passen (#148) -->
+    <Dialog
+      v-model:visible="showIntoDialog"
+      :header="intoMode === 'paste' ? 'Wohin einfügen?' : 'In welche Referenz verschieben?'"
+      :modal="true"
+      :style="{ width: '420px' }"
+      @hide="closeIntoDialog"
+    >
+      <div class="into-options">
+        <button
+          v-for="r in intoRefs"
+          :key="refLabel(r)"
+          type="button"
+          class="into-option"
+          @click="chooseIntoRef(r)"
+        >
+          <i class="pi pi-sitemap"></i>
+          <span class="into-ref">{{ refLabel(r) }}</span>
+          <span v-if="refTypeLabel(r)" class="into-type">{{ refTypeLabel(r) }}</span>
+        </button>
+      </div>
+      <template #footer>
+        <Button label="Abbrechen" severity="secondary" @click="closeIntoDialog" />
+      </template>
+    </Dialog>
 
     <!-- New Package Dialog -->
     <Dialog
@@ -1260,6 +1365,45 @@ async function exportJsonSchema() {
 }
 
 /* Rückmeldung bei abgelehntem Zug (#63) — gleiche Gestalt wie im Instanzbaum */
+/* Auswahl der Zielreferenz (#148) — gleiche Darstellung wie im Instanzbaum */
+.into-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.into-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  background: var(--surface-card, var(--surface-0, #fff));
+  border: 1px solid var(--surface-border, #e2e8f0);
+  border-radius: 6px;
+  color: var(--text-color, inherit);
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.into-option:hover,
+.into-option:focus-visible {
+  background: var(--primary-50, rgba(59, 130, 246, 0.12));
+  border-color: var(--primary-color, #3b82f6);
+}
+
+.into-option i { color: var(--text-color-secondary, #64748b); }
+.into-option .into-ref { font-weight: 600; }
+
+/* Der Zieltyp ordnet die Referenz ein, ohne ihren Namen zu verdrängen */
+.into-option .into-type {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary, #64748b);
+}
+
 .drop-message {
   position: absolute;
   bottom: 0.75rem;

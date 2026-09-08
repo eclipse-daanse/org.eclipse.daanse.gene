@@ -2191,14 +2191,24 @@ export function useMetamodeler() {
    * Original vorher aus seinem Container gelöst, beim Kopieren eine Tiefkopie
    * angelegt (Attribute kommen mit, Typverweise zeigen weiter auf dieselben
    * Datentypen).
+   *
+   * `zielRef` gibt die Containment-Referenz vor — die Oberfläche fragt danach,
+   * wenn mehrere passen und keine die Herkunft des Elements ist (#148). Ohne
+   * Vorgabe entscheidet die Reihenfolge aus `acceptingReferences`, die die
+   * Herkunftsreferenz vorne hält.
    */
-  function pasteInto(target: ENamedElement): boolean {
+  function pasteInto(target: ENamedElement, zielRef?: EReference): boolean {
     const entry = clipboard.value
     if (!entry) return false
 
     const pruefung = canPasteInto(target)
     if (!pruefung.ok || pruefung.refs.length === 0) return false
-    const ref = pruefung.refs[0]
+    // Eine vorgegebene Referenz muss selbst passen — sonst wäre die
+    // Containment-Prüfung über den Dialog umgehbar.
+    const ref = zielRef
+      ? pruefung.refs.find(r => r === toRaw(zielRef))
+      : pruefung.refs[0]
+    if (!ref) return false
     const zielRoh = toRaw(target) as unknown as EObject
 
     try {
@@ -2267,13 +2277,21 @@ export function useMetamodeler() {
     )
   }
 
-  /** Hängt `dragged` als Kind unter `target`. */
-  function dropInto(dragged: ENamedElement, target: ENamedElement): boolean {
+  /**
+   * Hängt `dragged` als Kind unter `target`.
+   *
+   * `zielRef` kommt aus dem Auswahldialog, wenn mehrere Referenzen passen
+   * (#148); ohne Vorgabe gilt die erste, und das ist die Herkunftsreferenz,
+   * falls das Ziel sie hat.
+   */
+  function dropInto(dragged: ENamedElement, target: ENamedElement, zielRef?: EReference): boolean {
     const element = toRaw(dragged) as unknown as EObject
     const ziel = toRaw(target) as unknown as EObject
     const refs = acceptingReferences(element, ziel)
     if (refs.length === 0) return false
-    if (!moveIntoContainment(element, ziel, refs[0])) return false
+    const ref = zielRef ? refs.find(r => r === toRaw(zielRef)) : refs[0]
+    if (!ref) return false
+    if (!moveIntoContainment(element, ziel, ref)) return false
     markDirtyAndUpdate()
     return true
   }

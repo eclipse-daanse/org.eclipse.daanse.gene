@@ -121,7 +121,7 @@ export function acceptingReferences(
     if (typeof ref.isMany === 'function' && ref.isMany()) return true
     // Einwertige Referenz: nur eine noch leere nimmt etwas auf, eine belegte
     // wird nie überschrieben.
-    return countValues(target.eGet(ref)) === 0
+    return countValues(valueOf(target, ref)) === 0
   })
 
   return withSourceReferenceFirst(element, refs)
@@ -186,14 +186,48 @@ export function checkContainment(
   return { ok: true, refs, origin }
 }
 
-/** Fügt `element` in die Containment-Referenz `ref` von `target` ein. */
+/**
+ * Der Wert einer Referenz.
+ *
+ * `eGet` ist bei den mitgelieferten Ecore-Klassen nicht durchgaengig
+ * implementiert: Eine EAnnotation liefert fuer `eAnnotations` nichts zurueck,
+ * obwohl `getEAnnotations()` die Liste hat. Deshalb hier zusaetzlich der
+ * Getter nach EMF-Namenskonvention — ohne ihn hielte das Einfuegen eine leere
+ * Referenz fuer belegt oder umgekehrt.
+ */
+function valueOf(target: EObject, ref: EReference): unknown {
+  const direct = target.eGet(ref)
+  if (direct !== null && direct !== undefined) return direct
+  const name = ref.getName?.()
+  if (!name) return null
+  const getter = `get${name[0]!.toUpperCase()}${name.slice(1)}`
+  const fn = (target as unknown as Record<string, unknown>)[getter]
+  return typeof fn === 'function' ? (fn as () => unknown).call(target) : null
+}
+
+/** Enthaelt der Wert dieser Referenz das Element? */
+function containsValue(value: unknown, element: EObject): boolean {
+  if (value === element) return true
+  if (Array.isArray(value)) return value.includes(element)
+  const list = value as { contains?: (v: unknown) => boolean }
+  return typeof list?.contains === 'function' ? list.contains(element) : false
+}
+
+/**
+ * Fügt `element` in die Containment-Referenz `ref` von `target` ein.
+ *
+ * Der Erfolg wird nachgelesen: Ohne diese Kontrolle meldete das Einfuegen
+ * Erfolg, auch wenn `eSet` auf einer nicht reflektiv bedienbaren Referenz
+ * wirkungslos blieb — beim Ausschneiden waere das Element damit verschwunden,
+ * denn es ist vorher aus seinem Container geloest.
+ */
 export function addToContainment(element: EObject, target: EObject, ref: EReference): boolean {
   try {
-    const list = target.eGet(ref) as unknown as { add?: (v: unknown) => void; push?: (v: unknown) => void } | null
+    const list = valueOf(target, ref) as { add?: (v: unknown) => void; push?: (v: unknown) => void } | null
     if (list && typeof list.add === 'function') list.add(element)
     else if (list && typeof list.push === 'function') list.push(element)
     else target.eSet(ref, element)   // leere einwertige Containment-Referenz
-    return true
+    return containsValue(valueOf(target, ref), element)
   } catch (e) {
     console.warn('[model-editing] Einfügen fehlgeschlagen:', e)
     return false
