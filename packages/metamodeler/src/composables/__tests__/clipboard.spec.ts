@@ -12,8 +12,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { useMetamodeler, setMetamodelerModelRegistry } from '../useMetamodeler'
 import {
   XMIResource, URI, BasicResourceSet, XMIResourceFactory,
-  registerEcorePackage, EPackageRegistry,
-  type EPackage, type EClass, type ENamedElement
+  registerEcorePackage, EPackageRegistry, getEcorePackage,
+  type EPackage, type EClass, type ENamedElement, type EReference
 } from '@emfts/core'
 
 const ECORE = `<?xml version="1.0" encoding="UTF-8"?>
@@ -135,5 +135,98 @@ describe('Metamodeler-Zwischenablage (#63)', () => {
     // erlaubt ist — siehe die Klassen-Kopie oben.
     mm.copyToClipboard(pkg as unknown as ENamedElement)
     expect(mm.canPasteInto(sensor as unknown as ENamedElement).ok).toBe(false)
+  })
+})
+
+/**
+ * Zielreferenz beim Einfuegen (#148).
+ *
+ * Ohne Vorgabe nahm das Einfuegen die erste passende Containment-Referenz. In
+ * Ecore ist das meist eindeutig — ein EAttribute passt nur in
+ * `eStructuralFeatures`. Bei einer EAnnotation als Ziel passt aber alles
+ * doppelt: `contents` nimmt jedes EObject auf, `eAnnotations` jede Annotation.
+ * Dann muss die Oberflaeche fragen koennen, und die Wahl muss ankommen.
+ */
+describe('Zielreferenz beim Einfuegen (#148)', () => {
+  let pkg: EPackage
+  let sensor: EClass
+  let ort: EClass
+  let mm: ReturnType<typeof useMetamodeler>
+
+  function referenz(element: any, name: string): EReference {
+    return element.eClass().getEStructuralFeature(name) as unknown as EReference
+  }
+
+  /** Eine frische EAnnotation ueber die Ecore-Factory. */
+  function neueAnnotation(source: string): any {
+    const ecore = getEcorePackage()
+    const annotation: any = (ecore.getEFactoryInstance() as any).create(ecore.getEAnnotationClass())
+    annotation.setSource(source)
+    return annotation
+  }
+
+  beforeEach(() => {
+    registerEcorePackage()
+    const rs = new BasicResourceSet()
+    const factory = new XMIResourceFactory()
+    const map = rs.getResourceFactoryRegistry().getExtensionToFactoryMap()
+    map.set('xmi', factory); map.set('ecore', factory)
+    const res = rs.createResource(URI.createURI('clip2.ecore')) as XMIResource
+    res.loadFromString(ECORE)
+    pkg = res.getContents().get(0) as unknown as EPackage
+    EPackageRegistry.INSTANCE.set(pkg.getNsURI()!, pkg)
+    sensor = pkg.getEClassifier('Sensor') as EClass
+    ort = pkg.getEClassifier('Ort') as EClass
+    mm = useMetamodeler()
+    mm.clearClipboard()
+  })
+
+  afterEach(() => {
+    setMetamodelerModelRegistry(() => null)
+    mm.clearClipboard()
+  })
+
+  it('canPasteInto nennt die Herkunftsreferenz', () => {
+    const attribut = sensor.getEStructuralFeatures().get(0) as unknown as ENamedElement
+    mm.copyToClipboard(attribut)
+    const pruefung = mm.canPasteInto(ort as unknown as ENamedElement)
+    expect(pruefung.ok).toBe(true)
+    expect(pruefung.origin?.getName()).toBe('eStructuralFeatures')
+  })
+
+  it('eine unpassende Vorgabe wird abgelehnt', () => {
+    const attribut = sensor.getEStructuralFeatures().get(0) as unknown as ENamedElement
+    mm.copyToClipboard(attribut)
+    // eOperations nimmt keine Attribute auf — sonst waere die
+    // Containment-Pruefung ueber den Dialog umgehbar
+    const unpassend = referenz(ort, 'eOperations')
+    expect(mm.pasteInto(ort as unknown as ENamedElement, unpassend)).toBe(false)
+    expect(ort.getEStructuralFeatures().size()).toBe(0)
+    expect(ort.getEOperations().size()).toBe(0)
+  })
+
+  it('eine vorgegebene Referenz nimmt die Kopie auf', () => {
+    const ziel = neueAnnotation('ziel')
+    mm.copyToClipboard(neueAnnotation('quelle') as ENamedElement)
+
+    expect(mm.pasteInto(ziel as ENamedElement, referenz(ziel, 'eAnnotations'))).toBe(true)
+    expect(ziel.getEAnnotations().size()).toBe(1)
+    expect(ziel.getEAnnotations().get(0).getSource()).toBe('quelle')
+  })
+
+  /*
+   * Haltbarkeitsdatum dieses Tests: Er haelt fest, warum der Auswahldialog im
+   * Metamodeler derzeit nicht auftaucht. `EAnnotation.contents` ist auf
+   * EObject typisiert und muesste damit jedes Element aufnehmen — in EMF geht
+   * genau das. `isSuperTypeOf` sieht EObject aber nicht als Obertyp einer
+   * EAnnotation (EModelElement hat keinen eingetragenen eSuperType), also
+   * bleibt `eAnnotations` die einzige passende Referenz. Faellt das in
+   * @emfts/core, wird der Fall mehrdeutig und der Dialog greift.
+   */
+  it('in Ecore bleibt die Wahl derzeit eindeutig', () => {
+    const ziel = neueAnnotation('ziel')
+    mm.copyToClipboard(neueAnnotation('quelle') as ENamedElement)
+    const pruefung = mm.canPasteInto(ziel as ENamedElement)
+    expect(pruefung.refs.map(r => r.getName())).toEqual(['eAnnotations'])
   })
 })
