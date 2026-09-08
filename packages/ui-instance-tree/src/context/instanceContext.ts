@@ -187,6 +187,11 @@ export function createInstanceContext(): EditorContext {
       return out
     },
 
+    // Modellversion — wird von triggerUpdate hochgezogen. Die
+    // Properties-Ansicht liest sie, um nach einer Aenderung am Modell neu zu
+    // lesen (#148); ohne sie blieb dort der alte Stand stehen.
+    version: instanceTree.version,
+
     // Trigger update
     triggerUpdate: () => instanceTree.triggerUpdate()
   }

@@ -1418,6 +1418,14 @@ export function useInstanceTree(
     activeResource,
     dirtyVersion,
 
+    /*
+     * Der Zaehler, den triggerUpdate hochzieht. Nach aussen gegeben, weil
+     * die Properties-Ansicht sonst kein Signal hat, dass sich das Modell
+     * geaendert hat: Ein eingefuegtes Kind blieb dort unsichtbar, bis man
+     * die Auswahl wechselte (#148).
+     */
+    version,
+
     // Methods
     selectNode,
     selectObject,

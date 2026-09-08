@@ -203,6 +203,17 @@ export function useInstanceEditor(options: UseInstanceEditorOptions): UseInstanc
       if (cached == null) return cached
       return Array.isArray(cached) ? [...cached] : Array.from(cached as Iterable<any>)
     }
+    /*
+     * Einwertige Referenzen ebenfalls live lesen (#148): Ein Containment-Kind
+     * kann von aussen entstehen — eingefuegt im Baum — und stand dann nicht im
+     * Cache. Anders als bei Attributen wird hier nicht getippt, der Cache muss
+     * also keinen Zwischenstand halten.
+     */
+    if (info.isReference && eObject) {
+      try {
+        return eObject.eGet(feature)
+      } catch { /* auf den Cache zurueckfallen */ }
+    }
     return values.value.get(feature.getName())
   }
 
