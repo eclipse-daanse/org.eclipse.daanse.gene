@@ -275,8 +275,9 @@ export interface EditorContext {
   copyToClipboard?: (element: EObject) => void
   cutToClipboard?: (element: EObject) => void
   hasClipboardContent?: { value: boolean }
-  canPasteInto?: (target: EObject) => { ok: boolean; refs: EReference[]; reason?: string }
-  pasteInto?: (target: EObject) => boolean
+  canPasteInto?: (target: EObject) => { ok: boolean; refs: EReference[]; origin?: EReference | null; reason?: string }
+  /** `ref` gibt die Containment-Referenz vor (Auswahldialog bei mehreren, #148). */
+  pasteInto?: (target: EObject, ref?: EReference) => boolean
   canPasteIntoResource?: (target: Resource) => { ok: boolean; reason?: string }
   pasteIntoResource?: (target: Resource) => boolean
   isResourceDirty?: (res: Resource) => boolean

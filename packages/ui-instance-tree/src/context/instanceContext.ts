@@ -167,7 +167,7 @@ export function createInstanceContext(): EditorContext {
     cutToClipboard: (element: EObject) => instanceTree.cutToClipboard(element),
     hasClipboardContent: instanceTree.hasClipboardContent,
     canPasteInto: (target: EObject) => instanceTree.canPasteInto(target),
-    pasteInto: (target: EObject) => instanceTree.pasteInto(target),
+    pasteInto: (target: EObject, ref?: EReference) => instanceTree.pasteInto(target, ref),
     canPasteIntoResource: (target: Resource) => instanceTree.canPasteIntoResource(target),
     pasteIntoResource: (target: Resource) => instanceTree.pasteIntoResource(target),
     isResourceDirty: (res: Resource) => instanceTree.isResourceDirty(res),
