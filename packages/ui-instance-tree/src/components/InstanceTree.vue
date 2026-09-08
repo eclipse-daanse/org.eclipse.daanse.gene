@@ -322,8 +322,9 @@ function handleClipboardShortcut(event: KeyboardEvent): void {
       (ctx as any).pasteIntoResource?.(resource)
     } else {
       if (!objekt) return
-      if (!((ctx as any).canPasteInto?.(objekt)?.ok)) return
-      (ctx as any).pasteInto?.(objekt)
+      // Die Prüfung samt Begründung steckt in pasteIntoObject — hier nicht
+      // doppelt urteilen.
+      pasteIntoObject(objekt)
     }
   } else {
     return
@@ -336,11 +337,14 @@ const showIntoDialog = ref(false)
 const intoDragged = ref<any>(null)
 const intoTarget = ref<any>(null)
 const intoRefs = ref<any[]>([])
+// Dieselbe Frage, zwei Wege: gezogen wird verschoben, aus der Ablage eingefügt.
+const intoMode = ref<'move' | 'paste'>('move')
 
-function openIntoDialog(dragged: any, target: any, refs: any[]) {
+function openIntoDialog(dragged: any, target: any, refs: any[], mode: 'move' | 'paste' = 'move') {
   intoDragged.value = dragged
   intoTarget.value = target
   intoRefs.value = refs
+  intoMode.value = mode
   showIntoDialog.value = true
 }
 function closeIntoDialog() {
@@ -352,10 +356,32 @@ function closeIntoDialog() {
 function chooseIntoRef(ref: any) {
   const dragged = intoDragged.value
   const target = intoTarget.value
+  const mode = intoMode.value
   closeIntoDialog()
-  if (dragged && target && ref) {
-    performMove(() => !!(ctx as any).moveInto?.(dragged, target, ref))
+  if (!target || !ref) return
+  if (mode === 'paste') {
+    (ctx as any).pasteInto?.(target, ref)
+    return
   }
+  if (dragged) performMove(() => !!(ctx as any).moveInto?.(dragged, target, ref))
+}
+
+/**
+ * Einfügen in ein Objekt (#148).
+ *
+ * Steckte das Element schon einmal in einer der passenden Referenzen, kommt es
+ * dorthin zurück — das ist die Erwartung und braucht keine Rückfrage. Passen
+ * mehrere und ist keine die Herkunft, entscheidet der Nutzer: sonst nähme das
+ * Einfügen stillschweigend die erste, und das war in CWM die falsche.
+ */
+function pasteIntoObject(target: any): boolean {
+  const check = (ctx as any).canPasteInto?.(target) ?? { ok: false, refs: [] }
+  if (!check.ok) { showDropMessage(check.reason); return false }
+  if (check.refs.length > 1 && !check.origin) {
+    openIntoDialog(null, target, check.refs, 'paste')
+    return true
+  }
+  return !!(ctx as any).pasteInto?.(target)
 }
 function refLabel(ref: any): string { return ref?.getName?.() ?? 'Referenz' }
 function refTypeLabel(ref: any): string {
@@ -864,7 +890,7 @@ const contextMenuItems = computed(() => {
       label: paste.ok ? 'Paste' : `Paste (${paste.reason ?? 'nicht möglich'})`,
       icon: 'pi pi-clipboard',
       disabled: !paste.ok,
-      command: () => { (ctx as any).pasteInto?.(clipObj) }
+      command: () => { pasteIntoObject(clipObj) }
     })
   }
 
@@ -1346,7 +1372,7 @@ watch(ctxSelectedObject, (obj) => {
     <!-- Insert-into dialog: target has several matching containment references -->
     <Dialog
       v-model:visible="showIntoDialog"
-      header="In welche Referenz einfügen?"
+      :header="intoMode === 'paste' ? 'Wohin einfügen?' : 'In welche Referenz einfügen?'"
       :modal="true"
       :style="{ width: '420px' }"
       @hide="closeIntoDialog"

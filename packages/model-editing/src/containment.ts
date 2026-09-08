@@ -161,6 +161,13 @@ function countValues(value: unknown): number {
 export interface ContainmentResult {
   ok: boolean
   refs: EReference[]
+  /**
+   * Die Referenz, in der das Element bisher steckte — sofern das Ziel sie
+   * ueberhaupt hat. Wer sie kennt, muss nicht fragen: Das Kind kommt dorthin
+   * zurueck, wo es herkam. Fehlt sie und passen mehrere Referenzen, ist die
+   * Wahl offen und gehoert dem Nutzer.
+   */
+  origin?: EReference | null
   reason?: string
 }
 
@@ -174,7 +181,9 @@ export function checkContainment(
   if (refs.length === 0) {
     return { ok: false, refs, reason: 'Kann hier nicht eingefügt werden (kein passender Container).' }
   }
-  return { ok: true, refs }
+  const source = containingReferenceOf(element)
+  const origin = source ? refs.find(ref => isSameReference(ref, source)) ?? null : null
+  return { ok: true, refs, origin }
 }
 
 /** Fügt `element` in die Containment-Referenz `ref` von `target` ein. */

@@ -1353,12 +1353,24 @@ export function useInstanceTree(
     }
   }
 
-  function pasteInto(target: EObject): boolean {
+  /**
+   * Fuegt das Element der Zwischenablage in `target` ein.
+   *
+   * `ref` gibt die Containment-Referenz vor — die Oberflaeche fragt danach,
+   * wenn mehrere passen und keine die Herkunft des Elements ist (#148). Ohne
+   * Vorgabe entscheidet die Reihenfolge aus `acceptingReferences`, die die
+   * Herkunftsreferenz vorne haelt.
+   */
+  function pasteInto(target: EObject, ref?: EReference): boolean {
     const entry = clipboard.value
     if (!entry) return false
     const ziel = toRaw(target)
     const refs = acceptingReferences(entry.element, ziel, { checkCycle: entry.cut })
     if (refs.length === 0) return false
+    // Eine vorgegebene Referenz muss selbst passen — sonst waere die Pruefung
+    // umgangen.
+    const zielRef = ref ? refs.find(r => r === toRaw(ref)) : refs[0]
+    if (!zielRef) return false
 
     try {
       let element: EObject
@@ -1368,7 +1380,7 @@ export function useInstanceTree(
       } else {
         element = copyDeep(entry.element)
       }
-      if (!addToContainment(element, ziel, refs[0])) return false
+      if (!addToContainment(element, ziel, zielRef)) return false
 
       // Kopien brauchen eine eigene xmi:id — sonst stünden zwei Objekte mit
       // derselben in der Datei, und Verweise darauf wären nicht mehr

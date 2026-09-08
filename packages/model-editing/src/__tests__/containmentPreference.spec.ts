@@ -13,7 +13,7 @@ import {
   registerEcorePackage, EPackageRegistry,
   type EPackage, type EClass, type EObject, type EReference
 } from '@emfts/core'
-import { acceptingReferences, containingReferenceOf } from '../containment'
+import { acceptingReferences, checkContainment, containingReferenceOf } from '../containment'
 
 /*
  * Nachbau der CWM-Vererbung: Namespace bringt `ownedElement` mit,
@@ -97,6 +97,19 @@ describe('Bevorzugte Containment-Referenz', () => {
     const frisch = factory.create(attributKlasse)
     const refs = acceptingReferences(frisch, ziel)
     expect(refs.map(r => r.getName())).toEqual(['ownedElement', 'feature'])
+  })
+
+  it('checkContainment nennt die Herkunftsreferenz', () => {
+    const pruefung = checkContainment(attribut, ziel)
+    expect(pruefung.ok).toBe(true)
+    expect(pruefung.origin?.getName()).toBe('feature')
+  })
+
+  it('ohne Herkunft bleibt origin leer — die Oberflaeche muss fragen', () => {
+    const frisch = (pkg.getEFactoryInstance() as any).create(attributKlasse)
+    const pruefung = checkContainment(frisch, ziel)
+    expect(pruefung.refs.length).toBeGreaterThan(1)
+    expect(pruefung.origin).toBeFalsy()
   })
 
   it('eine Referenz, die es im Ziel nicht gibt, aendert nichts', () => {
