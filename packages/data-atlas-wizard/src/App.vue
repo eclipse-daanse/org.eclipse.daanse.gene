@@ -1,17 +1,33 @@
 <template>
   <main class="wizard-app">
     <h1>Data-Atlas-Assistent <small>Domänenmodell → REST-Endpunkt</small></h1>
-    <WizardShell />
+    <p v-if="!ready">Initialisiere Modelle …</p>
+    <p v-else-if="error" class="error">{{ error }}</p>
+    <WizardShell v-else />
   </main>
 </template>
 
 <script setup lang="ts">
 /**
- * Standalone-Rahmen. Die Registrierung der Metamodelle kommt in Schritt 3 der
- * Umsetzungsreihenfolge dazu (`src/emf/setup.ts`); solange steht hier nur die
- * Shell, damit `npm run dev` etwas zeigt.
+ * Standalone-Rahmen. Die Shell wartet auf die Metamodelle: ohne registriertes
+ * Fassadenmodell finden die Schritt-Formulare ihre Features nicht.
  */
+import { onMounted, ref } from 'vue';
+import { setupPackages } from './emf/setup';
 import WizardShell from './wizard/WizardShell.vue';
+
+const ready = ref(false);
+const error = ref('');
+
+onMounted(async () => {
+  try {
+    await setupPackages();
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e);
+  } finally {
+    ready.value = true;
+  }
+});
 </script>
 
 <style scoped>
@@ -28,4 +44,5 @@ h1 small {
   font-size: 0.7em;
   margin-left: 0.5rem;
 }
+.error { color: #b00020; }
 </style>

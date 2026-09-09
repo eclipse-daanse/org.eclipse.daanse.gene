@@ -447,10 +447,16 @@ Bekannte Fallen:
 
 - **Codegen-Bug in `emfts-codegen`** (emf.ts#83): EAttribut-`eType`s fehlen,
   EEnums werden nicht als Classifier registriert → `wizardPackageFixup.ts`
-  trägt beides zur Laufzeit nach und ist **bei jeder Modelländerung
-  mitzupflegen**; der `wizardUi`-Test fängt Verstöße. Ohne den Fixup wird aus
-  `openApi = true` beim Round-Trip der String `"true"` und aus `batchSize = 500`
-  der String `"500"`.
+  trägt beides zur Laufzeit nach. Ohne den Fixup wird aus `openApi = true` beim
+  Round-Trip der String `"true"` und aus `batchSize = 500` der String `"500"`.
+  Anders als die Vorlagen in den beiden anderen Wizards pflegt der Fixup
+  **keine Tabelle**, sondern liest die Typen aus derselben `.ecore`, aus der
+  der Generator kommt — eine Modelländerung ist damit automatisch gedeckt.
+- **Enums: der Loader liefert `EEnumLiteral`, der generierte Typ verspricht
+  einen String** (Kommentar an emf.ts#83). Geschrieben wird der Name richtig;
+  `setup.configMode === 'FILE'` ist nach einem Round-Trip aber immer falsch.
+  In Iteration 1 ohne Folgen, weil die Fassade nur in der Oberfläche entsteht —
+  wer sie speichern und zurücklesen will, braucht eine Normalisierung.
 - **emf.ts wertet `iD="true"` beim Speichern nicht aus** (emf.ts#84) →
   `getURIFragment()` überschreiben, sonst stehen Pfadfragmente (`/0/0`) statt
   der ids in den Referenzattributen. Betrifft nur das Schreiben; beim Laden löst
@@ -536,7 +542,7 @@ Der data.atlas-Compose-Setup ist die reale Gegenprobe
 |---|---|
 | 1. Paketgerüst | `packages/data-atlas-wizard` mit `package.json`, `manifest.json`, `vitest.config.ts`, Standalone-`main.ts`; `npm run dev` zeigt eine leere Shell |
 | 2. Fassadenmodell + Codegen | `model/data-atlas-wizard.ecore` + genconfig, `npm run generate` erzeugt `src/generated`, eingecheckt |
-| 3. EMF-Setup | `setup.ts` + `wizardPackageFixup.ts`; ein Smoke-Test registriert Fassade, `configuration.ecore` und `eorm.ecore` ohne Fehler |
+| 3. EMF-Setup | `setup.ts` + `wizardPackageFixup.ts`; ein Smoke-Test registriert Fassade, `configuration.ecore` und `eorm.ecore` ohne Fehler, und der Round-Trip behält Wahrheitswerte und Zahlen (Gegenprobe: ohne Fixup fällt er um) |
 | 4. Ableitungsregeln | `context.ts` + `test/context.test.ts` grün |
 | 5. Serializer-Unterklassen | `dataAtlasResource.ts` + `test/dataAtlasResource.test.ts` grün: beide Href-Dialekte, Wurf bei fehlendem `modelFiles`-Eintrag, `iD`-Fragment ohne `xmi:id` |
 | 6. Transformer Datei-Grundfall | `test/toDataAtlasConfig.test.ts` grün gegen `dataatlas.xmi` und `dataatlas-atlas.xmi` — Graphgleichheit plus Href-Vergleich, nicht zeichenweise (Abschnitt 8); der Round-Trip löst alle Referenzen zu Objekten auf |
