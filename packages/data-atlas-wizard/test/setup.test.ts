@@ -66,6 +66,18 @@ describe('setupPackages', () => {
     expect(getEormPackage().getEClassifier('EntityMappings')).toBeTruthy();
   });
 
+  it('persistenceConfig ist auf EntityMappings auflösbar', () => {
+    /*
+     * Nur wenn eorm VOR configuration registriert wird: der Verweis in
+     * configuration.ecore ist ein nsURI-Href, und ein Forward-Ref auf ein
+     * noch unbekanntes Package bleibt unaufgelöst. Ohne das könnte Schritt 7
+     * kein Mapping einbetten.
+     */
+    const jpa = getConfigurationPackage().getEClassifier('JPADataInput') as EClass;
+    const feature = jpa.getEStructuralFeature('persistenceConfig');
+    expect(feature?.getEType()?.getName()).toBe('EntityMappings');
+  });
+
   it('die Ecore-Wrapper-Datentypen stehen bereit', () => {
     // Domänenmodelle aus Java-Werkzeugen referenzieren sie regelmäßig
     for (const name of ['EIntegerObject', 'EBooleanObject', 'EDoubleObject', 'ELongObject']) {

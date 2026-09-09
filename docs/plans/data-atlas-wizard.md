@@ -307,6 +307,15 @@ Die Validierung gehört vor das Serialisieren, nicht in den Serializer.
 
 `RestDataServiceConfiguration.id` wird vollständig abgeleitet
 (`<dataSetId>-config`) und nicht abgefragt: der Wert bedeutet fachlich nichts.
+Die Vorlagen sind darin uneinig — die Ein-Datensatz-Beispiele schreiben
+`<serviceId>-config` (`persons-rest-config`), das Mehr-Datensatz-Beispiel
+`<dataSetId>-config` (`persons-csv-only-config`). Nur letzteres bleibt bei
+mehreren Datensätzen eindeutig; im Golden-Vergleich bleibt dieses Feld deshalb
+außen vor und wird eigens geprüft.
+
+`path` wird **immer** geschrieben, obwohl es einen Default hat: greift der
+nicht, gilt der **Name** des Datensatzes (`tests/fixtures/dataatlas-servicedefault.xmi`),
+und der ist bei uns Title Case — als URL-Segment nicht gewollt.
 
 ### Was der Serializer anders macht als die Vorlagen
 
@@ -522,7 +531,7 @@ sichtbar festgenagelt sein.
 | `test/dataAtlasResource.test.ts` | die zwei Überschreibungen einzeln: `getHref()` liefert je Modus den richtigen Dialekt und **wirft**, wenn im `FILE`-Modus der `modelFiles`-Eintrag fehlt; `getURIFragment()` liefert den `iD`-Wert und schreibt **kein** `xmi:id` |
 | `test/persistenceConfig.test.ts` | das importierte `EntityMappings` landet als `persistenceConfig`-Containment, die inneren Hrefs folgen dem Modus; Zielbild `dataatlas-history-atlas.xmi` (ersetzt den früheren `embedEormMapping`-Test) |
 | `test/context.test.ts` | Ableitungsregeln: ids, `path`, `description` aus GenModel-`documentation`, Modus-abhängige `fileUri` |
-| `test/validation.test.ts` | jede harte Regel und jede Warnung aus Abschnitt 4 einmal |
+| `test/validation.test.ts` | jede harte Regel und jede Warnung aus Abschnitt 4 einmal, dazu die Grundannahme: was `initSetup` liefert, ist ohne Zutun schreibbar |
 | `test/wizardUi.test.ts` | jedes `feature=`-Href der Schritt-XMIs löst auf und findet eine Registry-Komponente (fängt Umbenennungen im Fassadenmodell und den Codegen-Bug) |
 | `test/publish.test.ts` | gegen Mock-`fetch`: Reihenfolge eorm→configuration→Domäne in **beiden** Stages, Retry auf 5xx, Transition-Payload als XMI, Abbruch bei fehlendem Schema |
 

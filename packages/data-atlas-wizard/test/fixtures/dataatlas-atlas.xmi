@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Atlas-mode variant of the example: EClass references use nsURI-based hrefs
+     (resolved against the Model Atlas schema registry instead of local ecore
+     files) and the data location is the absolute container path. This is the
+     instance a Model Atlas serves to an atlas-mode Data Atlas. -->
+<configuration:DataAtlasConfiguration xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:configuration="https://eclipse.org/fennec/data/atlas/configuration/1.0.0"
+    name="example-atlas" description="Example Data Atlas instance served from a Model Atlas.">
+  <dataInputs xsi:type="configuration:FileDataInput" id="persons-file" uri="/opt/dataatlas/runtime/data/data/persons.xmi">
+    <supportedEClasses href="https://eclipse.org/fennec/data/atlas/example/person/1.0.0#//Person"/>
+  </dataInputs>
+  <dataSets id="persons" name="Persons" description="All persons of the example data set." dataInput="persons-file">
+    <inputType href="https://eclipse.org/fennec/data/atlas/example/person/1.0.0#//Person"/>
+    <outputType href="https://eclipse.org/fennec/data/atlas/example/person/1.0.0#//Person"/>
+  </dataSets>
+  <services xsi:type="configuration:RestDataService" id="persons-rest" name="Persons REST"
+      description="REST endpoint publishing the example persons." urlContext="/example" openAPI="false">
+    <configuration id="persons-rest-config" dataSet="persons" path="persons"/>
+  </services>
+</configuration:DataAtlasConfiguration>

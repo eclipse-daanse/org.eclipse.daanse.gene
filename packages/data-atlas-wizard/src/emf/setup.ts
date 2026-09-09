@@ -160,10 +160,15 @@ export async function setupPackages(): Promise<void> {
 
   // Zielmetamodelle als gebündelte Assets — kein fetch, damit es auch als
   // gene-Plugin ohne eigene public/-Auslieferung funktioniert.
-  configurationPackage =
-    (EPackageRegistry.INSTANCE.get(CONFIGURATION_NS_URI) as EPackage | undefined) ??
-    registerEcoreFromString(configurationEcoreXml, 'configuration.ecore');
+  //
+  // eorm **zuerst**: configuration.ecore verweist mit einem nsURI-Href auf
+  // `eorm#//EntityMappings` (JPADataInput.persistenceConfig). Wird eorm später
+  // registriert, bleibt dieser Verweis unaufgelöst — dieselbe Reihenfolge, die
+  // auch der Publish-Flow braucht.
   eormPackage =
     (EPackageRegistry.INSTANCE.get(EORM_NS_URI) as EPackage | undefined) ??
     registerEcoreFromString(eormEcoreXml, 'eorm.ecore');
+  configurationPackage =
+    (EPackageRegistry.INSTANCE.get(CONFIGURATION_NS_URI) as EPackage | undefined) ??
+    registerEcoreFromString(configurationEcoreXml, 'configuration.ecore');
 }

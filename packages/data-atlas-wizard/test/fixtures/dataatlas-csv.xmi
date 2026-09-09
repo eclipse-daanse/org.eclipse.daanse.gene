@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration:DataAtlasConfiguration xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:configuration="https://eclipse.org/fennec/data/atlas/configuration/1.0.0"
+    name="csv" description="Export fixture: one DataSet offering CSV and JSON, one offering CSV only, and one relying on the runtime defaults.">
+  <dataInputs xsi:type="configuration:FileDataInput" id="persons-file" uri="data/persons.xmi">
+    <supportedEClasses href="model/person.ecore#//Person"/>
+  </dataInputs>
+  <dataSets id="persons-csv-and-json" name="Persons CSV and JSON" description="Serves both configured exports."
+      dataInput="persons-file" distributionExport="csv json">
+    <inputType href="model/person.ecore#//Person"/>
+    <outputType href="model/person.ecore#//Person"/>
+  </dataSets>
+  <dataSets id="persons-csv-only" name="Persons CSV only" description="Serves CSV only - JSON must be refused with 406."
+      dataInput="persons-file" distributionExport="csv">
+    <inputType href="model/person.ecore#//Person"/>
+    <outputType href="model/person.ecore#//Person"/>
+  </dataSets>
+  <dataSets id="persons-default" name="Persons default" description="Declares no export - the runtime defaults apply."
+      dataInput="persons-file">
+    <inputType href="model/person.ecore#//Person"/>
+    <outputType href="model/person.ecore#//Person"/>
+  </dataSets>
+  <services xsi:type="configuration:RestDataService" id="persons-export-rest" name="Persons export REST"
+      description="REST endpoint exercising the DistributionExport resolution." urlContext="/export" openAPI="false">
+    <configuration id="persons-csv-and-json-config" dataSet="persons-csv-and-json" path="both"/>
+    <configuration id="persons-csv-only-config" dataSet="persons-csv-only" path="csv-only"/>
+    <configuration id="persons-default-config" dataSet="persons-default" path="default"/>
+  </services>
+  <exports xsi:type="configuration:CSVDistributionExport" id="csv" name="CSV"
+      description="Semicolon separated, no SQL-type row." separator=";" includeTypeHeader="false"/>
+  <exports id="json" name="JSON" description="Plain JSON, expressed through mediaType." mediaType="application/json"/>
+</configuration:DataAtlasConfiguration>

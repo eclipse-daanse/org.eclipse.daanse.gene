@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration:DataAtlasConfiguration xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:configuration="https://eclipse.org/fennec/data/atlas/configuration/1.0.0"
+    name="servicedefault" description="Trias test fixture: the DataSet sets no dataInput and the configuration no path, so the service default input and the DataSet name apply (override-else-default).">
+  <dataInputs xsi:type="configuration:FileDataInput" id="persons-file" uri="data/persons.xmi">
+    <supportedEClasses href="model/person.ecore#//Person"/>
+  </dataInputs>
+  <dataSets id="persons" name="people" description="All persons; inherits the service's dataInput.">
+    <inputType href="model/person.ecore#//Person"/>
+    <outputType href="model/person.ecore#//Person"/>
+  </dataSets>
+  <services xsi:type="configuration:RestDataService" id="persons-rest" name="Persons REST"
+      description="REST endpoint whose dataInput is the default for its DataSets." urlContext="/svcdefault"
+      dataInput="persons-file" openAPI="false">
+    <configuration id="persons-rest-config" dataSet="persons"/>
+  </services>
+</configuration:DataAtlasConfiguration>

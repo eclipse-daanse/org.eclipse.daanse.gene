@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Postgres + CSV example: the persons live in a relational database, reached
+     through a JPADataInput over a JdbcDataSource, and the DataSet is served as
+     CSV (semicolon separated, no SQL-type row) as well as JSON.
+
+     The JdbcDataSource filter selects the javax.sql.DataSource service the
+     deployment provides. In the compose setup that service comes from
+     org.eclipse.daanse.jdbc.datasource.postgresql, configured by
+     dataatlas/load/datasource.json, which carries the extra config key
+     dataSourceName=personsDs - every non-dot key of a daanse DataSource
+     configuration also becomes a service property, which is what makes it
+     selectable here.
+
+     EClass references are relative hrefs, so this instance works in file mode;
+     dataatlas-postgres-atlas.xmi is the nsURI-based variant a Model Atlas
+     serves. -->
+<configuration:DataAtlasConfiguration xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:configuration="https://eclipse.org/fennec/data/atlas/configuration/1.0.0"
+    name="example-postgres" description="Example Data Atlas instance serving a PostgreSQL table as CSV.">
+  <dataSources id="persons-db" name="Persons DB" filter="(dataSourceName=personsDs)"/>
+  <dataInputs xsi:type="configuration:JPADataInput" id="persons-jpa" dataSource="persons-db">
+    <supportedEClasses href="model/person.ecore#//Person"/>
+  </dataInputs>
+  <dataSets id="persons" name="Persons" description="All persons from the database, as CSV or JSON."
+      dataInput="persons-jpa" distributionExport="csv json">
+    <inputType href="model/person.ecore#//Person"/>
+    <outputType href="model/person.ecore#//Person"/>
+  </dataSets>
+  <services xsi:type="configuration:RestDataService" id="persons-pg-rest" name="Persons Postgres REST"
+      description="REST endpoint publishing the database-backed persons." urlContext="/pg" openAPI="false">
+    <configuration id="persons-pg-rest-config" dataSet="persons" path="persons"/>
+  </services>
+  <exports xsi:type="configuration:CSVDistributionExport" id="csv" name="CSV"
+      description="Semicolon separated, no SQL-type row." separator=";" includeTypeHeader="false"/>
+  <exports id="json" name="JSON" description="Plain JSON, kept alongside the CSV export." mediaType="application/json"/>
+</configuration:DataAtlasConfiguration>
