@@ -45,13 +45,21 @@ export function getEormPackage(): EPackage {
   return eormPackage;
 }
 
-/** ResourceSet mit XMI-Factory für .xmi und .ecore. */
+/**
+ * ResourceSet mit XMI-Factory für alle Endungen, die hier vorkommen.
+ *
+ * `eorm` gehört dazu: ein importiertes JPA-Mapping ist XMI, trägt aber diese
+ * Endung. Ohne den Eintrag liefert das ResourceSet eine Resource ohne
+ * `loadFromString`, und der Import scheitert mit „is not a function" statt
+ * mit einer Aussage über das Dokument.
+ */
 export function newResourceSet(): BasicResourceSet {
   const rs = new BasicResourceSet();
   const xmiFactory = new XMIResourceFactory();
   const map = rs.getResourceFactoryRegistry().getExtensionToFactoryMap();
-  map.set('xmi', xmiFactory);
-  map.set('ecore', xmiFactory);
+  for (const endung of ['xmi', 'ecore', 'eorm']) {
+    map.set(endung, xmiFactory);
+  }
   return rs;
 }
 

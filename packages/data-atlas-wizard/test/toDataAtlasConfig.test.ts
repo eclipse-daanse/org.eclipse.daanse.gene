@@ -20,7 +20,13 @@ import { URI, type BasicResourceSet, type EClass, type EObject, type EPackage } 
 import { newResourceSet, registerEcoreFromString, setupPackages } from '../src/emf/setup';
 import { buildDataAtlasXmi } from '../src/transform/toDataAtlasConfig';
 import { initSetup, setup as setupRef } from '../src/wizard/context';
-import { ConfigMode, ExportKind, DataatlaswizardFactory, type AtlasSetup } from '../src/generated';
+import {
+  ConfigMode,
+  DataatlaswizardFactory,
+  ExportKind,
+  InputKind,
+  type AtlasSetup,
+} from '../src/generated';
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const lies = (name: string) => readFileSync(join(fixtures, name), 'utf-8');
@@ -342,6 +348,67 @@ describe('Formate gegen fixtures/dataatlas-csv.xmi', () => {
     csv.description = 'CSV.';
     s.exports.push(csv);
     expect(buildDataAtlasXmi(s).warnings.join(' ')).toMatch(/406/);
+  });
+});
+
+describe('Datenbank gegen example/dataatlas-postgres.xmi', () => {
+  /*
+   * Bewusst der Datei-Zwilling: die Atlas-Variante traegt publication/
+   * <publications>, was Iteration 1 nicht erzeugt.
+   */
+  function postgresSetup(): AtlasSetup {
+    const s = beispielSetup();
+    s.instanceName = 'example-postgres';
+    s.instanceDescription = 'Example Data Atlas instance serving a PostgreSQL table as CSV.';
+    s.inputKind = InputKind.DATABASE;
+    s.databaseSource!.id = 'persons-jpa';
+    s.databaseSource!.dataSourceId = 'persons-db';
+    s.databaseSource!.dataSourceName = 'Persons DB';
+    s.databaseSource!.dataSourceFilter = '(dataSourceName=personsDs)';
+    s.serviceId = 'persons-pg-rest';
+    s.serviceName = 'Persons Postgres REST';
+    s.serviceDescription = 'REST endpoint publishing the database-backed persons.';
+    s.urlContext = '/pg';
+    s.datasets[0].description = 'All persons from the database, as CSV or JSON.';
+
+    const factory = DataatlaswizardFactory.eINSTANCE;
+    const csv = factory.createExportConfig();
+    csv.kind = ExportKind.CSV;
+    csv.id = 'csv';
+    csv.name = 'CSV';
+    csv.description = 'Semicolon separated, no SQL-type row.';
+    const json = factory.createExportConfig();
+    json.kind = ExportKind.JSON;
+    json.id = 'json';
+    json.name = 'JSON';
+    json.description = 'Plain JSON, kept alongside the CSV export.';
+    s.exports.push(csv, json);
+    return s;
+  }
+
+  it('der Objektgraph stimmt', () => {
+    const { erzeugt, vorlage } = vergleiche(postgresSetup(), 'dataatlas-postgres.xmi');
+    expect(erzeugt).toEqual(vorlage);
+  });
+
+  it('JdbcDataSource und JPADataInput hängen zusammen', () => {
+    const { xmi } = vergleiche(postgresSetup(), 'dataatlas-postgres.xmi');
+    // Attributreihenfolge folgt dem Metamodell (JdbcDataSource: filter, id,
+    // name), nicht der Vorlage — deshalb einzeln geprueft.
+    expect(xmi).toMatch(/<dataSources [^>]*id="persons-db"/);
+    expect(xmi).toMatch(/<dataSources [^>]*name="Persons DB"/);
+    expect(xmi).toMatch(/<dataSources [^>]*filter="\(dataSourceName=personsDs\)"/);
+    expect(xmi).toContain('xsi:type="configuration:JPADataInput"');
+    expect(xmi).toContain('dataSource="persons-db"');
+  });
+
+  it('abgeleitetes Mapping heißt: kein persistenceConfig', () => {
+    const { xmi } = vergleiche(postgresSetup(), 'dataatlas-postgres.xmi');
+    expect(xmi).not.toContain('persistenceConfig');
+  });
+
+  it('und es warnt vor der Namens-Asymmetrie', () => {
+    expect(buildDataAtlasXmi(postgresSetup()).warnings.join(' ')).toMatch(/Großbuchstaben/);
   });
 });
 

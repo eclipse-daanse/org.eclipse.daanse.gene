@@ -20,7 +20,7 @@ import {
   type DatasetConfig,
   type ExportConfig,
 } from '../generated';
-import { createDataAtlasResource, type ModelFileMap } from './dataAtlasResource';
+import { ECORE_NS_URI, createDataAtlasResource, type ModelFileMap } from './dataAtlasResource';
 import { assertValid, findWarnings } from './validate';
 
 /** Der Dateiname, unter dem der Data Atlas die Konfiguration erwartet. */
@@ -130,6 +130,7 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
 
   // ── Datenquelle ──────────────────────────────────────────────────────────
   let dataInput: EObject;
+  let hatEingebettetesMapping = false;
   if (setup.inputKind === InputKind.FILE) {
     const quelle = setup.fileSource!;
     dataInput = builder.create('FileDataInput');
@@ -148,6 +149,7 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
     builder.set(dataInput, 'dataSource', dataSource);
     if (quelle.mappingKind === MappingKind.IMPORTED) {
       builder.set(dataInput, 'persistenceConfig', loadEntityMappings(quelle.eormXmi!));
+      hatEingebettetesMapping = true;
     }
   }
   // Die Klassen, die dieser Input liefern kann.
@@ -205,6 +207,10 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
   const resource = createDataAtlasResource(DEFAULT_FILE_NAME, {
     mode: setup.configMode,
     modelFiles: setup.configMode === ConfigMode.FILE ? modelFileMap(setup) : undefined,
+    // Ein eingebettetes Mapping verweist mit Typpräfix auf Ecore-Features
+    // (`feature="ecore:EAttribute …"`); ohne die Deklaration wäre das Präfix
+    // unbekannt (emf.ts#87). Ohne Mapping bleibt der Kopf schlank.
+    extraNamespaces: hatEingebettetesMapping ? { ecore: ECORE_NS_URI } : undefined,
   });
   resource.getContents().add(root);
 

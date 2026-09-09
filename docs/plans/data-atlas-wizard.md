@@ -288,6 +288,18 @@ zusammenkommen.
 Der Weg über `resource.setID()` wirkt auch, schreibt aber zusätzlich ein
 `xmi:id`, das die Vorlagen nicht haben.
 
+**c) Fehlende Namespace-Deklaration** — `writeNamespaces()` erweitert.
+Beim eingebetteten eorm-Mapping schreibt emf.ts Typpräfixe in Attributwerte
+(`feature="ecore:EAttribute …"`), zählt für die Deklarationen aber nur
+Präfixe, die von Elementen gebraucht werden — `xmlns:ecore` fehlt dann
+(emf.ts#87). Die Unterklasse trägt es nach, und zwar nur, wenn ein Mapping
+eingebettet ist; ohne bleibt der Dokumentkopf schlank.
+
+Der Href-Dialekt gilt auch für **Features**: ein eorm-Mapping verweist auf
+`…#//Person/firstName`, und im Datei-Modus muss daraus
+`model/person.ecore#//Person/firstName` werden — belegt durch
+`example/dataatlas-history.xmi`.
+
 `configMode` steuert damit keine Zeichenketten mehr, sondern nur noch die
 Dialekt-Karte — der Modus liegt an einer Stelle statt an jeder Href-Stelle.
 
@@ -491,7 +503,17 @@ Bekannte Fallen:
   über die `modelFiles`-Karte kommen.
 - **Einwertige Cross-Document-Referenzen schreibt emf.ts als Attribut**, nicht
   als `href`-Element (emf.ts#85, `XMLSave.js:318` gegen `writeElements`
-  Z. 711) — gegen den Java-Data-Atlas zu verifizieren, s. Abschnitt 4.
+  Z. 711) — gegen den Java-Data-Atlas zu verifizieren, s. Abschnitt 4. Im
+  eingebetteten eorm-Mapping heißt das
+  `feature="ecore:EAttribute model/person.ecore#//Person/id"` statt
+  `<feature href="…"/>`.
+- **Typpräfixe in Attributwerten bleiben undeklariert** (emf.ts#87) →
+  `writeNamespaces()` erweitern, sonst fehlt `xmlns:ecore` im Kopf.
+- **Das ResourceSet braucht die Endung `eorm`**: ein importiertes Mapping ist
+  XMI, trägt aber diese Endung. Ohne den Eintrag im
+  `ExtensionToFactoryMap` kommt eine Resource ohne `loadFromString` zurück,
+  und der Import scheitert mit „is not a function" statt mit einer Aussage
+  über das Dokument.
 - **EMF-Objekte sind nicht deep-reaktiv** → `shallowRef` + `version` +
   `touch()`, `void version.value;` in jedem `computed`.
 - **Widget-Prioritäten ≥ 900**: der Host hängt über
