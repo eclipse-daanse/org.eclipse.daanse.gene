@@ -29,6 +29,7 @@
   <startupModules>cocl-editor</startupModules>
   <startupModules>atlas-browser</startupModules>
   <startupModules>data-generator</startupModules>
+  <startupModules>data-atlas-wizard</startupModules>
 
   <!-- Plugin Configs -->
   <pluginConfigs xsi:type="actions:ActionsPluginConfig"

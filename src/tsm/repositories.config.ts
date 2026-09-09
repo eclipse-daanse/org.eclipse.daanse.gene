@@ -88,5 +88,6 @@ export const startupModules = [
   'atlas-browser',       // Model Atlas Browser
   'data-generator',      // Data generator for test data (must load after atlas-browser)
   'sensinact-mapping-wizard', // SensiNact Mapping Wizard
-  'eorm-wizard'          // eorm Mapping Wizard
+  'eorm-wizard',         // eorm Mapping Wizard
+  'data-atlas-wizard'    // Data Atlas Konfigurations-Wizard
 ]

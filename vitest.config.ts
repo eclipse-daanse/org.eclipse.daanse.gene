@@ -31,6 +31,7 @@ export default defineConfig({
       ),
       'packages/sensinact-mapping-wizard',
       'packages/eorm-wizard',
+      'packages/data-atlas-wizard',
     ],
   },
 })
