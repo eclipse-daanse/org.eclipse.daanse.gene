@@ -135,8 +135,10 @@ harter Fehler (der Href würde sonst stillschweigend falsch).
 `mappingKind`: `MappingKind`(1, `DERIVED`), `eormXmi`: EString (0..1 — das
 importierte `EntityMappings`-Dokument als Rohtext, s. Abschnitt 3).
 
-**`DatasetConfig`**: `selected`: EBoolean (default `true`), `eClass`:
-`Ecore#//EClass`(1), `id`(1), `name`(1), `description`(1), `path`(1),
+**`DatasetConfig`**: `selected`: EBoolean (default `true`), `targetClass`:
+`Ecore#//EClass`(1) — **nicht** `eClass`, der Name kollidiert mit
+`EObject.eClass()` und die generierte Impl liesse sich nicht mehr übersetzen
+(gleiche Wahl wie im eorm-Wizard) —, `id`(1), `name`(1), `description`(1), `path`(1),
 `batchSize`: EInt (default `-1`), `batchSizeLimit`: EInt (default `-1`).
 `EInt` statt `EBigInteger` — der Transformer schreibt den Dezimalstring.
 

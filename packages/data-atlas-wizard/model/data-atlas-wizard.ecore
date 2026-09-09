@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="dataatlaswizard" nsURI="http://fennec/data/atlas/data-atlas-wizard/1.0"
+    nsPrefix="dataatlaswizard">
+
+  <!-- Fassadenmodell des Data-Atlas-Assistenten: die Entscheidungen des
+       Nutzers in Fachsprache. Ein Transformer erzeugt daraus die konforme
+       DataAtlasConfiguration (configuration.ecore, nsURI
+       https://eclipse.org/fennec/data/atlas/configuration/1.0.0).
+
+       Die Fassade vereinfacht bewusst: ein Service, ein DataInput,
+       inputType = outputType, die Trias nur auf Service-Ebene. Siehe Plan
+       docs/plans/data-atlas-wizard.md, Abschnitt 1. -->
+
+  <eClassifiers xsi:type="ecore:EClass" name="AtlasSetup">
+    <!-- Identität der Instanz (= DataAtlasConfiguration.name/description). -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="instanceName" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="instanceDescription"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+
+    <!-- Wo liegt die Konfiguration später? Steuert den Href-Dialekt und ob
+         Datei-URIs absolut sein müssen. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="configMode" lowerBound="1"
+        eType="#//ConfigMode" defaultValueLiteral="FILE"/>
+
+    <!-- Das Domänenmodell, aus dem die Datensätze abgeleitet werden. -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="modelPackage" lowerBound="1"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EPackage"/>
+    <!-- Nur im FILE-Modus: unter welchem relativen Pfad liegt jede .ecore
+         neben der Konfiguration. Ohne Eintrag zu einem referenzierten Package
+         wäre der Href stillschweigend falsch — der Transformer wirft dann. -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="modelFiles" upperBound="-1"
+        eType="#//ModelFileRef" containment="true"/>
+
+    <!-- Woher kommen die Daten? inputKind schaltet zwischen den beiden
+         folgenden Containments; als Enum statt abstrakter Subklassen, damit
+         visibilityCondition im UIModel direkt darauf prüfen kann. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="inputKind" lowerBound="1"
+        eType="#//InputKind" defaultValueLiteral="FILE"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="fileSource"
+        eType="#//FileSourceConfig" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="databaseSource"
+        eType="#//DatabaseSourceConfig" containment="true"/>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="datasets" upperBound="-1"
+        eType="#//DatasetConfig" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="exports" upperBound="-1"
+        eType="#//ExportConfig" containment="true"/>
+
+    <!-- Identität des REST-Endpunkts (= RestDataService). Die Felder liegen
+         flach am Setup, weil die Fassade genau einen Service kennt. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="serviceId" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="serviceName" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="serviceDescription" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="urlContext" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="openApi" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="false"/>
+    <!-- Pagination-Parameter: Der Transformer schreibt sie nur, wenn sie von
+         diesen Vorgaben abweichen. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="paginationOffsetParameterName"
+        lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+        defaultValueLiteral="offset"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="paginationSizeParameterName"
+        lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+        defaultValueLiteral="limit"/>
+  </eClassifiers>
+
+  <!-- Reiner Serialisierungskontext für den FILE-Modus: kein Gegenstück im
+       Zielmodell. Als Liste, weil Cascade-Laden und Multi-File-Upload
+       regelmäßig mehrere Packages einbringen. -->
+  <eClassifiers xsi:type="ecore:EClass" name="ModelFileRef">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="modelPackage" lowerBound="1"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EPackage"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="fileName" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- Datei als Datenquelle (= FileDataInput). -->
+  <eClassifiers xsi:type="ecore:EClass" name="FileSourceConfig">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Im FILE-Modus relativ (data/persons.xmi), im ATLAS-Modus absolut
+         (/opt/dataatlas/runtime/data/…) — die Validierung erzwingt das. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="fileUri" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- Datenbank als Datenquelle (= JdbcDataSource + JPADataInput). -->
+  <eClassifiers xsi:type="ecore:EClass" name="DatabaseSourceConfig">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dataSourceId" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dataSourceName" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- LDAP-Filter, z. B. (dataSourceName=personsDs) -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dataSourceFilter" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="mappingKind" lowerBound="1"
+        eType="#//MappingKind" defaultValueLiteral="DERIVED"/>
+    <!-- Bei IMPORTED: das eorm-Dokument als Rohtext, wie es der eorm-Wizard
+         oder der Model Atlas liefert. Der Transformer lädt es und hängt das
+         EntityMappings-Objekt an persistenceConfig. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="eormXmi"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+
+  <!-- Eine Klasse, die als Datensatz veröffentlicht wird (= DataSet +
+       RestDataServiceConfiguration). -->
+  <eClassifiers xsi:type="ecore:EClass" name="DatasetConfig">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="selected"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="true"/>
+    <!-- Nicht "eClass" nennen: der Name kollidiert mit EObject.eClass() und
+         die generierte Impl liesse sich nicht mehr uebersetzen. Der
+         eorm-Wizard nennt dasselbe Feld ebenfalls targetClass. -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="targetClass" lowerBound="1"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="path" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- EInt statt EBigInteger: der Transformer schreibt den Dezimalstring.
+         -1 bedeutet „nicht gesetzt" und wird nicht geschrieben. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="batchSize"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        defaultValueLiteral="-1"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="batchSizeLimit"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        defaultValueLiteral="-1"/>
+  </eClassifiers>
+
+  <!-- Ein Ausgabeformat (= DistributionExport bzw. CSVDistributionExport). -->
+  <eClassifiers xsi:type="ecore:EClass" name="ExportConfig">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="selected"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind" lowerBound="1"
+        eType="#//ExportKind" defaultValueLiteral="JSON"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Nur für CSV/CSV_ZIP relevant. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="separator"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+        defaultValueLiteral=";"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="includeTypeHeader"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="false"/>
+  </eClassifiers>
+
+  <!-- Wo die Konfiguration später liegt: als Datei neben den Modellen, oder
+       als Objekt in einem Model-Atlas-Scope. -->
+  <eClassifiers xsi:type="ecore:EEnum" name="ConfigMode">
+    <eLiterals name="FILE" value="0"/>
+    <eLiterals name="ATLAS" value="1"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="InputKind">
+    <eLiterals name="FILE" value="0"/>
+    <eLiterals name="DATABASE" value="1"/>
+  </eClassifiers>
+
+  <!-- DERIVED: der Data Atlas leitet das JPA-Mapping aus dem Modell ab.
+       IMPORTED: ein fertiges eorm-Dokument wird eingebettet. -->
+  <eClassifiers xsi:type="ecore:EEnum" name="MappingKind">
+    <eLiterals name="DERIVED" value="0"/>
+    <eLiterals name="IMPORTED" value="1"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EEnum" name="ExportKind">
+    <eLiterals name="JSON" value="0"/>
+    <eLiterals name="XML" value="1"/>
+    <eLiterals name="CSV" value="2"/>
+    <eLiterals name="CSV_ZIP" value="3"/>
+  </eClassifiers>
+
+</ecore:EPackage>
