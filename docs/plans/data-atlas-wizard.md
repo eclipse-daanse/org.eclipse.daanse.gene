@@ -267,7 +267,7 @@ zusammenkommen.
 
 **b) ID-Fragmente** — `class DataAtlasResource extends XMIResource`,
 `getURIFragment()` überschrieben: Wert des `iD="true"`-Attributs, sonst
-`super`. emf.ts wertet `iD="true"` beim Speichern nicht aus; ohne die
+`super`. emf.ts wertet `iD="true"` beim Speichern nicht aus (emf.ts#84); ohne die
 Überschreibung entsteht `dataInput="/0/0"` statt `dataInput="persons-file"`.
 Der Weg über `resource.setID()` wirkt auch, schreibt aber zusätzlich ein
 `xmi:id`, das die Vorlagen nicht haben.
@@ -302,7 +302,7 @@ Drei Abweichungen, alle im Spike gemessen:
 | Attributreihenfolge und Umbrüche im Dokumentkopf | kosmetisch |
 | einwertige Cross-Document-Referenz als Attribut (`inputType="model/person.ecore#//Person"`) statt als `<inputType href="…"/>` | offen, s. u. |
 
-Der dritte Punkt ist ein Befund in emf.ts: `XMLSave.js:318` schreibt
+Der dritte Punkt ist ein Befund in emf.ts (#85): `XMLSave.js:318` schreibt
 einwertige Nicht-Containment-Referenzen **immer** als Attribut,
 `writeElements` (Z. 711) schreibt nur **mehrwertige** Cross-Document-Referenzen
 als `href`-Element. Java EMF entscheidet nach dem Ort des Ziels, nicht nach der
@@ -312,8 +312,7 @@ ist gültiges EMF — `.ecore` schreibt `eType="ecore:EDataType
 http://www.eclipse.org/emf/2002/Ecore#//EString"` genauso — und emf.ts lädt sie
 zurück (Round-Trip im Spike: `dataInput` → `persons-file`, `inputType` →
 `Person`). Ob der Java-Data-Atlas sie annimmt, entscheidet Schritt 5 aus
-Abschnitt 9. Schlägt es dort fehl, ist das ein emf.ts-Ticket, kein
-Wizard-Problem.
+Abschnitt 9. Schlägt es dort fehl, hängt es an emf.ts#85, nicht am Wizard.
 
 ### eorm-Mapping einbetten
 
@@ -446,20 +445,22 @@ eorm-Kopie ist unbenutzt und veraltet.
 
 Bekannte Fallen:
 
-- **Codegen-Bug in `emfts-codegen`**: EAttribut-`eType`s fehlen, EEnums werden
-  nicht als Classifier registriert → `wizardPackageFixup.ts` trägt beides zur
-  Laufzeit nach und ist **bei jeder Modelländerung mitzupflegen**; der
-  `wizardUi`-Test fängt Verstöße.
-- **emf.ts wertet `iD="true"` beim Speichern nicht aus** → `getURIFragment()`
-  überschreiben, sonst stehen Pfadfragmente (`/0/0`) statt der ids in den
-  Referenzattributen. Betrifft nur das Schreiben; beim Laden löst
+- **Codegen-Bug in `emfts-codegen`** (emf.ts#83): EAttribut-`eType`s fehlen,
+  EEnums werden nicht als Classifier registriert → `wizardPackageFixup.ts`
+  trägt beides zur Laufzeit nach und ist **bei jeder Modelländerung
+  mitzupflegen**; der `wizardUi`-Test fängt Verstöße. Ohne den Fixup wird aus
+  `openApi = true` beim Round-Trip der String `"true"` und aus `batchSize = 500`
+  der String `"500"`.
+- **emf.ts wertet `iD="true"` beim Speichern nicht aus** (emf.ts#84) →
+  `getURIFragment()` überschreiben, sonst stehen Pfadfragmente (`/0/0`) statt
+  der ids in den Referenzattributen. Betrifft nur das Schreiben; beim Laden löst
   `XMLHandler.resolveReference()` ID-Referenzen auf.
 - **EClassifier haben in emf.ts kein `eResource()`** (emf.ts#80) → der
   `FILE`-Href-Dialekt fällt *nicht* aus der Resource-Lage heraus, sondern muss
   über die `modelFiles`-Karte kommen.
 - **Einwertige Cross-Document-Referenzen schreibt emf.ts als Attribut**, nicht
-  als `href`-Element (`XMLSave.js:318` gegen `writeElements` Z. 711) — gegen
-  den Java-Data-Atlas zu verifizieren, s. Abschnitt 4.
+  als `href`-Element (emf.ts#85, `XMLSave.js:318` gegen `writeElements`
+  Z. 711) — gegen den Java-Data-Atlas zu verifizieren, s. Abschnitt 4.
 - **EMF-Objekte sind nicht deep-reaktiv** → `shallowRef` + `version` +
   `touch()`, `void version.value;` in jedem `computed`.
 - **Widget-Prioritäten ≥ 900**: der Host hängt über
