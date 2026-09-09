@@ -166,17 +166,33 @@ Enums und allen EAttribut-Typen füllen.
 Aus dem gewählten `EPackage`:
 
 - `instanceName` = `pkg.getName()`; `slug` = kebab-case davon.
+  `instanceDescription` = GenModel-`documentation` des Packages. Die ist nur
+  über `eGet` zu bekommen — der typisierte `getEAnnotations()` sieht am
+  EPackage nichts (emf.ts#86); `annotationsOf()` in `context.ts` geht beide
+  Wege.
 - je **konkreter** EClass (nicht abstrakt/Interface) ein `DatasetConfig`:
   `id` = lowerCamel(EClass-Name), `name` = Title Case, `path` = `id`,
   `description` = GenModel-`documentation`-Annotation der EClass, sonst
   `Alle <Name>-Objekte.` — dieselbe Annotation, die der Data Atlas
   serverseitig für DCAT-Beschreibungen heranzieht.
+  **Nicht pluralisiert:** Die handgeschriebenen Vorlagen nennen den Datensatz
+  einer EClass `Person` „Persons" mit id `persons`; eine Pluralregel für
+  beliebige Modellnamen wäre geraten. Abgeleitet wird `person`/`Person`, in der
+  Oberfläche mit einem Klick zu ändern — die Golden-Tests aus Abschnitt 8
+  setzen id, name und path deshalb selbst, statt sich auf die Vorschläge zu
+  verlassen.
 - `serviceId` = `${slug}-rest`, `serviceName` = `${instanceName} REST`,
   `urlContext` = `/${slug}`.
 - `fileSource.id` = `${slug}-file`, `fileUri` = modusabhängig
   `data/${pkg.getName()}.xmi` bzw. der absolute Pfad darunter.
-- `databaseSource.dataSourceId` = `${slug}-db`, `dataSourceFilter` =
+- `databaseSource.id` = `${slug}-jpa` (so heißt der JPADataInput in
+  `example/dataatlas-postgres.xmi`), `dataSourceId` = `${slug}-db`,
+  `dataSourceName` = Title Case + „ DB", `dataSourceFilter` =
   `(dataSourceName=${lowerCamel(slug)}Ds)`.
+- Beide Datenquellen werden **vorab angelegt**, nicht erst beim Umschalten:
+  der Schritt „Datenquelle" schaltet dann nur `inputKind` um. Ein Moduswechsel
+  zieht die Datei-URI mit, aber nur solange sie noch der Vorgabe entspricht —
+  eine von Hand eingetragene URI zu überschreiben wäre stiller Datenverlust.
 - `exports` bleibt leer → Runtime-Defaults JSON + XML.
 - `supportedEClasses` des Inputs = die EClasses aller *selektierten* Datasets
   (wird erst im Transformer eingesetzt, nicht im Setup gespeichert).
