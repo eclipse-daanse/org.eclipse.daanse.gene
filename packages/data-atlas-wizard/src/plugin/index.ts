@@ -5,11 +5,12 @@
  * Center-Panel (Vorbild: eorm-wizard/src/plugin/index.ts). Der
  * Standalone-Betrieb (src/main.ts) bleibt unabhängig von dieser Datei.
  *
- * Noch nicht enthalten: Metamodell-Registrierung (Schritt 3 der
- * Umsetzungsreihenfolge) und der Atlas-Client (Schritt 10).
+ * Noch nicht enthalten: der Atlas-Client (Schritt 10 der
+ * Umsetzungsreihenfolge).
  */
 import { markRaw } from 'vue';
 import type { ModuleContext } from '@eclipse-daanse/tsm';
+import { setupPackages } from '../emf/setup';
 import WizardShell from '../wizard/WizardShell.vue';
 
 const PERSPECTIVE_ID = 'data-atlas-config';
@@ -32,6 +33,10 @@ interface ActivityRegistryLike {
 }
 
 export async function activate(context: ModuleContext): Promise<void> {
+  // Metamodelle zuerst — idempotent, und die Shell braucht sie. Ecore-Basis
+  // und UIModel-Package bringt der gene-Host schon mit.
+  await setupPackages();
+
   const perspectives = context.services.get<PerspectiveManagerLike>('ui.registry.perspectives');
   perspectives?.registry.register({
     id: PERSPECTIVE_ID,
