@@ -1,0 +1,37 @@
+{
+  "name": "data-atlas-wizard",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Assistent zum Erzeugen einer DataAtlasConfiguration (Datei/JPA → REST) für den Fennec Data Atlas",
+  "scripts": {
+    "dev": "vite --port 5598 --strictPort",
+    "build": "vue-tsc --noEmit && vite build",
+    "type-check": "vue-tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "generate": "emfts-codegen generate -m model/data-atlas-wizard.ecore -c model/data-atlas-wizard.genconfig.xmi",
+    "build:plugin": "node scripts/build-plugin.mjs",
+    "serve:plugin": "npx serve dist/plugins -l 5498 --cors",
+    "mock:atlas": "node scripts/mock-atlas.mjs",
+    "sync:data-atlas-model": "cp ../../../data.atlas/org.eclipse.fennec.data.atlas.configuration.model/model/configuration.ecore src/assets/configuration.ecore && cp ../eorm-wizard/src/assets/eorm.ecore src/assets/eorm.ecore"
+  },
+  "dependencies": {
+    "@emfts/core": "^0.2.0-next.2",
+    "@emfts/uimodel-composer": "^0.0.2-next.1",
+    "@emfts/vue-registry": "^0.0.1-next.1",
+    "primeicons": "^8.0.0",
+    "vite-plugin-node-polyfills": "^0.28.0",
+    "vue": "^3.4.0"
+  },
+  "devDependencies": {
+    "@eclipse-daanse/tsm": "^0.0.1-next.1",
+    "@emfts/codegen": "^0.0.1-next.7",
+    "@types/node": "^20.10.0",
+    "@vitejs/plugin-vue": "^5.0.0",
+    "typescript": "^5.3.0",
+    "vite": "^5.0.0",
+    "vitest": "^4.1.4",
+    "vue-tsc": "^3.2.4"
+  }
+}

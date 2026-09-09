@@ -415,7 +415,7 @@ also **keinen** Eintrag):
 | Ort | Was |
 |---|---|
 | `src/tsm/repositories.config.ts` → `startupModules` | `'data-atlas-wizard'` — verpflichtend |
-| `public/config.xmi` → `<startupModules>` | **ebenfalls verpflichtend.** `src/main.ts:105` nimmt die Liste aus `config.xmi` und benutzt `repositories.config.ts` nur als Fallback, wenn jene **leer** ist — es wird nicht gemergt. Nebenbefund: in `config.xmi` stehen 22 Module, in `repositories.config.ts` 26; es fehlen dort `dmn-editor`, `icons-cwm`, `eorm-wizard` und `sensinact-mapping-wizard`. Die laufen heute nur, weil die XMI-Liste offenbar nicht greift — unabhängig vom Wizard zu klären |
+| `public/config.xmi` → `<startupModules>` | **ebenfalls verpflichtend.** `src/main.ts:105` nimmt die Liste aus `config.xmi` und benutzt `repositories.config.ts` nur als Fallback, wenn jene **leer** ist — es wird nicht gemergt. Nebenbefund: in `config.xmi` fehlen `icons-cwm`, `eorm-wizard` und `sensinact-mapping-wizard`, die in `repositories.config.ts` stehen (`dmn-editor` ist dort auskommentiert). Die laufen heute nur, weil die XMI-Liste offenbar nicht greift — unabhängig vom Wizard zu klären |
 | `vitest.config.ts` → `test.projects` | `'packages/data-atlas-wizard'`; das gene-Projekt exkludiert `packages/*-wizard/**`, deshalb muss der Paketname auf `-wizard` enden |
 | `vite.config.ts` | Proxy-Ziel per `MODEL_ATLAS_URL` (optional, s. o.) |
 | `release-plugins.json` | optional, fürs Release-Bundle |

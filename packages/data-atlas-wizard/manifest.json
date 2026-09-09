@@ -1,0 +1,41 @@
+{
+  "id": "data-atlas-wizard",
+  "name": "Data Atlas Konfigurations-Wizard",
+  "version": "0.1.0",
+  "description": "Assistent: Domänenmodell → DataAtlasConfiguration (Datei/JPA → REST) für den Fennec Data Atlas",
+  "entry": "src/plugin/index.ts",
+  "dependencies": [
+    "gene-app",
+    "ui-layout"
+  ],
+  "sharedDependencies": [
+    {
+      "id": "vue",
+      "versionRange": "^3.5.0"
+    },
+    {
+      "id": "@emfts/core",
+      "versionRange": ">=0.1.0"
+    },
+    {
+      "id": "@emfts/vue-registry",
+      "versionRange": ">=0.0.1"
+    },
+    {
+      "id": "@emfts/uimodel-composer",
+      "versionRange": ">=0.0.1"
+    }
+  ],
+  "provides": [
+    {
+      "id": "ui.data-atlas-wizard.open",
+      "description": "Öffnet die Data-Atlas-Perspective"
+    }
+  ],
+  "optionalDependencies": [
+    "atlas-browser",
+    "storage-model-atlas",
+    "ui-model-browser",
+    "ui-file-explorer"
+  ]
+}
