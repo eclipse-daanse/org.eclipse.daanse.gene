@@ -202,6 +202,12 @@ Zustandsmuster wie in den Vorbildern: `shallowRef` + `version = ref(0)` +
 
 ## 3. Schrittfolge
 
+Die beiden Quell-Tabs melden ein **Objekt** (`ModelSourcePayload`) statt
+mehrerer Argumente: der Assistent braucht neben den Kandidaten auch alle
+nachgeladenen Packages **samt Dateinamen**, weil im Datei-Modus jedes
+referenzierte Package den Pfad seiner `.ecore` braucht. Beim Upload sind die
+Namen bekannt, beim Atlas greift die Ableitung `model/<Paketname>.ecore`.
+
 | # | Schritt | Art | `blockReason` |
 |---|---|---|---|
 | 1 | **Modell** — Atlas-Tab (Verbindung/Suche/Cascade-Load) oder Upload-Tab | handgeschrieben, aus `eorm-wizard` kopiert (`ModelSourceStep.vue`, `AtlasSourceTab.vue`, `UploadSourceTab.vue`) | kein EPackage gewählt |
@@ -528,6 +534,11 @@ Bekannte Fallen:
   versehentlich den `localStorage`-Key von `sensinact-mapping-wizard`
   (`packages/eorm-wizard/src/atlas/atlasSource.ts:58`). Der Fehler dort bleibt
   bestehen, bis ihn jemand eigens behebt.
+- **Der Kandidaten-Filter im `ModelSourceStep` der Vorlage wirft zu viel weg**:
+  `nsURI.includes('/atlas/')` soll die Atlas-API-Metamodelle ausschließen,
+  trifft aber genau die Modelle dieses Assistenten
+  (`https://eclipse.org/fennec/data/atlas/example/person/1.0.0`). Geprüft wird
+  deshalb der Präfix `http://eclipse.org/fennec/model/atlas/`.
 
 
 ## 8. Tests

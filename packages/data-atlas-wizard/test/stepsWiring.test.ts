@@ -14,11 +14,12 @@ import { fileURLToPath } from 'node:url';
 import { mount } from '@vue/test-utils';
 import type { EPackage } from '@emfts/core';
 import { registerEcoreFromString, setupPackages } from '../src/emf/setup';
-import { initSetup, setup, version } from '../src/wizard/context';
+import { initSetup, setConfigMode, setup, version } from '../src/wizard/context';
+import ModelSourceStep from '../src/wizard/ModelSourceStep.vue';
 import DatasetsStep from '../src/wizard/DatasetsStep.vue';
 import ExportsStep from '../src/wizard/ExportsStep.vue';
 import SummaryStep from '../src/wizard/SummaryStep.vue';
-import { DataatlaswizardFactory, ExportKind } from '../src/generated';
+import { ConfigMode, DataatlaswizardFactory, ExportKind } from '../src/generated';
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 let personPackage: EPackage;
@@ -143,5 +144,101 @@ describe('SummaryStep', () => {
     expect(wrapper.find('.fehlerbox').exists()).toBe(true);
     expect(wrapper.text()).toMatch(/Basis-Pfad/);
     expect(wrapper.text()).not.toMatch(/Konfiguration herunterladen/);
+  });
+});
+
+describe('ModelSourceStep', () => {
+  it('nimmt alle geladenen Packages in die Datei-Karte auf', async () => {
+    /*
+     * Der entscheidende Unterschied zum eorm-Assistenten: im Datei-Modus
+     * braucht JEDES referenzierte Package den Pfad seiner .ecore, sonst wirft
+     * der Serializer. Der Schritt trägt deshalb auch die Abhängigkeiten ein,
+     * mit ihrem echten Dateinamen, wo er bekannt ist.
+     */
+    const zweites = registerEcoreFromString(
+      readFileSync(join(fixtures, 'person.ecore'), 'utf-8')
+        .replace('name="person"', 'name="basis"')
+        .replace('example/person/1.0.0', 'example/basis/1.0.0'),
+      'model/basis.ecore',
+    );
+    const wrapper = mount(ModelSourceStep);
+    const tab = wrapper.findComponent({ name: 'UploadSourceTab' });
+    tab.vm.$emit('packages-loaded', {
+      candidates: [personPackage],
+      all: [personPackage, zweites],
+      fileNames: ['person.ecore', 'schemas/basis.ecore'],
+      warnings: [],
+    });
+    await wrapper.vm.$nextTick();
+
+    const dateien = setup.value!.modelFiles;
+    expect(dateien).toHaveLength(2);
+    expect(dateien[0].fileName).toBe('model/person.ecore');
+    // Der echte Name der Abhängigkeit, nicht die Ableitung
+    expect(dateien[1].fileName).toBe('schemas/basis.ecore');
+    expect(setup.value!.modelPackage).toBe(personPackage);
+  });
+
+  it('ein Modellwechsel behält den gewählten Modus', async () => {
+    const wrapper = mount(ModelSourceStep);
+    const tab = wrapper.findComponent({ name: 'UploadSourceTab' });
+    tab.vm.$emit('packages-loaded', {
+      candidates: [personPackage],
+      all: [personPackage],
+      warnings: [],
+    });
+    await wrapper.vm.$nextTick();
+
+    setConfigMode(ConfigMode.ATLAS);
+    tab.vm.$emit('packages-loaded', {
+      candidates: [personPackage],
+      all: [personPackage],
+      warnings: [],
+    });
+    await wrapper.vm.$nextTick();
+    expect(setup.value!.configMode).toBe(ConfigMode.ATLAS);
+  });
+
+  it('filtert nur die Atlas-API-Metamodelle, nicht die Domänenmodelle', async () => {
+    /*
+     * Die Vorlage im eorm-Assistenten filtert Kandidaten mit
+     * `nsURI.includes('/atlas/')`. Genau das trifft die Modelle dieses
+     * Assistenten: `…/fennec/data/atlas/example/person/1.0.0`. Geprüft wird
+     * deshalb der Präfix der API-Modelle.
+     */
+    const api = registerEcoreFromString(
+      readFileSync(join(fixtures, 'person.ecore'), 'utf-8')
+        .replace('name="person"', 'name="apimodell"')
+        .replace(
+          'nsURI="https://eclipse.org/fennec/data/atlas/example/person/1.0.0"',
+          'nsURI="http://eclipse.org/fennec/model/atlas/management/1.0.0"',
+        ),
+      'model/api.ecore',
+    );
+    const wrapper = mount(ModelSourceStep);
+    const tab = wrapper.findComponent({ name: 'UploadSourceTab' });
+    tab.vm.$emit('packages-loaded', {
+      candidates: [personPackage, api],
+      all: [personPackage, api],
+      warnings: [],
+    });
+    await wrapper.vm.$nextTick();
+
+    const optionen = wrapper.findAll('option').map((o) => o.text());
+    expect(optionen.some((t) => t.includes('example/person'))).toBe(true);
+    expect(optionen.some((t) => t.includes('model/atlas/management'))).toBe(false);
+    expect(setup.value!.modelPackage).toBe(personPackage);
+  });
+
+  it('Warnungen des Ladevorgangs erscheinen', async () => {
+    const wrapper = mount(ModelSourceStep);
+    const tab = wrapper.findComponent({ name: 'UploadSourceTab' });
+    tab.vm.$emit('packages-loaded', {
+      candidates: [personPackage],
+      all: [personPackage],
+      warnings: ['Das Modell referenziert „basis.ecore".'],
+    });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toContain('basis.ecore');
   });
 });
