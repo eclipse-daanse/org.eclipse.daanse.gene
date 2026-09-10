@@ -413,6 +413,18 @@ Zeile mit Zustand), Fehler mit Status und Server-Antwort. Fehlt das
 abgelehnt (403 read-only Stage), bricht der Flow **vor** dem Instanz-Upload ab
 und benennt das fehlende Schema.
 
+**Wiederholt wird nur bei 5xx.** Ein 403 auf einer read-only Stage wird nicht
+besser; zehn Versuche à drei Sekunden wären dort nur Wartezeit. `publish.ts`
+prüft deshalb auf `HTTP 5xx` bzw. „de-serializing" im Fehlertext.
+
+**Den Quelltext der Domänenmodelle** liefert die Resource, aus der sie geladen
+wurden (`resource.saveToString()`, `requiredSchemas.ts`) — auch bei einem
+Upload, wo die Datei selbst nicht aufbewahrt wird. Fehlt sie, bricht es mit
+einer Aussage darüber ab, statt etwas Falsches hochzuladen.
+
+**Die Ziel-Stage des Wechsels** ist die *nächste* Stage der gewählten Registry,
+abgelesen aus `getScope` — nicht der feste Name „release".
+
 `baseUrl` ist `/atlas/rest` über den Same-Origin-Proxy — der Model Atlas sendet
 keine CORS-Header. Damit der Proxy auch auf eine Compose-Instanz zeigen kann,
 `gene/vite.config.ts` einzeilig aufbohren:
@@ -608,7 +620,7 @@ Der data.atlas-Compose-Setup ist die reale Gegenprobe
 | 7. Transformer JPA | `dataatlas-postgres.xmi` reproduziert; `persistenceConfig.test.ts` grün |
 | 8. UI-Schritte | alle sieben Schritte durchklickbar, `blockReason` je Schritt greift, `wizardUi.test.ts` grün |
 | 9. Download | XMI-Datei landet im Browser-Download, Vorschau im Summary |
-| 10. Publish | `publish.ts` + `test/publish.test.ts` grün, Publish gegen `mock-atlas.mjs` erfolgreich |
+| 10. Publish | `publish.ts` + `test/publish.test.ts` grün; das Panel im Summary lädt hoch und schiebt weiter (Verdrahtungstest gegen einen Stellvertreter). Der Lauf gegen `mock-atlas.mjs` bzw. den echten Atlas gehört zu Schritt 12 |
 | 11. Plugin-Integration | `startupModules`-Eintrag, Perspektive/Panel/Activity erscheinen in `npm run dev`, `build:plugin` läuft ohne Externals-Warnung |
 | 12. End-to-end | Verifikation aus Abschnitt 9 durchlaufen |
 | 13. Doku | `packages/data-atlas-wizard/README.md` im Stil von `eorm-wizard/README.md`; in `data.atlas/docs/user-guide.md` ein Absatz „Konfiguration im Browser erstellen" |

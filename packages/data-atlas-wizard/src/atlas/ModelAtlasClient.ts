@@ -50,6 +50,26 @@ export interface AtlasReadClient {
     stage: string,
     objectId: string,
   ): Promise<string | null>;
+  /**
+   * Schema-Metadaten einer Stage; null, wenn dort keins liegt. Grundlage der
+   * Existenzprüfung im Publish-Flow.
+   */
+  getSchema?(scopeName: string, stage: string, nsUri: string): Promise<string | null>;
+  /** Lädt ein Schema (.ecore) in eine Stage. */
+  uploadSchema?(
+    scopeName: string,
+    stage: string,
+    content: string,
+    options?: { nsUri?: string; name?: string; version?: string; overwrite?: boolean },
+  ): Promise<string>;
+  /** Schiebt ein Objekt in die nächste Stage. */
+  transitionObject?(
+    scopeName: string,
+    registryName: string,
+    fromStage: string,
+    objectId: string,
+    targetStage: string,
+  ): Promise<string | null>;
 }
 
 export interface AtlasSearchParams {
@@ -141,6 +161,81 @@ export class ModelAtlasClient implements AtlasReadClient {
     const resp = await fetch(`${this.baseUrl}${path}`, { method: 'POST', headers, body: content });
     if (resp.status === 200 || resp.status === 201) return resp.text();
     throw new Error(`Upload fehlgeschlagen (HTTP ${resp.status}): ${await resp.text()}`);
+  }
+
+  /** Schema-Metadaten einer Stage; null heißt „dort ist keins". */
+  async getSchema(scopeName: string, stage: string, nsUri: string): Promise<string | null> {
+    const resp = await this.get(
+      `/${enc(scopeName)}/schema/stages/${enc(stage)}?nsUri=${enc(nsUri)}`,
+    );
+    if (resp.status === 200) return resp.text();
+    return null;
+  }
+
+  /**
+   * Lädt ein Schema in eine Stage. Der Kurzweg `/schema/stages/<stage>` gilt
+   * für alle Scopes; die Registry-Variante des gene-Clients braucht es hier
+   * nicht, weil Schemas im Atlas eine eigene Registry haben.
+   */
+  async uploadSchema(
+    scopeName: string,
+    stage: string,
+    content: string,
+    options?: { nsUri?: string; name?: string; version?: string; overwrite?: boolean },
+  ): Promise<string> {
+    const params = new URLSearchParams();
+    if (options?.nsUri) params.set('nsUri', options.nsUri);
+    if (options?.name) params.set('name', options.name);
+    if (options?.version) params.set('version', options.version);
+    if (options?.overwrite) params.set('overwrite', 'true');
+    const qs = params.toString();
+    const path = `/${enc(scopeName)}/schema/stages/${enc(stage)}${qs ? '?' + qs : ''}`;
+
+    const headers: Record<string, string> = {
+      Accept: 'application/xml',
+      'Content-Type': 'application/xml',
+    };
+    if (this.token) headers.Authorization = `Bearer ${this.token}`;
+    const resp = await fetch(`${this.baseUrl}${path}`, { method: 'POST', headers, body: content });
+    if (resp.status === 200 || resp.status === 201) return resp.text();
+    throw new Error(`Schema-Upload fehlgeschlagen (HTTP ${resp.status}): ${await resp.text()}`);
+  }
+
+  /**
+   * Schiebt ein Objekt in die nächste Stage.
+   *
+   * Der Rumpf ist handgebautes XMI: mit JSON antwortet der Atlas mit 500.
+   */
+  async transitionObject(
+    scopeName: string,
+    registryName: string,
+    fromStage: string,
+    objectId: string,
+    targetStage: string,
+  ): Promise<string | null> {
+    const esc = (value: string) =>
+      value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    const body =
+      `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<rest:StageTransitionRequest xmlns:rest="http://eclipse.org/fennec/model/atlas/rest/1.0"` +
+      ` objectId="${esc(objectId)}" targetStage="${esc(targetStage)}"/>`;
+
+    const headers: Record<string, string> = {
+      Accept: 'application/xml',
+      'Content-Type': 'application/xmi',
+    };
+    if (this.token) headers.Authorization = `Bearer ${this.token}`;
+    const resp = await fetch(
+      `${this.baseUrl}/${enc(scopeName)}/registries/${enc(registryName)}/stages/${enc(fromStage)}/actions/transition`,
+      { method: 'POST', headers, body },
+    );
+    if (resp.status === 204) return '';
+    if (resp.ok) return resp.text();
+    throw new Error(`Transition fehlgeschlagen (HTTP ${resp.status}): ${await resp.text()}`);
   }
 
   /** Objekte einer Registry-Stage (rohes ObjectMetadata-XMI, '' wenn leer). */

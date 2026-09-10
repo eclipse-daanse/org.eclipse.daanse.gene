@@ -7,14 +7,14 @@
  * Wert im Fassadenmodell → `touch()`, damit die Anzeige nachzieht. Genau da
  * saßen in diesem Projekt schon mehrere Fehler, die kein Unit-Test sah.
  */
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import type { EPackage } from '@emfts/core';
 import { registerEcoreFromString, setupPackages } from '../src/emf/setup';
-import { initSetup, setConfigMode, setup, version } from '../src/wizard/context';
+import { atlasSource, initSetup, setConfigMode, setup, version } from '../src/wizard/context';
 import ModelSourceStep from '../src/wizard/ModelSourceStep.vue';
 import DatasetsStep from '../src/wizard/DatasetsStep.vue';
 import ExportsStep from '../src/wizard/ExportsStep.vue';
@@ -240,5 +240,97 @@ describe('ModelSourceStep', () => {
     });
     await wrapper.vm.$nextTick();
     expect(wrapper.text()).toContain('basis.ecore');
+  });
+});
+
+describe('SummaryStep: Veröffentlichen', () => {
+  /** Stellvertreter für die Atlas-Verbindung — nur was das Panel braucht. */
+  function fakeSource(overrides: Record<string, unknown> = {}) {
+    return {
+      canPublish: true,
+      canUploadSchemas: true,
+      canTransition: true,
+      listRegistries: async () => [
+        { name: 'configurations', stages: [{ name: 'draft' }, { name: 'release' }] },
+      ],
+      hasSchema: async () => true,
+      publishObject: vi.fn(async () => undefined),
+      uploadSchema: vi.fn(async () => undefined),
+      transitionObject: vi.fn(async () => undefined),
+      ...overrides,
+    };
+  }
+
+  beforeEach(() => {
+    atlasSource.value = undefined;
+  });
+
+  it('ohne Verbindung steht dort der Hinweis', () => {
+    const wrapper = mount(SummaryStep);
+    expect(wrapper.find('.publish-card').exists()).toBe(false);
+    expect(wrapper.text()).toMatch(/einen Model Atlas verbinden/);
+  });
+
+  it('mit Verbindung erscheinen Registry und Stages', async () => {
+    atlasSource.value = fakeSource() as never;
+    const wrapper = mount(SummaryStep);
+    await flushPromises();
+    expect(wrapper.find('.publish-card').exists()).toBe(true);
+    const optionen = wrapper.findAll('.publish-row select option').map((o) => o.text());
+    expect(optionen).toContain('configurations');
+    expect(optionen).toContain('draft');
+    expect(optionen).toContain('release');
+  });
+
+  it('ein Zugang ohne Schreibrecht bekommt kein Formular', async () => {
+    atlasSource.value = fakeSource({ canPublish: false }) as never;
+    const wrapper = mount(SummaryStep);
+    await flushPromises();
+    expect(wrapper.text()).toMatch(/darf nicht schreiben/);
+    expect(wrapper.find('.publish-row').exists()).toBe(false);
+  });
+
+  it('Veröffentlichen lädt hoch und schiebt in die nächste Stage', async () => {
+    const source = fakeSource();
+    atlasSource.value = source as never;
+    const wrapper = mount(SummaryStep);
+    await flushPromises();
+
+    const knopf = wrapper.findAll('button').find((b) => b.text().includes('Veröffentlichen'))!;
+    await knopf.trigger('click');
+    await flushPromises();
+
+    expect(source.publishObject).toHaveBeenCalledWith(
+      'configurations',
+      'draft',
+      'dataatlas',
+      expect.stringContaining('<configuration:DataAtlasConfiguration'),
+      expect.objectContaining({ override: true }),
+    );
+    // draft ist die erste Stage, geschoben wird nach release
+    expect(source.transitionObject).toHaveBeenCalledWith(
+      'configurations',
+      'draft',
+      'dataatlas',
+      'release',
+    );
+    expect(wrapper.text()).toMatch(/Veröffentlicht\./);
+  });
+
+  it('ein Fehler beim Hochladen erscheint als Meldung', async () => {
+    const source = fakeSource({
+      publishObject: vi.fn(async () => {
+        throw new Error('Upload fehlgeschlagen (HTTP 403): read-only stage');
+      }),
+    });
+    atlasSource.value = source as never;
+    const wrapper = mount(SummaryStep);
+    await flushPromises();
+    const knopf = wrapper.findAll('button').find((b) => b.text().includes('Veröffentlichen'))!;
+    await knopf.trigger('click');
+    await flushPromises();
+
+    expect(wrapper.find('.publish-fehler').text()).toMatch(/403/);
+    expect(wrapper.text()).not.toMatch(/Veröffentlicht\./);
   });
 });

@@ -366,6 +366,51 @@ export class AtlasModelSource {
     await this.client.uploadObject(this.scope, registry, stage, objectId, content, options);
   }
 
+  /** Kann dieser Client Schemas hochladen? */
+  get canUploadSchemas(): boolean {
+    return typeof this.client.uploadSchema === 'function';
+  }
+
+  /** Kann dieser Client Objekte in die nächste Stage schieben? */
+  get canTransition(): boolean {
+    return typeof this.client.transitionObject === 'function';
+  }
+
+  /** Liegt in dieser Stage schon ein Schema mit diesem nsURI? */
+  async hasSchema(stage: string, nsUri: string): Promise<boolean> {
+    if (this.client.getSchema) {
+      return (await this.client.getSchema(this.scope, stage, nsUri)) !== null;
+    }
+    // Ohne getSchema über die Suche gehen — der gene-Client hat beides.
+    const treffer = parseSchemaList(
+      await this.client.searchSchemas(this.scope, { nsUriExact: nsUri }),
+    );
+    return treffer.length > 0;
+  }
+
+  async uploadSchema(
+    stage: string,
+    content: string,
+    options?: { nsUri?: string; name?: string; version?: string; overwrite?: boolean },
+  ): Promise<void> {
+    if (!this.client.uploadSchema) {
+      throw new Error('Der Atlas-Client unterstützt kein Hochladen von Schemas.');
+    }
+    await this.client.uploadSchema(this.scope, stage, content, options);
+  }
+
+  async transitionObject(
+    registry: string,
+    fromStage: string,
+    objectId: string,
+    targetStage: string,
+  ): Promise<void> {
+    if (!this.client.transitionObject) {
+      throw new Error('Der Atlas-Client unterstützt keinen Stage-Wechsel.');
+    }
+    await this.client.transitionObject(this.scope, registry, fromStage, objectId, targetStage);
+  }
+
   /** Kann dieser Client bestehende Registry-Objekte lesen? */
   get canBrowseObjects(): boolean {
     return typeof this.client.listObjects === 'function' &&
