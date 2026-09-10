@@ -1,133 +1,189 @@
-/** Mock-Modelatlas für den E2E-Test des Wizards (Port 8199). */
+/**
+ * Mock-Model-Atlas für den Handbetrieb des Assistenten (Port 8199).
+ *
+ * Genug, um den ganzen Weg ohne Docker durchzuspielen: Scope mit Registry und
+ * zwei Stages, das Beispielmodell als Schema, und die Schreibpfade des
+ * Publish-Flows — Schema-Upload, Objekt-Upload und Stage-Wechsel. Was
+ * hochgeladen wird, bleibt im Speicher und wird protokolliert.
+ *
+ *   npm run mock:atlas
+ *   # im Assistenten als baseUrl eintragen: http://localhost:8199/rest
+ *
+ * Die Antworten sind dieselben Metamodelle, die der echte Atlas benutzt
+ * (workflow/api für Scopes, management für Objekt-Metadaten) — der Wizard
+ * parst sie mit denselben Funktionen wie im Ernstfall.
+ */
 import { createServer } from 'node:http';
 import { readFileSync } from 'node:fs';
 
 const FIXTURES = new URL('../test/fixtures', import.meta.url).pathname;
-const LORAWAN_NS = 'https://eclipse.org/fennec/lorawan';
-const EM310_NS = 'http://www.example.org/lorawan/specific/em310udl';
+const PERSON_NS = 'https://eclipse.org/fennec/data/atlas/example/person/1.0.0';
+const SCOPE = 'jena';
 
-const TESTDATA = new URL('../test-data', import.meta.url).pathname;
+/** Schemas je Stage: stage → nsUri → Inhalt. */
 const schemas = {
-  [LORAWAN_NS]: readFileSync(`${FIXTURES}/lorawan-uplink.ecore`, 'utf-8'),
-  [EM310_NS]: readFileSync(`${FIXTURES}/em310udl-message.ecore`, 'utf-8')
-    .replaceAll('lorawan-uplink.ecore#', `${LORAWAN_NS}#`),
-  'https://example.org/dragino': readFileSync(`${FIXTURES}/dragino-message.ecore`, 'utf-8')
-    .replaceAll('lorawan-uplink.ecore#', `${LORAWAN_NS}#`),
-  // Multi-Nachrichtentyp-Demo (B1/#146): zwei Uplink-Typen desselben Geräts
-  'https://example.org/demo/multisensor/base': readFileSync(`${TESTDATA}/multisensor-base.ecore`, 'utf-8'),
-  'https://example.org/demo/multisensor/measurement': readFileSync(`${TESTDATA}/multisensor-measurement.ecore`, 'utf-8'),
-  'https://example.org/demo/multisensor/status': readFileSync(`${TESTDATA}/multisensor-status.ecore`, 'utf-8'),
-  'http://cdc.dwd.de/common/weather': readFileSync(new URL('../../emf.util/org.eclipse.fennec.sensinact.mapping/model/dwd-weather.ecore', import.meta.url).pathname, 'utf-8'),
+  draft: {},
+  release: { [PERSON_NS]: readFileSync(`${FIXTURES}/person.ecore`, 'utf-8') },
 };
 
-/** Hochgeladene Objekte: registry → stage → objectId → {content, name, contentType} */
+/** Objekte: registry → stage → objectId → { content, name } */
 const objects = new Map();
 
 const b64 = (s) => Buffer.from(s, 'utf-8').toString('base64');
-const metadataXmi = (entries) => `<?xml version="1.0" encoding="UTF-8"?>
-<mgmt:ObjectMetadataContainer xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
-    xmlns:mgmt="http://eclipse.org/fennec/model/atlas/management/1.0.0">
-${entries.map((ns) => `  <metadata objectId="${b64(ns)}" objectName="${ns.split('/').pop()}" objectType="EPackage" stage="release" scope="sensors" registry="schema" version="1.0" contentHash="x" uploadUser="mock" uploadTime="now" sourceChannel="mock"/>`).join('\n')}
-</mgmt:ObjectMetadataContainer>`;
 
 const scopesXmi = `<?xml version="1.0" encoding="UTF-8"?>
 <workflowapi:ScopeListResponse xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
     xmlns:workflowapi="http://eclipse.org/fennec/model/atlas/workflow/api/1.0.0">
-  <scopes name="sensors" description="Sensor-Modelle (Mock)"/>
+  <scopes name="${SCOPE}" description="Data-Atlas-Konfigurationen (Mock)"/>
 </workflowapi:ScopeListResponse>`;
 
 const scopeXmi = `<?xml version="1.0" encoding="UTF-8"?>
 <workflowapi:Scope xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
     xmlns:workflowapi="http://eclipse.org/fennec/model/atlas/workflow/api/1.0.0"
-    name="sensors" description="Sensor-Modelle (Mock)">
+    name="${SCOPE}" description="Data-Atlas-Konfigurationen (Mock)">
   <registries name="schema" description="Ecore-Schemas">
     <stages name="draft" writable="true" final="false"/>
-    <stages name="release" writable="false" final="true"/>
+    <stages name="release" writable="true" final="true"/>
     <allowedTransitions fromStage="draft" toStage="release"/>
   </registries>
-  <registries name="mappings" description="SensiNact-Mappings">
+  <registries name="configurations" description="Data-Atlas-Konfigurationen">
     <stages name="draft" writable="true" final="false"/>
     <stages name="release" writable="true" final="true"/>
     <allowedTransitions fromStage="draft" toStage="release"/>
   </registries>
 </workflowapi:Scope>`;
 
-createServer((req, res) => {
+const metadataXmi = (nsUris, stage) => `<?xml version="1.0" encoding="UTF-8"?>
+<mgmt:ObjectMetadataContainer xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:mgmt="http://eclipse.org/fennec/model/atlas/management/1.0.0">
+${nsUris
+  .map(
+    (ns) =>
+      `  <metadata objectId="${b64(ns)}" objectName="${ns.split('/').slice(-2)[0]}" objectType="EPackage"` +
+      ` stage="${stage}" scope="${SCOPE}" registry="schema" version="1.0" contentHash="x"` +
+      ` uploadUser="mock" uploadTime="now" sourceChannel="mock"/>`,
+  )
+  .join('\n')}
+</mgmt:ObjectMetadataContainer>`;
+
+const leseRumpf = (req) =>
+  new Promise((resolve) => {
+    let daten = '';
+    req.on('data', (teil) => (daten += teil));
+    req.on('end', () => resolve(daten));
+  });
+
+createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
+  const pfad = url.pathname.replace(/^\/rest/, '');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Content-Type', 'application/xml');
 
   // CORS-Preflight: Ein POST mit Content-Type application/xmi ist kein
-  // „simple request" — der Browser fragt vorher per OPTIONS. Ohne Antwort
-  // hier scheitert das Veröffentlichen aus der Web-UI mit „Failed to fetch".
+  // „simple request" — ohne Antwort hier scheitert das Veröffentlichen aus
+  // dem Browser mit „Failed to fetch".
   if (req.method === 'OPTIONS') {
     res.statusCode = 204;
     res.end();
     return;
   }
-  const ok = (body) => { res.statusCode = 200; res.end(body); };
-  const notFound = () => { res.statusCode = 404; res.end('not found'); };
+
+  const ok = (body, status = 200) => {
+    res.statusCode = status;
+    res.end(body ?? '');
+  };
+  const notFound = () => {
+    res.statusCode = 404;
+    res.end('not found');
+  };
 
   console.log(req.method, req.url);
 
-  // Upload: POST /rest/{scope}/registries/{registry}/stages/{stage}/{objectId}
-  const uploadMatch = url.pathname.match(
-    /^\/rest\/([^/]+)\/registries\/([^/]+)\/stages\/([^/]+)\/([^/]+)$/,
-  );
-  if (req.method === 'POST' && uploadMatch) {
-    const [, scope, registry, stage, objectId] = uploadMatch.map(decodeURIComponent);
-    let body = '';
-    req.on('data', (chunk) => (body += chunk));
-    req.on('end', () => {
-      const key = `${registry}/${stage}`;
-      if (!objects.has(key)) objects.set(key, new Map());
-      objects.get(key).set(objectId, {
-        content: body,
-        name: url.searchParams.get('name') ?? objectId,
-        contentType: req.headers['content-type'] ?? '',
-      });
-      console.log(
-        `  → gespeichert: ${scope}/${registry}/${stage}/${objectId} ` +
-          `(${body.length} B, ${req.headers['content-type']})`,
-      );
-      res.statusCode = 201;
-      res.end(`<?xml version="1.0" encoding="UTF-8"?><ok objectId="${objectId}"/>`);
-    });
-    return;
-  }
+  // ── Scopes ───────────────────────────────────────────────────────────────
+  if (pfad === '/scopes') return ok(scopesXmi);
+  if (pfad === `/scopes/${SCOPE}`) return ok(scopeXmi);
 
-  // Liste hochgeladener Objekte einer Registry-Stage
-  const listMatch = url.pathname.match(/^\/rest\/([^/]+)\/registries\/([^/]+)\/stages\/([^/]+)$/);
-  if (req.method === 'GET' && listMatch) {
-    const [, , registry, stage] = listMatch.map(decodeURIComponent);
-    const stored = objects.get(`${registry}/${stage}`) ?? new Map();
-    const entries = [...stored.entries()].map(
-      ([id, o]) =>
-        `  <metadata objectId="${id}" objectName="${o.name}" objectType="ProviderMapping" stage="${stage}" scope="sensors" registry="${registry}" version="1.0" contentHash="x" uploadUser="mock" uploadTime="now" sourceChannel="mock"/>`,
-    );
-    return ok(`<?xml version="1.0" encoding="UTF-8"?>
-<mgmt:ObjectMetadataContainer xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
-    xmlns:mgmt="http://eclipse.org/fennec/model/atlas/management/1.0.0">
-${entries.join('\n')}
-</mgmt:ObjectMetadataContainer>`);
-  }
-
-  if (url.pathname === '/rest/scopes') return ok(scopesXmi);
-  if (url.pathname === '/rest/scopes/sensors') return ok(scopeXmi);
-  if (url.pathname === '/rest/sensors/schema/stages/release/content') {
+  // ── Schemas ──────────────────────────────────────────────────────────────
+  const schemaStage = pfad.match(new RegExp(`^/${SCOPE}/schema/stages/([^/]+)$`));
+  if (schemaStage) {
+    const stage = schemaStage[1];
+    schemas[stage] ??= {};
+    if (req.method === 'POST') {
+      const nsUri = url.searchParams.get('nsUri');
+      if (!nsUri) return ok('nsUri fehlt', 400);
+      schemas[stage][nsUri] = await leseRumpf(req);
+      console.log(`   → Schema ${nsUri} in ${stage} abgelegt`);
+      return ok('', 201);
+    }
     const nsUri = url.searchParams.get('nsUri');
-    return schemas[nsUri] ? ok(schemas[nsUri]) : notFound();
+    if (nsUri) {
+      return schemas[stage][nsUri] ? ok(metadataXmi([nsUri], stage)) : notFound();
+    }
+    return ok(metadataXmi(Object.keys(schemas[stage]), stage));
   }
-  if (url.pathname === '/rest/sensors/schema/search') {
-    const exact = url.searchParams.get('nsUriExact');
-    if (exact) return ok(metadataXmi(schemas[exact] ? [exact] : []));
-    const name = (url.searchParams.get('name') ?? '').toLowerCase();
-    return ok(metadataXmi(Object.keys(schemas).filter((ns) => ns.toLowerCase().includes(name))));
+
+  const schemaContent = pfad.match(new RegExp(`^/${SCOPE}/schema/stages/([^/]+)/content$`));
+  if (schemaContent) {
+    const inhalt = schemas[schemaContent[1]]?.[url.searchParams.get('nsUri')];
+    return inhalt ? ok(inhalt) : notFound();
   }
-  if (url.pathname === '/rest/sensors/schema/stages/release') {
-    return ok(metadataXmi(Object.keys(schemas)));
+
+  if (pfad === `/${SCOPE}/schema/search`) {
+    const exakt = url.searchParams.get('nsUriExact');
+    const alle = [...new Set(Object.values(schemas).flatMap((s) => Object.keys(s)))];
+    const treffer = exakt ? alle.filter((ns) => ns === exakt) : alle;
+    return ok(metadataXmi(treffer, 'release'));
   }
-  notFound();
-}).listen(8199, () => console.log('Mock-Atlas auf http://localhost:8199/rest'));
+
+  // ── Stage-Wechsel ────────────────────────────────────────────────────────
+  const transition = pfad.match(
+    new RegExp(`^/${SCOPE}/registries/([^/]+)/stages/([^/]+)/actions/transition$`),
+  );
+  if (transition && req.method === 'POST') {
+    const rumpf = await leseRumpf(req);
+    const id = /objectId="([^"]+)"/.exec(rumpf)?.[1];
+    const ziel = /targetStage="([^"]+)"/.exec(rumpf)?.[1];
+    const [, registry, von] = transition;
+    const eintrag = objects.get(registry)?.[von]?.[id];
+    if (!eintrag) return notFound();
+    objects.get(registry)[ziel] ??= {};
+    objects.get(registry)[ziel][id] = eintrag;
+    console.log(`   → ${id} von ${von} nach ${ziel} geschoben`);
+    return ok('', 204);
+  }
+
+  // ── Objekte ──────────────────────────────────────────────────────────────
+  const objekt = pfad.match(new RegExp(`^/${SCOPE}/registries/([^/]+)/stages/([^/]+)/([^/]+)$`));
+  if (objekt) {
+    const [, registry, stage, objectId] = objekt;
+    if (req.method === 'POST') {
+      const content = await leseRumpf(req);
+      if (!objects.has(registry)) objects.set(registry, {});
+      objects.get(registry)[stage] ??= {};
+      objects.get(registry)[stage][objectId] = {
+        content,
+        name: url.searchParams.get('name') ?? objectId,
+      };
+      console.log(`   → Objekt ${objectId} in ${registry}/${stage} (${content.length} Bytes)`);
+      return ok('', 201);
+    }
+    const eintrag = objects.get(registry)?.[stage]?.[objectId];
+    return eintrag ? ok(eintrag.content) : notFound();
+  }
+
+  const objektListe = pfad.match(new RegExp(`^/${SCOPE}/registries/([^/]+)/stages/([^/]+)$`));
+  if (objektListe) {
+    const [, registry, stage] = objektListe;
+    return ok(metadataXmi(Object.keys(objects.get(registry)?.[stage] ?? {}), stage));
+  }
+
+  return notFound();
+}).listen(8199, () =>
+  console.log(
+    `Mock-Model-Atlas auf http://localhost:8199/rest\n` +
+      `  Scope „${SCOPE}", Registries „schema" und „configurations", Stages draft/release\n` +
+      `  ${PERSON_NS} liegt in release`,
+  ),
+);
