@@ -61,6 +61,10 @@
         />
       </section>
 
+      <DatasetsStep v-else-if="currentStep.id === 'datasets'" />
+      <ExportsStep v-else-if="currentStep.id === 'exports'" />
+      <SummaryStep v-else-if="currentStep.id === 'summary'" />
+
       <section v-else class="placeholder">
         <h2>{{ currentStep.title }}</h2>
         <p class="lead">{{ currentStep.lead }}</p>
@@ -107,6 +111,9 @@
 import { computed, onMounted, ref, shallowRef } from 'vue';
 import { UIModelComposer } from '@emfts/uimodel-composer';
 import { loadWizardUiModels, type WizardUiModels } from './uiModels';
+import DatasetsStep from './DatasetsStep.vue';
+import ExportsStep from './ExportsStep.vue';
+import SummaryStep from './SummaryStep.vue';
 import { setup, version } from './context';
 import { InputKind } from '../generated';
 
