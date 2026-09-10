@@ -4,7 +4,11 @@
 > der Reihenfolge in Abschnitt 10.
 >
 > **Änderung 2026-09-10 (2):** Aus dem einen Dateneingang ist eine **Liste**
-> geworden (`AtlasSetup.dataSources` + `defaultSourceId`, `DatasetConfig.sourceId`).
+> geworden, und der **Datensatz** trägt die Zuordnung: `DatasetConfig.sourceId`
+> (Pflicht) und `exportIds*`. Sind sich alle Datensätze einig, schreibt der
+> Transformer den Wert einmal am Service statt n-mal — das
+> override-else-default des Zielmodells, aber vom Datensatz her gedacht. Ein
+> `defaultSourceId` am Setup gibt es deshalb nicht.
 > Die Entweder-oder-Frage „woher kommen die Daten?" in Schritt 2 gab es nur,
 > weil die Fassade genau einen Eingang kannte — mit einer Transformation sind
 > es immer mindestens zwei (`BridgeRepository` liest einen anderen Eingang).

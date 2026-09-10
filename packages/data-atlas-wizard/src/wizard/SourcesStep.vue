@@ -2,23 +2,13 @@
   <section class="step">
     <h2>Datenquellen</h2>
     <p class="lead">
-      Woher der Data Atlas seine Objekte liest. Mehrere sind erlaubt — welche
-      ein Datensatz benutzt, steht im nächsten Schritt; ohne Angabe gilt der
-      Vorgabe-Eingang.
+      Woher der Data Atlas seine Objekte liest. Mehrere sind erlaubt; welche
+      ein Datensatz benutzt, steht im nächsten Schritt.
     </p>
 
     <ul class="quellen">
       <li v-for="(q, i) in quellen" :key="i" class="quelle">
         <header>
-          <label class="vorgabe" :title="'Vorgabe-Eingang des Endpunkts'">
-            <input
-              type="radio"
-              name="vorgabe"
-              :checked="setupValue?.defaultSourceId === q.id"
-              @change="setzeVorgabe(q)"
-            />
-            Vorgabe
-          </label>
           <input
             type="text"
             class="id"
@@ -122,9 +112,9 @@
  * braucht ohnehin einen zweiten (ein `BridgeRepository` liest einen anderen
  * Eingang). Deshalb eine Liste statt der früheren Entweder-oder-Frage.
  *
- * Genau ein Eintrag ist der Vorgabe-Eingang: er landet am Service, und
- * Datensätze ohne eigene Angabe übernehmen ihn (override-else-default, wie im
- * Zielmodell).
+ * Welchen Eingang ein Datensatz benutzt, steht am Datensatz (Schritt 4).
+ * Sind sich alle einig, schreibt der Transformer den Wert einmal am Service —
+ * das override-else-default des Zielmodells, aber vom Datensatz her gedacht.
  */
 import { computed, inject } from 'vue';
 import { InputKind, MappingKind, type DataSourceConfig } from '../generated';
@@ -161,13 +151,6 @@ function setze<K extends keyof DataSourceConfig>(
 
 function setzeArt(q: DataSourceConfig, e: Event): void {
   q.kind = wert(e) as InputKind;
-  touch();
-}
-
-function setzeVorgabe(q: DataSourceConfig): void {
-  const s = setup.value;
-  if (!s) return;
-  s.defaultSourceId = q.id;
   touch();
 }
 
@@ -209,7 +192,6 @@ h2 { margin: 0; font-size: 1.25rem; }
   padding: 0.6rem 0.8rem;
 }
 .quelle header { display: flex; align-items: center; gap: 0.6rem; }
-.vorgabe { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.85rem; white-space: nowrap; }
 .quelle header .id { flex: 1; font-family: ui-monospace, monospace; }
 .weg { background: none; border: none; cursor: pointer; color: var(--text-color-secondary, #888); }
 .weg:disabled { opacity: 0.3; cursor: not-allowed; }

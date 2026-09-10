@@ -44,7 +44,6 @@ describe('Fassadenmodell', () => {
       'instanceDescription',
       'modelPackage',
       'dataSources',
-      'defaultSourceId',
       'datasets',
       'exports',
       'serviceId',
@@ -59,7 +58,7 @@ describe('Fassadenmodell', () => {
 
   it('Pflichtfelder sind als lowerBound=1 markiert', () => {
     const setup = DataatlaswizardPackage.Literals.ATLAS_SETUP;
-    for (const name of ['instanceName', 'modelPackage', 'defaultSourceId', 'serviceId', 'urlContext']) {
+    for (const name of ['instanceName', 'modelPackage', 'serviceId', 'urlContext']) {
       expect(feature(setup, name).getLowerBound(), name).toBe(1);
     }
     // Beschreibung der Instanz bleibt optional

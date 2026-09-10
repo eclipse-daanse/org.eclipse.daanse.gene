@@ -37,7 +37,6 @@ export class DataatlaswizardPackage extends BasicEPackage {
     ATLAS_SETUP__INSTANCE_DESCRIPTION: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__MODEL_PACKAGE: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__DATA_SOURCES: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__DEFAULT_SOURCE_ID: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__DATASETS: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__EXPORTS: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__SERVICE_ID: null as unknown as EAttribute | EReference,
@@ -64,6 +63,7 @@ export class DataatlaswizardPackage extends BasicEPackage {
     DATASET_CONFIG__DESCRIPTION: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__PATH: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__SOURCE_ID: null as unknown as EAttribute | EReference,
+    DATASET_CONFIG__EXPORT_IDS: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__BATCH_SIZE: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__BATCH_SIZE_LIMIT: null as unknown as EAttribute | EReference,
     EXPORT_CONFIG: null as unknown as EClass,
@@ -129,14 +129,6 @@ export class DataatlaswizardPackage extends BasicEPackage {
     atlasSetup_dataSources.setUpperBound(-1);
     atlasSetupClass.getEStructuralFeatures().push(atlasSetup_dataSources);
     DataatlaswizardPackage.Literals.ATLAS_SETUP__DATA_SOURCES = atlasSetup_dataSources;
-
-    // Create defaultSourceId feature
-    const atlasSetup_defaultSourceId = new BasicEAttribute();
-    atlasSetup_defaultSourceId.setName('defaultSourceId');
-    atlasSetup_defaultSourceId.setLowerBound(1);
-    atlasSetup_defaultSourceId.setUpperBound(1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_defaultSourceId);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__DEFAULT_SOURCE_ID = atlasSetup_defaultSourceId;
 
     // Create datasets feature
     const atlasSetup_datasets = new BasicEReference();
@@ -346,10 +338,18 @@ export class DataatlaswizardPackage extends BasicEPackage {
     // Create sourceId feature
     const datasetConfig_sourceId = new BasicEAttribute();
     datasetConfig_sourceId.setName('sourceId');
-    datasetConfig_sourceId.setLowerBound(0);
+    datasetConfig_sourceId.setLowerBound(1);
     datasetConfig_sourceId.setUpperBound(1);
     datasetConfigClass.getEStructuralFeatures().push(datasetConfig_sourceId);
     DataatlaswizardPackage.Literals.DATASET_CONFIG__SOURCE_ID = datasetConfig_sourceId;
+
+    // Create exportIds feature
+    const datasetConfig_exportIds = new BasicEAttribute();
+    datasetConfig_exportIds.setName('exportIds');
+    datasetConfig_exportIds.setLowerBound(0);
+    datasetConfig_exportIds.setUpperBound(-1);
+    datasetConfigClass.getEStructuralFeatures().push(datasetConfig_exportIds);
+    DataatlaswizardPackage.Literals.DATASET_CONFIG__EXPORT_IDS = datasetConfig_exportIds;
 
     // Create batchSize feature
     const datasetConfig_batchSize = new BasicEAttribute();

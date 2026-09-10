@@ -19,10 +19,10 @@ werden Datensätze, unter welchem Pfad, in welchen Formaten.**
 |---|---|
 | Modell | Domänenmodell aus einem Model-Atlas-Scope oder als Datei laden |
 | Instanz | Name und Beschreibung |
-| Datenquellen | Liste: XMI-Dateien (absoluter Pfad) und Datenbanken (DataSource-Filter, Mapping abgeleitet oder importiert). Eine davon ist der Vorgabe-Eingang |
-| Datensätze | Häkchen je Klasse, dazu id, Name, Pfad, Beschreibung, Datenquelle und Batch-Grenzen |
+| Datenquellen | Liste: XMI-Dateien (absoluter Pfad) und Datenbanken (DataSource-Filter, Mapping abgeleitet oder importiert) |
+| Datensätze | Häkchen je Klasse, dazu id, Name, Pfad, Beschreibung, **Datenquelle**, **Formate** und Batch-Grenzen |
 | Endpunkt | Basis-Pfad, Namen, OpenAPI, Pagination-Parameter |
-| Formate | JSON, XML, CSV, CSV-ZIP — leer heißt: die Vorgaben des Data Atlas |
+| Formate | JSON, XML, CSV, CSV-ZIP definieren; neu Angehaktes gilt für alle Datensätze, Abweichungen macht Schritt 4 |
 | Zusammenfassung | Prüfliste, XMI-Vorschau, Download oder Veröffentlichen im Model Atlas |
 
 ## Verweise entstehen immer über den nsURI
@@ -66,6 +66,15 @@ Attribut-Typen und die EEnums als Classifier. Ohne das käme aus einem
 Round-Trip der String `"true"` statt eines Wahrheitswerts zurück. Die Typen
 liest der Fixup aus derselben `.ecore`, aus der auch der Generator kommt — eine
 Modelländerung ist damit gedeckt, ohne eine Tabelle nachzuziehen.
+
+## Der Datensatz trägt die Zuordnung
+
+`DatasetConfig.sourceId` und `exportIds` stehen am Datensatz, nicht am Service.
+Das Zielmodell erlaubt beides auf beiden Ebenen und löst
+override-else-default auf; hier ist der Datensatz die Wahrheit und der Service
+nur die Abkürzung: sind sich alle Datensätze einig, schreibt der Transformer
+den Wert einmal am Service, sonst an jedem Datensatz. So funktioniert es auch
+mit mehreren Datenquellen, ohne dass eine davon ausgezeichnet wäre.
 
 ## Ableitungsregeln
 

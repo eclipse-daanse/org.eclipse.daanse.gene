@@ -134,8 +134,8 @@ export function concreteClasses(pkg: EPackage): EClass[] {
   return klassen;
 }
 
-/** Eine EClass → Datensatz-Vorschlag. */
-export function buildDataset(eClass: EClass): DatasetConfig {
+/** Eine EClass → Datensatz-Vorschlag. `sourceId` ist Pflicht. */
+export function buildDataset(eClass: EClass, sourceId: string): DatasetConfig {
   const factory = DataatlaswizardFactory.eINSTANCE;
   const dataset = factory.createDatasetConfig();
   const name = eClass.getName() ?? 'dataset';
@@ -145,6 +145,7 @@ export function buildDataset(eClass: EClass): DatasetConfig {
   dataset.name = titleCase(name);
   dataset.path = dataset.id;
   dataset.description = documentationOf(eClass) ?? `Alle ${name}-Objekte.`;
+  dataset.sourceId = sourceId;
   return dataset;
 }
 
@@ -195,22 +196,47 @@ export function addDataSource(quelle: DataSourceConfig): DataSourceConfig | unde
   return quelle;
 }
 
-/** Entfernt einen Eingang und räumt die Verweise darauf auf. */
+/**
+ * Entfernt einen Eingang. Datensätze, die aus ihm lasen, hängen danach auf dem
+ * einzigen verbliebenen — oder auf keinem, dann meldet es die Prüfung.
+ */
 export function removeDataSource(quelle: DataSourceConfig): void {
   const s = setup.value;
   if (!s) return;
   s.dataSources = s.dataSources.filter((q) => q !== quelle);
+  const ersatz = s.dataSources.length === 1 ? s.dataSources[0].id : '';
   for (const d of s.datasets) {
-    if (d.sourceId === quelle.id) d.sourceId = '';
+    if (d.sourceId === quelle.id) d.sourceId = ersatz;
   }
-  if (s.defaultSourceId === quelle.id) s.defaultSourceId = s.dataSources[0]?.id ?? '';
   touch();
 }
 
-/** Der Eingang, aus dem ein Datensatz liest — eigener Wert oder die Vorgabe. */
-export function sourceOf(setupValue: AtlasSetup, dataset: DatasetConfig): DataSourceConfig | undefined {
-  const id = dataset.sourceId?.trim() || setupValue.defaultSourceId;
-  return setupValue.dataSources.find((q) => q.id === id);
+/** Der Eingang, aus dem ein Datensatz liest. */
+export function sourceOf(
+  setupValue: AtlasSetup,
+  dataset: DatasetConfig,
+): DataSourceConfig | undefined {
+  return setupValue.dataSources.find((q) => q.id === dataset.sourceId);
+}
+
+/**
+ * Der Wert, auf den sich alle ausgewählten Datensätze einigen — oder
+ * `undefined`. Grundlage dafür, ob der Transformer ihn einmal am Service
+ * schreibt statt an jedem Datensatz.
+ */
+export function commonValue<T>(
+  datasets: DatasetConfig[],
+  lies: (d: DatasetConfig) => T,
+  gleich: (a: T, b: T) => boolean = (a, b) => a === b,
+): T | undefined {
+  if (datasets.length === 0) return undefined;
+  const erster = lies(datasets[0]);
+  return datasets.every((d) => gleich(lies(d), erster)) ? erster : undefined;
+}
+
+/** Formate eines Datensatzes, in der Reihenfolge der Definition. */
+export function exportsOf(setupValue: AtlasSetup, dataset: DatasetConfig) {
+  return setupValue.exports.filter((e) => e.selected && dataset.exportIds.includes(e.id));
 }
 
 /**
@@ -233,10 +259,9 @@ export function initSetup(pkg: EPackage): AtlasSetup {
   // Ein Eingang als Vorschlag; weitere kommen über addDataSource() dazu.
   const quelle = buildFileSource(slug, defaultFileUri(pkg));
   s.dataSources.push(quelle);
-  s.defaultSourceId = quelle.id;
 
   for (const eClass of concreteClasses(pkg)) {
-    s.datasets.push(buildDataset(eClass));
+    s.datasets.push(buildDataset(eClass, quelle.id));
   }
 
   s.serviceId = `${slug}-rest`;

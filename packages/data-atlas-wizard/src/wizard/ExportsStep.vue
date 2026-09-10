@@ -49,6 +49,10 @@
       <i class="pi pi-info-circle" aria-hidden="true"></i>
       Nichts gewählt — es gelten JSON und XML.
     </p>
+    <p v-else class="hinweis">
+      <i class="pi pi-info-circle" aria-hidden="true"></i>
+      Gilt für alle Datensätze. Abweichungen je Datensatz macht Schritt 4.
+    </p>
   </section>
 </template>
 
@@ -109,6 +113,12 @@ const istCsv = (kind: ExportKind) => kind === ExportKind.CSV || kind === ExportK
 const eintrag = (kind: ExportKind) => gewaehlte.value.find((e) => e.kind === kind);
 const istGewaehlt = (kind: ExportKind) => !!eintrag(kind);
 
+/**
+ * Anhaken legt das Format an und ordnet es **allen** Datensätzen zu; abhaken
+ * nimmt es überall weg. Zugeordnet wird am Datensatz, weil dort die Wahrheit
+ * steht — abweichende Zuordnungen macht man in Schritt 4. Ohne diese
+ * Vorbelegung wäre ein definiertes Format erst einmal wirkungslos.
+ */
 function schalte(kind: ExportKind, an: boolean): void {
   const s = setup.value;
   if (!s) return;
@@ -120,8 +130,15 @@ function schalte(kind: ExportKind, an: boolean): void {
     neu.name = art.name;
     neu.description = art.beschreibung;
     s.exports.push(neu);
+    for (const d of s.datasets) {
+      if (!d.exportIds.includes(neu.id)) d.exportIds = [...d.exportIds, neu.id];
+    }
   } else {
+    const weg = s.exports.filter((e) => e.kind === kind).map((e) => e.id);
     s.exports = s.exports.filter((e) => e.kind !== kind);
+    for (const d of s.datasets) {
+      d.exportIds = d.exportIds.filter((id) => !weg.includes(id));
+    }
   }
   touch();
 }
