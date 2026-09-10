@@ -18,7 +18,6 @@ import { DataatlaswizardPackage } from '../generated';
 
 /** Enum-Felder → Radio-Auswahl. */
 const ENUM_FEATURES: [keyof typeof DataatlaswizardPackage.Literals, string][] = [
-  ['ATLAS_SETUP', 'configMode'],
   ['ATLAS_SETUP', 'inputKind'],
   ['DATABASE_SOURCE_CONFIG', 'mappingKind'],
   ['EXPORT_CONFIG', 'kind'],

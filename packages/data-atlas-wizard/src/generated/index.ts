@@ -11,7 +11,6 @@ export { DataatlaswizardFactory } from './DataatlaswizardFactory';
 
 // Interfaces
 export type { AtlasSetup } from './AtlasSetup';
-export type { ModelFileRef } from './ModelFileRef';
 export type { FileSourceConfig } from './FileSourceConfig';
 export type { DatabaseSourceConfig } from './DatabaseSourceConfig';
 export type { DatasetConfig } from './DatasetConfig';
@@ -19,14 +18,12 @@ export type { ExportConfig } from './ExportConfig';
 
 // Implementations (including abstract classes, as they're extended by subclasses)
 export { AtlasSetupImpl } from './AtlasSetupImpl';
-export { ModelFileRefImpl } from './ModelFileRefImpl';
 export { FileSourceConfigImpl } from './FileSourceConfigImpl';
 export { DatabaseSourceConfigImpl } from './DatabaseSourceConfigImpl';
 export { DatasetConfigImpl } from './DatasetConfigImpl';
 export { ExportConfigImpl } from './ExportConfigImpl';
 
 // Enums
-export { ConfigMode, getConfigMode, getConfigModeByLiteral } from './ConfigMode';
 export { InputKind, getInputKind, getInputKindByLiteral } from './InputKind';
 export { MappingKind, getMappingKind, getMappingKindByLiteral } from './MappingKind';
 export { ExportKind, getExportKind, getExportKindByLiteral } from './ExportKind';

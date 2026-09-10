@@ -14,7 +14,6 @@ import { computed, ref, shallowRef, triggerRef } from 'vue';
 import type { EClass, EPackage } from '@emfts/core';
 import type { AtlasModelSource } from '../atlas/atlasSource';
 import {
-  ConfigMode,
   DataatlaswizardFactory,
   InputKind,
   type AtlasSetup,
@@ -50,10 +49,9 @@ export function touch(): void {
 const GEN_MODEL_ANNOTATION = 'http://www.eclipse.org/emf/2002/GenModel';
 
 /**
- * Wohin der Data Atlas im Atlas-Modus schaut. Im Compose-Setup ist das
- * Datenverzeichnis unter diesem Pfad gemountet — belegt durch
- * `example/dataatlas-atlas.xmi`, das `/opt/dataatlas/runtime/data/data/persons.xmi`
- * trägt, wo die Datei-Variante `data/persons.xmi` sagt.
+ * Wohin der Data Atlas schaut. Im Compose-Setup ist das Datenverzeichnis unter
+ * diesem Pfad gemountet — belegt durch `example/dataatlas-atlas.xmi`, das
+ * `/opt/dataatlas/runtime/data/data/persons.xmi` trägt.
  */
 export const ATLAS_DATA_PREFIX = '/opt/dataatlas/runtime/data/';
 
@@ -148,15 +146,12 @@ export function buildDataset(eClass: EClass): DatasetConfig {
   return dataset;
 }
 
-/** Der Ort der Datendatei — im Atlas-Modus absolut, im Datei-Modus relativ. */
-export function defaultFileUri(pkg: EPackage, mode: ConfigMode): string {
-  const relativ = `data/${pkg.getName() ?? 'data'}.xmi`;
-  return mode === ConfigMode.ATLAS ? `${ATLAS_DATA_PREFIX}${relativ}` : relativ;
-}
-
-/** Der Pfad, unter dem die .ecore neben der Konfiguration liegt. */
-export function defaultModelFileName(pkg: EPackage): string {
-  return `model/${pkg.getName() ?? 'model'}.ecore`;
+/**
+ * Der Ort der Datendatei — immer absolut. Die Konfiguration kommt über HTTP
+ * aus dem Model Atlas, ein relativer Pfad hätte dort keinen Bezugspunkt.
+ */
+export function defaultFileUri(pkg: EPackage): string {
+  return `${ATLAS_DATA_PREFIX}data/${pkg.getName() ?? 'data'}.xmi`;
 }
 
 /**
@@ -166,27 +161,20 @@ export function defaultModelFileName(pkg: EPackage): string {
  * `exports` bleibt bewusst leer — der Data Atlas liefert dann seine Vorgaben
  * JSON und XML. Ein einziger Eintrag würde sie vollständig ersetzen.
  */
-export function initSetup(pkg: EPackage, mode: ConfigMode | undefined = ConfigMode.FILE): AtlasSetup {
+export function initSetup(pkg: EPackage): AtlasSetup {
   const factory = DataatlaswizardFactory.eINSTANCE;
   const instanceName = pkg.getName() ?? 'data-atlas';
   const slug = slugOf(instanceName);
 
   const s = factory.createAtlasSetup();
-  // Ein Modellwechsel soll den gewaehlten Modus nicht zuruecksetzen.
-  mode = mode ?? ConfigMode.FILE;
   s.instanceName = instanceName;
   s.instanceDescription = documentationOf(pkg) ?? '';
-  s.configMode = mode;
   s.modelPackage = pkg;
   s.inputKind = InputKind.FILE;
 
-  // Serialisierungskontext für den FILE-Modus. Weitere Packages kommen über
-  // addModelFile() dazu, wenn das Laden sie mitbringt (Cascade/Upload).
-  s.modelFiles.push(buildModelFileRef(pkg));
-
   const fileSource = factory.createFileSourceConfig();
   fileSource.id = `${slug}-file`;
-  fileSource.fileUri = defaultFileUri(pkg, mode);
+  fileSource.fileUri = defaultFileUri(pkg);
   s.fileSource = fileSource;
 
   // Auch die Datenbank-Variante wird vorbereitet: der Schritt „Datenquelle"
@@ -211,49 +199,6 @@ export function initSetup(pkg: EPackage, mode: ConfigMode | undefined = ConfigMo
   setup.value = s;
   touch();
   return s;
-}
-
-/** Ein Eintrag für die nsURI-zu-Dateiname-Karte des FILE-Modus. */
-export function buildModelFileRef(pkg: EPackage) {
-  const ref = DataatlaswizardFactory.eINSTANCE.createModelFileRef();
-  ref.modelPackage = pkg;
-  ref.fileName = defaultModelFileName(pkg);
-  return ref;
-}
-
-/**
- * Nimmt ein weiteres Package in die Karte auf — nötig, sobald ein Modell auf
- * ein anderes verweist, weil der Href sonst im FILE-Modus falsch wäre.
- * Idempotent, damit mehrfaches Laden keine Doppel erzeugt.
- */
-export function addModelFile(pkg: EPackage, fileName?: string): void {
-  const s = setup.value;
-  if (!s) return;
-  if (s.modelFiles.some((ref) => ref.modelPackage === pkg)) return;
-  const ref = buildModelFileRef(pkg);
-  if (fileName) ref.fileName = fileName;
-  s.modelFiles.push(ref);
-  if (!modelPackages.value.includes(pkg)) {
-    modelPackages.value = [...modelPackages.value, pkg];
-  }
-  touch();
-}
-
-/**
- * Wechselt den Modus und zieht die Datei-URI mit — aber nur, wenn sie noch der
- * Vorgabe des alten Modus entspricht. Eine von Hand eingetragene URI bleibt
- * stehen; sie zu überschreiben wäre ein stiller Datenverlust.
- */
-export function setConfigMode(mode: ConfigMode): void {
-  const s = setup.value;
-  if (!s || s.configMode === mode) return;
-  const pkg = s.modelPackage;
-  const alteVorgabe = pkg ? defaultFileUri(pkg, s.configMode) : undefined;
-  s.configMode = mode;
-  if (pkg && s.fileSource && s.fileSource.fileUri === alteVorgabe) {
-    s.fileSource.fileUri = defaultFileUri(pkg, mode);
-  }
-  touch();
 }
 
 /** Die ausgewählten Datensätze — was der Transformer schreibt. */

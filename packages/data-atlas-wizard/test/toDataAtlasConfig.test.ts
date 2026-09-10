@@ -20,13 +20,7 @@ import { URI, type BasicResourceSet, type EClass, type EObject, type EPackage } 
 import { newResourceSet, registerEcoreFromString, setupPackages } from '../src/emf/setup';
 import { buildDataAtlasXmi } from '../src/transform/toDataAtlasConfig';
 import { initSetup, setup as setupRef } from '../src/wizard/context';
-import {
-  ConfigMode,
-  DataatlaswizardFactory,
-  ExportKind,
-  InputKind,
-  type AtlasSetup,
-} from '../src/generated';
+import { DataatlaswizardFactory, ExportKind, InputKind, type AtlasSetup } from '../src/generated';
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const lies = (name: string) => readFileSync(join(fixtures, name), 'utf-8');
@@ -177,15 +171,14 @@ function vergleiche(setup: AtlasSetup, fixture: string) {
 
 // ── Aufbau der Setups ─────────────────────────────────────────────────────
 
-/** Das Setup zum Beispiel aus `example/dataatlas.xmi`. */
-function beispielSetup(mode: ConfigMode = ConfigMode.FILE): AtlasSetup {
-  initSetup(personPackage, mode);
+/** Das Setup zum Beispiel aus `example/dataatlas-atlas.xmi`. */
+function beispielSetup(): AtlasSetup {
+  initSetup(personPackage);
   const s = setupRef.value!;
-  s.instanceName = 'example';
-  s.instanceDescription =
-    'Example Data Atlas instance: one file-based input served over REST (the Milestone 1 vertical slice).';
+  s.instanceName = 'example-atlas';
+  s.instanceDescription = 'Example Data Atlas instance served from a Model Atlas.';
   s.fileSource!.id = 'persons-file';
-  s.fileSource!.fileUri = 'data/persons.xmi';
+  s.fileSource!.fileUri = '/opt/dataatlas/runtime/data/data/persons.xmi';
   s.serviceId = 'persons-rest';
   s.serviceName = 'Persons REST';
   s.serviceDescription = 'REST endpoint publishing the example persons.';
@@ -203,17 +196,19 @@ function beispielSetup(mode: ConfigMode = ConfigMode.FILE): AtlasSetup {
   return s;
 }
 
-describe('Datei-Grundfall gegen example/dataatlas.xmi', () => {
+describe('Grundfall gegen example/dataatlas-atlas.xmi', () => {
   it('der Objektgraph stimmt', () => {
-    const { erzeugt, vorlage } = vergleiche(beispielSetup(), 'dataatlas.xmi');
+    const { erzeugt, vorlage } = vergleiche(beispielSetup(), 'dataatlas-atlas.xmi');
     expect(erzeugt).toEqual(vorlage);
   });
 
-  it('die Hrefs sind relative Dateipfade', () => {
-    const { xmi } = vergleiche(beispielSetup(), 'dataatlas.xmi');
+  it('alle Verweise auf Modellklassen sind nsURIs', () => {
+    const { xmi } = vergleiche(beispielSetup(), 'dataatlas-atlas.xmi');
     const hrefs = [...xmi.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
     const attribute = [...xmi.matchAll(/(?:inputType|outputType)="([^"]+)"/g)].map((m) => m[1]);
-    expect([...new Set([...hrefs, ...attribute])]).toEqual(['model/person.ecore#//Person']);
+    expect([...new Set([...hrefs, ...attribute])]).toEqual([
+      'https://eclipse.org/fennec/data/atlas/example/person/1.0.0#//Person',
+    ]);
   });
 
   it('die id der Service-Konfiguration ist abgeleitet und eindeutig', () => {
@@ -241,35 +236,14 @@ describe('Datei-Grundfall gegen example/dataatlas.xmi', () => {
   });
 });
 
-describe('Atlas-Dialekt gegen example/dataatlas-atlas.xmi', () => {
-  function atlasSetup(): AtlasSetup {
-    const s = beispielSetup(ConfigMode.ATLAS);
-    s.instanceName = 'example-atlas';
-    s.instanceDescription = 'Example Data Atlas instance served from a Model Atlas.';
-    s.fileSource!.fileUri = '/opt/dataatlas/runtime/data/data/persons.xmi';
-    return s;
-  }
-
-  it('der Objektgraph stimmt', () => {
-    const { erzeugt, vorlage } = vergleiche(atlasSetup(), 'dataatlas-atlas.xmi');
-    expect(erzeugt).toEqual(vorlage);
-  });
-
-  it('die Hrefs sind nsURIs', () => {
-    const { xmi } = vergleiche(atlasSetup(), 'dataatlas-atlas.xmi');
-    expect(xmi).toContain(
-      'href="https://eclipse.org/fennec/data/atlas/example/person/1.0.0#//Person"',
-    );
-    expect(xmi).not.toContain('model/person.ecore');
-  });
-});
-
 describe('Pagination gegen fixtures/dataatlas-pagination.xmi', () => {
   it('eigene Parameternamen und Batch-Grenzen', () => {
+    /*
+     * Die Vorlage ist datei-basiert (relative Hrefs, relative Datei-URI), also
+     * werden nur die Teile verglichen, um die es hier geht — der Endpunkt und
+     * seine Konfigurationen.
+     */
     const s = beispielSetup();
-    s.instanceName = 'pagination';
-    s.instanceDescription =
-      'Pagination test fixture: custom parameter names, a default batch size and a server-side batch size limit.';
     s.serviceDescription = 'REST endpoint with custom pagination parameter names.';
     s.urlContext = '/paged';
     s.paginationOffsetParameterName = 'start';
@@ -278,11 +252,11 @@ describe('Pagination gegen fixtures/dataatlas-pagination.xmi', () => {
     s.datasets[0].batchSizeLimit = 2;
 
     const { erzeugt, vorlage } = vergleiche(s, 'dataatlas-pagination.xmi');
-    expect(erzeugt).toEqual(vorlage);
+    expect(erzeugt.services).toEqual(vorlage.services);
   });
 
   it('Vorgabewerte werden nicht geschrieben', () => {
-    const { xmi } = vergleiche(beispielSetup(), 'dataatlas.xmi');
+    const { xmi } = vergleiche(beispielSetup(), 'dataatlas-atlas.xmi');
     expect(xmi).not.toContain('paginationOffsetParameterName');
     expect(xmi).not.toContain('batchSize');
   });
@@ -351,15 +325,17 @@ describe('Formate gegen fixtures/dataatlas-csv.xmi', () => {
   });
 });
 
-describe('Datenbank gegen example/dataatlas-postgres.xmi', () => {
+describe('Datenbank gegen example/dataatlas-postgres-atlas.xmi', () => {
   /*
-   * Bewusst der Datei-Zwilling: die Atlas-Variante traegt publication/
-   * <publications>, was Iteration 1 nicht erzeugt.
+   * Der Atlas-Zwilling. Er traegt publication/<publications>, was Iteration 1
+   * nicht erzeugt — der Graphvergleich liest die beiden Felder nicht, deshalb
+   * stoert es nicht.
    */
   function postgresSetup(): AtlasSetup {
     const s = beispielSetup();
-    s.instanceName = 'example-postgres';
-    s.instanceDescription = 'Example Data Atlas instance serving a PostgreSQL table as CSV.';
+    s.instanceName = 'example-postgres-atlas';
+    s.instanceDescription =
+      'Example Data Atlas instance serving a PostgreSQL table as CSV, delivered by a Model Atlas.';
     s.inputKind = InputKind.DATABASE;
     s.databaseSource!.id = 'persons-jpa';
     s.databaseSource!.dataSourceId = 'persons-db';
@@ -387,7 +363,7 @@ describe('Datenbank gegen example/dataatlas-postgres.xmi', () => {
   }
 
   it('der Objektgraph stimmt', () => {
-    const { erzeugt, vorlage } = vergleiche(postgresSetup(), 'dataatlas-postgres.xmi');
+    const { erzeugt, vorlage } = vergleiche(postgresSetup(), 'dataatlas-postgres-atlas.xmi');
     expect(erzeugt).toEqual(vorlage);
   });
 
@@ -403,7 +379,7 @@ describe('Datenbank gegen example/dataatlas-postgres.xmi', () => {
   });
 
   it('abgeleitetes Mapping heißt: kein persistenceConfig', () => {
-    const { xmi } = vergleiche(postgresSetup(), 'dataatlas-postgres.xmi');
+    const { xmi } = vergleiche(postgresSetup(), 'dataatlas-postgres-atlas.xmi');
     expect(xmi).not.toContain('persistenceConfig');
   });
 

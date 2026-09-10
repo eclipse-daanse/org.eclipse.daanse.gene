@@ -12,7 +12,13 @@
 
        Die Fassade vereinfacht bewusst: ein Service, ein DataInput,
        inputType = outputType, die Trias nur auf Service-Ebene. Siehe Plan
-       docs/plans/data-atlas-wizard.md, Abschnitt 1. -->
+       docs/plans/data-atlas-wizard.md, Abschnitt 1.
+
+       Verweise auf Modellklassen entstehen immer über den nsURI. Relative
+       Datei-Verweise wären eine Deployment-Konvention, die keine der drei
+       beteiligten Anwendungen kennt — gene hat kein Dateisystem, der Model
+       Atlas liefert Objekte statt Pfade. Wer sie wirklich braucht, schreibt
+       das XMI von Hand. -->
 
   <eClassifiers xsi:type="ecore:EClass" name="AtlasSetup">
     <!-- Identität der Instanz (= DataAtlasConfiguration.name/description). -->
@@ -21,19 +27,9 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="instanceDescription"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
 
-    <!-- Wo liegt die Konfiguration später? Steuert den Href-Dialekt und ob
-         Datei-URIs absolut sein müssen. -->
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="configMode" lowerBound="1"
-        eType="#//ConfigMode" defaultValueLiteral="FILE"/>
-
     <!-- Das Domänenmodell, aus dem die Datensätze abgeleitet werden. -->
     <eStructuralFeatures xsi:type="ecore:EReference" name="modelPackage" lowerBound="1"
         eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EPackage"/>
-    <!-- Nur im FILE-Modus: unter welchem relativen Pfad liegt jede .ecore
-         neben der Konfiguration. Ohne Eintrag zu einem referenzierten Package
-         wäre der Href stillschweigend falsch — der Transformer wirft dann. -->
-    <eStructuralFeatures xsi:type="ecore:EReference" name="modelFiles" upperBound="-1"
-        eType="#//ModelFileRef" containment="true"/>
 
     <!-- Woher kommen die Daten? inputKind schaltet zwischen den beiden
          folgenden Containments; als Enum statt abstrakter Subklassen, damit
@@ -73,22 +69,13 @@
         defaultValueLiteral="limit"/>
   </eClassifiers>
 
-  <!-- Reiner Serialisierungskontext für den FILE-Modus: kein Gegenstück im
-       Zielmodell. Als Liste, weil Cascade-Laden und Multi-File-Upload
-       regelmäßig mehrere Packages einbringen. -->
-  <eClassifiers xsi:type="ecore:EClass" name="ModelFileRef">
-    <eStructuralFeatures xsi:type="ecore:EReference" name="modelPackage" lowerBound="1"
-        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EPackage"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="fileName" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-  </eClassifiers>
-
   <!-- Datei als Datenquelle (= FileDataInput). -->
   <eClassifiers xsi:type="ecore:EClass" name="FileSourceConfig">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" lowerBound="1"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <!-- Im FILE-Modus relativ (data/persons.xmi), im ATLAS-Modus absolut
-         (/opt/dataatlas/runtime/data/…) — die Validierung erzwingt das. -->
+    <!-- Absoluter Pfad im Container (/opt/dataatlas/runtime/data/…). Relativ
+         geht nicht: die Konfiguration kommt über HTTP aus dem Model Atlas und
+         hätte keinen Bezugspunkt. Die Validierung erzwingt das. -->
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="fileUri" lowerBound="1"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
   </eClassifiers>
@@ -162,13 +149,6 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="includeTypeHeader"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
         defaultValueLiteral="false"/>
-  </eClassifiers>
-
-  <!-- Wo die Konfiguration später liegt: als Datei neben den Modellen, oder
-       als Objekt in einem Model-Atlas-Scope. -->
-  <eClassifiers xsi:type="ecore:EEnum" name="ConfigMode">
-    <eLiterals name="FILE" value="0"/>
-    <eLiterals name="ATLAS" value="1"/>
   </eClassifiers>
 
   <eClassifiers xsi:type="ecore:EEnum" name="InputKind">

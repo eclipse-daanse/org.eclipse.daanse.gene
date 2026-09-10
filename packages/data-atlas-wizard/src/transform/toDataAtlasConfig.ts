@@ -12,7 +12,6 @@
 import type { EClass, EObject, EPackage } from '@emfts/core';
 import { getConfigurationPackage } from '../emf/setup';
 import {
-  ConfigMode,
   ExportKind,
   InputKind,
   MappingKind,
@@ -20,7 +19,7 @@ import {
   type DatasetConfig,
   type ExportConfig,
 } from '../generated';
-import { ECORE_NS_URI, createDataAtlasResource, type ModelFileMap } from './dataAtlasResource';
+import { ECORE_NS_URI, createDataAtlasResource } from './dataAtlasResource';
 import { assertValid, findWarnings } from './validate';
 
 /** Der Dateiname, unter dem der Data Atlas die Konfiguration erwartet. */
@@ -56,16 +55,6 @@ function makeBuilder(pkg: EPackage) {
       (obj.eGet(feature) as unknown as { add(v: unknown): void }).add(value);
     },
   };
-}
-
-/** Karte nsURI → Dateiname für den FILE-Href-Dialekt. */
-export function modelFileMap(setup: AtlasSetup): ModelFileMap {
-  const karte = new Map<string, string>();
-  for (const ref of setup.modelFiles) {
-    const nsURI = ref.modelPackage?.getNsURI();
-    if (nsURI && ref.fileName) karte.set(nsURI, ref.fileName);
-  }
-  return karte;
 }
 
 /** JSON und XML tragen ihren mediaType, CSV seine Trennzeichen-Angaben. */
@@ -205,8 +194,6 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
   }
 
   const resource = createDataAtlasResource(DEFAULT_FILE_NAME, {
-    mode: setup.configMode,
-    modelFiles: setup.configMode === ConfigMode.FILE ? modelFileMap(setup) : undefined,
     // Ein eingebettetes Mapping verweist mit Typpräfix auf Ecore-Features
     // (`feature="ecore:EAttribute …"`); ohne die Deklaration wäre das Präfix
     // unbekannt (emf.ts#87). Ohne Mapping bleibt der Kopf schlank.
@@ -223,7 +210,7 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
  * Inneren. Deshalb braucht es keine Textchirurgie am fremden Dokument.
  */
 function loadEntityMappings(eormXmi: string): EObject {
-  const resource = createDataAtlasResource('imported.eorm', { mode: ConfigMode.ATLAS });
+  const resource = createDataAtlasResource('imported.eorm');
   resource.loadFromString(eormXmi);
   const wurzel = resource.getContents().get(0);
   if (!wurzel) throw new Error('Das importierte JPA-Mapping ist leer.');

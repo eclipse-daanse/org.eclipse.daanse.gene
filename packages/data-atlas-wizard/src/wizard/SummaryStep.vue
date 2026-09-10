@@ -19,8 +19,6 @@
           </dd>
           <dt><i class="pi pi-server" aria-hidden="true"></i> Instanz</dt>
           <dd>{{ setupValue?.instanceName }}</dd>
-          <dt><i class="pi pi-file" aria-hidden="true"></i> Ablage</dt>
-          <dd>{{ modusText }}</dd>
           <dt><i class="pi pi-database" aria-hidden="true"></i> Datenquelle</dt>
           <dd>{{ quelleText }}</dd>
           <dt><i class="pi pi-list" aria-hidden="true"></i> Datensätze</dt>
@@ -132,7 +130,7 @@
  * Umsetzungsreihenfolge.
  */
 import { computed, onMounted, ref, watch } from 'vue';
-import { ConfigMode, InputKind, MappingKind } from '../generated';
+import { InputKind, MappingKind } from '../generated';
 import { atlasSource, setup, version } from './context';
 import { buildDataAtlasXmi, type DataAtlasResult } from '../transform/toDataAtlasConfig';
 import { findErrors } from '../transform/validate';
@@ -166,13 +164,6 @@ const ergebnis = computed<DataAtlasResult | null>(() => {
       warnings: [e instanceof Error ? e.message : String(e)],
     };
   }
-});
-
-const modusText = computed(() => {
-  void version.value;
-  return setup.value?.configMode === ConfigMode.ATLAS
-    ? 'Model-Atlas-Scope (nsURI-Verweise)'
-    : 'Datei neben den Modellen (relative Verweise)';
 });
 
 const quelleText = computed(() => {

@@ -7,12 +7,10 @@
 
 import { BasicEObject } from '@emfts/core';
 import type { EClass, EStructuralFeature, EPackage } from '@emfts/core';
-import type { ModelFileRef } from './ModelFileRef';
 import type { FileSourceConfig } from './FileSourceConfig';
 import type { DatabaseSourceConfig } from './DatabaseSourceConfig';
 import type { DatasetConfig } from './DatasetConfig';
 import type { ExportConfig } from './ExportConfig';
-import { ConfigMode } from './ConfigMode';
 import { InputKind } from './InputKind';
 import type { AtlasSetup } from './AtlasSetup';
 import { DataatlaswizardPackage } from './DataatlaswizardPackage';
@@ -25,28 +23,24 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
   // Feature ID Constants (eLiterals)
   static readonly INSTANCE_NAME: number = 0;
   static readonly INSTANCE_DESCRIPTION: number = 1;
-  static readonly CONFIG_MODE: number = 2;
-  static readonly MODEL_PACKAGE: number = 3;
-  static readonly MODEL_FILES: number = 4;
-  static readonly INPUT_KIND: number = 5;
-  static readonly FILE_SOURCE: number = 6;
-  static readonly DATABASE_SOURCE: number = 7;
-  static readonly DATASETS: number = 8;
-  static readonly EXPORTS: number = 9;
-  static readonly SERVICE_ID: number = 10;
-  static readonly SERVICE_NAME: number = 11;
-  static readonly SERVICE_DESCRIPTION: number = 12;
-  static readonly URL_CONTEXT: number = 13;
-  static readonly OPEN_API: number = 14;
-  static readonly PAGINATION_OFFSET_PARAMETER_NAME: number = 15;
-  static readonly PAGINATION_SIZE_PARAMETER_NAME: number = 16;
+  static readonly MODEL_PACKAGE: number = 2;
+  static readonly INPUT_KIND: number = 3;
+  static readonly FILE_SOURCE: number = 4;
+  static readonly DATABASE_SOURCE: number = 5;
+  static readonly DATASETS: number = 6;
+  static readonly EXPORTS: number = 7;
+  static readonly SERVICE_ID: number = 8;
+  static readonly SERVICE_NAME: number = 9;
+  static readonly SERVICE_DESCRIPTION: number = 10;
+  static readonly URL_CONTEXT: number = 11;
+  static readonly OPEN_API: number = 12;
+  static readonly PAGINATION_OFFSET_PARAMETER_NAME: number = 13;
+  static readonly PAGINATION_SIZE_PARAMETER_NAME: number = 14;
 
   // Private fields
   private _instanceName: string = "";
   private _instanceDescription?: string;
-  private _configMode: ConfigMode = ConfigMode.FILE;
   private _modelPackage?: EPackage;
-  private _modelFiles: ModelFileRef[] = [];
   private _inputKind: InputKind = InputKind.FILE;
   private _fileSource?: FileSourceConfig;
   private _databaseSource?: DatabaseSourceConfig;
@@ -116,30 +110,6 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
     }
   }
 
-  get configMode(): ConfigMode {
-    return this._configMode!;
-  }
-
-  set configMode(value: ConfigMode) {
-    const oldValue = this._configMode;
-    this._configMode = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.CONFIG_MODE),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.CONFIG_MODE,
-        merge: () => false
-      });
-    }
-  }
-
   get modelPackage(): EPackage {
     return this._modelPackage!;
   }
@@ -159,30 +129,6 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
         isTouch: () => false,
         isReset: () => false,
         getFeatureID: () => AtlasSetupImpl.MODEL_PACKAGE,
-        merge: () => false
-      });
-    }
-  }
-
-  get modelFiles(): ModelFileRef[] {
-    return this._modelFiles;
-  }
-
-  set modelFiles(value: ModelFileRef[]) {
-    const oldValue = this._modelFiles;
-    this._modelFiles = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.MODEL_FILES),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.MODEL_FILES,
         merge: () => false
       });
     }
@@ -488,12 +434,8 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
         return this.instanceName;
       case AtlasSetupImpl.INSTANCE_DESCRIPTION:
         return this.instanceDescription;
-      case AtlasSetupImpl.CONFIG_MODE:
-        return this.configMode;
       case AtlasSetupImpl.MODEL_PACKAGE:
         return this.modelPackage;
-      case AtlasSetupImpl.MODEL_FILES:
-        return this.modelFiles;
       case AtlasSetupImpl.INPUT_KIND:
         return this.inputKind;
       case AtlasSetupImpl.FILE_SOURCE:
@@ -537,16 +479,8 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
         this.instanceDescription = newValue as string;
         super.eSet(feature, newValue);
         break;
-      case AtlasSetupImpl.CONFIG_MODE:
-        this.configMode = newValue as ConfigMode;
-        super.eSet(feature, newValue);
-        break;
       case AtlasSetupImpl.MODEL_PACKAGE:
         this.modelPackage = newValue as EPackage;
-        super.eSet(feature, newValue);
-        break;
-      case AtlasSetupImpl.MODEL_FILES:
-        this.modelFiles = newValue as ModelFileRef[];
         super.eSet(feature, newValue);
         break;
       case AtlasSetupImpl.INPUT_KIND:
@@ -612,12 +546,8 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
         return this._instanceName !== "";
       case AtlasSetupImpl.INSTANCE_DESCRIPTION:
         return this._instanceDescription !== undefined;
-      case AtlasSetupImpl.CONFIG_MODE:
-        return this._configMode !== ConfigMode.FILE;
       case AtlasSetupImpl.MODEL_PACKAGE:
         return this._modelPackage !== undefined;
-      case AtlasSetupImpl.MODEL_FILES:
-        return this._modelFiles !== undefined && this._modelFiles.length > 0;
       case AtlasSetupImpl.INPUT_KIND:
         return this._inputKind !== InputKind.FILE;
       case AtlasSetupImpl.FILE_SOURCE:
@@ -659,14 +589,8 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
       case AtlasSetupImpl.INSTANCE_DESCRIPTION:
         this._instanceDescription = undefined;
         return;
-      case AtlasSetupImpl.CONFIG_MODE:
-        this._configMode = ConfigMode.FILE;
-        return;
       case AtlasSetupImpl.MODEL_PACKAGE:
         this._modelPackage = undefined;
-        return;
-      case AtlasSetupImpl.MODEL_FILES:
-        this._modelFiles = [];
         return;
       case AtlasSetupImpl.INPUT_KIND:
         this._inputKind = InputKind.FILE;

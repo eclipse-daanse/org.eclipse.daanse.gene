@@ -36,12 +36,6 @@
         <i class="pi pi-list" aria-hidden="true"></i>
         {{ setupValue.datasets.length }} veröffentlichbare Klasse(n) gefunden
       </p>
-      <ul v-if="dateien.length > 1" class="dateien">
-        <li v-for="(d, i) in dateien" :key="i">
-          <i class="pi pi-file" aria-hidden="true"></i>
-          {{ d.name }} <small>{{ d.fileName }}</small>
-        </li>
-      </ul>
     </div>
   </section>
 </template>
@@ -50,37 +44,25 @@
 /**
  * Schritt 1: Domänenmodell wählen und daraus die Vorschläge ableiten.
  *
- * Anders als im eorm-Assistenten werden **alle** geladenen Packages in die
- * `modelFiles`-Karte aufgenommen, nicht nur das gewählte: im Datei-Modus
- * braucht jedes referenzierte Package den Pfad seiner `.ecore`, sonst wirft
- * der Serializer beim Schreiben (Plan, Abschnitt 4).
+ * Verweise auf Modellklassen entstehen immer über den nsURI; die geladenen
+ * Abhängigkeiten müssen daher nur registriert sein, nicht benannt.
  */
 import { computed, ref, shallowRef } from 'vue';
 import type { EPackage } from '@emfts/core';
 import AtlasSourceTab from './AtlasSourceTab.vue';
 import UploadSourceTab from './UploadSourceTab.vue';
 import type { ModelSourcePayload } from './modelSource';
-import { addModelFile, initSetup, modelPackages, setup, version } from './context';
+import { initSetup, modelPackages, setup, version } from './context';
 
 const tab = ref<'atlas' | 'upload'>('atlas');
 const warnings = ref<string[]>([]);
 const kandidaten = shallowRef<EPackage[]>([]);
-/** Package + Dateiname, wie sie zuletzt geladen wurden. */
-const geladene = shallowRef<{ pkg: EPackage; fileName?: string }[]>([]);
 
 const setupValue = computed(() => {
   void version.value;
   return setup.value;
 });
 const gewaehlterNsUri = computed(() => setupValue.value?.modelPackage?.getNsURI() ?? '');
-
-const dateien = computed(() => {
-  void version.value;
-  return (setupValue.value?.modelFiles ?? []).map((ref) => ({
-    name: ref.modelPackage?.getName() ?? '?',
-    fileName: ref.fileName,
-  }));
-});
 
 /**
  * Die Metamodelle der Atlas-REST-API — Antwort-Parsing, keine Domänenmodelle.
@@ -99,24 +81,13 @@ function onPackagesLoaded(payload: ModelSourcePayload): void {
   kandidaten.value = auswahl;
   modelPackages.value = auswahl;
   warnings.value = payload.warnings;
-  geladene.value = payload.all.map((pkg, i) => ({ pkg, fileName: payload.fileNames?.[i] }));
-  if (auswahl.length) waehle(auswahl[0]);
-}
-
-function waehle(pkg: EPackage): void {
-  const vorheriger = setup.value?.configMode;
-  initSetup(pkg, vorheriger);
-  // Auch die Abhängigkeiten brauchen ihren Pfad — mit dem echten Dateinamen,
-  // wo er bekannt ist.
-  for (const { pkg: weiteres, fileName } of geladene.value) {
-    if (weiteres !== pkg) addModelFile(weiteres, fileName);
-  }
+  if (auswahl.length) initSetup(auswahl[0]);
 }
 
 function onPackageChange(event: Event): void {
   const nsUri = (event.target as HTMLSelectElement).value;
   const pkg = kandidaten.value.find((p) => p.getNsURI() === nsUri);
-  if (pkg) waehle(pkg);
+  if (pkg) initSetup(pkg);
 }
 </script>
 
@@ -155,7 +126,4 @@ select {
   color: var(--text-color-secondary, #666);
 }
 .summary-line .pi { color: var(--primary-color, #1a56a0); }
-.dateien { margin: 0; padding: 0; list-style: none; font-size: 0.85rem; }
-.dateien li { display: flex; align-items: baseline; gap: 0.4rem; color: var(--text-color-secondary, #666); }
-.dateien small { color: var(--text-color-secondary, #888); }
 </style>

@@ -35,9 +35,7 @@ export class DataatlaswizardPackage extends BasicEPackage {
     ATLAS_SETUP: null as unknown as EClass,
     ATLAS_SETUP__INSTANCE_NAME: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__INSTANCE_DESCRIPTION: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__CONFIG_MODE: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__MODEL_PACKAGE: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__MODEL_FILES: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__INPUT_KIND: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__FILE_SOURCE: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__DATABASE_SOURCE: null as unknown as EAttribute | EReference,
@@ -50,9 +48,6 @@ export class DataatlaswizardPackage extends BasicEPackage {
     ATLAS_SETUP__OPEN_API: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__PAGINATION_OFFSET_PARAMETER_NAME: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__PAGINATION_SIZE_PARAMETER_NAME: null as unknown as EAttribute | EReference,
-    MODEL_FILE_REF: null as unknown as EClass,
-    MODEL_FILE_REF__MODEL_PACKAGE: null as unknown as EAttribute | EReference,
-    MODEL_FILE_REF__FILE_NAME: null as unknown as EAttribute | EReference,
     FILE_SOURCE_CONFIG: null as unknown as EClass,
     FILE_SOURCE_CONFIG__ID: null as unknown as EAttribute | EReference,
     FILE_SOURCE_CONFIG__FILE_URI: null as unknown as EAttribute | EReference,
@@ -118,14 +113,6 @@ export class DataatlaswizardPackage extends BasicEPackage {
     atlasSetupClass.getEStructuralFeatures().push(atlasSetup_instanceDescription);
     DataatlaswizardPackage.Literals.ATLAS_SETUP__INSTANCE_DESCRIPTION = atlasSetup_instanceDescription;
 
-    // Create configMode feature
-    const atlasSetup_configMode = new BasicEAttribute();
-    atlasSetup_configMode.setName('configMode');
-    atlasSetup_configMode.setLowerBound(1);
-    atlasSetup_configMode.setUpperBound(1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_configMode);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__CONFIG_MODE = atlasSetup_configMode;
-
     // Create modelPackage feature
     const atlasSetup_modelPackage = new BasicEReference();
     atlasSetup_modelPackage.setContainment(false);
@@ -134,15 +121,6 @@ export class DataatlaswizardPackage extends BasicEPackage {
     atlasSetup_modelPackage.setUpperBound(1);
     atlasSetupClass.getEStructuralFeatures().push(atlasSetup_modelPackage);
     DataatlaswizardPackage.Literals.ATLAS_SETUP__MODEL_PACKAGE = atlasSetup_modelPackage;
-
-    // Create modelFiles feature
-    const atlasSetup_modelFiles = new BasicEReference();
-    atlasSetup_modelFiles.setContainment(true);
-    atlasSetup_modelFiles.setName('modelFiles');
-    atlasSetup_modelFiles.setLowerBound(0);
-    atlasSetup_modelFiles.setUpperBound(-1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_modelFiles);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__MODEL_FILES = atlasSetup_modelFiles;
 
     // Create inputKind feature
     const atlasSetup_inputKind = new BasicEAttribute();
@@ -243,32 +221,6 @@ export class DataatlaswizardPackage extends BasicEPackage {
     atlasSetup_paginationSizeParameterName.setUpperBound(1);
     atlasSetupClass.getEStructuralFeatures().push(atlasSetup_paginationSizeParameterName);
     DataatlaswizardPackage.Literals.ATLAS_SETUP__PAGINATION_SIZE_PARAMETER_NAME = atlasSetup_paginationSizeParameterName;
-
-    // Create ModelFileRef class
-    const modelFileRefClass = new BasicEClass();
-    modelFileRefClass.setName('ModelFileRef');
-    modelFileRefClass.setAbstract(false);
-    modelFileRefClass.setInterface(false);
-    this.getEClassifiers().push(modelFileRefClass);
-    modelFileRefClass.setEPackage(this);
-    DataatlaswizardPackage.Literals.MODEL_FILE_REF = modelFileRefClass;
-
-    // Create modelPackage feature
-    const modelFileRef_modelPackage = new BasicEReference();
-    modelFileRef_modelPackage.setContainment(false);
-    modelFileRef_modelPackage.setName('modelPackage');
-    modelFileRef_modelPackage.setLowerBound(1);
-    modelFileRef_modelPackage.setUpperBound(1);
-    modelFileRefClass.getEStructuralFeatures().push(modelFileRef_modelPackage);
-    DataatlaswizardPackage.Literals.MODEL_FILE_REF__MODEL_PACKAGE = modelFileRef_modelPackage;
-
-    // Create fileName feature
-    const modelFileRef_fileName = new BasicEAttribute();
-    modelFileRef_fileName.setName('fileName');
-    modelFileRef_fileName.setLowerBound(1);
-    modelFileRef_fileName.setUpperBound(1);
-    modelFileRefClass.getEStructuralFeatures().push(modelFileRef_fileName);
-    DataatlaswizardPackage.Literals.MODEL_FILE_REF__FILE_NAME = modelFileRef_fileName;
 
     // Create FileSourceConfig class
     const fileSourceConfigClass = new BasicEClass();
@@ -500,12 +452,10 @@ export class DataatlaswizardPackage extends BasicEPackage {
     // Set ETypes for EReferences (must be done after all classes are created)
     // ============================================
     (DataatlaswizardPackage.Literals.ATLAS_SETUP__MODEL_PACKAGE as BasicEReference).setEType(getEcorePackage().getEClassifier('EPackage')!);
-    (DataatlaswizardPackage.Literals.ATLAS_SETUP__MODEL_FILES as BasicEReference).setEType(DataatlaswizardPackage.Literals.MODEL_FILE_REF);
     (DataatlaswizardPackage.Literals.ATLAS_SETUP__FILE_SOURCE as BasicEReference).setEType(DataatlaswizardPackage.Literals.FILE_SOURCE_CONFIG);
     (DataatlaswizardPackage.Literals.ATLAS_SETUP__DATABASE_SOURCE as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATABASE_SOURCE_CONFIG);
     (DataatlaswizardPackage.Literals.ATLAS_SETUP__DATASETS as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATASET_CONFIG);
     (DataatlaswizardPackage.Literals.ATLAS_SETUP__EXPORTS as BasicEReference).setEType(DataatlaswizardPackage.Literals.EXPORT_CONFIG);
-    (DataatlaswizardPackage.Literals.MODEL_FILE_REF__MODEL_PACKAGE as BasicEReference).setEType(getEcorePackage().getEClassifier('EPackage')!);
     (DataatlaswizardPackage.Literals.DATASET_CONFIG__TARGET_CLASS as BasicEReference).setEType(getEcorePackage().getEClassifier('EClass')!);
 
     // ============================================

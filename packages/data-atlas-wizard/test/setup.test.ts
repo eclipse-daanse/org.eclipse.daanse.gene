@@ -87,8 +87,8 @@ describe('setupPackages', () => {
 });
 
 describe('Fixup der Codegen-Lücken (emf.ts#83)', () => {
-  it('die vier EEnums sind Classifier des Packages', () => {
-    for (const name of ['ConfigMode', 'InputKind', 'MappingKind', 'ExportKind']) {
+  it('die drei EEnums sind Classifier des Packages', () => {
+    for (const name of ['InputKind', 'MappingKind', 'ExportKind']) {
       const eEnum = facade.getEClassifier(name) as EEnum | null;
       expect(eEnum, name).toBeTruthy();
       expect([...eEnum!.getELiterals()].length, name).toBeGreaterThan(1);
@@ -115,7 +115,6 @@ describe('Fixup der Codegen-Lücken (emf.ts#83)', () => {
     const typ = (name: string) => setup.getEStructuralFeature(name)?.getEType()?.getName();
     expect(typ('instanceName')).toBe('EString');
     expect(typ('openApi')).toBe('EBoolean');
-    expect(typ('configMode')).toBe('ConfigMode');
     expect(typ('inputKind')).toBe('InputKind');
 
     const dataset = DataatlaswizardPackage.Literals.DATASET_CONFIG;
@@ -169,12 +168,12 @@ describe('Fixup der Codegen-Lücken (emf.ts#83)', () => {
     setup.instanceName = 'demo';
     raus.getContents().add(setup);
     const xmi = raus.saveToString();
-    expect(xmi).toContain('configMode="FILE"'); // geschrieben wird der Name
+    expect(xmi).toContain('inputKind="FILE"'); // geschrieben wird der Name
 
     const rein: any = newResourceSet().createResource(URI.createURI('enum-back.xmi'));
     rein.loadFromString(xmi);
     const geladen = rein.getContents().get(0);
-    expect(typeof geladen.configMode).toBe('object');
-    expect((geladen.configMode as { getName(): string }).getName()).toBe('FILE');
+    expect(typeof geladen.inputKind).toBe('object');
+    expect((geladen.inputKind as { getName(): string }).getName()).toBe('FILE');
   });
 });

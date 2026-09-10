@@ -10,8 +10,6 @@ import type { EClass, EObject } from '@emfts/core';
 import { DataatlaswizardPackage } from './DataatlaswizardPackage';
 import type { AtlasSetup } from './AtlasSetup';
 import { AtlasSetupImpl } from './AtlasSetupImpl';
-import type { ModelFileRef } from './ModelFileRef';
-import { ModelFileRefImpl } from './ModelFileRefImpl';
 import type { FileSourceConfig } from './FileSourceConfig';
 import { FileSourceConfigImpl } from './FileSourceConfigImpl';
 import type { DatabaseSourceConfig } from './DatabaseSourceConfig';
@@ -49,13 +47,6 @@ export class DataatlaswizardFactory extends BasicEFactory {
   }
 
   /**
-   * Create a new ModelFileRef instance
-   */
-  createModelFileRef(): ModelFileRef {
-    return new ModelFileRefImpl();
-  }
-
-  /**
    * Create a new FileSourceConfig instance
    */
   createFileSourceConfig(): FileSourceConfig {
@@ -90,8 +81,6 @@ export class DataatlaswizardFactory extends BasicEFactory {
     switch (eClass.getName()) {
       case 'AtlasSetup':
         return this.createAtlasSetup();
-      case 'ModelFileRef':
-        return this.createModelFileRef();
       case 'FileSourceConfig':
         return this.createFileSourceConfig();
       case 'DatabaseSourceConfig':
