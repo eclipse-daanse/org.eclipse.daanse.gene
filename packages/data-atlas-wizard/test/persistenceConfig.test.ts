@@ -74,18 +74,18 @@ beforeAll(async () => {
 beforeEach(() => {
   initSetup(personPackage);
   s = setupRef.value!;
-  s.datasets = [s.datasets[0]];
-  s.datasets[0].id = 'persons';
-  s.datasets[0].name = 'Persons';
-  s.datasets[0].description = 'All persons.';
-  s.datasets[0].path = 'persons';
-  // Die Datei-Quelle durch eine Datenbank-Quelle mit importiertem Mapping
-  // ersetzen
+  const kette = s.chains[0];
+  kette.datasets = [kette.datasets[0]];
+  kette.datasets[0].id = 'persons';
+  kette.datasets[0].name = 'Persons';
+  kette.datasets[0].description = 'All persons.';
+  kette.datasets[0].path = 'persons';
+  // Die Datei-Quelle des Wegs durch eine Datenbank-Quelle mit importiertem
+  // Mapping ersetzen
   const quelle = buildDatabaseSource('person', 'person');
   quelle.mappingKind = MappingKind.IMPORTED;
   quelle.eormXmi = EORM;
-  s.dataSources = [quelle];
-  for (const d of s.datasets) d.sourceId = quelle.id;
+  kette.source = quelle;
 });
 
 describe('Prüfung', () => {

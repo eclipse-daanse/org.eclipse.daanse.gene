@@ -247,7 +247,9 @@ describe('requiredSchemas', () => {
       eResource: () => null,
     };
     const setupAttrappe = {
-      datasets: [{ selected: true, targetClass: { getEPackage: () => ohneResource } }],
+      chains: [
+        { datasets: [{ selected: true, targetClass: { getEPackage: () => ohneResource } }] },
+      ],
     };
     expect(() => requiredSchemas(setupAttrappe as never)).toThrowError(/kein Quelltext/);
   });

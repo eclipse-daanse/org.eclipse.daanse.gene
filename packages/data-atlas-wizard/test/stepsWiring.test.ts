@@ -16,10 +16,9 @@ import type { EPackage } from '@emfts/core';
 import { registerEcoreFromString, setupPackages } from '../src/emf/setup';
 import { atlasSource, initSetup, setup, version } from '../src/wizard/context';
 import ModelSourceStep from '../src/wizard/ModelSourceStep.vue';
-import DatasetsStep from '../src/wizard/DatasetsStep.vue';
-import ExportsStep from '../src/wizard/ExportsStep.vue';
+import ChainsStep from '../src/wizard/ChainsStep.vue';
 import SummaryStep from '../src/wizard/SummaryStep.vue';
-import { DataatlaswizardFactory, ExportKind } from '../src/generated';
+import { DataatlaswizardFactory, ExportKind, InputKind } from '../src/generated';
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 let personPackage: EPackage;
@@ -36,88 +35,145 @@ beforeEach(() => {
   initSetup(personPackage);
 });
 
-describe('DatasetsStep', () => {
+describe('ChainsStep: Datensätze', () => {
   it('zeigt je konkreter Klasse eine Zeile', () => {
-    const wrapper = mount(DatasetsStep);
-    expect(wrapper.findAll('tbody tr')).toHaveLength(setup.value!.datasets.length);
+    const wrapper = mount(ChainsStep);
+    expect(wrapper.findAll('tbody tr')).toHaveLength(setup.value!.chains[0].datasets.length);
   });
 
   it('das Häkchen schaltet selected und stößt touch an', async () => {
-    const wrapper = mount(DatasetsStep);
+    const wrapper = mount(ChainsStep);
     const vorher = version.value;
     const box = wrapper.find('tbody tr input[type="checkbox"]');
     await box.setValue(false);
 
-    expect(setup.value!.datasets[0].selected).toBe(false);
+    expect(setup.value!.chains[0].datasets[0].selected).toBe(false);
     expect(version.value).toBeGreaterThan(vorher);
   });
 
   it('eine Eingabe landet im Modell', async () => {
-    const wrapper = mount(DatasetsStep);
+    const wrapper = mount(ChainsStep);
     const felder = wrapper.findAll('tbody tr:first-child input[type="text"]');
     // Reihenfolge der Spalten: id, Name, Pfad, Beschreibung
     await felder[0].setValue('personen');
-    expect(setup.value!.datasets[0].id).toBe('personen');
+    expect(setup.value!.chains[0].datasets[0].id).toBe('personen');
     await felder[2].setValue('leute');
-    expect(setup.value!.datasets[0].path).toBe('leute');
+    expect(setup.value!.chains[0].datasets[0].path).toBe('leute');
   });
 
-  it('doppelte ids werden als Hinweis gemeldet', async () => {
+  it('doppelte ids werden als Hinweis gemeldet', () => {
     // person.ecore hat nur eine konkrete Klasse — fuer den Fall braucht es
     // einen zweiten Datensatz auf derselben Klasse.
-    const s = setup.value!;
+    const kette = setup.value!.chains[0];
     const zweiter = DataatlaswizardFactory.eINSTANCE.createDatasetConfig();
-    zweiter.targetClass = s.datasets[0].targetClass;
-    zweiter.id = s.datasets[0].id;
+    zweiter.targetClass = kette.datasets[0].targetClass;
+    zweiter.id = kette.datasets[0].id;
     zweiter.name = 'Zweiter';
     zweiter.description = 'Zweiter.';
     zweiter.path = 'zweiter';
-    s.datasets.push(zweiter);
+    kette.datasets.push(zweiter);
 
-    const wrapper = mount(DatasetsStep);
+    const wrapper = mount(ChainsStep);
     expect(wrapper.text()).toMatch(/mehrfach vergeben/);
   });
 
-  it('ohne Auswahl steht der Hinweis dort', async () => {
-    const wrapper = mount(DatasetsStep);
+  it('ohne Auswahl steht der Hinweis am Weg', async () => {
+    const wrapper = mount(ChainsStep);
     for (const box of wrapper.findAll('tbody tr input[type="checkbox"]')) {
       await box.setValue(false);
     }
-    expect(wrapper.text()).toMatch(/Kein Datensatz ausgewählt/);
+    expect(wrapper.find('.probleme').text()).toMatch(/Kein Datensatz ausgewählt/);
   });
 });
 
-describe('ExportsStep', () => {
+describe('ChainsStep: Formate', () => {
   it('nichts gewählt heißt: die Vorgaben gelten', () => {
-    const wrapper = mount(ExportsStep);
+    const wrapper = mount(ChainsStep);
     expect(wrapper.text()).toMatch(/es gelten JSON und XML/);
-    expect(setup.value!.exports).toHaveLength(0);
+    expect(setup.value!.chains[0].exports).toHaveLength(0);
   });
 
-  it('Anhaken legt einen Eintrag an, Abhaken entfernt ihn', async () => {
-    const wrapper = mount(ExportsStep);
+  it('Anhaken legt einen Eintrag am Weg an, Abhaken entfernt ihn', async () => {
+    const wrapper = mount(ChainsStep);
     const boxen = wrapper.findAll('.formate > li input[type="checkbox"]');
     await boxen[0].setValue(true); // JSON
-    expect(setup.value!.exports.map((e) => e.kind)).toEqual([ExportKind.JSON]);
+    expect(setup.value!.chains[0].exports.map((e) => e.kind)).toEqual([ExportKind.JSON]);
 
     await wrapper.findAll('.formate > li input[type="checkbox"]')[0].setValue(false);
-    expect(setup.value!.exports).toHaveLength(0);
+    expect(setup.value!.chains[0].exports).toHaveLength(0);
   });
 
   it('CSV blendet seine Optionen ein und schreibt sie', async () => {
-    const wrapper = mount(ExportsStep);
+    const wrapper = mount(ChainsStep);
     const boxen = wrapper.findAll('.formate > li input[type="checkbox"]');
     await boxen[2].setValue(true); // CSV
-    const trenner = wrapper.find('.csv-optionen input[type="text"]');
+    const trenner = wrapper.find('.csv input[type="text"]');
     expect(trenner.exists()).toBe(true);
     await trenner.setValue('|');
-    expect(setup.value!.exports[0].separator).toBe('|');
+    expect(setup.value!.chains[0].exports[0].separator).toBe('|');
+  });
+});
+
+describe('ChainsStep: Wege und Quellen', () => {
+  it('ein zweiter Weg kommt mit eigener Quelle und ohne Auswahl', async () => {
+    const wrapper = mount(ChainsStep);
+    const knopf = wrapper.findAll('button').find((b) => b.text().includes('Datenweg (Datei)'))!;
+    await knopf.trigger('click');
+
+    const s = setup.value!;
+    expect(s.chains).toHaveLength(2);
+    expect(s.chains[1].source?.kind).toBe(InputKind.FILE);
+    // Welche Klassen aus diesem Weg kommen, entscheidet der Nutzer
+    expect(s.chains[1].datasets.every((d) => !d.selected)).toBe(true);
+    expect(wrapper.findAll('.kette')).toHaveLength(2);
   });
 
-  it('nur CSV warnt vor dem 406', async () => {
-    const wrapper = mount(ExportsStep);
-    await wrapper.findAll('.formate > li input[type="checkbox"]')[2].setValue(true);
-    expect(wrapper.text()).toMatch(/406/);
+  it('der zweite Weg kann die Quelle des ersten mitbenutzen', async () => {
+    const wrapper = mount(ChainsStep);
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Datenweg (Datenbank)'))!
+      .trigger('click');
+
+    const erste = setup.value!.chains[0].source!;
+    const wahl = wrapper.findAll('.kette')[1].find('.art select');
+    const angebot = wahl.findAll('option').map((o) => o.attributes('value'));
+    expect(angebot).toContain(`shared:${erste.id}`);
+
+    await wahl.setValue(`shared:${erste.id}`);
+    expect(setup.value!.chains[1].sharedSource).toBe(erste);
+    expect(setup.value!.chains[1].source).toBeFalsy();
+    // Statt der Felder steht dort der Hinweis auf die geteilte Quelle
+    expect(wrapper.findAll('.kette')[1].find('.geteilt').text()).toContain(erste.id);
+  });
+
+  it('die Wahl „eigene Datenbank" tauscht die Quelle des Wegs', async () => {
+    const wrapper = mount(ChainsStep);
+    await wrapper.find('.art select').setValue(InputKind.DATABASE);
+    const quelle = setup.value!.chains[0].source!;
+    expect(quelle.kind).toBe(InputKind.DATABASE);
+    expect(quelle.dataSourceFilter).toBeTruthy();
+    // Und die Warnung zum abgeleiteten Mapping erscheint in der Zusammenfassung
+    expect(wrapper.findAll('.kette')[0].text()).toContain('Filter auf den DataSource-Dienst');
+  });
+
+  it('der erste Weg lässt sich nicht entfernen, solange er der einzige ist', async () => {
+    const wrapper = mount(ChainsStep);
+    const weg = wrapper.find('.kette .weg');
+    expect(weg.attributes('disabled')).toBeDefined();
+
+    await wrapper
+      .findAll('button')
+      .find((b) => b.text().includes('Datenweg (Datei)'))!
+      .trigger('click');
+    await wrapper.findAll('.kette')[1].find('.weg').trigger('click');
+    expect(setup.value!.chains).toHaveLength(1);
+  });
+
+  it('die id des Wegs landet im Modell', async () => {
+    const wrapper = mount(ChainsStep);
+    await wrapper.find('.kette input.id').setValue('personen-weg');
+    expect(setup.value!.chains[0].id).toBe('personen-weg');
   });
 });
 
@@ -167,7 +223,7 @@ describe('ModelSourceStep', () => {
     await wrapper.vm.$nextTick();
 
     expect(setup.value!.modelPackage).toBe(personPackage);
-    expect(setup.value!.datasets.length).toBeGreaterThan(0);
+    expect(setup.value!.chains[0].datasets.length).toBeGreaterThan(0);
   });
 
   it('filtert nur die Atlas-API-Metamodelle, nicht die Domänenmodelle', async () => {

@@ -6,9 +6,7 @@
  */
 
 import type { EObject, EPackage, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
-import type { DataSourceConfig } from './DataSourceConfig';
-import type { DatasetConfig } from './DatasetConfig';
-import type { ExportConfig } from './ExportConfig';
+import type { DataChain } from './DataChain';
 
 /**
  * AtlasSetup
@@ -18,9 +16,7 @@ export interface AtlasSetup extends EObject {
   instanceName: string;
   instanceDescription?: string;
   modelPackage: EPackage;
-  dataSources: DataSourceConfig[];
-  datasets: DatasetConfig[];
-  exports: ExportConfig[];
+  chains: DataChain[];
   serviceId: string;
   serviceName: string;
   serviceDescription: string;
