@@ -17,12 +17,51 @@
     </ol>
 
     <div class="body">
-      <!--
-        Gerüst: je Schritt steht hier noch der Platzhalter mit dem Verweis auf
-        die Stelle im Plan, die ihn beschreibt. Die Schritte selbst kommen in
-        Schritt 8 der Umsetzungsreihenfolge.
-      -->
-      <section class="placeholder">
+      <section v-if="currentStep.id === 'instance'" class="composed">
+        <h2>Instanz &amp; Modus</h2>
+        <p class="lead">{{ currentStep.lead }}</p>
+        <UIModelComposer
+          v-if="uiModels && setupValue"
+          :key="`instance-${version}`"
+          :ui-model="uiModels.instance"
+          :model="setupValue"
+        />
+      </section>
+
+      <section v-else-if="currentStep.id === 'source'" class="composed">
+        <h2>Datenquelle</h2>
+        <p class="lead">{{ currentStep.lead }}</p>
+        <!--
+          Zwei Formulare im selben UIModel; welches gilt, entscheidet
+          inputKind. Getrennt, weil ein FormView genau eine Zielklasse
+          bedient und die beiden Quellen verschiedene Objekte sind.
+        -->
+        <UIModelComposer
+          v-if="uiModels && istDatei && setupValue?.fileSource"
+          :key="`file-${version}`"
+          :ui-model="uiModels.source"
+          :model="setupValue.fileSource"
+        />
+        <UIModelComposer
+          v-else-if="uiModels && !istDatei && setupValue?.databaseSource"
+          :key="`db-${version}`"
+          :ui-model="uiModels.source"
+          :model="setupValue.databaseSource"
+        />
+      </section>
+
+      <section v-else-if="currentStep.id === 'service'" class="composed">
+        <h2>Endpunkt</h2>
+        <p class="lead">{{ currentStep.lead }}</p>
+        <UIModelComposer
+          v-if="uiModels && setupValue"
+          :key="`service-${version}`"
+          :ui-model="uiModels.service"
+          :model="setupValue"
+        />
+      </section>
+
+      <section v-else class="placeholder">
         <h2>{{ currentStep.title }}</h2>
         <p class="lead">{{ currentStep.lead }}</p>
         <p class="todo">
@@ -30,6 +69,8 @@
           Noch nicht umgesetzt — {{ currentStep.plan }}
         </p>
       </section>
+
+      <p v-if="ladefehler" class="fehler">{{ ladefehler }}</p>
     </div>
 
     <nav class="nav">
@@ -37,10 +78,15 @@
         <i class="pi pi-arrow-left" aria-hidden="true"></i>
         Zurück
       </button>
+      <span v-if="blockReason" class="hint">
+        <i class="pi pi-info-circle" aria-hidden="true"></i>
+        {{ blockReason }}
+      </span>
       <button
         v-if="current < steps.length - 1"
         type="button"
         class="btn primary next"
+        :disabled="!!blockReason"
         @click="current++"
       >
         Weiter
@@ -58,7 +104,11 @@
  * `blockReason`-Prüfung je Schritt kommen später. Besuchte Schritte sind über
  * den Stepper anspringbar — dasselbe Verhalten wie im eorm-Assistenten.
  */
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref, shallowRef } from 'vue';
+import { UIModelComposer } from '@emfts/uimodel-composer';
+import { loadWizardUiModels, type WizardUiModels } from './uiModels';
+import { setup, version } from './context';
+import { InputKind } from '../generated';
 
 const steps = [
   {
@@ -107,6 +157,60 @@ const steps = [
 
 const current = ref(0);
 const currentStep = computed(() => steps[current.value]);
+
+const uiModels = shallowRef<WizardUiModels | undefined>(undefined);
+const ladefehler = ref('');
+
+onMounted(async () => {
+  try {
+    uiModels.value = await loadWizardUiModels();
+  } catch (e) {
+    ladefehler.value = e instanceof Error ? e.message : String(e);
+  }
+});
+
+/*
+ * EMF-Objekte sind nicht deep-reaktiv: jedes computed, das am Modell liest,
+ * beginnt mit `void version.value` und wird über touch() angestoßen.
+ */
+const setupValue = computed(() => {
+  void version.value;
+  return setup.value;
+});
+
+const istDatei = computed(() => {
+  void version.value;
+  return setup.value?.inputKind !== InputKind.DATABASE;
+});
+
+/**
+ * Grund, warum „Weiter" gesperrt ist — leer, wenn der Schritt vollständig ist.
+ * Bewusst nur das Nötigste je Schritt; die vollständige Prüfung macht der
+ * Transformer (src/transform/validate.ts) vor dem Schreiben.
+ */
+const blockReason = computed<string>(() => {
+  void version.value;
+  const s = setup.value;
+  if (!s) return currentStep.value.id === 'model' ? 'Bitte wählen Sie ein Domänenmodell.' : '';
+  switch (currentStep.value.id) {
+    case 'instance':
+      return s.instanceName?.trim() ? '' : 'Bitte geben Sie einen Namen für die Instanz an.';
+    case 'source':
+      if (istDatei.value) {
+        return s.fileSource?.fileUri?.trim() ? '' : 'Bitte geben Sie den Pfad der Datendatei an.';
+      }
+      return s.databaseSource?.dataSourceFilter?.trim()
+        ? ''
+        : 'Bitte geben Sie den Filter der DataSource an.';
+    case 'datasets':
+      return s.datasets.some((d) => d.selected) ? '' : 'Bitte wählen Sie mindestens einen Datensatz.';
+    case 'service':
+      if (!s.urlContext?.trim()) return 'Bitte geben Sie den Basis-Pfad an.';
+      return s.serviceName?.trim() ? '' : 'Bitte geben Sie einen Namen für den Endpunkt an.';
+    default:
+      return '';
+  }
+});
 </script>
 
 <style scoped>
@@ -171,6 +275,23 @@ const currentStep = computed(() => steps[current.value]);
 }
 
 .body { min-height: 20rem; }
+.composed { display: flex; flex-direction: column; gap: 0.75rem; max-width: 44rem; }
+.composed h2 { margin: 0; font-size: 1.25rem; }
+/* Die FormViewComposer rendert ohne eigenes Layout */
+.composed :deep(.uimodel-form-view) {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  max-width: 30rem;
+}
+.fehler { color: #b00020; }
+.nav .hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-color-secondary, #8a6d00);
+  font-size: 0.9rem;
+}
 .placeholder { display: flex; flex-direction: column; gap: 0.75rem; max-width: 44rem; }
 .placeholder h2 { margin: 0; font-size: 1.25rem; }
 .lead { margin: 0; color: var(--text-color-secondary, #666); }
