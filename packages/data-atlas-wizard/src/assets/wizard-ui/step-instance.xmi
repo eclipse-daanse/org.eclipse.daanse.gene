@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uimodel:UIModel
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmi:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:uimodel="http://uimodel/1.0"
+    name="InstanceStep">
+
+  <components xsi:type="uimodel:FormView" name="InstanceForm">
+    <targetClasses href="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="instanceName"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup/instanceName"
+        label="Name der Data-Atlas-Instanz"
+        placeholder="z. B. waterparc"
+        required="true">
+      <validations language="JS"
+          body="self.instanceName != null &amp;&amp; self.instanceName.length > 0"
+          defaultMessage="Bitte geben Sie einen Namen an."
+          severity="ERROR"/>
+    </fields>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="instanceDescription"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup/instanceDescription"
+        label="Beschreibung (optional)"
+        placeholder="Wofür ist diese Instanz da?"/>
+
+    <!-- Steuert den Href-Dialekt und ob die Datei-URI absolut sein muss -->
+    <fields xsi:type="uimodel:SelectWidget"
+        name="configMode"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup/configMode"
+        label="Wo liegt die Konfiguration später?"/>
+
+    <fields xsi:type="uimodel:SelectWidget"
+        name="inputKind"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup/inputKind"
+        label="Woher kommen die Daten?"/>
+  </components>
+</uimodel:UIModel>

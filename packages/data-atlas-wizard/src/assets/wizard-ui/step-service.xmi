@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uimodel:UIModel
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmi:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:uimodel="http://uimodel/1.0"
+    name="ServiceStep">
+
+  <components xsi:type="uimodel:FormView" name="ServiceForm">
+    <targetClasses href="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="urlContext"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup/urlContext"
+        label="Basis-Pfad des Endpunkts"
+        placeholder="z. B. /waterparc"
+        required="true">
+      <validations language="JS"
+          body="self.urlContext != null &amp;&amp; self.urlContext.length > 0"
+          defaultMessage="Bitte geben Sie einen Basis-Pfad an."
+          severity="ERROR"/>
+    </fields>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="serviceName"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup/serviceName"
+        label="Name des Endpunkts"
+        required="true"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="serviceDescription"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup/serviceDescription"
+        label="Beschreibung des Endpunkts"
+        required="true">
+      <validations language="JS"
+          body="self.serviceDescription != null &amp;&amp; self.serviceDescription.length > 0"
+          defaultMessage="Die Beschreibung ist im Zielmodell Pflicht."
+          severity="ERROR"/>
+    </fields>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="serviceId"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup/serviceId"
+        label="Technische id des Endpunkts"
+        required="true"/>
+
+    <fields xsi:type="uimodel:CheckboxWidget"
+        name="openApi"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup/openApi"
+        label="OpenAPI-Beschreibung ausliefern"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="paginationOffsetParameterName"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup/paginationOffsetParameterName"
+        label="Query-Parameter für den Versatz"
+        placeholder="offset"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="paginationSizeParameterName"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup/paginationSizeParameterName"
+        label="Query-Parameter für die Anzahl"
+        placeholder="limit"/>
+  </components>
+</uimodel:UIModel>

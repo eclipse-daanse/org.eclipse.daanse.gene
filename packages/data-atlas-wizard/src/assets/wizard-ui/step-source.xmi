@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<uimodel:UIModel
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmi:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:uimodel="http://uimodel/1.0"
+    name="SourceStep">
+
+  <!-- Zwei Formulare: das Modell entscheidet über inputKind, welches der
+       Wizard zeigt. Getrennt, weil sie auf verschiedene Objekte gehen
+       (fileSource bzw. databaseSource) und ein FormView genau eine
+       Zielklasse bedient. -->
+
+  <components xsi:type="uimodel:FormView" name="FileSourceForm">
+    <targetClasses href="http://fennec/data/atlas/data-atlas-wizard/1.0#//FileSourceConfig"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="fileUri"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//FileSourceConfig/fileUri"
+        label="Pfad der Datendatei"
+        placeholder="data/person.xmi"
+        required="true">
+      <validations language="JS"
+          body="self.fileUri != null &amp;&amp; self.fileUri.length > 0"
+          defaultMessage="Bitte geben Sie den Pfad der Datendatei an."
+          severity="ERROR"/>
+    </fields>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="id"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//FileSourceConfig/id"
+        label="Technische id der Datenquelle"
+        required="true"/>
+  </components>
+
+  <components xsi:type="uimodel:FormView" name="DatabaseSourceForm">
+    <targetClasses href="http://fennec/data/atlas/data-atlas-wizard/1.0#//DatabaseSourceConfig"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="dataSourceName"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//DatabaseSourceConfig/dataSourceName"
+        label="Name der Datenquelle"
+        placeholder="z. B. Persons DB"
+        required="true"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="dataSourceFilter"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//DatabaseSourceConfig/dataSourceFilter"
+        label="Filter auf den DataSource-Dienst (LDAP)"
+        placeholder="(dataSourceName=personsDs)"
+        required="true">
+      <validations language="JS"
+          body="self.dataSourceFilter != null &amp;&amp; self.dataSourceFilter.indexOf('(') === 0"
+          defaultMessage="Der Filter muss in Klammern stehen, z. B. (dataSourceName=personsDs)."
+          severity="ERROR"/>
+    </fields>
+
+    <!-- Abgeleitet oder ein fertiges eorm-Mapping importieren -->
+    <fields xsi:type="uimodel:SelectWidget"
+        name="mappingKind"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//DatabaseSourceConfig/mappingKind"
+        label="Woher kommt das JPA-Mapping?"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="dataSourceId"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//DatabaseSourceConfig/dataSourceId"
+        label="Technische id der DataSource"
+        required="true"/>
+
+    <fields xsi:type="uimodel:InputWidget"
+        name="id"
+        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//DatabaseSourceConfig/id"
+        label="Technische id des Dateneingangs"
+        required="true"/>
+  </components>
+</uimodel:UIModel>

@@ -14,6 +14,7 @@
  */
 import { onMounted, ref } from 'vue';
 import { setupPackages } from './emf/setup';
+import { registerWizardWidgets } from './widgets/register';
 import WizardShell from './wizard/WizardShell.vue';
 
 const ready = ref(false);
@@ -22,6 +23,7 @@ const error = ref('');
 onMounted(async () => {
   try {
     await setupPackages();
+    registerWizardWidgets();
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
