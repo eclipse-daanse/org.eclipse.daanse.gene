@@ -12,6 +12,7 @@
  */
 import { computed, ref, shallowRef, triggerRef } from 'vue';
 import type { EClass, EPackage } from '@emfts/core';
+import type { AtlasModelSource } from '../atlas/atlasSource';
 import {
   ConfigMode,
   DataatlaswizardFactory,
@@ -19,6 +20,12 @@ import {
   type AtlasSetup,
   type DatasetConfig,
 } from '../generated';
+
+/**
+ * Die aktive Atlas-Verbindung. Der Modell-Schritt setzt sie, das
+ * Veröffentlichen benutzt sie später.
+ */
+export const atlasSource = shallowRef<AtlasModelSource | undefined>(undefined);
 
 /** Die geladenen Domänen-Packages (das erste ist das gewählte). */
 export const modelPackages = shallowRef<EPackage[]>([]);
@@ -159,12 +166,14 @@ export function defaultModelFileName(pkg: EPackage): string {
  * `exports` bleibt bewusst leer — der Data Atlas liefert dann seine Vorgaben
  * JSON und XML. Ein einziger Eintrag würde sie vollständig ersetzen.
  */
-export function initSetup(pkg: EPackage, mode: ConfigMode = ConfigMode.FILE): AtlasSetup {
+export function initSetup(pkg: EPackage, mode: ConfigMode | undefined = ConfigMode.FILE): AtlasSetup {
   const factory = DataatlaswizardFactory.eINSTANCE;
   const instanceName = pkg.getName() ?? 'data-atlas';
   const slug = slugOf(instanceName);
 
   const s = factory.createAtlasSetup();
+  // Ein Modellwechsel soll den gewaehlten Modus nicht zuruecksetzen.
+  mode = mode ?? ConfigMode.FILE;
   s.instanceName = instanceName;
   s.instanceDescription = documentationOf(pkg) ?? '';
   s.configMode = mode;

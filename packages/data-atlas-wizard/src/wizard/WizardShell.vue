@@ -17,7 +17,9 @@
     </ol>
 
     <div class="body">
-      <section v-if="currentStep.id === 'instance'" class="composed">
+      <ModelSourceStep v-if="currentStep.id === 'model'" />
+
+      <section v-else-if="currentStep.id === 'instance'" class="composed">
         <h2>Instanz &amp; Modus</h2>
         <p class="lead">{{ currentStep.lead }}</p>
         <UIModelComposer
@@ -65,15 +67,6 @@
       <ExportsStep v-else-if="currentStep.id === 'exports'" />
       <SummaryStep v-else-if="currentStep.id === 'summary'" />
 
-      <section v-else class="placeholder">
-        <h2>{{ currentStep.title }}</h2>
-        <p class="lead">{{ currentStep.lead }}</p>
-        <p class="todo">
-          <i class="pi pi-wrench" aria-hidden="true"></i>
-          Noch nicht umgesetzt — {{ currentStep.plan }}
-        </p>
-      </section>
-
       <p v-if="ladefehler" class="fehler">{{ ladefehler }}</p>
     </div>
 
@@ -111,6 +104,7 @@
 import { computed, onMounted, ref, shallowRef } from 'vue';
 import { UIModelComposer } from '@emfts/uimodel-composer';
 import { loadWizardUiModels, type WizardUiModels } from './uiModels';
+import ModelSourceStep from './ModelSourceStep.vue';
 import DatasetsStep from './DatasetsStep.vue';
 import ExportsStep from './ExportsStep.vue';
 import SummaryStep from './SummaryStep.vue';
@@ -122,43 +116,36 @@ const steps = [
     id: 'model',
     title: 'Modell',
     lead: 'Domänenmodell aus dem Model Atlas laden oder eine .ecore hochladen.',
-    plan: 'Abschnitt 3, Schritt 1 (Vorlage: eorm-wizard/ModelSourceStep.vue)',
   },
   {
     id: 'instance',
     title: 'Instanz & Modus',
     lead: 'Name der Data-Atlas-Instanz, und wo die Konfiguration später liegt.',
-    plan: 'Abschnitt 3, Schritt 2 (UIModel step-instance.xmi)',
   },
   {
     id: 'source',
     title: 'Datenquelle',
     lead: 'Datei oder Datenbank — und bei JPA, ob das Mapping abgeleitet oder importiert wird.',
-    plan: 'Abschnitt 3, Schritt 3 (UIModel step-source.xmi)',
   },
   {
     id: 'datasets',
     title: 'Datensätze',
     lead: 'Welche Klassen des Modells werden als Datensatz veröffentlicht.',
-    plan: 'Abschnitt 3, Schritt 4 (Tabelle, Vorlage ColumnsStep.vue)',
   },
   {
     id: 'service',
     title: 'Endpunkt',
     lead: 'Basis-Pfad, OpenAPI und die Namen der Pagination-Parameter.',
-    plan: 'Abschnitt 3, Schritt 5 (UIModel step-service.xmi)',
   },
   {
     id: 'exports',
     title: 'Formate',
     lead: 'JSON, XML, CSV oder CSV-ZIP — leer bedeutet die Runtime-Defaults.',
-    plan: 'Abschnitt 3, Schritt 6',
   },
   {
     id: 'summary',
     title: 'Zusammenfassung',
     lead: 'Prüfliste, XMI-Vorschau, Download und Veröffentlichen in den Model Atlas.',
-    plan: 'Abschnitt 3, Schritt 7 und Abschnitt 5',
   },
 ] as const;
 
@@ -299,20 +286,7 @@ const blockReason = computed<string>(() => {
   color: var(--text-color-secondary, #8a6d00);
   font-size: 0.9rem;
 }
-.placeholder { display: flex; flex-direction: column; gap: 0.75rem; max-width: 44rem; }
-.placeholder h2 { margin: 0; font-size: 1.25rem; }
 .lead { margin: 0; color: var(--text-color-secondary, #666); }
-.todo {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0;
-  padding: 0.6rem 0.8rem;
-  border: 1px dashed var(--surface-border, #ddd);
-  border-radius: 6px;
-  color: var(--text-color-secondary, #8a6d00);
-  font-size: 0.9rem;
-}
 
 /* Fußnavigation */
 .nav {
