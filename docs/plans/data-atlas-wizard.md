@@ -579,7 +579,9 @@ sichtbar festgenagelt sein.
 | `test/validation.test.ts` | jede harte Regel und jede Warnung aus Abschnitt 4 einmal, dazu die Grundannahme: was `initSetup` liefert, ist ohne Zutun schreibbar |
 | `test/wizardUi.test.ts` | jedes `feature=`-Href der Schritt-XMIs löst auf und findet eine Registry-Komponente (fängt Umbenennungen im Fassadenmodell und den Codegen-Bug) |
 | `test/stepsWiring.test.ts` | die Kette Klick → Fassadenmodell → `touch()` in den handgeschriebenen Schritten. Braucht `// @vitest-environment jsdom` in der ersten Zeile, weil das Paket sonst auf `node` steht. Genau diese Verdrahtung war in gene schon mehrfach kaputt, ohne dass ein Unit-Test es sah |
-| `test/publish.test.ts` | gegen Mock-`fetch`: Reihenfolge eorm→configuration→Domäne in **beiden** Stages, Retry auf 5xx, Transition-Payload als XMI, Abbruch bei fehlendem Schema |
+| `test/publish.test.ts` | gegen einen Stellvertreter: Reihenfolge eorm→configuration→Domäne in **beiden** Stages, Retry auf 5xx und **keiner** auf 4xx, Abbruch bei fehlendem Schema, Fortschrittsmeldungen, `requiredSchemas` samt Fehlerfall |
+| `test/publishHttp.test.ts` | derselbe Flow durch den **echten** Client gegen einen HTTP-Server im Test: Pfade, Query-Parameter, Content-Types (`application/xml` fürs Schema, `application/xmi` für Objekt und Transition) und der `StageTransitionRequest`-Rumpf. Genau daran scheitert es gegen den echten Atlas, und ein Stellvertreter merkt es nie |
+| `test/pluginIntegration.test.ts` | `startupModules` in **beiden** Listen, Manifest-Angaben, und dass `activate()` Perspektive, Panel, Activity und den Opener registriert |
 
 
 ## 9. Verifikation end-to-end
@@ -605,7 +607,16 @@ Der data.atlas-Compose-Setup ist die reale Gegenprobe
 6. Gegenprobe JPA: `docker-compose-postgres.yml`-Setup, Wizard mit
    `inputKind = DATABASE`, `DERIVED`, Filter `(dataSourceName=personsDs)` →
    Ergebnis muss dem `dataSources`/`dataInputs`/`services`-Teil von `example/dataatlas-postgres.xmi` entsprechen.
-7. `npm run test:unit` (beide vitest-Projekte) und `npm run type-check`.
+7. `npm run test:unit` (alle vitest-Projekte) und `npm run type-check`.
+
+**Ohne Docker so weit gekommen** (Stand 2026-09-10): Schritte 1 und 5 brauchen
+den Compose-Setup und sind offen. Alles andere ist abgedeckt —
+`test/publishHttp.test.ts` fährt den Publish-Flow durch den echten Client
+gegen einen HTTP-Server im Test, `npm run mock:atlas` stellt für den
+Handbetrieb einen Scope „jena" mit Registry `configurations` und den Stages
+draft/release bereit. Was der Mock nicht kann: prüfen, ob der **Java**-Atlas
+die Dokumente annimmt — insbesondere die einwertigen Cross-Document-Referenzen
+als Attribut (emf.ts#85).
 
 ## 10. Umsetzungsreihenfolge
 
@@ -621,9 +632,9 @@ Der data.atlas-Compose-Setup ist die reale Gegenprobe
 | 8. UI-Schritte | alle sieben Schritte durchklickbar, `blockReason` je Schritt greift, `wizardUi.test.ts` grün |
 | 9. Download | XMI-Datei landet im Browser-Download, Vorschau im Summary |
 | 10. Publish | `publish.ts` + `test/publish.test.ts` grün; das Panel im Summary lädt hoch und schiebt weiter (Verdrahtungstest gegen einen Stellvertreter). Der Lauf gegen `mock-atlas.mjs` bzw. den echten Atlas gehört zu Schritt 12 |
-| 11. Plugin-Integration | `startupModules`-Eintrag, Perspektive/Panel/Activity erscheinen in `npm run dev`, `build:plugin` läuft ohne Externals-Warnung |
-| 12. End-to-end | Verifikation aus Abschnitt 9 durchlaufen |
-| 13. Doku | `packages/data-atlas-wizard/README.md` im Stil von `eorm-wizard/README.md`; in `data.atlas/docs/user-guide.md` ein Absatz „Konfiguration im Browser erstellen" |
+| 11. Plugin-Integration | `startupModules`-Eintrag in **beiden** Listen, `build:plugin` läuft ohne Externals-Warnung (572 kB, davon 279 kB die beiden eingebetteten Metamodelle), `pluginIntegration.test.ts` grün |
+| 12. End-to-end | Verifikation aus Abschnitt 9 durchlaufen — Schritte 1 und 5 brauchen den Compose-Setup |
+| 13. Doku | `packages/data-atlas-wizard/README.md`; der Absatz für `data.atlas/docs/user-guide.md` ist vorbereitet, aber nicht eingetragen (fremdes Repo) |
 
 ## 11. Nächster Schritt: QVT-O über LSP
 
