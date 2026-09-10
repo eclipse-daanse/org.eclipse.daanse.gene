@@ -20,7 +20,7 @@
       <ModelSourceStep v-if="currentStep.id === 'model'" />
 
       <section v-else-if="currentStep.id === 'instance'" class="composed">
-        <h2>Instanz &amp; Modus</h2>
+        <h2>Instanz</h2>
         <p class="lead">{{ currentStep.lead }}</p>
         <UIModelComposer
           v-if="uiModels && setupValue"
@@ -30,27 +30,7 @@
         />
       </section>
 
-      <section v-else-if="currentStep.id === 'source'" class="composed">
-        <h2>Datenquelle</h2>
-        <p class="lead">{{ currentStep.lead }}</p>
-        <!--
-          Zwei Formulare im selben UIModel; welches gilt, entscheidet
-          inputKind. Getrennt, weil ein FormView genau eine Zielklasse
-          bedient und die beiden Quellen verschiedene Objekte sind.
-        -->
-        <UIModelComposer
-          v-if="uiModels && istDatei && setupValue?.fileSource"
-          :key="`file-${version}`"
-          :ui-model="uiModels.source"
-          :model="setupValue.fileSource"
-        />
-        <UIModelComposer
-          v-else-if="uiModels && !istDatei && setupValue?.databaseSource"
-          :key="`db-${version}`"
-          :ui-model="uiModels.source"
-          :model="setupValue.databaseSource"
-        />
-      </section>
+      <SourcesStep v-else-if="currentStep.id === 'source'" />
 
       <section v-else-if="currentStep.id === 'service'" class="composed">
         <h2>Endpunkt</h2>
@@ -105,6 +85,7 @@ import { computed, onMounted, ref, shallowRef } from 'vue';
 import { UIModelComposer } from '@emfts/uimodel-composer';
 import { loadWizardUiModels, type WizardUiModels } from './uiModels';
 import ModelSourceStep from './ModelSourceStep.vue';
+import SourcesStep from './SourcesStep.vue';
 import DatasetsStep from './DatasetsStep.vue';
 import ExportsStep from './ExportsStep.vue';
 import SummaryStep from './SummaryStep.vue';
@@ -119,13 +100,13 @@ const steps = [
   },
   {
     id: 'instance',
-    title: 'Instanz & Modus',
-    lead: 'Name der Data-Atlas-Instanz, und wo die Konfiguration später liegt.',
+    title: 'Instanz',
+    lead: 'Name und Beschreibung der Data-Atlas-Instanz.',
   },
   {
     id: 'source',
-    title: 'Datenquelle',
-    lead: 'Datei oder Datenbank — und bei JPA, ob das Mapping abgeleitet oder importiert wird.',
+    title: 'Datenquellen',
+    lead: 'Eine oder mehrere: XMI-Dateien und Datenbanken.',
   },
   {
     id: 'datasets',
@@ -172,11 +153,6 @@ const setupValue = computed(() => {
   return setup.value;
 });
 
-const istDatei = computed(() => {
-  void version.value;
-  return setup.value?.inputKind !== InputKind.DATABASE;
-});
-
 /**
  * Grund, warum „Weiter" gesperrt ist — leer, wenn der Schritt vollständig ist.
  * Bewusst nur das Nötigste je Schritt; die vollständige Prüfung macht der
@@ -189,13 +165,18 @@ const blockReason = computed<string>(() => {
   switch (currentStep.value.id) {
     case 'instance':
       return s.instanceName?.trim() ? '' : 'Bitte geben Sie einen Namen für die Instanz an.';
-    case 'source':
-      if (istDatei.value) {
-        return s.fileSource?.fileUri?.trim() ? '' : 'Bitte geben Sie den Pfad der Datendatei an.';
-      }
-      return s.databaseSource?.dataSourceFilter?.trim()
-        ? ''
-        : 'Bitte geben Sie den Filter der DataSource an.';
+    case 'source': {
+      if (s.dataSources.length === 0) return 'Bitte legen Sie eine Datenquelle an.';
+      const unfertig = s.dataSources.find((q) =>
+        q.kind === InputKind.DATABASE
+          ? !q.dataSourceFilter?.trim()
+          : !q.fileUri?.trim(),
+      );
+      if (!unfertig) return '';
+      return unfertig.kind === InputKind.DATABASE
+        ? `Datenquelle „${unfertig.id}": bitte den Filter der DataSource angeben.`
+        : `Datenquelle „${unfertig.id}": bitte den Pfad der Datendatei angeben.`;
+    }
     case 'datasets':
       return s.datasets.some((d) => d.selected) ? '' : 'Bitte wählen Sie mindestens einen Datensatz.';
     case 'service':

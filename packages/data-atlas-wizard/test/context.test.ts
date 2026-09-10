@@ -10,7 +10,12 @@ import type { EClass, EPackage } from '@emfts/core';
 import { setupPackages, registerEcoreFromString } from '../src/emf/setup';
 import {
   ATLAS_DATA_PREFIX,
+  addDataSource,
+  buildDatabaseSource,
   buildDataset,
+  buildFileSource,
+  removeDataSource,
+  sourceOf,
   concreteClasses,
   defaultFileUri,
   documentationOf,
@@ -22,7 +27,7 @@ import {
   titleCase,
   version,
 } from '../src/wizard/context';
-import { InputKind } from '../src/generated';
+import { InputKind, MappingKind } from '../src/generated';
 
 /** Wie example/model/person.ecore, um eine abstrakte Klasse ergänzt. */
 const PERSON_ECORE = `<?xml version="1.0" encoding="UTF-8"?>
@@ -122,7 +127,6 @@ describe('initSetup', () => {
     const s = setup.value!;
     expect(s.instanceName).toBe('person');
     expect(s.instanceDescription).toBe('Minimal example domain model.');
-    expect(s.inputKind).toBe(InputKind.FILE);
     expect(s.modelPackage).toBe(personPackage);
   });
 
@@ -134,13 +138,43 @@ describe('initSetup', () => {
     expect(s.serviceDescription).toBeTruthy();
   });
 
-  it('beide Datenquellen sind vorbereitet', () => {
+  it('eine Datei-Quelle als Vorschlag, und sie ist die Vorgabe', () => {
     const s = setup.value!;
-    expect(s.fileSource!.id).toBe('person-file');
-    expect(s.fileSource!.fileUri).toBe(`${ATLAS_DATA_PREFIX}data/person.xmi`);
-    expect(s.databaseSource!.id).toBe('person-jpa');
-    expect(s.databaseSource!.dataSourceId).toBe('person-db');
-    expect(s.databaseSource!.dataSourceFilter).toBe('(dataSourceName=personDs)');
+    expect(s.dataSources).toHaveLength(1);
+    expect(s.dataSources[0].id).toBe('person-file');
+    expect(s.dataSources[0].kind).toBe(InputKind.FILE);
+    expect(s.dataSources[0].fileUri).toBe(`${ATLAS_DATA_PREFIX}data/person.xmi`);
+    expect(s.defaultSourceId).toBe('person-file');
+  });
+
+  it('eine Datenbank-Quelle bringt die JdbcDataSource-Angaben mit', () => {
+    const quelle = buildDatabaseSource('person', 'person');
+    expect(quelle.kind).toBe(InputKind.DATABASE);
+    expect(quelle.id).toBe('person-jpa');
+    expect(quelle.dataSourceId).toBe('person-db');
+    expect(quelle.dataSourceFilter).toBe('(dataSourceName=personDs)');
+    expect(quelle.mappingKind).toBe(MappingKind.DERIVED);
+  });
+
+  it('addDataSource nummeriert doppelte ids durch', () => {
+    addDataSource(buildFileSource('person', '/x.xmi'));
+    expect(setup.value!.dataSources.map((q) => q.id)).toEqual(['person-file', 'person-file-2']);
+  });
+
+  it('removeDataSource räumt Vorgabe und Verweise auf', () => {
+    const zweite = addDataSource(buildFileSource('zweit', '/y.xmi'))!;
+    setup.value!.datasets[0].sourceId = zweite.id;
+    removeDataSource(zweite);
+    expect(setup.value!.dataSources.map((q) => q.id)).toEqual(['person-file']);
+    expect(setup.value!.datasets[0].sourceId).toBe('');
+  });
+
+  it('sourceOf fällt auf die Vorgabe zurück', () => {
+    const s = setup.value!;
+    expect(sourceOf(s, s.datasets[0])?.id).toBe('person-file');
+    const zweite = addDataSource(buildFileSource('zweit', '/y.xmi'))!;
+    s.datasets[0].sourceId = zweite.id;
+    expect(sourceOf(s, s.datasets[0])?.id).toBe(zweite.id);
   });
 
   it('ein Datensatz je konkreter Klasse, alle ausgewählt', () => {

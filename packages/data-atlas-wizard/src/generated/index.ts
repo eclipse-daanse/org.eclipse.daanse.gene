@@ -11,15 +11,13 @@ export { DataatlaswizardFactory } from './DataatlaswizardFactory';
 
 // Interfaces
 export type { AtlasSetup } from './AtlasSetup';
-export type { FileSourceConfig } from './FileSourceConfig';
-export type { DatabaseSourceConfig } from './DatabaseSourceConfig';
+export type { DataSourceConfig } from './DataSourceConfig';
 export type { DatasetConfig } from './DatasetConfig';
 export type { ExportConfig } from './ExportConfig';
 
 // Implementations (including abstract classes, as they're extended by subclasses)
 export { AtlasSetupImpl } from './AtlasSetupImpl';
-export { FileSourceConfigImpl } from './FileSourceConfigImpl';
-export { DatabaseSourceConfigImpl } from './DatabaseSourceConfigImpl';
+export { DataSourceConfigImpl } from './DataSourceConfigImpl';
 export { DatasetConfigImpl } from './DatasetConfigImpl';
 export { ExportConfigImpl } from './ExportConfigImpl';
 

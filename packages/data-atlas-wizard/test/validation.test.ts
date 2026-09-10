@@ -14,11 +14,10 @@ import type { EClass, EPackage } from '@emfts/core';
 import { registerEcoreFromString, setupPackages } from '../src/emf/setup';
 import { buildDataAtlasXmi } from '../src/transform/toDataAtlasConfig';
 import { SetupInvalidError, findErrors, findWarnings } from '../src/transform/validate';
-import { initSetup, setup as setupRef } from '../src/wizard/context';
+import { buildDatabaseSource, initSetup, setup as setupRef } from '../src/wizard/context';
 import {
   DataatlaswizardFactory,
   ExportKind,
-  InputKind,
   MappingKind,
   type AtlasSetup,
 } from '../src/generated';
@@ -41,6 +40,14 @@ beforeEach(() => {
   // Nur den ersten Datensatz behalten, damit die Fälle übersichtlich bleiben
   s.datasets = [s.datasets[0]];
 });
+
+/** Ersetzt die Datei-Quelle durch eine Datenbank-Quelle. */
+function setzeDatenbank(setup: AtlasSetup) {
+  const quelle = buildDatabaseSource('person', 'person');
+  setup.dataSources = [quelle];
+  setup.defaultSourceId = quelle.id;
+  return quelle;
+}
 
 /** Der abgeleitete Zustand muss von sich aus gültig sein. */
 describe('Ausgangslage', () => {
@@ -91,13 +98,28 @@ describe('harte Fehler', () => {
 
   it('relativer Datei-Pfad', () => {
     // Die Konfiguration kommt über HTTP aus dem Model Atlas — relativ zu was?
-    s.fileSource!.fileUri = 'data/person.xmi';
+    s.dataSources[0].fileUri = 'data/person.xmi';
     expect(findErrors(s).join('\n')).toMatch(/muss absolut sein/);
   });
 
   it('eine file:-URI gilt als absolut', () => {
-    s.fileSource!.fileUri = 'file:///DATA/data/person.xmi';
+    s.dataSources[0].fileUri = 'file:///DATA/data/person.xmi';
     expect(findErrors(s)).toEqual([]);
+  });
+
+  it('keine Datenquelle', () => {
+    s.dataSources = [];
+    expect(findErrors(s).join('\n')).toMatch(/Keine Datenquelle/);
+  });
+
+  it('der Vorgabe-Eingang zeigt ins Leere', () => {
+    s.defaultSourceId = 'gibt-es-nicht';
+    expect(findErrors(s).join('\n')).toMatch(/Vorgabe-Eingang zeigt auf keine/);
+  });
+
+  it('ein Datensatz zeigt auf eine unbekannte Datenquelle', () => {
+    s.datasets[0].sourceId = 'weg';
+    expect(findErrors(s).join('\n')).toMatch(/die Datenquelle „weg" gibt es nicht/);
   });
 
   it('doppelte ids', () => {
@@ -112,15 +134,14 @@ describe('harte Fehler', () => {
   });
 
   it('IMPORTED ohne Mapping', () => {
-    s.inputKind = InputKind.DATABASE;
-    s.databaseSource!.mappingKind = MappingKind.IMPORTED;
+    setzeDatenbank(s).mappingKind = MappingKind.IMPORTED;
     expect(findErrors(s).join('\n')).toMatch(/keines geladen/);
   });
 
   it('IMPORTED mit einem Dokument, das kein EntityMappings ist', () => {
-    s.inputKind = InputKind.DATABASE;
-    s.databaseSource!.mappingKind = MappingKind.IMPORTED;
-    s.databaseSource!.eormXmi = '<?xml version="1.0"?><irgendwas/>';
+    const quelle = setzeDatenbank(s);
+    quelle.mappingKind = MappingKind.IMPORTED;
+    quelle.eormXmi = '<?xml version="1.0"?><irgendwas/>';
     expect(findErrors(s).join('\n')).toMatch(/kein EntityMappings-Dokument/);
   });
 
@@ -139,7 +160,7 @@ describe('harte Fehler', () => {
     zweiter.description = 'Fremd.';
     zweiter.path = 'fremd';
     s.datasets.push(zweiter);
-    s.inputKind = InputKind.DATABASE;
+    setzeDatenbank(s);
     expect(findErrors(s).join('\n')).toMatch(/aus einem Package kommen/);
   });
 
@@ -184,8 +205,7 @@ describe('Warnungen', () => {
   });
 
   it('abgeleitetes JPA-Mapping warnt vor der Namens-Asymmetrie', () => {
-    s.inputKind = InputKind.DATABASE;
-    s.databaseSource!.mappingKind = MappingKind.DERIVED;
+    setzeDatenbank(s).mappingKind = MappingKind.DERIVED;
     expect(findWarnings(s).join('\n')).toMatch(/Großbuchstaben/);
   });
 
@@ -196,7 +216,7 @@ describe('Warnungen', () => {
   });
 
   it('Warnungen halten nicht auf — sie stehen im Ergebnis', () => {
-    s.inputKind = InputKind.DATABASE;
+    setzeDatenbank(s);
     const ergebnis = buildDataAtlasXmi(s);
     expect(ergebnis.warnings.length).toBeGreaterThan(0);
     expect(ergebnis.xmi).toContain('JPADataInput');

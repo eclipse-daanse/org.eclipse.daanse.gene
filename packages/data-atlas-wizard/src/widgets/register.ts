@@ -16,12 +16,12 @@ import EnumChooser from './EnumChooser.vue';
 import InputFieldWidget from './InputFieldWidget.vue';
 import { DataatlaswizardPackage } from '../generated';
 
-/** Enum-Felder → Radio-Auswahl. */
-const ENUM_FEATURES: [keyof typeof DataatlaswizardPackage.Literals, string][] = [
-  ['ATLAS_SETUP', 'inputKind'],
-  ['DATABASE_SOURCE_CONFIG', 'mappingKind'],
-  ['EXPORT_CONFIG', 'kind'],
-];
+/**
+ * Enum-Felder → Radio-Auswahl. Nur was in einem UIModel-Schritt vorkommt; die
+ * Datenquellen-Liste ist handgeschrieben und bringt ihre Bedienelemente selbst
+ * mit.
+ */
+const ENUM_FEATURES: [keyof typeof DataatlaswizardPackage.Literals, string][] = [];
 
 /** Text- und Zahlfelder der Formular-Schritte → eigenes Eingabefeld. */
 const INPUT_FEATURES: [keyof typeof DataatlaswizardPackage.Literals, string[]][] = [
@@ -38,10 +38,6 @@ const INPUT_FEATURES: [keyof typeof DataatlaswizardPackage.Literals, string[]][]
       'paginationSizeParameterName',
     ],
   ],
-  ['FILE_SOURCE_CONFIG', ['id', 'fileUri']],
-  ['DATABASE_SOURCE_CONFIG', ['id', 'dataSourceId', 'dataSourceName', 'dataSourceFilter']],
-  ['DATASET_CONFIG', ['id', 'name', 'description', 'path', 'batchSize', 'batchSizeLimit']],
-  ['EXPORT_CONFIG', ['id', 'name', 'description', 'separator']],
 ];
 
 export function registerWizardWidgets(): void {

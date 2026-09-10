@@ -7,28 +7,33 @@
 
 import { BasicEObject } from '@emfts/core';
 import type { EClass, EStructuralFeature } from '@emfts/core';
+import { InputKind } from './InputKind';
 import { MappingKind } from './MappingKind';
-import type { DatabaseSourceConfig } from './DatabaseSourceConfig';
+import type { DataSourceConfig } from './DataSourceConfig';
 import { DataatlaswizardPackage } from './DataatlaswizardPackage';
 
 /**
- * Implementation of DatabaseSourceConfig
+ * Implementation of DataSourceConfig
  * @generated
  */
-export class DatabaseSourceConfigImpl extends BasicEObject implements DatabaseSourceConfig {
+export class DataSourceConfigImpl extends BasicEObject implements DataSourceConfig {
   // Feature ID Constants (eLiterals)
   static readonly ID: number = 0;
-  static readonly DATA_SOURCE_ID: number = 1;
-  static readonly DATA_SOURCE_NAME: number = 2;
-  static readonly DATA_SOURCE_FILTER: number = 3;
-  static readonly MAPPING_KIND: number = 4;
-  static readonly EORM_XMI: number = 5;
+  static readonly KIND: number = 1;
+  static readonly FILE_URI: number = 2;
+  static readonly DATA_SOURCE_ID: number = 3;
+  static readonly DATA_SOURCE_NAME: number = 4;
+  static readonly DATA_SOURCE_FILTER: number = 5;
+  static readonly MAPPING_KIND: number = 6;
+  static readonly EORM_XMI: number = 7;
 
   // Private fields
   private _id: string = "";
-  private _dataSourceId: string = "";
-  private _dataSourceName: string = "";
-  private _dataSourceFilter: string = "";
+  private _kind: InputKind = InputKind.FILE;
+  private _fileUri?: string;
+  private _dataSourceId?: string;
+  private _dataSourceName?: string;
+  private _dataSourceFilter?: string;
   private _mappingKind: MappingKind = MappingKind.DERIVED;
   private _eormXmi?: string;
 
@@ -36,7 +41,7 @@ export class DatabaseSourceConfigImpl extends BasicEObject implements DatabaseSo
    * Returns the EClass of this object
    */
   override eClass(): EClass {
-    return DataatlaswizardPackage.Literals.DATABASE_SOURCE_CONFIG;
+    return DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG;
   }
 
   // Getters and Setters
@@ -51,14 +56,62 @@ export class DatabaseSourceConfigImpl extends BasicEObject implements DatabaseSo
       this.eNotify({
         getNotifier: () => this,
         getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(DatabaseSourceConfigImpl.ID),
+        getFeature: () => this.eClass().getEStructuralFeature(DataSourceConfigImpl.ID),
         getOldValue: () => oldValue,
         getNewValue: () => value,
         getPosition: () => -1,
         wasSet: () => true,
         isTouch: () => false,
         isReset: () => false,
-        getFeatureID: () => DatabaseSourceConfigImpl.ID,
+        getFeatureID: () => DataSourceConfigImpl.ID,
+        merge: () => false
+      });
+    }
+  }
+
+  get kind(): InputKind {
+    return this._kind!;
+  }
+
+  set kind(value: InputKind) {
+    const oldValue = this._kind;
+    this._kind = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(DataSourceConfigImpl.KIND),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => DataSourceConfigImpl.KIND,
+        merge: () => false
+      });
+    }
+  }
+
+  get fileUri(): string {
+    return this._fileUri!;
+  }
+
+  set fileUri(value: string) {
+    const oldValue = this._fileUri;
+    this._fileUri = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(DataSourceConfigImpl.FILE_URI),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => DataSourceConfigImpl.FILE_URI,
         merge: () => false
       });
     }
@@ -75,14 +128,14 @@ export class DatabaseSourceConfigImpl extends BasicEObject implements DatabaseSo
       this.eNotify({
         getNotifier: () => this,
         getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(DatabaseSourceConfigImpl.DATA_SOURCE_ID),
+        getFeature: () => this.eClass().getEStructuralFeature(DataSourceConfigImpl.DATA_SOURCE_ID),
         getOldValue: () => oldValue,
         getNewValue: () => value,
         getPosition: () => -1,
         wasSet: () => true,
         isTouch: () => false,
         isReset: () => false,
-        getFeatureID: () => DatabaseSourceConfigImpl.DATA_SOURCE_ID,
+        getFeatureID: () => DataSourceConfigImpl.DATA_SOURCE_ID,
         merge: () => false
       });
     }
@@ -99,14 +152,14 @@ export class DatabaseSourceConfigImpl extends BasicEObject implements DatabaseSo
       this.eNotify({
         getNotifier: () => this,
         getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(DatabaseSourceConfigImpl.DATA_SOURCE_NAME),
+        getFeature: () => this.eClass().getEStructuralFeature(DataSourceConfigImpl.DATA_SOURCE_NAME),
         getOldValue: () => oldValue,
         getNewValue: () => value,
         getPosition: () => -1,
         wasSet: () => true,
         isTouch: () => false,
         isReset: () => false,
-        getFeatureID: () => DatabaseSourceConfigImpl.DATA_SOURCE_NAME,
+        getFeatureID: () => DataSourceConfigImpl.DATA_SOURCE_NAME,
         merge: () => false
       });
     }
@@ -123,14 +176,14 @@ export class DatabaseSourceConfigImpl extends BasicEObject implements DatabaseSo
       this.eNotify({
         getNotifier: () => this,
         getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(DatabaseSourceConfigImpl.DATA_SOURCE_FILTER),
+        getFeature: () => this.eClass().getEStructuralFeature(DataSourceConfigImpl.DATA_SOURCE_FILTER),
         getOldValue: () => oldValue,
         getNewValue: () => value,
         getPosition: () => -1,
         wasSet: () => true,
         isTouch: () => false,
         isReset: () => false,
-        getFeatureID: () => DatabaseSourceConfigImpl.DATA_SOURCE_FILTER,
+        getFeatureID: () => DataSourceConfigImpl.DATA_SOURCE_FILTER,
         merge: () => false
       });
     }
@@ -147,14 +200,14 @@ export class DatabaseSourceConfigImpl extends BasicEObject implements DatabaseSo
       this.eNotify({
         getNotifier: () => this,
         getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(DatabaseSourceConfigImpl.MAPPING_KIND),
+        getFeature: () => this.eClass().getEStructuralFeature(DataSourceConfigImpl.MAPPING_KIND),
         getOldValue: () => oldValue,
         getNewValue: () => value,
         getPosition: () => -1,
         wasSet: () => true,
         isTouch: () => false,
         isReset: () => false,
-        getFeatureID: () => DatabaseSourceConfigImpl.MAPPING_KIND,
+        getFeatureID: () => DataSourceConfigImpl.MAPPING_KIND,
         merge: () => false
       });
     }
@@ -171,14 +224,14 @@ export class DatabaseSourceConfigImpl extends BasicEObject implements DatabaseSo
       this.eNotify({
         getNotifier: () => this,
         getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(DatabaseSourceConfigImpl.EORM_XMI),
+        getFeature: () => this.eClass().getEStructuralFeature(DataSourceConfigImpl.EORM_XMI),
         getOldValue: () => oldValue,
         getNewValue: () => value,
         getPosition: () => -1,
         wasSet: () => true,
         isTouch: () => false,
         isReset: () => false,
-        getFeatureID: () => DatabaseSourceConfigImpl.EORM_XMI,
+        getFeatureID: () => DataSourceConfigImpl.EORM_XMI,
         merge: () => false
       });
     }
@@ -192,17 +245,21 @@ export class DatabaseSourceConfigImpl extends BasicEObject implements DatabaseSo
   override eGet(feature: EStructuralFeature): unknown {
     const featureID = this.eClass().getFeatureID(feature);
     switch (featureID) {
-      case DatabaseSourceConfigImpl.ID:
+      case DataSourceConfigImpl.ID:
         return this.id;
-      case DatabaseSourceConfigImpl.DATA_SOURCE_ID:
+      case DataSourceConfigImpl.KIND:
+        return this.kind;
+      case DataSourceConfigImpl.FILE_URI:
+        return this.fileUri;
+      case DataSourceConfigImpl.DATA_SOURCE_ID:
         return this.dataSourceId;
-      case DatabaseSourceConfigImpl.DATA_SOURCE_NAME:
+      case DataSourceConfigImpl.DATA_SOURCE_NAME:
         return this.dataSourceName;
-      case DatabaseSourceConfigImpl.DATA_SOURCE_FILTER:
+      case DataSourceConfigImpl.DATA_SOURCE_FILTER:
         return this.dataSourceFilter;
-      case DatabaseSourceConfigImpl.MAPPING_KIND:
+      case DataSourceConfigImpl.MAPPING_KIND:
         return this.mappingKind;
-      case DatabaseSourceConfigImpl.EORM_XMI:
+      case DataSourceConfigImpl.EORM_XMI:
         return this.eormXmi;
       default:
         return super.eGet(feature);
@@ -215,27 +272,35 @@ export class DatabaseSourceConfigImpl extends BasicEObject implements DatabaseSo
   override eSet(feature: EStructuralFeature, newValue: unknown): void {
     const featureID = this.eClass().getFeatureID(feature);
     switch (featureID) {
-      case DatabaseSourceConfigImpl.ID:
+      case DataSourceConfigImpl.ID:
         this.id = newValue as string;
         super.eSet(feature, newValue);
         break;
-      case DatabaseSourceConfigImpl.DATA_SOURCE_ID:
+      case DataSourceConfigImpl.KIND:
+        this.kind = newValue as InputKind;
+        super.eSet(feature, newValue);
+        break;
+      case DataSourceConfigImpl.FILE_URI:
+        this.fileUri = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case DataSourceConfigImpl.DATA_SOURCE_ID:
         this.dataSourceId = newValue as string;
         super.eSet(feature, newValue);
         break;
-      case DatabaseSourceConfigImpl.DATA_SOURCE_NAME:
+      case DataSourceConfigImpl.DATA_SOURCE_NAME:
         this.dataSourceName = newValue as string;
         super.eSet(feature, newValue);
         break;
-      case DatabaseSourceConfigImpl.DATA_SOURCE_FILTER:
+      case DataSourceConfigImpl.DATA_SOURCE_FILTER:
         this.dataSourceFilter = newValue as string;
         super.eSet(feature, newValue);
         break;
-      case DatabaseSourceConfigImpl.MAPPING_KIND:
+      case DataSourceConfigImpl.MAPPING_KIND:
         this.mappingKind = newValue as MappingKind;
         super.eSet(feature, newValue);
         break;
-      case DatabaseSourceConfigImpl.EORM_XMI:
+      case DataSourceConfigImpl.EORM_XMI:
         this.eormXmi = newValue as string;
         super.eSet(feature, newValue);
         break;
@@ -250,17 +315,21 @@ export class DatabaseSourceConfigImpl extends BasicEObject implements DatabaseSo
   override eIsSet(feature: EStructuralFeature): boolean {
     const featureID = this.eClass().getFeatureID(feature);
     switch (featureID) {
-      case DatabaseSourceConfigImpl.ID:
+      case DataSourceConfigImpl.ID:
         return this._id !== "";
-      case DatabaseSourceConfigImpl.DATA_SOURCE_ID:
-        return this._dataSourceId !== "";
-      case DatabaseSourceConfigImpl.DATA_SOURCE_NAME:
-        return this._dataSourceName !== "";
-      case DatabaseSourceConfigImpl.DATA_SOURCE_FILTER:
-        return this._dataSourceFilter !== "";
-      case DatabaseSourceConfigImpl.MAPPING_KIND:
+      case DataSourceConfigImpl.KIND:
+        return this._kind !== InputKind.FILE;
+      case DataSourceConfigImpl.FILE_URI:
+        return this._fileUri !== undefined;
+      case DataSourceConfigImpl.DATA_SOURCE_ID:
+        return this._dataSourceId !== undefined;
+      case DataSourceConfigImpl.DATA_SOURCE_NAME:
+        return this._dataSourceName !== undefined;
+      case DataSourceConfigImpl.DATA_SOURCE_FILTER:
+        return this._dataSourceFilter !== undefined;
+      case DataSourceConfigImpl.MAPPING_KIND:
         return this._mappingKind !== MappingKind.DERIVED;
-      case DatabaseSourceConfigImpl.EORM_XMI:
+      case DataSourceConfigImpl.EORM_XMI:
         return this._eormXmi !== undefined;
       default:
         return super.eIsSet(feature);
@@ -273,22 +342,28 @@ export class DatabaseSourceConfigImpl extends BasicEObject implements DatabaseSo
   override eUnset(feature: EStructuralFeature): void {
     const featureID = this.eClass().getFeatureID(feature);
     switch (featureID) {
-      case DatabaseSourceConfigImpl.ID:
+      case DataSourceConfigImpl.ID:
         this._id = "";
         return;
-      case DatabaseSourceConfigImpl.DATA_SOURCE_ID:
-        this._dataSourceId = "";
+      case DataSourceConfigImpl.KIND:
+        this._kind = InputKind.FILE;
         return;
-      case DatabaseSourceConfigImpl.DATA_SOURCE_NAME:
-        this._dataSourceName = "";
+      case DataSourceConfigImpl.FILE_URI:
+        this._fileUri = undefined;
         return;
-      case DatabaseSourceConfigImpl.DATA_SOURCE_FILTER:
-        this._dataSourceFilter = "";
+      case DataSourceConfigImpl.DATA_SOURCE_ID:
+        this._dataSourceId = undefined;
         return;
-      case DatabaseSourceConfigImpl.MAPPING_KIND:
+      case DataSourceConfigImpl.DATA_SOURCE_NAME:
+        this._dataSourceName = undefined;
+        return;
+      case DataSourceConfigImpl.DATA_SOURCE_FILTER:
+        this._dataSourceFilter = undefined;
+        return;
+      case DataSourceConfigImpl.MAPPING_KIND:
         this._mappingKind = MappingKind.DERIVED;
         return;
-      case DatabaseSourceConfigImpl.EORM_XMI:
+      case DataSourceConfigImpl.EORM_XMI:
         this._eormXmi = undefined;
         return;
       default:

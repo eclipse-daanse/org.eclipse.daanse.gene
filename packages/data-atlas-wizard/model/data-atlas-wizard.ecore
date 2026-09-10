@@ -10,8 +10,8 @@
        DataAtlasConfiguration (configuration.ecore, nsURI
        https://eclipse.org/fennec/data/atlas/configuration/1.0.0).
 
-       Die Fassade vereinfacht bewusst: ein Service, ein DataInput,
-       inputType = outputType, die Trias nur auf Service-Ebene. Siehe Plan
+       Die Fassade vereinfacht bewusst: ein Service und
+       inputType = outputType. Siehe Plan
        docs/plans/data-atlas-wizard.md, Abschnitt 1.
 
        Verweise auf Modellklassen entstehen immer über den nsURI. Relative
@@ -31,15 +31,15 @@
     <eStructuralFeatures xsi:type="ecore:EReference" name="modelPackage" lowerBound="1"
         eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EPackage"/>
 
-    <!-- Woher kommen die Daten? inputKind schaltet zwischen den beiden
-         folgenden Containments; als Enum statt abstrakter Subklassen, damit
-         visibilityCondition im UIModel direkt darauf prüfen kann. -->
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="inputKind" lowerBound="1"
-        eType="#//InputKind" defaultValueLiteral="FILE"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="fileSource"
-        eType="#//FileSourceConfig" containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="databaseSource"
-        eType="#//DatabaseSourceConfig" containment="true"/>
+    <!-- Die Dateneingänge. Eine Liste, weil das Zielmodell beliebig viele
+         DataInputs kennt und eine Transformation ohnehin einen zweiten
+         braucht (BridgeRepository liest einen anderen Eingang). -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="dataSources" upperBound="-1"
+        eType="#//DataSourceConfig" containment="true"/>
+    <!-- Welcher Eingang gilt als Vorgabe des Service. Datensätze ohne eigene
+         Angabe übernehmen ihn — override-else-default, wie im Zielmodell. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="defaultSourceId" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
 
     <eStructuralFeatures xsi:type="ecore:EReference" name="datasets" upperBound="-1"
         eType="#//DatasetConfig" containment="true"/>
@@ -69,33 +69,34 @@
         defaultValueLiteral="limit"/>
   </eClassifiers>
 
-  <!-- Datei als Datenquelle (= FileDataInput). -->
-  <eClassifiers xsi:type="ecore:EClass" name="FileSourceConfig">
+  <!--
+    Ein Dateneingang. Eine Klasse mit `kind` statt abstrakter Subklassen: so
+    kann `visibilityCondition` im UIModel direkt darauf prüfen, und die Liste
+    bleibt homogen.
+  -->
+  <eClassifiers xsi:type="ecore:EClass" name="DataSourceConfig">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" lowerBound="1"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <!-- Absoluter Pfad im Container (/opt/dataatlas/runtime/data/…). Relativ
-         geht nicht: die Konfiguration kommt über HTTP aus dem Model Atlas und
-         hätte keinen Bezugspunkt. Die Validierung erzwingt das. -->
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="fileUri" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-  </eClassifiers>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind" lowerBound="1"
+        eType="#//InputKind" defaultValueLiteral="FILE"/>
 
-  <!-- Datenbank als Datenquelle (= JdbcDataSource + JPADataInput). -->
-  <eClassifiers xsi:type="ecore:EClass" name="DatabaseSourceConfig">
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" lowerBound="1"
+    <!-- kind = FILE: absoluter Pfad der Datendatei im Container. Relativ geht
+         nicht, die Konfiguration kommt über HTTP aus dem Model Atlas. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="fileUri"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dataSourceId" lowerBound="1"
+
+    <!-- kind = DATABASE: die JdbcDataSource und das JPA-Mapping. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dataSourceId"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dataSourceName" lowerBound="1"
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dataSourceName"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <!-- LDAP-Filter, z. B. (dataSourceName=personsDs) -->
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dataSourceFilter" lowerBound="1"
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="dataSourceFilter"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="mappingKind" lowerBound="1"
         eType="#//MappingKind" defaultValueLiteral="DERIVED"/>
     <!-- Bei IMPORTED: das eorm-Dokument als Rohtext, wie es der eorm-Wizard
-         oder der Model Atlas liefert. Der Transformer lädt es und hängt das
-         EntityMappings-Objekt an persistenceConfig. -->
+         oder der Model Atlas liefert. -->
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="eormXmi"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
   </eClassifiers>
@@ -118,6 +119,10 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" lowerBound="1"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="path" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Aus welchem Eingang dieser Datensatz liest. Leer heißt: der
+         Vorgabe-Eingang des Service gilt (override-else-default). -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sourceId"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <!-- EInt statt EBigInteger: der Transformer schreibt den Dezimalstring.
          -1 bedeutet „nicht gesetzt" und wird nicht geschrieben. -->

@@ -3,6 +3,15 @@
 > **Status:** freigegeben, noch nicht begonnen. Umsetzung startet bei Schritt 1
 > der Reihenfolge in Abschnitt 10.
 >
+> **Änderung 2026-09-10 (2):** Aus dem einen Dateneingang ist eine **Liste**
+> geworden (`AtlasSetup.dataSources` + `defaultSourceId`, `DatasetConfig.sourceId`).
+> Die Entweder-oder-Frage „woher kommen die Daten?" in Schritt 2 gab es nur,
+> weil die Fassade genau einen Eingang kannte — mit einer Transformation sind
+> es immer mindestens zwei (`BridgeRepository` liest einen anderen Eingang).
+> `FileSourceConfig`/`DatabaseSourceConfig` sind zu `DataSourceConfig` mit
+> `kind` verschmolzen, Schritt 3 ist jetzt handgeschrieben (`SourcesStep.vue`)
+> statt UIModel-getrieben.
+>
 > **Änderung 2026-09-10:** `configMode` und `modelFiles` sind entfallen.
 > Verweise auf Modellklassen entstehen immer über den nsURI; relative
 > Datei-Verweise sind eine Deployment-Konvention, die keine der drei

@@ -20,8 +20,8 @@ import { URI, type EObject, type EPackage } from '@emfts/core';
 import { newResourceSet, registerEcoreFromString, setupPackages } from '../src/emf/setup';
 import { buildDataAtlasXmi } from '../src/transform/toDataAtlasConfig';
 import { findErrors } from '../src/transform/validate';
-import { initSetup, setup as setupRef } from '../src/wizard/context';
-import { InputKind, MappingKind, type AtlasSetup } from '../src/generated';
+import { buildDatabaseSource, initSetup, setup as setupRef } from '../src/wizard/context';
+import { MappingKind, type AtlasSetup } from '../src/generated';
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const PERSON_NS = 'https://eclipse.org/fennec/data/atlas/example/person/1.0.0';
@@ -79,9 +79,13 @@ beforeEach(() => {
   s.datasets[0].name = 'Persons';
   s.datasets[0].description = 'All persons.';
   s.datasets[0].path = 'persons';
-  s.inputKind = InputKind.DATABASE;
-  s.databaseSource!.mappingKind = MappingKind.IMPORTED;
-  s.databaseSource!.eormXmi = EORM;
+  // Die Datei-Quelle durch eine Datenbank-Quelle mit importiertem Mapping
+  // ersetzen
+  const quelle = buildDatabaseSource('person', 'person');
+  quelle.mappingKind = MappingKind.IMPORTED;
+  quelle.eormXmi = EORM;
+  s.dataSources = [quelle];
+  s.defaultSourceId = quelle.id;
 });
 
 describe('Prüfung', () => {

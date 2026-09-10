@@ -36,10 +36,11 @@ export function isEntityMappings(eormXmi: string): boolean {
 /** Alle im Zieldokument vergebenen ids — Dubletten wären nicht auflösbar. */
 export function collectIds(setup: AtlasSetup): string[] {
   const ids: string[] = [setup.serviceId];
-  if (setup.inputKind === InputKind.FILE) {
-    if (setup.fileSource) ids.push(setup.fileSource.id);
-  } else if (setup.databaseSource) {
-    ids.push(setup.databaseSource.id, setup.databaseSource.dataSourceId);
+  for (const quelle of setup.dataSources) {
+    ids.push(quelle.id);
+    if (quelle.kind === InputKind.DATABASE && quelle.dataSourceId) {
+      ids.push(quelle.dataSourceId);
+    }
   }
   for (const dataset of setup.datasets.filter((d) => d.selected)) {
     ids.push(dataset.id, `${dataset.id}-config`);
@@ -85,49 +86,69 @@ export function findErrors(setup: AtlasSetup): string[] {
     if (leer(exportConfig.description)) fehler.push(`Format „${bezeichnung}": Beschreibung fehlt.`);
   }
 
-  if (setup.inputKind === InputKind.FILE) {
-    const quelle = setup.fileSource;
-    if (!quelle) {
-      fehler.push('Keine Datei als Datenquelle konfiguriert.');
-    } else {
-      if (leer(quelle.id)) fehler.push('Datenquelle: id fehlt.');
-      if (leer(quelle.fileUri)) fehler.push('Datenquelle: Pfad der Datendatei fehlt.');
-      else if (!quelle.fileUri.startsWith('/') && !quelle.fileUri.includes('://')) {
+  if (setup.dataSources.length === 0) {
+    fehler.push('Keine Datenquelle konfiguriert.');
+  }
+  if (setup.dataSources.length > 0 && !setup.dataSources.some((q) => q.id === setup.defaultSourceId)) {
+    fehler.push('Der Vorgabe-Eingang zeigt auf keine der Datenquellen.');
+  }
+
+  for (const quelle of setup.dataSources) {
+    const bezeichnung = quelle.id || quelle.kind;
+    if (leer(quelle.id)) fehler.push('Eine Datenquelle hat keine id.');
+
+    if (quelle.kind === InputKind.FILE) {
+      if (leer(quelle.fileUri)) {
+        fehler.push(`Datenquelle „${bezeichnung}": Pfad der Datendatei fehlt.`);
+      } else if (!quelle.fileUri!.startsWith('/') && !quelle.fileUri!.includes('://')) {
         // Die Konfiguration kommt über HTTP aus dem Model Atlas — ein
         // relativer Pfad hätte dort keinen Bezugspunkt.
         fehler.push(
-          `Der Pfad der Datendatei muss absolut sein (ist: „${quelle.fileUri}").`,
+          `Datenquelle „${bezeichnung}": der Pfad muss absolut sein (ist: „${quelle.fileUri}").`,
         );
       }
-    }
-  } else {
-    const quelle = setup.databaseSource;
-    if (!quelle) {
-      fehler.push('Keine Datenbank als Datenquelle konfiguriert.');
     } else {
-      if (leer(quelle.id)) fehler.push('Datenquelle: id fehlt.');
-      if (leer(quelle.dataSourceId)) fehler.push('Datenquelle: id der DataSource fehlt.');
-      if (leer(quelle.dataSourceName)) fehler.push('Datenquelle: Name der DataSource fehlt.');
-      if (leer(quelle.dataSourceFilter)) fehler.push('Datenquelle: Filter der DataSource fehlt.');
+      if (leer(quelle.dataSourceId)) fehler.push(`Datenquelle „${bezeichnung}": id der DataSource fehlt.`);
+      if (leer(quelle.dataSourceName)) fehler.push(`Datenquelle „${bezeichnung}": Name der DataSource fehlt.`);
+      if (leer(quelle.dataSourceFilter)) fehler.push(`Datenquelle „${bezeichnung}": Filter der DataSource fehlt.`);
       if (quelle.mappingKind === MappingKind.IMPORTED) {
         if (leer(quelle.eormXmi)) {
-          fehler.push('Das JPA-Mapping soll importiert werden, es ist aber keines geladen.');
+          fehler.push(
+            `Datenquelle „${bezeichnung}": das JPA-Mapping soll importiert werden, ` +
+              `es ist aber keines geladen.`,
+          );
         } else if (!isEntityMappings(quelle.eormXmi!)) {
-          fehler.push('Das importierte JPA-Mapping ist kein EntityMappings-Dokument.');
+          fehler.push(
+            `Datenquelle „${bezeichnung}": das importierte JPA-Mapping ist kein ` +
+              `EntityMappings-Dokument.`,
+          );
         }
       }
-      // Alle Klassen müssen in einem Package liegen (JPADataInputConfigurator)
+
+      /*
+       * Alle Klassen, die aus dieser Datenbank gelesen werden, müssen aus
+       * einem Package kommen (JPADataInputConfigurator prüft das ebenso).
+       */
       const pakete = new Set(
         ausgewaehlt
+          .filter((d) => (d.sourceId?.trim() || setup.defaultSourceId) === quelle.id)
           .map((d) => d.targetClass?.getEPackage()?.getNsURI())
           .filter((n): n is string => !!n),
       );
       if (pakete.size > 1) {
         fehler.push(
-          `Bei einer Datenbank als Quelle müssen alle Datensätze aus einem Package kommen ` +
-            `(gefunden: ${[...pakete].join(', ')}).`,
+          `Datenquelle „${bezeichnung}": bei einer Datenbank müssen alle Datensätze aus ` +
+            `einem Package kommen (gefunden: ${[...pakete].join(', ')}).`,
         );
       }
+    }
+  }
+
+  // Ein Datensatz darf nur auf einen vorhandenen Eingang zeigen
+  for (const dataset of ausgewaehlt) {
+    const eigene = dataset.sourceId?.trim();
+    if (eigene && !setup.dataSources.some((q) => q.id === eigene)) {
+      fehler.push(`Datensatz „${dataset.id}": die Datenquelle „${eigene}" gibt es nicht.`);
     }
   }
 
@@ -158,7 +179,11 @@ export function findWarnings(setup: AtlasSetup): string[] {
     }
   }
 
-  if (setup.inputKind === InputKind.DATABASE && setup.databaseSource?.mappingKind === MappingKind.DERIVED) {
+  if (
+    setup.dataSources.some(
+      (q) => q.kind === InputKind.DATABASE && q.mappingKind === MappingKind.DERIVED,
+    )
+  ) {
     warnungen.push(
       'Abgeleitetes JPA-Mapping: Tabellenname ist der Klassenname in Großbuchstaben, ' +
         'Spaltennamen sind die Feature-Namen unverändert — beide unquoted. Auf PostgreSQL ' +

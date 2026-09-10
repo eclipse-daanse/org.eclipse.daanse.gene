@@ -16,7 +16,9 @@ import type { AtlasModelSource } from '../atlas/atlasSource';
 import {
   DataatlaswizardFactory,
   InputKind,
+  MappingKind,
   type AtlasSetup,
+  type DataSourceConfig,
   type DatasetConfig,
 } from '../generated';
 
@@ -154,6 +156,63 @@ export function defaultFileUri(pkg: EPackage): string {
   return `${ATLAS_DATA_PREFIX}data/${pkg.getName() ?? 'data'}.xmi`;
 }
 
+/** Ein Datei-Eingang. */
+export function buildFileSource(slug: string, fileUri: string): DataSourceConfig {
+  const quelle = DataatlaswizardFactory.eINSTANCE.createDataSourceConfig();
+  quelle.id = `${slug}-file`;
+  quelle.kind = InputKind.FILE;
+  quelle.fileUri = fileUri;
+  return quelle;
+}
+
+/** Ein Datenbank-Eingang samt JdbcDataSource-Angaben. */
+export function buildDatabaseSource(slug: string, name: string): DataSourceConfig {
+  const quelle = DataatlaswizardFactory.eINSTANCE.createDataSourceConfig();
+  quelle.id = `${slug}-jpa`;
+  quelle.kind = InputKind.DATABASE;
+  quelle.dataSourceId = `${slug}-db`;
+  quelle.dataSourceName = `${titleCase(name)} DB`;
+  quelle.dataSourceFilter = `(dataSourceName=${lowerCamel(slug)}Ds)`;
+  quelle.mappingKind = MappingKind.DERIVED;
+  return quelle;
+}
+
+/**
+ * Nimmt einen weiteren Eingang auf. Die id wird bei Bedarf durchnummeriert —
+ * doppelte ids wären im Zieldokument nicht auflösbar.
+ */
+export function addDataSource(quelle: DataSourceConfig): DataSourceConfig | undefined {
+  const s = setup.value;
+  if (!s) return undefined;
+  const vergeben = new Set(s.dataSources.map((q) => q.id));
+  if (vergeben.has(quelle.id)) {
+    let i = 2;
+    while (vergeben.has(`${quelle.id}-${i}`)) i++;
+    quelle.id = `${quelle.id}-${i}`;
+  }
+  s.dataSources.push(quelle);
+  touch();
+  return quelle;
+}
+
+/** Entfernt einen Eingang und räumt die Verweise darauf auf. */
+export function removeDataSource(quelle: DataSourceConfig): void {
+  const s = setup.value;
+  if (!s) return;
+  s.dataSources = s.dataSources.filter((q) => q !== quelle);
+  for (const d of s.datasets) {
+    if (d.sourceId === quelle.id) d.sourceId = '';
+  }
+  if (s.defaultSourceId === quelle.id) s.defaultSourceId = s.dataSources[0]?.id ?? '';
+  touch();
+}
+
+/** Der Eingang, aus dem ein Datensatz liest — eigener Wert oder die Vorgabe. */
+export function sourceOf(setupValue: AtlasSetup, dataset: DatasetConfig): DataSourceConfig | undefined {
+  const id = dataset.sourceId?.trim() || setupValue.defaultSourceId;
+  return setupValue.dataSources.find((q) => q.id === id);
+}
+
 /**
  * Legt das Fassadenmodell für ein EPackage an: Identität, beide Datenquellen
  * als Vorschlag, ein Datensatz je konkreter Klasse, und der REST-Endpunkt.
@@ -170,21 +229,11 @@ export function initSetup(pkg: EPackage): AtlasSetup {
   s.instanceName = instanceName;
   s.instanceDescription = documentationOf(pkg) ?? '';
   s.modelPackage = pkg;
-  s.inputKind = InputKind.FILE;
 
-  const fileSource = factory.createFileSourceConfig();
-  fileSource.id = `${slug}-file`;
-  fileSource.fileUri = defaultFileUri(pkg);
-  s.fileSource = fileSource;
-
-  // Auch die Datenbank-Variante wird vorbereitet: der Schritt „Datenquelle"
-  // schaltet nur um, statt beim Wechsel erst etwas anzulegen.
-  const databaseSource = factory.createDatabaseSourceConfig();
-  databaseSource.id = `${slug}-jpa`;
-  databaseSource.dataSourceId = `${slug}-db`;
-  databaseSource.dataSourceName = `${titleCase(instanceName)} DB`;
-  databaseSource.dataSourceFilter = `(dataSourceName=${lowerCamel(slug)}Ds)`;
-  s.databaseSource = databaseSource;
+  // Ein Eingang als Vorschlag; weitere kommen über addDataSource() dazu.
+  const quelle = buildFileSource(slug, defaultFileUri(pkg));
+  s.dataSources.push(quelle);
+  s.defaultSourceId = quelle.id;
 
   for (const eClass of concreteClasses(pkg)) {
     s.datasets.push(buildDataset(eClass));

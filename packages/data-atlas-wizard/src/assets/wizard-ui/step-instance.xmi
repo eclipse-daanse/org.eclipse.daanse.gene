@@ -26,10 +26,5 @@
         feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup/instanceDescription"
         label="Beschreibung (optional)"
         placeholder="Wofür ist diese Instanz da?"/>
-
-    <fields xsi:type="uimodel:SelectWidget"
-        name="inputKind"
-        feature="http://fennec/data/atlas/data-atlas-wizard/1.0#//AtlasSetup/inputKind"
-        label="Woher kommen die Daten?"/>
   </components>
 </uimodel:UIModel>

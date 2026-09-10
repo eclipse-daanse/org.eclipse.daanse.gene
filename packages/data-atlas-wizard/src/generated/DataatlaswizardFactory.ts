@@ -10,10 +10,8 @@ import type { EClass, EObject } from '@emfts/core';
 import { DataatlaswizardPackage } from './DataatlaswizardPackage';
 import type { AtlasSetup } from './AtlasSetup';
 import { AtlasSetupImpl } from './AtlasSetupImpl';
-import type { FileSourceConfig } from './FileSourceConfig';
-import { FileSourceConfigImpl } from './FileSourceConfigImpl';
-import type { DatabaseSourceConfig } from './DatabaseSourceConfig';
-import { DatabaseSourceConfigImpl } from './DatabaseSourceConfigImpl';
+import type { DataSourceConfig } from './DataSourceConfig';
+import { DataSourceConfigImpl } from './DataSourceConfigImpl';
 import type { DatasetConfig } from './DatasetConfig';
 import { DatasetConfigImpl } from './DatasetConfigImpl';
 import type { ExportConfig } from './ExportConfig';
@@ -47,17 +45,10 @@ export class DataatlaswizardFactory extends BasicEFactory {
   }
 
   /**
-   * Create a new FileSourceConfig instance
+   * Create a new DataSourceConfig instance
    */
-  createFileSourceConfig(): FileSourceConfig {
-    return new FileSourceConfigImpl();
-  }
-
-  /**
-   * Create a new DatabaseSourceConfig instance
-   */
-  createDatabaseSourceConfig(): DatabaseSourceConfig {
-    return new DatabaseSourceConfigImpl();
+  createDataSourceConfig(): DataSourceConfig {
+    return new DataSourceConfigImpl();
   }
 
   /**
@@ -81,10 +72,8 @@ export class DataatlaswizardFactory extends BasicEFactory {
     switch (eClass.getName()) {
       case 'AtlasSetup':
         return this.createAtlasSetup();
-      case 'FileSourceConfig':
-        return this.createFileSourceConfig();
-      case 'DatabaseSourceConfig':
-        return this.createDatabaseSourceConfig();
+      case 'DataSourceConfig':
+        return this.createDataSourceConfig();
       case 'DatasetConfig':
         return this.createDatasetConfig();
       case 'ExportConfig':

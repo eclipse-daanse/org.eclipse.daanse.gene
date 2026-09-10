@@ -170,12 +170,15 @@ const quelleText = computed(() => {
   void version.value;
   const s = setup.value;
   if (!s) return '';
-  if (s.inputKind === InputKind.FILE) return `Datei ${s.fileSource?.fileUri ?? ''}`;
-  const art =
-    s.databaseSource?.mappingKind === MappingKind.IMPORTED
-      ? 'importiertes Mapping'
-      : 'abgeleitetes Mapping';
-  return `Datenbank ${s.databaseSource?.dataSourceFilter ?? ''} (${art})`;
+  return s.dataSources
+    .map((q) => {
+      const vorgabe = q.id === s.defaultSourceId ? ' (Vorgabe)' : '';
+      if (q.kind === InputKind.FILE) return `${q.id}: Datei ${q.fileUri ?? ''}${vorgabe}`;
+      const art =
+        q.mappingKind === MappingKind.IMPORTED ? 'importiertes Mapping' : 'abgeleitetes Mapping';
+      return `${q.id}: Datenbank ${q.dataSourceFilter ?? ''} (${art})${vorgabe}`;
+    })
+    .join(' · ');
 });
 
 const datensatzText = computed(() => {
