@@ -45,7 +45,7 @@ beforeEach(() => {
 function setzeDatenbank(setup: AtlasSetup) {
   const quelle = buildDatabaseSource('person', 'person');
   setup.dataSources = [quelle];
-  setup.defaultSourceId = quelle.id;
+  for (const d of setup.datasets) d.sourceId = quelle.id;
   return quelle;
 }
 
@@ -112,9 +112,14 @@ describe('harte Fehler', () => {
     expect(findErrors(s).join('\n')).toMatch(/Keine Datenquelle/);
   });
 
-  it('der Vorgabe-Eingang zeigt ins Leere', () => {
-    s.defaultSourceId = 'gibt-es-nicht';
-    expect(findErrors(s).join('\n')).toMatch(/Vorgabe-Eingang zeigt auf keine/);
+  it('ein Datensatz ohne Datenquelle', () => {
+    s.datasets[0].sourceId = '';
+    expect(findErrors(s).join('\n')).toMatch(/keine Datenquelle zugeordnet/);
+  });
+
+  it('ein Datensatz mit unbekanntem Format', () => {
+    s.datasets[0].exportIds = ['gibt-es-nicht'];
+    expect(findErrors(s).join('\n')).toMatch(/das Format „gibt-es-nicht" gibt es nicht/);
   });
 
   it('ein Datensatz zeigt auf eine unbekannte Datenquelle', () => {
@@ -161,6 +166,7 @@ describe('harte Fehler', () => {
     zweiter.path = 'fremd';
     s.datasets.push(zweiter);
     setzeDatenbank(s);
+    for (const d of s.datasets) d.sourceId = s.dataSources[0].id;
     expect(findErrors(s).join('\n')).toMatch(/aus einem Package kommen/);
   });
 
@@ -185,6 +191,7 @@ describe('Warnungen', () => {
     csv.name = 'CSV';
     csv.description = 'CSV.';
     s.exports.push(csv);
+    for (const d of s.datasets) d.exportIds = ['csv'];
     expect(findWarnings(s).join('\n')).toMatch(/406/);
   });
 
@@ -201,6 +208,7 @@ describe('Warnungen', () => {
       e.description = id;
       s.exports.push(e);
     }
+    for (const d of s.datasets) d.exportIds = ['csv', 'json'];
     expect(findWarnings(s)).toEqual([]);
   });
 

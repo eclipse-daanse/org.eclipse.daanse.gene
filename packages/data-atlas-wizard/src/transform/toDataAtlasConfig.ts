@@ -22,7 +22,7 @@ import {
 } from '../generated';
 import { ECORE_NS_URI, createDataAtlasResource } from './dataAtlasResource';
 import { assertValid, findWarnings } from './validate';
-import { sourceOf } from '../wizard/context';
+import { commonValue, sourceOf } from '../wizard/context';
 
 /** Der Dateiname, unter dem der Data Atlas die Konfiguration erwartet. */
 export const DEFAULT_FILE_NAME = 'dataatlas.xmi';
@@ -170,16 +170,43 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
     if (dataInput) builder.add(dataInput, 'supportedEClasses', dataset.targetClass);
   }
 
+  // ── Formate ──────────────────────────────────────────────────────────────
+  // Zuerst, weil Datensätze und Service sie referenzieren. Leer lassen heißt:
+  // die Vorgaben des Data Atlas (JSON und XML) gelten.
+  const exportObjekte = new Map<string, EObject>();
+  for (const exportConfig of exports) {
+    const exportObj = buildExport(builder, exportConfig);
+    exportObjekte.set(exportConfig.id, exportObj);
+    builder.add(root, 'exports', exportObj);
+  }
+  const exportObjekteVon = (dataset: DatasetConfig): EObject[] =>
+    dataset.exportIds
+      .map((id) => exportObjekte.get(id))
+      .filter((o): o is EObject => !!o);
+
+  /*
+   * Sind alle Datensätze einig, wandert der Wert an den Service — einmal statt
+   * n-mal, und genau so lesen die Vorlagen des data.atlas-Repos. Sonst steht
+   * er an jedem Datensatz (override-else-default).
+   */
+  const gemeinsamerEingang = commonValue(datasets, (d) => d.sourceId);
+  const gemeinsameFormate = commonValue(
+    datasets,
+    (d) => [...d.exportIds].sort().join(' '),
+  );
+
   // ── Datensätze ───────────────────────────────────────────────────────────
   const dataSetObjekte = new Map<DatasetConfig, EObject>();
   for (const dataset of datasets) {
     const dataSet = buildDataSet(builder, dataset);
-    // Nur abweichende Eingänge werden am Datensatz vermerkt; der
-    // Vorgabe-Eingang steht am Service (override-else-default).
-    const eigene = dataset.sourceId?.trim();
-    if (eigene && eigene !== setup.defaultSourceId) {
-      const dataInput = inputObjekte.get(eigene);
+    if (!gemeinsamerEingang) {
+      const dataInput = inputObjekte.get(dataset.sourceId);
       if (dataInput) builder.set(dataSet, 'dataInput', dataInput);
+    }
+    if (gemeinsameFormate === undefined) {
+      for (const exportObj of exportObjekteVon(dataset)) {
+        builder.add(dataSet, 'distributionExport', exportObj);
+      }
     }
     dataSetObjekte.set(dataset, dataSet);
     builder.add(root, 'dataSets', dataSet);
@@ -192,8 +219,10 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
   builder.set(service, 'description', setup.serviceDescription);
   builder.set(service, 'urlContext', setup.urlContext);
   builder.set(service, 'openAPI', setup.openApi);
-  const vorgabe = inputObjekte.get(setup.defaultSourceId);
-  if (vorgabe) builder.set(service, 'dataInput', vorgabe);
+  if (gemeinsamerEingang) {
+    const vorgabe = inputObjekte.get(gemeinsamerEingang);
+    if (vorgabe) builder.set(service, 'dataInput', vorgabe);
+  }
   builder.set(service, 'paginationOffsetParameterName', setup.paginationOffsetParameterName);
   builder.set(service, 'paginationSizeParameterName', setup.paginationSizeParameterName);
 
@@ -215,13 +244,11 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
   }
   builder.add(root, 'services', service);
 
-  // ── Formate ──────────────────────────────────────────────────────────────
-  // Leer lassen heißt: die Vorgaben des Data Atlas (JSON und XML) gelten.
-  // Ein einziger Eintrag ersetzt sie vollständig.
-  for (const exportConfig of exports) {
-    const exportObj = buildExport(builder, exportConfig);
-    builder.add(root, 'exports', exportObj);
-    builder.add(service, 'distributionExport', exportObj);
+  // Die gemeinsamen Formate am Service — sonst stehen sie an den Datensätzen.
+  if (gemeinsameFormate !== undefined && datasets.length > 0) {
+    for (const exportObj of exportObjekteVon(datasets[0])) {
+      builder.add(service, 'distributionExport', exportObj);
+    }
   }
 
   const resource = createDataAtlasResource(DEFAULT_FILE_NAME, {

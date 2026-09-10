@@ -14,6 +14,7 @@ import {
   buildDatabaseSource,
   buildDataset,
   buildFileSource,
+  commonValue,
   removeDataSource,
   sourceOf,
   concreteClasses,
@@ -102,16 +103,17 @@ describe('concreteClasses', () => {
 
 describe('buildDataset', () => {
   it('leitet id, name, path und Beschreibung ab', () => {
-    const dataset = buildDataset(personPackage.getEClassifier('Person') as EClass);
+    const dataset = buildDataset(personPackage.getEClassifier('Person') as EClass, 'q1');
     expect(dataset.selected).toBe(true);
     expect(dataset.id).toBe('person');
     expect(dataset.name).toBe('Person');
     expect(dataset.path).toBe('person');
     expect(dataset.description).toBe('A person of the example data set.');
+    expect(dataset.sourceId).toBe('q1');
   });
 
   it('bildet ohne Annotation einen Satz — description ist Pflicht', () => {
-    const dataset = buildDataset(personPackage.getEClassifier('WaterQuality') as EClass);
+    const dataset = buildDataset(personPackage.getEClassifier('WaterQuality') as EClass, 'q1');
     expect(dataset.id).toBe('waterQuality');
     expect(dataset.name).toBe('Water Quality');
     expect(dataset.description).toBe('Alle WaterQuality-Objekte.');
@@ -144,7 +146,8 @@ describe('initSetup', () => {
     expect(s.dataSources[0].id).toBe('person-file');
     expect(s.dataSources[0].kind).toBe(InputKind.FILE);
     expect(s.dataSources[0].fileUri).toBe(`${ATLAS_DATA_PREFIX}data/person.xmi`);
-    expect(s.defaultSourceId).toBe('person-file');
+    // Jeder Datensatz zeigt darauf — der Datensatz ist die Wahrheit
+    expect(s.datasets.every((d) => d.sourceId === 'person-file')).toBe(true);
   });
 
   it('eine Datenbank-Quelle bringt die JdbcDataSource-Angaben mit', () => {
@@ -161,20 +164,34 @@ describe('initSetup', () => {
     expect(setup.value!.dataSources.map((q) => q.id)).toEqual(['person-file', 'person-file-2']);
   });
 
-  it('removeDataSource räumt Vorgabe und Verweise auf', () => {
+  it('removeDataSource hängt betroffene Datensätze auf den letzten Rest um', () => {
     const zweite = addDataSource(buildFileSource('zweit', '/y.xmi'))!;
     setup.value!.datasets[0].sourceId = zweite.id;
     removeDataSource(zweite);
     expect(setup.value!.dataSources.map((q) => q.id)).toEqual(['person-file']);
-    expect(setup.value!.datasets[0].sourceId).toBe('');
+    // Eine einzige verbliebene Quelle ist die einzig sinnvolle Wahl
+    expect(setup.value!.datasets[0].sourceId).toBe('person-file');
   });
 
-  it('sourceOf fällt auf die Vorgabe zurück', () => {
+  it('bleiben mehrere übrig, wird nichts geraten', () => {
+    const zweite = addDataSource(buildFileSource('zweit', '/y.xmi'))!;
+    const dritte = addDataSource(buildFileSource('dritt', '/z.xmi'))!;
+    setup.value!.datasets[0].sourceId = dritte.id;
+    removeDataSource(dritte);
+    expect(setup.value!.datasets[0].sourceId).toBe('');
+    void zweite;
+  });
+
+  it('sourceOf löst die id auf', () => {
     const s = setup.value!;
     expect(sourceOf(s, s.datasets[0])?.id).toBe('person-file');
-    const zweite = addDataSource(buildFileSource('zweit', '/y.xmi'))!;
-    s.datasets[0].sourceId = zweite.id;
-    expect(sourceOf(s, s.datasets[0])?.id).toBe(zweite.id);
+  });
+
+  it('commonValue erkennt Einigkeit', () => {
+    const s = setup.value!;
+    expect(commonValue(s.datasets, (d) => d.sourceId)).toBe('person-file');
+    s.datasets[1].sourceId = 'anders';
+    expect(commonValue(s.datasets, (d) => d.sourceId)).toBeUndefined();
   });
 
   it('ein Datensatz je konkreter Klasse, alle ausgewählt', () => {

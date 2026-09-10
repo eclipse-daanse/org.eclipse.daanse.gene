@@ -19,7 +19,6 @@ export interface AtlasSetup extends EObject {
   instanceDescription?: string;
   modelPackage: EPackage;
   dataSources: DataSourceConfig[];
-  defaultSourceId: string;
   datasets: DatasetConfig[];
   exports: ExportConfig[];
   serviceId: string;

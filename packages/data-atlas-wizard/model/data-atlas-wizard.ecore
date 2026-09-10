@@ -36,10 +36,6 @@
          braucht (BridgeRepository liest einen anderen Eingang). -->
     <eStructuralFeatures xsi:type="ecore:EReference" name="dataSources" upperBound="-1"
         eType="#//DataSourceConfig" containment="true"/>
-    <!-- Welcher Eingang gilt als Vorgabe des Service. Datensätze ohne eigene
-         Angabe übernehmen ihn — override-else-default, wie im Zielmodell. -->
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="defaultSourceId" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
 
     <eStructuralFeatures xsi:type="ecore:EReference" name="datasets" upperBound="-1"
         eType="#//DatasetConfig" containment="true"/>
@@ -120,9 +116,17 @@
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="path" lowerBound="1"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <!-- Aus welchem Eingang dieser Datensatz liest. Leer heißt: der
-         Vorgabe-Eingang des Service gilt (override-else-default). -->
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sourceId"
+    <!--
+      Aus welchem Eingang dieser Datensatz liest, und in welchen Formaten er
+      ausgeliefert wird. Beides steht am Datensatz, nicht am Service: der
+      Datensatz ist die Wahrheit, der Service nur die Abkürzung. Sind alle
+      Datensätze einig, schreibt der Transformer den Wert einmal am Service
+      (override-else-default des Zielmodells) statt n-mal.
+    -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sourceId" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Leer heißt: die Vorgaben des Data Atlas (JSON und XML). -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="exportIds" upperBound="-1"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <!-- EInt statt EBigInteger: der Transformer schreibt den Dezimalstring.
          -1 bedeutet „nicht gesetzt" und wird nicht geschrieben. -->

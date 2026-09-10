@@ -172,11 +172,10 @@ const quelleText = computed(() => {
   if (!s) return '';
   return s.dataSources
     .map((q) => {
-      const vorgabe = q.id === s.defaultSourceId ? ' (Vorgabe)' : '';
-      if (q.kind === InputKind.FILE) return `${q.id}: Datei ${q.fileUri ?? ''}${vorgabe}`;
+      if (q.kind === InputKind.FILE) return `${q.id}: Datei ${q.fileUri ?? ''}`;
       const art =
         q.mappingKind === MappingKind.IMPORTED ? 'importiertes Mapping' : 'abgeleitetes Mapping';
-      return `${q.id}: Datenbank ${q.dataSourceFilter ?? ''} (${art})${vorgabe}`;
+      return `${q.id}: Datenbank ${q.dataSourceFilter ?? ''} (${art})`;
     })
     .join(' · ');
 });
@@ -190,10 +189,18 @@ const datensatzText = computed(() => {
 
 const formatText = computed(() => {
   void version.value;
-  const gewaehlt = setup.value?.exports.filter((e) => e.selected) ?? [];
-  return gewaehlt.length === 0
-    ? 'Vorgaben des Data Atlas (JSON, XML)'
-    : gewaehlt.map((e) => e.kind).join(', ');
+  const s = setup.value;
+  if (!s) return '';
+  const ausgewaehlt = s.datasets.filter((d) => d.selected);
+  if (ausgewaehlt.every((d) => d.exportIds.length === 0)) {
+    return 'Vorgaben des Data Atlas (JSON, XML)';
+  }
+  // Sind alle einig, genügt eine Zeile
+  const einheitlich = ausgewaehlt.every(
+    (d) => [...d.exportIds].sort().join(' ') === [...ausgewaehlt[0].exportIds].sort().join(' '),
+  );
+  if (einheitlich) return ausgewaehlt[0].exportIds.join(', ');
+  return ausgewaehlt.map((d) => `${d.id}: ${d.exportIds.join(', ') || 'Vorgaben'}`).join(' · ');
 });
 
 // ── Veröffentlichen ────────────────────────────────────────────────────────

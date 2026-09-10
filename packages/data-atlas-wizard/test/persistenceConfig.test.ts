@@ -85,7 +85,7 @@ beforeEach(() => {
   quelle.mappingKind = MappingKind.IMPORTED;
   quelle.eormXmi = EORM;
   s.dataSources = [quelle];
-  s.defaultSourceId = quelle.id;
+  for (const d of s.datasets) d.sourceId = quelle.id;
 });
 
 describe('Prüfung', () => {

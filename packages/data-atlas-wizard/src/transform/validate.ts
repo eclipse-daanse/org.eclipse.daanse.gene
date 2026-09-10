@@ -89,9 +89,6 @@ export function findErrors(setup: AtlasSetup): string[] {
   if (setup.dataSources.length === 0) {
     fehler.push('Keine Datenquelle konfiguriert.');
   }
-  if (setup.dataSources.length > 0 && !setup.dataSources.some((q) => q.id === setup.defaultSourceId)) {
-    fehler.push('Der Vorgabe-Eingang zeigt auf keine der Datenquellen.');
-  }
 
   for (const quelle of setup.dataSources) {
     const bezeichnung = quelle.id || quelle.kind;
@@ -131,7 +128,7 @@ export function findErrors(setup: AtlasSetup): string[] {
        */
       const pakete = new Set(
         ausgewaehlt
-          .filter((d) => (d.sourceId?.trim() || setup.defaultSourceId) === quelle.id)
+          .filter((d) => d.sourceId === quelle.id)
           .map((d) => d.targetClass?.getEPackage()?.getNsURI())
           .filter((n): n is string => !!n),
       );
@@ -144,11 +141,19 @@ export function findErrors(setup: AtlasSetup): string[] {
     }
   }
 
-  // Ein Datensatz darf nur auf einen vorhandenen Eingang zeigen
+  // Jeder Datensatz braucht eine vorhandene Datenquelle und gültige Formate
+  const exportIds = new Set(setup.exports.filter((e) => e.selected).map((e) => e.id));
   for (const dataset of ausgewaehlt) {
     const eigene = dataset.sourceId?.trim();
-    if (eigene && !setup.dataSources.some((q) => q.id === eigene)) {
+    if (!eigene) {
+      fehler.push(`Datensatz „${dataset.id}": keine Datenquelle zugeordnet.`);
+    } else if (!setup.dataSources.some((q) => q.id === eigene)) {
       fehler.push(`Datensatz „${dataset.id}": die Datenquelle „${eigene}" gibt es nicht.`);
+    }
+    for (const id of dataset.exportIds) {
+      if (!exportIds.has(id)) {
+        fehler.push(`Datensatz „${dataset.id}": das Format „${id}" gibt es nicht.`);
+      }
     }
   }
 
@@ -166,15 +171,19 @@ export function findWarnings(setup: AtlasSetup): string[] {
   const warnungen: string[] = [];
   const exporte = setup.exports.filter((e) => e.selected);
 
-  if (exporte.length > 0) {
-    const hatCsv = exporte.some((e) => e.kind === ExportKind.CSV || e.kind === ExportKind.CSV_ZIP);
-    const hatJsonOderXml = exporte.some(
+  for (const dataset of setup.datasets.filter((d) => d.selected)) {
+    const zugeordnet = exporte.filter((e) => dataset.exportIds.includes(e.id));
+    if (zugeordnet.length === 0) continue;
+    const hatCsv = zugeordnet.some(
+      (e) => e.kind === ExportKind.CSV || e.kind === ExportKind.CSV_ZIP,
+    );
+    const hatJsonOderXml = zugeordnet.some(
       (e) => e.kind === ExportKind.JSON || e.kind === ExportKind.XML,
     );
     if (hatCsv && !hatJsonOderXml) {
       warnungen.push(
-        'Nur CSV gewählt: ein einziges Format ersetzt die Vorgaben des Data Atlas ' +
-          'vollständig — JSON und XML werden dann mit 406 abgelehnt.',
+        `Datensatz „${dataset.id}": nur CSV zugeordnet — ein einziges Format ersetzt die ` +
+          `Vorgaben des Data Atlas vollständig, JSON und XML werden dann mit 406 abgelehnt.`,
       );
     }
   }

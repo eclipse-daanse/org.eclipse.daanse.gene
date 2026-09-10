@@ -22,6 +22,7 @@
             <th>Pfad</th>
             <th>Beschreibung</th>
             <th>Datenquelle</th>
+            <th>Formate</th>
             <th class="tight">Batch</th>
             <th class="tight">Grenze</th>
           </tr>
@@ -53,13 +54,24 @@
             </td>
             <td>
               <select
-                :value="d.sourceId ?? ''"
+                :value="d.sourceId"
                 :aria-label="`Datenquelle für ${d.id}`"
                 @change="setze(d, 'sourceId', text($event))"
               >
-                <option value="">Vorgabe ({{ setupValue?.defaultSourceId }})</option>
+                <option value="">— bitte wählen —</option>
                 <option v-for="q in quellen" :key="q.id" :value="q.id">{{ q.id }}</option>
               </select>
+            </td>
+            <td class="formate">
+              <label v-for="e in formate" :key="e.id" :title="e.name">
+                <input
+                  type="checkbox"
+                  :checked="d.exportIds.includes(e.id)"
+                  @change="schalteFormat(d, e.id, ($event.target as HTMLInputElement).checked)"
+                />
+                {{ e.id }}
+              </label>
+              <small v-if="formate.length === 0">keine definiert</small>
             </td>
             <td class="tight">
               <input
@@ -112,6 +124,13 @@ const setupValue = computed(() => {
 });
 const datasets = computed<DatasetConfig[]>(() => setupValue.value?.datasets ?? []);
 const quellen = computed(() => setupValue.value?.dataSources ?? []);
+const formate = computed(() => (setupValue.value?.exports ?? []).filter((e) => e.selected));
+
+/** Formate hängen am Datensatz — der Service bekommt später den gemeinsamen. */
+function schalteFormat(d: DatasetConfig, id: string, an: boolean): void {
+  d.exportIds = an ? [...d.exportIds, id] : d.exportIds.filter((x) => x !== id);
+  touch();
+}
 
 const text = (e: Event) => (e.target as HTMLInputElement).value;
 const zahl = (e: Event) => {
@@ -139,6 +158,9 @@ const hinweise = computed<string[]>(() => {
     }
   }
   for (const d of ausgewaehlt) {
+    if (!d.sourceId?.trim()) {
+      meldungen.push(`„${d.id || d.targetClass?.getName()}": keine Datenquelle zugeordnet.`);
+    }
     if (!d.description?.trim()) {
       meldungen.push(`„${d.id || d.targetClass?.getName()}": die Beschreibung ist Pflicht.`);
     }
@@ -165,6 +187,8 @@ tr:last-child td { border-bottom: none; }
 tr.off { opacity: 0.5; }
 td.check, th.check { width: 2rem; }
 td.tight input { width: 5rem; }
+.formate { white-space: nowrap; }
+.formate label { display: inline-flex; align-items: center; gap: 0.2rem; margin-right: 0.5rem; font-size: 0.8rem; }
 .klasse small { display: block; color: var(--text-color-secondary, #888); font-size: 0.75rem; }
 input[type='text'], input[type='number'], select {
   width: 100%;

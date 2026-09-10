@@ -179,7 +179,7 @@ function beispielSetup(): AtlasSetup {
   s.instanceDescription = 'Example Data Atlas instance served from a Model Atlas.';
   s.dataSources[0].id = 'persons-file';
   s.dataSources[0].fileUri = '/opt/dataatlas/runtime/data/data/persons.xmi';
-  s.defaultSourceId = 'persons-file';
+  for (const d of s.datasets) d.sourceId = 'persons-file';
   s.serviceId = 'persons-rest';
   s.serviceName = 'Persons REST';
   s.serviceDescription = 'REST endpoint publishing the example persons.';
@@ -221,6 +221,7 @@ describe('Grundfall gegen example/dataatlas-atlas.xmi', () => {
     zweiter.name = 'Orte';
     zweiter.description = 'Alle Orte.';
     zweiter.path = 'orte';
+    zweiter.sourceId = s.dataSources[0].id;
     s.datasets.push(zweiter);
 
     const { xmi } = buildDataAtlasXmi(s);
@@ -283,6 +284,7 @@ describe('Formate gegen fixtures/dataatlas-csv.xmi', () => {
     json.name = 'JSON';
     json.description = 'Plain JSON, expressed through mediaType.';
     s.exports.push(csv, json);
+    for (const d of s.datasets) d.exportIds = ['csv', 'json'];
 
     const { erzeugt, vorlage } = vergleiche(s, 'dataatlas-csv.xmi');
     expect(erzeugt.exports).toEqual(vorlage.exports);
@@ -297,6 +299,7 @@ describe('Formate gegen fixtures/dataatlas-csv.xmi', () => {
     csv.name = 'CSV';
     csv.description = 'CSV.';
     s.exports.push(csv);
+    for (const d of s.datasets) d.exportIds = ['csv'];
 
     const { erzeugt } = vergleiche(s, 'dataatlas-csv.xmi');
     expect(erzeugt.dataSets[0].distributionExport).toEqual(['csv']);
@@ -310,6 +313,7 @@ describe('Formate gegen fixtures/dataatlas-csv.xmi', () => {
     zip.name = 'CSV (ZIP)';
     zip.description = 'Gepackt.';
     s.exports.push(zip);
+    for (const d of s.datasets) d.exportIds = ['csv-zip'];
     const { xmi } = buildDataAtlasXmi(s);
     expect(xmi).toContain('compressed="true"');
   });
@@ -322,6 +326,7 @@ describe('Formate gegen fixtures/dataatlas-csv.xmi', () => {
     csv.name = 'CSV';
     csv.description = 'CSV.';
     s.exports.push(csv);
+    for (const d of s.datasets) d.exportIds = ['csv'];
     expect(buildDataAtlasXmi(s).warnings.join(' ')).toMatch(/406/);
   });
 });
@@ -343,7 +348,7 @@ describe('Datenbank gegen example/dataatlas-postgres-atlas.xmi', () => {
     quelle.dataSourceName = 'Persons DB';
     quelle.dataSourceFilter = '(dataSourceName=personsDs)';
     s.dataSources = [quelle];
-    s.defaultSourceId = quelle.id;
+    for (const d of s.datasets) d.sourceId = quelle.id;
     s.serviceId = 'persons-pg-rest';
     s.serviceName = 'Persons Postgres REST';
     s.serviceDescription = 'REST endpoint publishing the database-backed persons.';
@@ -362,6 +367,7 @@ describe('Datenbank gegen example/dataatlas-postgres-atlas.xmi', () => {
     json.name = 'JSON';
     json.description = 'Plain JSON, kept alongside the CSV export.';
     s.exports.push(csv, json);
+    for (const d of s.datasets) d.exportIds = ['csv', 'json'];
     return s;
   }
 

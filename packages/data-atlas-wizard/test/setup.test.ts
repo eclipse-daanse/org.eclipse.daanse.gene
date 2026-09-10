@@ -172,7 +172,7 @@ describe('Fixup der Codegen-Lücken (emf.ts#83)', () => {
     setup.instanceName = 'demo';
     raus.getContents().add(setup);
     const xmi = raus.saveToString();
-    expect(xmi).toContain('defaultSourceId'); // Attribut ist da
+    expect(xmi).toContain('instanceName="demo"');
 
     const rein: any = newResourceSet().createResource(URI.createURI('enum-back.xmi'));
     rein.loadFromString(xmi);
