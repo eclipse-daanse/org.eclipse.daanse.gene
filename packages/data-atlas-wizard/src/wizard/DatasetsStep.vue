@@ -21,6 +21,7 @@
             <th>Name</th>
             <th>Pfad</th>
             <th>Beschreibung</th>
+            <th>Datenquelle</th>
             <th class="tight">Batch</th>
             <th class="tight">Grenze</th>
           </tr>
@@ -49,6 +50,16 @@
                 :value="d.description"
                 @input="setze(d, 'description', text($event))"
               />
+            </td>
+            <td>
+              <select
+                :value="d.sourceId ?? ''"
+                :aria-label="`Datenquelle für ${d.id}`"
+                @change="setze(d, 'sourceId', text($event))"
+              >
+                <option value="">Vorgabe ({{ setupValue?.defaultSourceId }})</option>
+                <option v-for="q in quellen" :key="q.id" :value="q.id">{{ q.id }}</option>
+              </select>
             </td>
             <td class="tight">
               <input
@@ -95,10 +106,12 @@ import { computed } from 'vue';
 import type { DatasetConfig } from '../generated';
 import { setup, touch, version } from './context';
 
-const datasets = computed<DatasetConfig[]>(() => {
+const setupValue = computed(() => {
   void version.value;
-  return setup.value?.datasets ?? [];
+  return setup.value;
 });
+const datasets = computed<DatasetConfig[]>(() => setupValue.value?.datasets ?? []);
+const quellen = computed(() => setupValue.value?.dataSources ?? []);
 
 const text = (e: Event) => (e.target as HTMLInputElement).value;
 const zahl = (e: Event) => {
@@ -153,7 +166,7 @@ tr.off { opacity: 0.5; }
 td.check, th.check { width: 2rem; }
 td.tight input { width: 5rem; }
 .klasse small { display: block; color: var(--text-color-secondary, #888); font-size: 0.75rem; }
-input[type='text'], input[type='number'] {
+input[type='text'], input[type='number'], select {
   width: 100%;
   min-width: 6rem;
   font: inherit;

@@ -6,9 +6,7 @@
  */
 
 import type { EObject, EPackage, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
-import type { InputKind } from './InputKind';
-import type { FileSourceConfig } from './FileSourceConfig';
-import type { DatabaseSourceConfig } from './DatabaseSourceConfig';
+import type { DataSourceConfig } from './DataSourceConfig';
 import type { DatasetConfig } from './DatasetConfig';
 import type { ExportConfig } from './ExportConfig';
 
@@ -20,9 +18,8 @@ export interface AtlasSetup extends EObject {
   instanceName: string;
   instanceDescription?: string;
   modelPackage: EPackage;
-  inputKind: InputKind;
-  fileSource?: FileSourceConfig;
-  databaseSource?: DatabaseSourceConfig;
+  dataSources: DataSourceConfig[];
+  defaultSourceId: string;
   datasets: DatasetConfig[];
   exports: ExportConfig[];
   serviceId: string;

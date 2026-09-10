@@ -24,11 +24,10 @@ import {
 } from '@emfts/vue-registry';
 import { newResourceSet, setupPackages } from '../src/emf/setup';
 import { registerWizardWidgets } from '../src/widgets/register';
-import EnumChooser from '../src/widgets/EnumChooser.vue';
 import InputFieldWidget from '../src/widgets/InputFieldWidget.vue';
 
 const wizardUi = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'src', 'assets', 'wizard-ui');
-const STEP_FILES = ['step-instance.xmi', 'step-source.xmi', 'step-service.xmi'];
+const STEP_FILES = ['step-instance.xmi', 'step-service.xmi'];
 
 beforeAll(async () => {
   await setupPackages();
@@ -105,13 +104,6 @@ describe.each(STEP_FILES)('%s', (datei) => {
 });
 
 describe('Widget-Zuordnung', () => {
-  it('Enum-Felder bekommen den EnumChooser, nicht den Default-Editor', () => {
-    const uiModel = ladeSchritt('step-instance.xmi');
-    const feld = felder(formViews(uiModel)[0]).find((f) => lies(f, 'name') === 'inputKind');
-    const feature = lies(feld!, 'feature') as EStructuralFeature;
-    expect(componentRegistry.getComponentForFeature(feature)).toBe(EnumChooser);
-  });
-
   it('Textfelder bekommen das eigene Eingabefeld', () => {
     const uiModel = ladeSchritt('step-instance.xmi');
     const feld = felder(formViews(uiModel)[0]).find((f) => lies(f, 'name') === 'instanceName');
@@ -125,12 +117,7 @@ describe('Widget-Zuordnung', () => {
   });
 });
 
-describe('Sichtbarkeit und Prüfungen im Modell', () => {
-  it('der Datenquellen-Schritt trennt Datei und Datenbank in zwei Formulare', () => {
-    const views = formViews(ladeSchritt('step-source.xmi'));
-    expect(views.map((v) => lies(v, 'name'))).toEqual(['FileSourceForm', 'DatabaseSourceForm']);
-  });
-
+describe('Prüfungen im Modell', () => {
   it('Pflichtfelder tragen eine Validierung', () => {
     const uiModel = ladeSchritt('step-instance.xmi');
     const feld = felder(formViews(uiModel)[0]).find((f) => lies(f, 'name') === 'instanceName');

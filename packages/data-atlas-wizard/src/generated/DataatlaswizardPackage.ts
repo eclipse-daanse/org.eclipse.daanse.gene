@@ -36,9 +36,8 @@ export class DataatlaswizardPackage extends BasicEPackage {
     ATLAS_SETUP__INSTANCE_NAME: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__INSTANCE_DESCRIPTION: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__MODEL_PACKAGE: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__INPUT_KIND: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__FILE_SOURCE: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__DATABASE_SOURCE: null as unknown as EAttribute | EReference,
+    ATLAS_SETUP__DATA_SOURCES: null as unknown as EAttribute | EReference,
+    ATLAS_SETUP__DEFAULT_SOURCE_ID: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__DATASETS: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__EXPORTS: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__SERVICE_ID: null as unknown as EAttribute | EReference,
@@ -48,16 +47,15 @@ export class DataatlaswizardPackage extends BasicEPackage {
     ATLAS_SETUP__OPEN_API: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__PAGINATION_OFFSET_PARAMETER_NAME: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__PAGINATION_SIZE_PARAMETER_NAME: null as unknown as EAttribute | EReference,
-    FILE_SOURCE_CONFIG: null as unknown as EClass,
-    FILE_SOURCE_CONFIG__ID: null as unknown as EAttribute | EReference,
-    FILE_SOURCE_CONFIG__FILE_URI: null as unknown as EAttribute | EReference,
-    DATABASE_SOURCE_CONFIG: null as unknown as EClass,
-    DATABASE_SOURCE_CONFIG__ID: null as unknown as EAttribute | EReference,
-    DATABASE_SOURCE_CONFIG__DATA_SOURCE_ID: null as unknown as EAttribute | EReference,
-    DATABASE_SOURCE_CONFIG__DATA_SOURCE_NAME: null as unknown as EAttribute | EReference,
-    DATABASE_SOURCE_CONFIG__DATA_SOURCE_FILTER: null as unknown as EAttribute | EReference,
-    DATABASE_SOURCE_CONFIG__MAPPING_KIND: null as unknown as EAttribute | EReference,
-    DATABASE_SOURCE_CONFIG__EORM_XMI: null as unknown as EAttribute | EReference,
+    DATA_SOURCE_CONFIG: null as unknown as EClass,
+    DATA_SOURCE_CONFIG__ID: null as unknown as EAttribute | EReference,
+    DATA_SOURCE_CONFIG__KIND: null as unknown as EAttribute | EReference,
+    DATA_SOURCE_CONFIG__FILE_URI: null as unknown as EAttribute | EReference,
+    DATA_SOURCE_CONFIG__DATA_SOURCE_ID: null as unknown as EAttribute | EReference,
+    DATA_SOURCE_CONFIG__DATA_SOURCE_NAME: null as unknown as EAttribute | EReference,
+    DATA_SOURCE_CONFIG__DATA_SOURCE_FILTER: null as unknown as EAttribute | EReference,
+    DATA_SOURCE_CONFIG__MAPPING_KIND: null as unknown as EAttribute | EReference,
+    DATA_SOURCE_CONFIG__EORM_XMI: null as unknown as EAttribute | EReference,
     DATASET_CONFIG: null as unknown as EClass,
     DATASET_CONFIG__SELECTED: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__TARGET_CLASS: null as unknown as EAttribute | EReference,
@@ -65,6 +63,7 @@ export class DataatlaswizardPackage extends BasicEPackage {
     DATASET_CONFIG__NAME: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__DESCRIPTION: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__PATH: null as unknown as EAttribute | EReference,
+    DATASET_CONFIG__SOURCE_ID: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__BATCH_SIZE: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__BATCH_SIZE_LIMIT: null as unknown as EAttribute | EReference,
     EXPORT_CONFIG: null as unknown as EClass,
@@ -122,31 +121,22 @@ export class DataatlaswizardPackage extends BasicEPackage {
     atlasSetupClass.getEStructuralFeatures().push(atlasSetup_modelPackage);
     DataatlaswizardPackage.Literals.ATLAS_SETUP__MODEL_PACKAGE = atlasSetup_modelPackage;
 
-    // Create inputKind feature
-    const atlasSetup_inputKind = new BasicEAttribute();
-    atlasSetup_inputKind.setName('inputKind');
-    atlasSetup_inputKind.setLowerBound(1);
-    atlasSetup_inputKind.setUpperBound(1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_inputKind);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__INPUT_KIND = atlasSetup_inputKind;
+    // Create dataSources feature
+    const atlasSetup_dataSources = new BasicEReference();
+    atlasSetup_dataSources.setContainment(true);
+    atlasSetup_dataSources.setName('dataSources');
+    atlasSetup_dataSources.setLowerBound(0);
+    atlasSetup_dataSources.setUpperBound(-1);
+    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_dataSources);
+    DataatlaswizardPackage.Literals.ATLAS_SETUP__DATA_SOURCES = atlasSetup_dataSources;
 
-    // Create fileSource feature
-    const atlasSetup_fileSource = new BasicEReference();
-    atlasSetup_fileSource.setContainment(true);
-    atlasSetup_fileSource.setName('fileSource');
-    atlasSetup_fileSource.setLowerBound(0);
-    atlasSetup_fileSource.setUpperBound(1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_fileSource);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__FILE_SOURCE = atlasSetup_fileSource;
-
-    // Create databaseSource feature
-    const atlasSetup_databaseSource = new BasicEReference();
-    atlasSetup_databaseSource.setContainment(true);
-    atlasSetup_databaseSource.setName('databaseSource');
-    atlasSetup_databaseSource.setLowerBound(0);
-    atlasSetup_databaseSource.setUpperBound(1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_databaseSource);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__DATABASE_SOURCE = atlasSetup_databaseSource;
+    // Create defaultSourceId feature
+    const atlasSetup_defaultSourceId = new BasicEAttribute();
+    atlasSetup_defaultSourceId.setName('defaultSourceId');
+    atlasSetup_defaultSourceId.setLowerBound(1);
+    atlasSetup_defaultSourceId.setUpperBound(1);
+    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_defaultSourceId);
+    DataatlaswizardPackage.Literals.ATLAS_SETUP__DEFAULT_SOURCE_ID = atlasSetup_defaultSourceId;
 
     // Create datasets feature
     const atlasSetup_datasets = new BasicEReference();
@@ -222,87 +212,78 @@ export class DataatlaswizardPackage extends BasicEPackage {
     atlasSetupClass.getEStructuralFeatures().push(atlasSetup_paginationSizeParameterName);
     DataatlaswizardPackage.Literals.ATLAS_SETUP__PAGINATION_SIZE_PARAMETER_NAME = atlasSetup_paginationSizeParameterName;
 
-    // Create FileSourceConfig class
-    const fileSourceConfigClass = new BasicEClass();
-    fileSourceConfigClass.setName('FileSourceConfig');
-    fileSourceConfigClass.setAbstract(false);
-    fileSourceConfigClass.setInterface(false);
-    this.getEClassifiers().push(fileSourceConfigClass);
-    fileSourceConfigClass.setEPackage(this);
-    DataatlaswizardPackage.Literals.FILE_SOURCE_CONFIG = fileSourceConfigClass;
+    // Create DataSourceConfig class
+    const dataSourceConfigClass = new BasicEClass();
+    dataSourceConfigClass.setName('DataSourceConfig');
+    dataSourceConfigClass.setAbstract(false);
+    dataSourceConfigClass.setInterface(false);
+    this.getEClassifiers().push(dataSourceConfigClass);
+    dataSourceConfigClass.setEPackage(this);
+    DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG = dataSourceConfigClass;
 
     // Create id feature
-    const fileSourceConfig_id = new BasicEAttribute();
-    fileSourceConfig_id.setName('id');
-    fileSourceConfig_id.setLowerBound(1);
-    fileSourceConfig_id.setUpperBound(1);
-    fileSourceConfigClass.getEStructuralFeatures().push(fileSourceConfig_id);
-    DataatlaswizardPackage.Literals.FILE_SOURCE_CONFIG__ID = fileSourceConfig_id;
+    const dataSourceConfig_id = new BasicEAttribute();
+    dataSourceConfig_id.setName('id');
+    dataSourceConfig_id.setLowerBound(1);
+    dataSourceConfig_id.setUpperBound(1);
+    dataSourceConfigClass.getEStructuralFeatures().push(dataSourceConfig_id);
+    DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG__ID = dataSourceConfig_id;
+
+    // Create kind feature
+    const dataSourceConfig_kind = new BasicEAttribute();
+    dataSourceConfig_kind.setName('kind');
+    dataSourceConfig_kind.setLowerBound(1);
+    dataSourceConfig_kind.setUpperBound(1);
+    dataSourceConfigClass.getEStructuralFeatures().push(dataSourceConfig_kind);
+    DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG__KIND = dataSourceConfig_kind;
 
     // Create fileUri feature
-    const fileSourceConfig_fileUri = new BasicEAttribute();
-    fileSourceConfig_fileUri.setName('fileUri');
-    fileSourceConfig_fileUri.setLowerBound(1);
-    fileSourceConfig_fileUri.setUpperBound(1);
-    fileSourceConfigClass.getEStructuralFeatures().push(fileSourceConfig_fileUri);
-    DataatlaswizardPackage.Literals.FILE_SOURCE_CONFIG__FILE_URI = fileSourceConfig_fileUri;
-
-    // Create DatabaseSourceConfig class
-    const databaseSourceConfigClass = new BasicEClass();
-    databaseSourceConfigClass.setName('DatabaseSourceConfig');
-    databaseSourceConfigClass.setAbstract(false);
-    databaseSourceConfigClass.setInterface(false);
-    this.getEClassifiers().push(databaseSourceConfigClass);
-    databaseSourceConfigClass.setEPackage(this);
-    DataatlaswizardPackage.Literals.DATABASE_SOURCE_CONFIG = databaseSourceConfigClass;
-
-    // Create id feature
-    const databaseSourceConfig_id = new BasicEAttribute();
-    databaseSourceConfig_id.setName('id');
-    databaseSourceConfig_id.setLowerBound(1);
-    databaseSourceConfig_id.setUpperBound(1);
-    databaseSourceConfigClass.getEStructuralFeatures().push(databaseSourceConfig_id);
-    DataatlaswizardPackage.Literals.DATABASE_SOURCE_CONFIG__ID = databaseSourceConfig_id;
+    const dataSourceConfig_fileUri = new BasicEAttribute();
+    dataSourceConfig_fileUri.setName('fileUri');
+    dataSourceConfig_fileUri.setLowerBound(0);
+    dataSourceConfig_fileUri.setUpperBound(1);
+    dataSourceConfigClass.getEStructuralFeatures().push(dataSourceConfig_fileUri);
+    DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG__FILE_URI = dataSourceConfig_fileUri;
 
     // Create dataSourceId feature
-    const databaseSourceConfig_dataSourceId = new BasicEAttribute();
-    databaseSourceConfig_dataSourceId.setName('dataSourceId');
-    databaseSourceConfig_dataSourceId.setLowerBound(1);
-    databaseSourceConfig_dataSourceId.setUpperBound(1);
-    databaseSourceConfigClass.getEStructuralFeatures().push(databaseSourceConfig_dataSourceId);
-    DataatlaswizardPackage.Literals.DATABASE_SOURCE_CONFIG__DATA_SOURCE_ID = databaseSourceConfig_dataSourceId;
+    const dataSourceConfig_dataSourceId = new BasicEAttribute();
+    dataSourceConfig_dataSourceId.setName('dataSourceId');
+    dataSourceConfig_dataSourceId.setLowerBound(0);
+    dataSourceConfig_dataSourceId.setUpperBound(1);
+    dataSourceConfigClass.getEStructuralFeatures().push(dataSourceConfig_dataSourceId);
+    DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG__DATA_SOURCE_ID = dataSourceConfig_dataSourceId;
 
     // Create dataSourceName feature
-    const databaseSourceConfig_dataSourceName = new BasicEAttribute();
-    databaseSourceConfig_dataSourceName.setName('dataSourceName');
-    databaseSourceConfig_dataSourceName.setLowerBound(1);
-    databaseSourceConfig_dataSourceName.setUpperBound(1);
-    databaseSourceConfigClass.getEStructuralFeatures().push(databaseSourceConfig_dataSourceName);
-    DataatlaswizardPackage.Literals.DATABASE_SOURCE_CONFIG__DATA_SOURCE_NAME = databaseSourceConfig_dataSourceName;
+    const dataSourceConfig_dataSourceName = new BasicEAttribute();
+    dataSourceConfig_dataSourceName.setName('dataSourceName');
+    dataSourceConfig_dataSourceName.setLowerBound(0);
+    dataSourceConfig_dataSourceName.setUpperBound(1);
+    dataSourceConfigClass.getEStructuralFeatures().push(dataSourceConfig_dataSourceName);
+    DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG__DATA_SOURCE_NAME = dataSourceConfig_dataSourceName;
 
     // Create dataSourceFilter feature
-    const databaseSourceConfig_dataSourceFilter = new BasicEAttribute();
-    databaseSourceConfig_dataSourceFilter.setName('dataSourceFilter');
-    databaseSourceConfig_dataSourceFilter.setLowerBound(1);
-    databaseSourceConfig_dataSourceFilter.setUpperBound(1);
-    databaseSourceConfigClass.getEStructuralFeatures().push(databaseSourceConfig_dataSourceFilter);
-    DataatlaswizardPackage.Literals.DATABASE_SOURCE_CONFIG__DATA_SOURCE_FILTER = databaseSourceConfig_dataSourceFilter;
+    const dataSourceConfig_dataSourceFilter = new BasicEAttribute();
+    dataSourceConfig_dataSourceFilter.setName('dataSourceFilter');
+    dataSourceConfig_dataSourceFilter.setLowerBound(0);
+    dataSourceConfig_dataSourceFilter.setUpperBound(1);
+    dataSourceConfigClass.getEStructuralFeatures().push(dataSourceConfig_dataSourceFilter);
+    DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG__DATA_SOURCE_FILTER = dataSourceConfig_dataSourceFilter;
 
     // Create mappingKind feature
-    const databaseSourceConfig_mappingKind = new BasicEAttribute();
-    databaseSourceConfig_mappingKind.setName('mappingKind');
-    databaseSourceConfig_mappingKind.setLowerBound(1);
-    databaseSourceConfig_mappingKind.setUpperBound(1);
-    databaseSourceConfigClass.getEStructuralFeatures().push(databaseSourceConfig_mappingKind);
-    DataatlaswizardPackage.Literals.DATABASE_SOURCE_CONFIG__MAPPING_KIND = databaseSourceConfig_mappingKind;
+    const dataSourceConfig_mappingKind = new BasicEAttribute();
+    dataSourceConfig_mappingKind.setName('mappingKind');
+    dataSourceConfig_mappingKind.setLowerBound(1);
+    dataSourceConfig_mappingKind.setUpperBound(1);
+    dataSourceConfigClass.getEStructuralFeatures().push(dataSourceConfig_mappingKind);
+    DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG__MAPPING_KIND = dataSourceConfig_mappingKind;
 
     // Create eormXmi feature
-    const databaseSourceConfig_eormXmi = new BasicEAttribute();
-    databaseSourceConfig_eormXmi.setName('eormXmi');
-    databaseSourceConfig_eormXmi.setLowerBound(0);
-    databaseSourceConfig_eormXmi.setUpperBound(1);
-    databaseSourceConfigClass.getEStructuralFeatures().push(databaseSourceConfig_eormXmi);
-    DataatlaswizardPackage.Literals.DATABASE_SOURCE_CONFIG__EORM_XMI = databaseSourceConfig_eormXmi;
+    const dataSourceConfig_eormXmi = new BasicEAttribute();
+    dataSourceConfig_eormXmi.setName('eormXmi');
+    dataSourceConfig_eormXmi.setLowerBound(0);
+    dataSourceConfig_eormXmi.setUpperBound(1);
+    dataSourceConfigClass.getEStructuralFeatures().push(dataSourceConfig_eormXmi);
+    DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG__EORM_XMI = dataSourceConfig_eormXmi;
 
     // Create DatasetConfig class
     const datasetConfigClass = new BasicEClass();
@@ -361,6 +342,14 @@ export class DataatlaswizardPackage extends BasicEPackage {
     datasetConfig_path.setUpperBound(1);
     datasetConfigClass.getEStructuralFeatures().push(datasetConfig_path);
     DataatlaswizardPackage.Literals.DATASET_CONFIG__PATH = datasetConfig_path;
+
+    // Create sourceId feature
+    const datasetConfig_sourceId = new BasicEAttribute();
+    datasetConfig_sourceId.setName('sourceId');
+    datasetConfig_sourceId.setLowerBound(0);
+    datasetConfig_sourceId.setUpperBound(1);
+    datasetConfigClass.getEStructuralFeatures().push(datasetConfig_sourceId);
+    DataatlaswizardPackage.Literals.DATASET_CONFIG__SOURCE_ID = datasetConfig_sourceId;
 
     // Create batchSize feature
     const datasetConfig_batchSize = new BasicEAttribute();
@@ -452,8 +441,7 @@ export class DataatlaswizardPackage extends BasicEPackage {
     // Set ETypes for EReferences (must be done after all classes are created)
     // ============================================
     (DataatlaswizardPackage.Literals.ATLAS_SETUP__MODEL_PACKAGE as BasicEReference).setEType(getEcorePackage().getEClassifier('EPackage')!);
-    (DataatlaswizardPackage.Literals.ATLAS_SETUP__FILE_SOURCE as BasicEReference).setEType(DataatlaswizardPackage.Literals.FILE_SOURCE_CONFIG);
-    (DataatlaswizardPackage.Literals.ATLAS_SETUP__DATABASE_SOURCE as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATABASE_SOURCE_CONFIG);
+    (DataatlaswizardPackage.Literals.ATLAS_SETUP__DATA_SOURCES as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG);
     (DataatlaswizardPackage.Literals.ATLAS_SETUP__DATASETS as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATASET_CONFIG);
     (DataatlaswizardPackage.Literals.ATLAS_SETUP__EXPORTS as BasicEReference).setEType(DataatlaswizardPackage.Literals.EXPORT_CONFIG);
     (DataatlaswizardPackage.Literals.DATASET_CONFIG__TARGET_CLASS as BasicEReference).setEType(getEcorePackage().getEClassifier('EClass')!);

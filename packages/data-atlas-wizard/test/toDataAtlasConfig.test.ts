@@ -19,8 +19,8 @@ import { fileURLToPath } from 'node:url';
 import { URI, type BasicResourceSet, type EClass, type EObject, type EPackage } from '@emfts/core';
 import { newResourceSet, registerEcoreFromString, setupPackages } from '../src/emf/setup';
 import { buildDataAtlasXmi } from '../src/transform/toDataAtlasConfig';
-import { initSetup, setup as setupRef } from '../src/wizard/context';
-import { DataatlaswizardFactory, ExportKind, InputKind, type AtlasSetup } from '../src/generated';
+import { buildDatabaseSource, initSetup, setup as setupRef } from '../src/wizard/context';
+import { DataatlaswizardFactory, ExportKind, type AtlasSetup } from '../src/generated';
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const lies = (name: string) => readFileSync(join(fixtures, name), 'utf-8');
@@ -177,8 +177,9 @@ function beispielSetup(): AtlasSetup {
   const s = setupRef.value!;
   s.instanceName = 'example-atlas';
   s.instanceDescription = 'Example Data Atlas instance served from a Model Atlas.';
-  s.fileSource!.id = 'persons-file';
-  s.fileSource!.fileUri = '/opt/dataatlas/runtime/data/data/persons.xmi';
+  s.dataSources[0].id = 'persons-file';
+  s.dataSources[0].fileUri = '/opt/dataatlas/runtime/data/data/persons.xmi';
+  s.defaultSourceId = 'persons-file';
   s.serviceId = 'persons-rest';
   s.serviceName = 'Persons REST';
   s.serviceDescription = 'REST endpoint publishing the example persons.';
@@ -336,11 +337,13 @@ describe('Datenbank gegen example/dataatlas-postgres-atlas.xmi', () => {
     s.instanceName = 'example-postgres-atlas';
     s.instanceDescription =
       'Example Data Atlas instance serving a PostgreSQL table as CSV, delivered by a Model Atlas.';
-    s.inputKind = InputKind.DATABASE;
-    s.databaseSource!.id = 'persons-jpa';
-    s.databaseSource!.dataSourceId = 'persons-db';
-    s.databaseSource!.dataSourceName = 'Persons DB';
-    s.databaseSource!.dataSourceFilter = '(dataSourceName=personsDs)';
+    const quelle = buildDatabaseSource('persons', 'persons');
+    quelle.id = 'persons-jpa';
+    quelle.dataSourceId = 'persons-db';
+    quelle.dataSourceName = 'Persons DB';
+    quelle.dataSourceFilter = '(dataSourceName=personsDs)';
+    s.dataSources = [quelle];
+    s.defaultSourceId = quelle.id;
     s.serviceId = 'persons-pg-rest';
     s.serviceName = 'Persons Postgres REST';
     s.serviceDescription = 'REST endpoint publishing the database-backed persons.';

@@ -6,17 +6,20 @@
  */
 
 import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
+import type { InputKind } from './InputKind';
 import type { MappingKind } from './MappingKind';
 
 /**
- * DatabaseSourceConfig
+ * DataSourceConfig
  * @generated
  */
-export interface DatabaseSourceConfig extends EObject {
+export interface DataSourceConfig extends EObject {
   id: string;
-  dataSourceId: string;
-  dataSourceName: string;
-  dataSourceFilter: string;
+  kind: InputKind;
+  fileUri?: string;
+  dataSourceId?: string;
+  dataSourceName?: string;
+  dataSourceFilter?: string;
   mappingKind: MappingKind;
   eormXmi?: string;
 

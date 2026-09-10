@@ -7,11 +7,9 @@
 
 import { BasicEObject } from '@emfts/core';
 import type { EClass, EStructuralFeature, EPackage } from '@emfts/core';
-import type { FileSourceConfig } from './FileSourceConfig';
-import type { DatabaseSourceConfig } from './DatabaseSourceConfig';
+import type { DataSourceConfig } from './DataSourceConfig';
 import type { DatasetConfig } from './DatasetConfig';
 import type { ExportConfig } from './ExportConfig';
-import { InputKind } from './InputKind';
 import type { AtlasSetup } from './AtlasSetup';
 import { DataatlaswizardPackage } from './DataatlaswizardPackage';
 
@@ -24,26 +22,24 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
   static readonly INSTANCE_NAME: number = 0;
   static readonly INSTANCE_DESCRIPTION: number = 1;
   static readonly MODEL_PACKAGE: number = 2;
-  static readonly INPUT_KIND: number = 3;
-  static readonly FILE_SOURCE: number = 4;
-  static readonly DATABASE_SOURCE: number = 5;
-  static readonly DATASETS: number = 6;
-  static readonly EXPORTS: number = 7;
-  static readonly SERVICE_ID: number = 8;
-  static readonly SERVICE_NAME: number = 9;
-  static readonly SERVICE_DESCRIPTION: number = 10;
-  static readonly URL_CONTEXT: number = 11;
-  static readonly OPEN_API: number = 12;
-  static readonly PAGINATION_OFFSET_PARAMETER_NAME: number = 13;
-  static readonly PAGINATION_SIZE_PARAMETER_NAME: number = 14;
+  static readonly DATA_SOURCES: number = 3;
+  static readonly DEFAULT_SOURCE_ID: number = 4;
+  static readonly DATASETS: number = 5;
+  static readonly EXPORTS: number = 6;
+  static readonly SERVICE_ID: number = 7;
+  static readonly SERVICE_NAME: number = 8;
+  static readonly SERVICE_DESCRIPTION: number = 9;
+  static readonly URL_CONTEXT: number = 10;
+  static readonly OPEN_API: number = 11;
+  static readonly PAGINATION_OFFSET_PARAMETER_NAME: number = 12;
+  static readonly PAGINATION_SIZE_PARAMETER_NAME: number = 13;
 
   // Private fields
   private _instanceName: string = "";
   private _instanceDescription?: string;
   private _modelPackage?: EPackage;
-  private _inputKind: InputKind = InputKind.FILE;
-  private _fileSource?: FileSourceConfig;
-  private _databaseSource?: DatabaseSourceConfig;
+  private _dataSources: DataSourceConfig[] = [];
+  private _defaultSourceId: string = "";
   private _datasets: DatasetConfig[] = [];
   private _exports: ExportConfig[] = [];
   private _serviceId: string = "";
@@ -134,73 +130,49 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
     }
   }
 
-  get inputKind(): InputKind {
-    return this._inputKind!;
+  get dataSources(): DataSourceConfig[] {
+    return this._dataSources;
   }
 
-  set inputKind(value: InputKind) {
-    const oldValue = this._inputKind;
-    this._inputKind = value;
+  set dataSources(value: DataSourceConfig[]) {
+    const oldValue = this._dataSources;
+    this._dataSources = value;
     if (this.eDeliver()) {
       this.eNotify({
         getNotifier: () => this,
         getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.INPUT_KIND),
+        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.DATA_SOURCES),
         getOldValue: () => oldValue,
         getNewValue: () => value,
         getPosition: () => -1,
         wasSet: () => true,
         isTouch: () => false,
         isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.INPUT_KIND,
+        getFeatureID: () => AtlasSetupImpl.DATA_SOURCES,
         merge: () => false
       });
     }
   }
 
-  get fileSource(): FileSourceConfig {
-    return this._fileSource!;
+  get defaultSourceId(): string {
+    return this._defaultSourceId!;
   }
 
-  set fileSource(value: FileSourceConfig) {
-    const oldValue = this._fileSource;
-    this._fileSource = value;
+  set defaultSourceId(value: string) {
+    const oldValue = this._defaultSourceId;
+    this._defaultSourceId = value;
     if (this.eDeliver()) {
       this.eNotify({
         getNotifier: () => this,
         getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.FILE_SOURCE),
+        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.DEFAULT_SOURCE_ID),
         getOldValue: () => oldValue,
         getNewValue: () => value,
         getPosition: () => -1,
         wasSet: () => true,
         isTouch: () => false,
         isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.FILE_SOURCE,
-        merge: () => false
-      });
-    }
-  }
-
-  get databaseSource(): DatabaseSourceConfig {
-    return this._databaseSource!;
-  }
-
-  set databaseSource(value: DatabaseSourceConfig) {
-    const oldValue = this._databaseSource;
-    this._databaseSource = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.DATABASE_SOURCE),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.DATABASE_SOURCE,
+        getFeatureID: () => AtlasSetupImpl.DEFAULT_SOURCE_ID,
         merge: () => false
       });
     }
@@ -436,12 +408,10 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
         return this.instanceDescription;
       case AtlasSetupImpl.MODEL_PACKAGE:
         return this.modelPackage;
-      case AtlasSetupImpl.INPUT_KIND:
-        return this.inputKind;
-      case AtlasSetupImpl.FILE_SOURCE:
-        return this.fileSource;
-      case AtlasSetupImpl.DATABASE_SOURCE:
-        return this.databaseSource;
+      case AtlasSetupImpl.DATA_SOURCES:
+        return this.dataSources;
+      case AtlasSetupImpl.DEFAULT_SOURCE_ID:
+        return this.defaultSourceId;
       case AtlasSetupImpl.DATASETS:
         return this.datasets;
       case AtlasSetupImpl.EXPORTS:
@@ -483,16 +453,12 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
         this.modelPackage = newValue as EPackage;
         super.eSet(feature, newValue);
         break;
-      case AtlasSetupImpl.INPUT_KIND:
-        this.inputKind = newValue as InputKind;
+      case AtlasSetupImpl.DATA_SOURCES:
+        this.dataSources = newValue as DataSourceConfig[];
         super.eSet(feature, newValue);
         break;
-      case AtlasSetupImpl.FILE_SOURCE:
-        this.fileSource = newValue as FileSourceConfig;
-        super.eSet(feature, newValue);
-        break;
-      case AtlasSetupImpl.DATABASE_SOURCE:
-        this.databaseSource = newValue as DatabaseSourceConfig;
+      case AtlasSetupImpl.DEFAULT_SOURCE_ID:
+        this.defaultSourceId = newValue as string;
         super.eSet(feature, newValue);
         break;
       case AtlasSetupImpl.DATASETS:
@@ -548,12 +514,10 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
         return this._instanceDescription !== undefined;
       case AtlasSetupImpl.MODEL_PACKAGE:
         return this._modelPackage !== undefined;
-      case AtlasSetupImpl.INPUT_KIND:
-        return this._inputKind !== InputKind.FILE;
-      case AtlasSetupImpl.FILE_SOURCE:
-        return this._fileSource !== undefined;
-      case AtlasSetupImpl.DATABASE_SOURCE:
-        return this._databaseSource !== undefined;
+      case AtlasSetupImpl.DATA_SOURCES:
+        return this._dataSources !== undefined && this._dataSources.length > 0;
+      case AtlasSetupImpl.DEFAULT_SOURCE_ID:
+        return this._defaultSourceId !== "";
       case AtlasSetupImpl.DATASETS:
         return this._datasets !== undefined && this._datasets.length > 0;
       case AtlasSetupImpl.EXPORTS:
@@ -592,14 +556,11 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
       case AtlasSetupImpl.MODEL_PACKAGE:
         this._modelPackage = undefined;
         return;
-      case AtlasSetupImpl.INPUT_KIND:
-        this._inputKind = InputKind.FILE;
+      case AtlasSetupImpl.DATA_SOURCES:
+        this._dataSources = [];
         return;
-      case AtlasSetupImpl.FILE_SOURCE:
-        this._fileSource = undefined;
-        return;
-      case AtlasSetupImpl.DATABASE_SOURCE:
-        this._databaseSource = undefined;
+      case AtlasSetupImpl.DEFAULT_SOURCE_ID:
+        this._defaultSourceId = "";
         return;
       case AtlasSetupImpl.DATASETS:
         this._datasets = [];

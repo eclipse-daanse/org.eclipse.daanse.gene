@@ -16,11 +16,13 @@ import {
   InputKind,
   MappingKind,
   type AtlasSetup,
+  type DataSourceConfig,
   type DatasetConfig,
   type ExportConfig,
 } from '../generated';
 import { ECORE_NS_URI, createDataAtlasResource } from './dataAtlasResource';
 import { assertValid, findWarnings } from './validate';
+import { sourceOf } from '../wizard/context';
 
 /** Der Dateiname, unter dem der Data Atlas die Konfiguration erwartet. */
 export const DEFAULT_FILE_NAME = 'dataatlas.xmi';
@@ -80,6 +82,34 @@ function buildExport(builder: ReturnType<typeof makeBuilder>, config: ExportConf
   return exportObj;
 }
 
+/** Ein Eintrag der Eingangsliste → FileDataInput bzw. JdbcDataSource + JPADataInput. */
+function buildDataInput(
+  builder: ReturnType<typeof makeBuilder>,
+  root: EObject,
+  quelle: DataSourceConfig,
+): EObject {
+  if (quelle.kind === InputKind.FILE) {
+    const dataInput = builder.create('FileDataInput');
+    builder.set(dataInput, 'id', quelle.id);
+    builder.set(dataInput, 'uri', quelle.fileUri);
+    return dataInput;
+  }
+
+  const dataSource = builder.create('JdbcDataSource');
+  builder.set(dataSource, 'id', quelle.dataSourceId);
+  builder.set(dataSource, 'name', quelle.dataSourceName);
+  builder.set(dataSource, 'filter', quelle.dataSourceFilter);
+  builder.add(root, 'dataSources', dataSource);
+
+  const dataInput = builder.create('JPADataInput');
+  builder.set(dataInput, 'id', quelle.id);
+  builder.set(dataInput, 'dataSource', dataSource);
+  if (quelle.mappingKind === MappingKind.IMPORTED) {
+    builder.set(dataInput, 'persistenceConfig', loadEntityMappings(quelle.eormXmi!));
+  }
+  return dataInput;
+}
+
 function buildDataSet(
   builder: ReturnType<typeof makeBuilder>,
   config: DatasetConfig,
@@ -117,40 +147,40 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
     builder.set(root, 'description', setup.instanceDescription.trim());
   }
 
-  // ── Datenquelle ──────────────────────────────────────────────────────────
-  let dataInput: EObject;
+  // ── Dateneingänge ────────────────────────────────────────────────────────
   let hatEingebettetesMapping = false;
-  if (setup.inputKind === InputKind.FILE) {
-    const quelle = setup.fileSource!;
-    dataInput = builder.create('FileDataInput');
-    builder.set(dataInput, 'id', quelle.id);
-    builder.set(dataInput, 'uri', quelle.fileUri);
-  } else {
-    const quelle = setup.databaseSource!;
-    const dataSource = builder.create('JdbcDataSource');
-    builder.set(dataSource, 'id', quelle.dataSourceId);
-    builder.set(dataSource, 'name', quelle.dataSourceName);
-    builder.set(dataSource, 'filter', quelle.dataSourceFilter);
-    builder.add(root, 'dataSources', dataSource);
-
-    dataInput = builder.create('JPADataInput');
-    builder.set(dataInput, 'id', quelle.id);
-    builder.set(dataInput, 'dataSource', dataSource);
-    if (quelle.mappingKind === MappingKind.IMPORTED) {
-      builder.set(dataInput, 'persistenceConfig', loadEntityMappings(quelle.eormXmi!));
+  const inputObjekte = new Map<string, EObject>();
+  for (const quelle of setup.dataSources) {
+    const dataInput = buildDataInput(builder, root, quelle);
+    if (quelle.kind === InputKind.DATABASE && quelle.mappingKind === MappingKind.IMPORTED) {
       hatEingebettetesMapping = true;
     }
+    inputObjekte.set(quelle.id, dataInput);
+    builder.add(root, 'dataInputs', dataInput);
   }
-  // Die Klassen, die dieser Input liefern kann.
+
+  /*
+   * supportedEClasses je Eingang: die Klassen der Datensätze, die aus ihm
+   * lesen. Ein Eingang, den niemand benutzt, bleibt leer — das ist zulässig
+   * und sagt dem Data Atlas nur, dass er nichts liefern muss.
+   */
   for (const dataset of datasets) {
-    builder.add(dataInput, 'supportedEClasses', dataset.targetClass);
+    const quelle = sourceOf(setup, dataset);
+    const dataInput = quelle ? inputObjekte.get(quelle.id) : undefined;
+    if (dataInput) builder.add(dataInput, 'supportedEClasses', dataset.targetClass);
   }
-  builder.add(root, 'dataInputs', dataInput);
 
   // ── Datensätze ───────────────────────────────────────────────────────────
   const dataSetObjekte = new Map<DatasetConfig, EObject>();
   for (const dataset of datasets) {
     const dataSet = buildDataSet(builder, dataset);
+    // Nur abweichende Eingänge werden am Datensatz vermerkt; der
+    // Vorgabe-Eingang steht am Service (override-else-default).
+    const eigene = dataset.sourceId?.trim();
+    if (eigene && eigene !== setup.defaultSourceId) {
+      const dataInput = inputObjekte.get(eigene);
+      if (dataInput) builder.set(dataSet, 'dataInput', dataInput);
+    }
     dataSetObjekte.set(dataset, dataSet);
     builder.add(root, 'dataSets', dataSet);
   }
@@ -162,7 +192,8 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
   builder.set(service, 'description', setup.serviceDescription);
   builder.set(service, 'urlContext', setup.urlContext);
   builder.set(service, 'openAPI', setup.openApi);
-  builder.set(service, 'dataInput', dataInput);
+  const vorgabe = inputObjekte.get(setup.defaultSourceId);
+  if (vorgabe) builder.set(service, 'dataInput', vorgabe);
   builder.set(service, 'paginationOffsetParameterName', setup.paginationOffsetParameterName);
   builder.set(service, 'paginationSizeParameterName', setup.paginationSizeParameterName);
 

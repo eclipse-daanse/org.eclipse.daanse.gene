@@ -22,8 +22,9 @@ export class DatasetConfigImpl extends BasicEObject implements DatasetConfig {
   static readonly NAME: number = 3;
   static readonly DESCRIPTION: number = 4;
   static readonly PATH: number = 5;
-  static readonly BATCH_SIZE: number = 6;
-  static readonly BATCH_SIZE_LIMIT: number = 7;
+  static readonly SOURCE_ID: number = 6;
+  static readonly BATCH_SIZE: number = 7;
+  static readonly BATCH_SIZE_LIMIT: number = 8;
 
   // Private fields
   private _selected: boolean = true;
@@ -32,6 +33,7 @@ export class DatasetConfigImpl extends BasicEObject implements DatasetConfig {
   private _name: string = "";
   private _description: string = "";
   private _path: string = "";
+  private _sourceId?: string;
   private _batchSize: number = -1;
   private _batchSizeLimit: number = -1;
 
@@ -187,6 +189,30 @@ export class DatasetConfigImpl extends BasicEObject implements DatasetConfig {
     }
   }
 
+  get sourceId(): string {
+    return this._sourceId!;
+  }
+
+  set sourceId(value: string) {
+    const oldValue = this._sourceId;
+    this._sourceId = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(DatasetConfigImpl.SOURCE_ID),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => DatasetConfigImpl.SOURCE_ID,
+        merge: () => false
+      });
+    }
+  }
+
   get batchSize(): number {
     return this._batchSize!;
   }
@@ -255,6 +281,8 @@ export class DatasetConfigImpl extends BasicEObject implements DatasetConfig {
         return this.description;
       case DatasetConfigImpl.PATH:
         return this.path;
+      case DatasetConfigImpl.SOURCE_ID:
+        return this.sourceId;
       case DatasetConfigImpl.BATCH_SIZE:
         return this.batchSize;
       case DatasetConfigImpl.BATCH_SIZE_LIMIT:
@@ -294,6 +322,10 @@ export class DatasetConfigImpl extends BasicEObject implements DatasetConfig {
         this.path = newValue as string;
         super.eSet(feature, newValue);
         break;
+      case DatasetConfigImpl.SOURCE_ID:
+        this.sourceId = newValue as string;
+        super.eSet(feature, newValue);
+        break;
       case DatasetConfigImpl.BATCH_SIZE:
         this.batchSize = newValue as number;
         super.eSet(feature, newValue);
@@ -325,6 +357,8 @@ export class DatasetConfigImpl extends BasicEObject implements DatasetConfig {
         return this._description !== "";
       case DatasetConfigImpl.PATH:
         return this._path !== "";
+      case DatasetConfigImpl.SOURCE_ID:
+        return this._sourceId !== undefined;
       case DatasetConfigImpl.BATCH_SIZE:
         return this._batchSize !== -1;
       case DatasetConfigImpl.BATCH_SIZE_LIMIT:
@@ -357,6 +391,9 @@ export class DatasetConfigImpl extends BasicEObject implements DatasetConfig {
         return;
       case DatasetConfigImpl.PATH:
         this._path = "";
+        return;
+      case DatasetConfigImpl.SOURCE_ID:
+        this._sourceId = undefined;
         return;
       case DatasetConfigImpl.BATCH_SIZE:
         this._batchSize = -1;

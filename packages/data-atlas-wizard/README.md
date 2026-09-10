@@ -18,9 +18,9 @@ werden Datensätze, unter welchem Pfad, in welchen Formaten.**
 | Schritt | Inhalt |
 |---|---|
 | Modell | Domänenmodell aus einem Model-Atlas-Scope oder als Datei laden |
-| Instanz | Name, Beschreibung, Art der Datenquelle |
-| Datenquelle | Datei: absoluter Pfad der XMI. Datenbank: DataSource-Filter und ob das JPA-Mapping abgeleitet oder importiert wird |
-| Datensätze | Häkchen je Klasse, dazu id, Name, Pfad, Beschreibung, Batch-Grenzen |
+| Instanz | Name und Beschreibung |
+| Datenquellen | Liste: XMI-Dateien (absoluter Pfad) und Datenbanken (DataSource-Filter, Mapping abgeleitet oder importiert). Eine davon ist der Vorgabe-Eingang |
+| Datensätze | Häkchen je Klasse, dazu id, Name, Pfad, Beschreibung, Datenquelle und Batch-Grenzen |
 | Endpunkt | Basis-Pfad, Namen, OpenAPI, Pagination-Parameter |
 | Formate | JSON, XML, CSV, CSV-ZIP — leer heißt: die Vorgaben des Data Atlas |
 | Zusammenfassung | Prüfliste, XMI-Vorschau, Download oder Veröffentlichen im Model Atlas |
@@ -75,8 +75,10 @@ Aus dem gewählten EPackage (`src/wizard/context.ts`):
 - je **konkreter** Klasse ein Datensatz: `id` = lowerCamel, `name` = Title
   Case, `path` = `id`, Beschreibung aus der GenModel-Annotation
 - `serviceId` = `<slug>-rest`, `urlContext` = `/<slug>`
-- `fileSource.fileUri` = `/opt/dataatlas/runtime/data/data/<Paketname>.xmi`
-- `databaseSource.dataSourceFilter` = `(dataSourceName=<slug>Ds)`
+- eine Datei-Quelle `<slug>-file` mit
+  `/opt/dataatlas/runtime/data/data/<Paketname>.xmi`, und sie ist der
+  Vorgabe-Eingang
+- eine Datenbank-Quelle (auf Knopfdruck) mit `(dataSourceName=<slug>Ds)`
 - `exports` bleibt leer → die Runtime-Vorgaben JSON und XML gelten
 
 **Nicht pluralisiert:** Die Vorlagen im data.atlas-Repo nennen den Datensatz

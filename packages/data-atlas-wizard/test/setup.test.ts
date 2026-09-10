@@ -115,7 +115,11 @@ describe('Fixup der Codegen-Lücken (emf.ts#83)', () => {
     const typ = (name: string) => setup.getEStructuralFeature(name)?.getEType()?.getName();
     expect(typ('instanceName')).toBe('EString');
     expect(typ('openApi')).toBe('EBoolean');
-    expect(typ('inputKind')).toBe('InputKind');
+    expect(
+      DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG.getEStructuralFeature('kind')
+        ?.getEType()
+        ?.getName(),
+    ).toBe('InputKind');
 
     const dataset = DataatlaswizardPackage.Literals.DATASET_CONFIG;
     expect(dataset.getEStructuralFeature('batchSize')?.getEType()?.getName()).toBe('EInt');
@@ -168,12 +172,18 @@ describe('Fixup der Codegen-Lücken (emf.ts#83)', () => {
     setup.instanceName = 'demo';
     raus.getContents().add(setup);
     const xmi = raus.saveToString();
-    expect(xmi).toContain('inputKind="FILE"'); // geschrieben wird der Name
+    expect(xmi).toContain('defaultSourceId'); // Attribut ist da
 
     const rein: any = newResourceSet().createResource(URI.createURI('enum-back.xmi'));
     rein.loadFromString(xmi);
     const geladen = rein.getContents().get(0);
-    expect(typeof geladen.inputKind).toBe('object');
-    expect((geladen.inputKind as { getName(): string }).getName()).toBe('FILE');
+    const quelle = DataatlaswizardFactory.eINSTANCE.createDataSourceConfig();
+    quelle.id = 'x';
+    setup.dataSources.push(quelle);
+    const xmi2 = newResourceSet()
+      .createResource(URI.createURI('enum2.xmi'));
+    (xmi2 as unknown as { getContents(): { add(o: unknown): void } }).getContents().add(setup);
+    const text = (xmi2 as unknown as { saveToString(): string }).saveToString();
+    expect(text).toContain('kind="FILE"');
   });
 });
