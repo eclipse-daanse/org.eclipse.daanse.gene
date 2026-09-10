@@ -671,11 +671,67 @@ derselben Bauart hinzu, plus der Editor aus `OclMonacoEditor.vue`.
 | `qvto-lsp-worker` | fehlt; Vorbild `EMFTs/ocl-lsp-worker` |
 | AST → `qvtoperational`-Modell | offen: die Grammatik muss den AST als EMF-Modell aufbauen, so wie `ocl-model` es für OCL tut. Das ist das eigentliche Stück Arbeit |
 
-**Offene Frage für den Anfang:** Ob der Data Atlas den AST als eigenständiges
-Dokument im Scope erwartet oder inline in der Konfiguration — `AstGen.java` und
-`example/dataatlas-transformation.xmi` bzw. `tests/fixtures/dataatlas-trafo-atlas.xmi`
-sagen es; das ist vor dem ersten Handgriff zu klären, weil davon abhängt, ob
-der Publish-Flow aus Abschnitt 5 ein weiteres Objekt hochladen muss.
+### Die offene Frage ist beantwortet (2026-09-10)
+
+Weder inline noch als Objekt im Scope: der AST ist ein **eigenes Dokument**,
+auf das die Konfiguration per URI verweist.
+
+| Modus | Verweis |
+|---|---|
+| `FILE` | `<transformation href="trafo/person-to-public.xmi#//@unit"/>` |
+| `ATLAS` | `<transformation href="file:///DATA/trafo/person-to-public-atlas.xmi#//@unit"/>` |
+
+Im Atlas-Modus also eine **absolute Datei-URI**, die die Runtime lokal auflöst
+— „like every FileDataInput in this mode" (Kommentar in
+`tests/fixtures/dataatlas-trafo-atlas.xmi`). Der Publish-Flow lädt somit
+**kein** weiteres Objekt hoch; das AST-Dokument liegt beim Deployment. Die
+Modell-Doku an `DataTransformation` spricht von einem „dedicated EObject
+registry of the scope" — das ist die Absicht, die Fixtures zeigen den heutigen
+Stand.
+
+### Was im AST-Dokument steckt
+
+Es ist kein nackter `OperationalTransformation`, sondern eine **`CompiledUnit`**
+(`http://www.eclipse.org/fennec/m2x/compiled/1.0`) mit
+
+- einem `manifest`: `producedBy="org.eclipse.fennec.m2x.unit"`, `language="qvto"`,
+  `qualifiedName`, **`unitFingerprint`** und **`sourceFingerprint`**
+  (`m2x1:<sha256>`), `dependencyMode="pin"`, dazu je benutztes Package ein
+  `packageEntry` mit eigenem `fingerprint` (`fp1:<sha256>`) und
+  `role="embedded"`,
+- dem `unit` — darauf zeigt das Fragment `#//@unit`,
+- `satellite`-Einträgen mit den eingebetteten Package-Kopien.
+
+Erzeugt wird das von `engine.compile(source, name)` im Java-Bundle
+`org.eclipse.fennec.m2x.unit` (`example/trafo/AstGen.java`), und zwar
+**zweimal**: einmal mit datei-relativen, einmal mit nsURI-basierten Verweisen —
+derselbe Dialekt-Unterschied wie bei der Konfiguration selbst.
+
+**Das vergrößert den LSP-Schritt.** Eine Langium-Grammatik, die den AST
+aufbaut, reicht nicht: `dependencyMode="pin"` heißt, dass die Fingerprints
+stimmen müssen. Ein Browser-Erzeuger müsste das Fingerprint-Schema (`m2x1:`,
+`fp1:`) mitliefern, sonst nimmt die Runtime das Dokument nicht an — oder löst
+gegen die falsche Package-Version auf.
+
+### Daraus zwei Iterationen statt einer
+
+**2a — ein bestehendes AST-Dokument referenzieren.** Braucht nichts von oben
+und ist genau das, was die Runtime heute konsumiert: Der Assistent fragt Pfad
+bzw. URI des `CompiledUnit`-Dokuments, Quell- und Ergebnisklasse, und erzeugt
+daraus den `<transformations>`-Eintrag, ein `BridgeRepository` als Dateneingang
+(`source` = der ursprüngliche Input, `dataTrafo` = die Transformation) und
+Datensätze auf der **Ergebnisklasse**. Vorbild:
+`example/dataatlas-transformation.xmi`.
+
+Verifiziert (2026-09-10), dass das **ohne** die m2x-Metamodelle geht: ein
+DynamicEObject mit `eSetProxyURI('trafo/x.xmi#//@unit')` genügt, `XMLSave`
+schreibt den Verweis aus der Proxy-URI. Lädt man das Dokument zusätzlich hoch,
+kann der Assistent aus dem `manifest` sogar prüfen, ob die gepinnten Packages
+zum geladenen Modell passen.
+
+**2b — QVT-O im Browser verfassen.** Sprachdienst als Web Worker, wie bei OCL
+und FEEL, plus die Erzeugung der `CompiledUnit` samt Manifest und
+Fingerprints. Das ist der große Teil und liegt in EMFTs/m2x.
 
 ---
 
