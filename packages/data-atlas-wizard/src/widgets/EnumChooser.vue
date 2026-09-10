@@ -43,10 +43,6 @@ const widgetLabel = computed(
 
 /** Beschriftungen je Feature (Klasse.Feature → Wert → Label). */
 const LABELS: Record<string, { value: string; label: string }[]> = {
-  'AtlasSetup.configMode': [
-    { value: 'FILE', label: 'Als Datei neben den Modellen' },
-    { value: 'ATLAS', label: 'Als Objekt in einem Model-Atlas-Scope' },
-  ],
   'AtlasSetup.inputKind': [
     { value: 'FILE', label: 'Aus einer XMI-Datei' },
     { value: 'DATABASE', label: 'Aus einer Datenbank (JPA)' },

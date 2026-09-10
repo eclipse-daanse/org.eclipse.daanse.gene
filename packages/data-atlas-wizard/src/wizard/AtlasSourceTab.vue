@@ -333,9 +333,8 @@ async function pick(schema: AtlasSchemaInfo): Promise<void> {
     );
     /*
      * Nur das gewählte Schema liefert Kandidaten für Datensätze; die
-     * nachgeladenen Basis-Modelle reisen als `all` mit, damit der Datei-Modus
-     * auch für sie einen Pfad kennt. Dateinamen liefert der Atlas nicht — im
-     * Datei-Modus greift dann die Ableitung `model/<Paketname>.ecore`.
+     * nachgeladenen Basis-Modelle reisen als `all` mit, damit ihre Klassen
+     * für Vererbung und Verweise verfügbar sind.
      */
     emit('packages-loaded', {
       candidates: [result.rootPackage],

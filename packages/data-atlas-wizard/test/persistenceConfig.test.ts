@@ -21,7 +21,7 @@ import { newResourceSet, registerEcoreFromString, setupPackages } from '../src/e
 import { buildDataAtlasXmi } from '../src/transform/toDataAtlasConfig';
 import { findErrors } from '../src/transform/validate';
 import { initSetup, setup as setupRef } from '../src/wizard/context';
-import { ConfigMode, InputKind, MappingKind, type AtlasSetup } from '../src/generated';
+import { InputKind, MappingKind, type AtlasSetup } from '../src/generated';
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const PERSON_NS = 'https://eclipse.org/fennec/data/atlas/example/person/1.0.0';
@@ -90,12 +90,7 @@ describe('Prüfung', () => {
   });
 });
 
-describe('Atlas-Modus', () => {
-  beforeEach(() => {
-    s.configMode = ConfigMode.ATLAS;
-    s.fileSource!.fileUri = '/opt/dataatlas/runtime/data/data/person.xmi';
-  });
-
+describe('Einbetten', () => {
   it('das Mapping hängt als Containment im JPADataInput', () => {
     const { xmi } = buildDataAtlasXmi(s);
     expect(xmi).toContain('<persistenceConfig');
@@ -138,31 +133,8 @@ describe('Atlas-Modus', () => {
   });
 });
 
-describe('Datei-Modus', () => {
-  it('die Verweise im Inneren gehen mit dem Modus mit', () => {
-    /*
-     * Der eorm-Wizard schreibt nsURI-Hrefs. Im Datei-Modus muessen sie zu
-     * `model/person.ecore#//…` werden — auch die auf Features, wie
-     * `example/dataatlas-history.xmi` es zeigt
-     * (`<feature href="model/sensinact-history.ecore#//GeoData/latitude"/>`).
-     */
-    const { xmi } = buildDataAtlasXmi(s);
-    expect(xmi).toContain('eclass="model/person.ecore#//Person"');
-    expect(xmi).toContain('feature="ecore:EAttribute model/person.ecore#//Person/id"');
-    expect(xmi).toContain('feature="ecore:EAttribute model/person.ecore#//Person/firstName"');
-    expect(xmi).not.toContain(PERSON_NS + '#//');
-  });
-
-  it('das package-Attribut bleibt der nsURI — es ist kein Verweis', () => {
-    const { xmi } = buildDataAtlasXmi(s);
-    expect(xmi).toMatch(new RegExp(`<persistenceConfig[^>]*package="${PERSON_NS}"`));
-  });
-});
-
 describe('Round-Trip', () => {
   it('das eingebettete Mapping lässt sich wieder lesen', () => {
-    s.configMode = ConfigMode.ATLAS;
-    s.fileSource!.fileUri = '/opt/dataatlas/runtime/data/data/person.xmi';
     const { xmi } = buildDataAtlasXmi(s);
 
     const resource = newResourceSet().createResource(URI.createURI('zurueck.xmi'));

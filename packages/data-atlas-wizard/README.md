@@ -18,26 +18,28 @@ werden Datensätze, unter welchem Pfad, in welchen Formaten.**
 | Schritt | Inhalt |
 |---|---|
 | Modell | Domänenmodell aus einem Model-Atlas-Scope oder als Datei laden |
-| Instanz & Modus | Name, Beschreibung, Ablageort (Datei oder Atlas), Art der Datenquelle |
-| Datenquelle | Datei: Pfad der XMI. Datenbank: DataSource-Filter und ob das JPA-Mapping abgeleitet oder importiert wird |
+| Instanz | Name, Beschreibung, Art der Datenquelle |
+| Datenquelle | Datei: absoluter Pfad der XMI. Datenbank: DataSource-Filter und ob das JPA-Mapping abgeleitet oder importiert wird |
 | Datensätze | Häkchen je Klasse, dazu id, Name, Pfad, Beschreibung, Batch-Grenzen |
 | Endpunkt | Basis-Pfad, Namen, OpenAPI, Pagination-Parameter |
 | Formate | JSON, XML, CSV, CSV-ZIP — leer heißt: die Vorgaben des Data Atlas |
 | Zusammenfassung | Prüfliste, XMI-Vorschau, Download oder Veröffentlichen im Model Atlas |
 
-## Der Ablageort bestimmt die Verweise
+## Verweise entstehen immer über den nsURI
 
-Das ist die Entscheidung mit den meisten Folgen im erzeugten Dokument:
+```xml
+<supportedEClasses href="https://eclipse.org/fennec/data/atlas/example/person/1.0.0#//Person"/>
+```
 
-| `configMode` | Verweise auf Modellklassen | Pfad der Datendatei |
-|---|---|---|
-| `FILE` | `model/person.ecore#//Person` | relativ (`data/person.xmi`) |
-| `ATLAS` | `<nsURI>#//Person` | absolut (`/opt/dataatlas/runtime/data/…`) |
+Relative Datei-Verweise (`model/person.ecore#//Person`) kennt der Assistent
+nicht. Sie sind eine Deployment-Konvention, die keine der beteiligten
+Anwendungen herstellen kann: gene hat kein Dateisystem, der Model Atlas
+liefert Objekte statt Pfade. Wer sie wirklich braucht, schreibt das XMI von
+Hand.
 
-Im Datei-Modus braucht **jedes** referenzierte Package den Pfad seiner
-`.ecore`; der Modell-Schritt trägt sie beim Laden ein. Fehlt einer, bricht das
-Erzeugen mit einer Meldung ab — ein nsURI-Href in einer Datei-Konfiguration
-sieht plausibel aus und löst beim Laden nicht auf.
+Aus dem gleichen Grund muss der Pfad der Datendatei **absolut** sein
+(`/opt/dataatlas/runtime/data/…`) — die Konfiguration kommt über HTTP und
+hätte für einen relativen Pfad keinen Bezugspunkt.
 
 ## Erzeugt wird über EMF, nicht über Textbausteine
 
@@ -52,9 +54,11 @@ beide weil emf.ts dort von Java EMF abweicht:
 
 | Was | Warum | Ticket |
 |---|---|---|
-| `getHref()` | Der Datei-Dialekt kommt aus der Karte nsURI → Dateiname; EClassifier haben in emf.ts kein `eResource()` | [emf.ts#80](https://github.com/eclipse-fennec/emf.ts/issues/80) |
 | `getURIFragment()` | `iD="true"` wird beim Speichern nicht ausgewertet — sonst stünde `dataInput="/0/0"` in der Datei | [emf.ts#84](https://github.com/eclipse-fennec/emf.ts/issues/84) |
 | `writeNamespaces()` | Typpräfixe in Attributwerten werden geschrieben, das Präfix aber nicht deklariert | [emf.ts#87](https://github.com/eclipse-fennec/emf.ts/issues/87) |
+
+Den nsURI-Href liefert `XMLSave.getHref()` von selbst, weil EClassifier in
+emf.ts kein `eResource()` haben ([emf.ts#80](https://github.com/eclipse-fennec/emf.ts/issues/80)).
 
 Ebenso trägt `src/emf/wizardPackageFixup.ts` nach, was `emfts-codegen`
 ausgelassen hat ([emf.ts#83](https://github.com/eclipse-fennec/emf.ts/issues/83)):
@@ -71,8 +75,7 @@ Aus dem gewählten EPackage (`src/wizard/context.ts`):
 - je **konkreter** Klasse ein Datensatz: `id` = lowerCamel, `name` = Title
   Case, `path` = `id`, Beschreibung aus der GenModel-Annotation
 - `serviceId` = `<slug>-rest`, `urlContext` = `/<slug>`
-- `fileSource.fileUri` = `data/<Paketname>.xmi`, im Atlas-Modus mit dem
-  absoluten Präfix davor
+- `fileSource.fileUri` = `/opt/dataatlas/runtime/data/data/<Paketname>.xmi`
 - `databaseSource.dataSourceFilter` = `(dataSourceName=<slug>Ds)`
 - `exports` bleibt leer → die Runtime-Vorgaben JSON und XML gelten
 
@@ -86,9 +89,8 @@ wäre geraten. Abgeleitet wird `person`, in der Tabelle mit einem Klick zu
 Harte Fehler halten das Erzeugen auf (`src/transform/validate.ts`), weil das
 Ergebnis sonst unbrauchbar wäre: leere Pflichtfelder (`name`, `description`
 und `path` sind im Zielmodell `lowerBound=1`), kein ausgewählter Datensatz,
-doppelte ids, relativer Datei-Pfad im Atlas-Modus, fehlender `.ecore`-Pfad im
-Datei-Modus, `IMPORTED` ohne gültiges Mapping, und bei einer Datenbank
-Klassen aus mehreren Packages.
+doppelte ids, relativer Pfad der Datendatei, `IMPORTED` ohne gültiges Mapping,
+und bei einer Datenbank Klassen aus mehreren Packages.
 
 Warnungen halten nicht auf: nur CSV gewählt (ersetzt die Vorgaben vollständig,
 alles andere wird mit 406 abgelehnt), abgeleitetes JPA-Mapping (Tabellenname

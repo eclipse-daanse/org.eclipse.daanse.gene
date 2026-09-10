@@ -32,8 +32,11 @@ export function schemaContentOf(pkg: EPackage): string | null {
 }
 
 /**
- * Die Liste für `publishConfiguration`. Domänenmodelle kommen aus
- * `modelFiles` — dort steht genau das, was die Konfiguration referenziert.
+ * Die Liste für `publishConfiguration`.
+ *
+ * Die Domänenmodelle leiten sich aus den ausgewählten Datensätzen ab — deren
+ * Klassen sind genau das, was die Konfiguration referenziert, und nur die
+ * müssen im Scope auflösbar sein.
  */
 export function requiredSchemas(setup: AtlasSetup): RequiredSchema[] {
   const liste: RequiredSchema[] = [
@@ -42,8 +45,8 @@ export function requiredSchemas(setup: AtlasSetup): RequiredSchema[] {
   ];
 
   const gesehen = new Set(liste.map((s) => s.nsUri));
-  for (const ref of setup.modelFiles) {
-    const pkg = ref.modelPackage;
+  for (const dataset of setup.datasets.filter((d) => d.selected)) {
+    const pkg = dataset.targetClass?.getEPackage() as EPackage | null;
     const nsUri = pkg?.getNsURI();
     if (!pkg || !nsUri || gesehen.has(nsUri)) continue;
     gesehen.add(nsUri);

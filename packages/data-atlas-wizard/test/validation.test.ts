@@ -16,7 +16,6 @@ import { buildDataAtlasXmi } from '../src/transform/toDataAtlasConfig';
 import { SetupInvalidError, findErrors, findWarnings } from '../src/transform/validate';
 import { initSetup, setup as setupRef } from '../src/wizard/context';
 import {
-  ConfigMode,
   DataatlaswizardFactory,
   ExportKind,
   InputKind,
@@ -90,15 +89,15 @@ describe('harte Fehler', () => {
     expect(fehler).toMatch(/Pfad fehlt/);
   });
 
-  it('Atlas-Modus mit relativem Datei-Pfad', () => {
-    s.configMode = ConfigMode.ATLAS;
+  it('relativer Datei-Pfad', () => {
+    // Die Konfiguration kommt über HTTP aus dem Model Atlas — relativ zu was?
     s.fileSource!.fileUri = 'data/person.xmi';
-    expect(findErrors(s).join('\n')).toMatch(/muss der Pfad der Datendatei absolut sein/);
+    expect(findErrors(s).join('\n')).toMatch(/muss absolut sein/);
   });
 
-  it('Datei-Modus ohne Pfad der .ecore', () => {
-    s.modelFiles = [];
-    expect(findErrors(s).join('\n')).toMatch(/fehlt der Pfad der \.ecore für „person"/);
+  it('eine file:-URI gilt als absolut', () => {
+    s.fileSource!.fileUri = 'file:///DATA/data/person.xmi';
+    expect(findErrors(s)).toEqual([]);
   });
 
   it('doppelte ids', () => {

@@ -247,7 +247,7 @@ describe('requiredSchemas', () => {
       eResource: () => null,
     };
     const setupAttrappe = {
-      modelFiles: [{ modelPackage: ohneResource, fileName: 'model/x.ecore' }],
+      datasets: [{ selected: true, targetClass: { getEPackage: () => ohneResource } }],
     };
     expect(() => requiredSchemas(setupAttrappe as never)).toThrowError(/kein Quelltext/);
   });

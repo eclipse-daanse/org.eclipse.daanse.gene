@@ -1,11 +1,10 @@
 /**
  * Was die beiden Quell-Tabs melden, wenn Modelle geladen sind.
  *
- * Ein Objekt statt mehrerer Argumente, weil der Data-Atlas-Assistent mehr
- * braucht als die Kandidatenliste: im Datei-Modus muss zu **jedem**
- * referenzierten Package der Pfad seiner `.ecore` bekannt sein, sonst schreibt
- * der Serializer einen Href, der nicht auflöst. Die Dateinamen kennt nur der
- * Ladevorgang.
+ * Ein Objekt statt mehrerer Argumente, damit es erweiterbar bleibt. Dateinamen
+ * kommen nicht vor: Verweise auf Modellklassen entstehen immer über den
+ * nsURI — wo eine `.ecore` liegt, ist für die erzeugte Konfiguration
+ * bedeutungslos.
  */
 import type { EPackage } from '@emfts/core';
 
@@ -14,7 +13,5 @@ export interface ModelSourcePayload {
   candidates: EPackage[];
   /** Alle in diesem Lauf registrierten Packages, Abhängigkeiten eingeschlossen. */
   all: EPackage[];
-  /** Dateiname je Package aus `all`, gleiche Reihenfolge — leer, wenn unbekannt. */
-  fileNames?: (string | undefined)[];
   warnings: string[];
 }

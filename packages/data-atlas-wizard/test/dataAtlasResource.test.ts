@@ -10,8 +10,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import type { EClass, EObject, EPackage } from '@emfts/core';
 import { getConfigurationPackage, registerEcoreFromString, setupPackages } from '../src/emf/setup';
-import { createDataAtlasResource, type ModelFileMap } from '../src/transform/dataAtlasResource';
-import { ConfigMode } from '../src/generated';
+import { createDataAtlasResource } from '../src/transform/dataAtlasResource';
 
 const PERSON_ECORE = `<?xml version="1.0" encoding="UTF-8"?>
 <ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI"
@@ -79,37 +78,23 @@ function buildConfiguration(): EObject {
   return root;
 }
 
-function serialize(mode: ConfigMode, modelFiles?: ModelFileMap): string {
-  const resource = createDataAtlasResource('dataatlas.xmi', { mode, modelFiles });
+function serialize(): string {
+  const resource = createDataAtlasResource('dataatlas.xmi');
   resource.getContents().add(buildConfiguration());
   return resource.saveToString();
 }
 
-const dateien: ModelFileMap = new Map([[PERSON_NS, 'model/person.ecore']]);
-
-describe('Href-Dialekt', () => {
-  it('FILE-Modus: relativer Datei-Href', () => {
-    const xmi = serialize(ConfigMode.FILE, dateien);
-    expect(xmi).toContain('href="model/person.ecore#//Person"');
-    expect(xmi).not.toContain(PERSON_NS);
-  });
-
-  it('ATLAS-Modus: nsURI-Href', () => {
-    const xmi = serialize(ConfigMode.ATLAS);
+describe('Verweise auf Modellklassen', () => {
+  it('entstehen über den nsURI', () => {
+    /*
+     * Ohne Zutun: XMLSave.getHref() faellt fuer einen EClassifier auf den
+     * nsURI zurueck, weil EClassifier in emf.ts kein eResource() haben
+     * (emf.ts#80). Relative Datei-Verweise gibt es nicht — sie waeren eine
+     * Deployment-Konvention, die keine der beteiligten Anwendungen kennt.
+     */
+    const xmi = serialize();
     expect(xmi).toContain(`href="${PERSON_NS}#//Person"`);
     expect(xmi).not.toContain('model/person.ecore');
-  });
-
-  it('FILE-Modus ohne Eintrag: harter Fehler statt falschem Href', () => {
-    // Ein nsURI-Href in einer Datei-Konfiguration sieht plausibel aus und
-    // loest beim Laden nicht auf — deshalb wirft es hier.
-    expect(() => serialize(ConfigMode.FILE, new Map())).toThrowError(
-      /Kein modelFiles-Eintrag für https:\/\/eclipse\.org\/fennec\/data\/atlas\/example\/person/,
-    );
-  });
-
-  it('der Fehler nennt die betroffene Klasse', () => {
-    expect(() => serialize(ConfigMode.FILE)).toThrowError(/Person/);
   });
 });
 
@@ -117,7 +102,7 @@ describe('ID-Fragmente', () => {
   let xmi: string;
 
   beforeEach(() => {
-    xmi = serialize(ConfigMode.FILE, dateien);
+    xmi = serialize();
   });
 
   it('dokumentinterne Referenzen benutzen den iD-Wert', () => {
@@ -136,19 +121,19 @@ describe('ID-Fragmente', () => {
 
 describe('was der Serializer von sich aus richtig macht', () => {
   it('xsi:type an den abstrakten Features', () => {
-    const xmi = serialize(ConfigMode.FILE, dateien);
+    const xmi = serialize();
     expect(xmi).toContain('xsi:type="configuration:FileDataInput"');
     expect(xmi).toContain('xsi:type="configuration:RestDataService"');
   });
 
   it('Elementreihenfolge nach dem Metamodell', () => {
-    const xmi = serialize(ConfigMode.FILE, dateien);
+    const xmi = serialize();
     expect(xmi.indexOf('<dataInputs')).toBeLessThan(xmi.indexOf('<dataSets'));
     expect(xmi.indexOf('<dataSets')).toBeLessThan(xmi.indexOf('<services'));
   });
 
   it('Namespace-Deklaration des Zielmetamodells', () => {
-    const xmi = serialize(ConfigMode.FILE, dateien);
+    const xmi = serialize();
     expect(xmi).toContain(
       'xmlns:configuration="https://eclipse.org/fennec/data/atlas/configuration/1.0.0"',
     );
@@ -157,8 +142,8 @@ describe('was der Serializer von sich aus richtig macht', () => {
 
 describe('Round-Trip', () => {
   it('beide Referenzarten lösen wieder zu Objekten auf', () => {
-    const xmi = serialize(ConfigMode.ATLAS);
-    const zurueck = createDataAtlasResource('back.xmi', { mode: ConfigMode.ATLAS });
+    const xmi = serialize();
+    const zurueck = createDataAtlasResource('back.xmi');
     zurueck.loadFromString(xmi);
     const root: any = zurueck.getContents().get(0);
     const dataSet = root.eGet(root.eClass().getEStructuralFeature('dataSets')).get(0);

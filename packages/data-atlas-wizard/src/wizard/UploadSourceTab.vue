@@ -160,14 +160,8 @@ function processContents(contents: { name: string; content: string }[]): void {
     (ref) =>
       `Das Modell referenziert „${ref}" — bitte die Datei mit laden oder den Model Atlas verbinden, sonst fehlen zugehörige Verweise.`,
   );
-  // Hochgeladene Dateien sind alle Kandidaten, und ihre Namen sind bekannt —
-  // der Datei-Modus benutzt genau diese Namen für die Hrefs.
-  emit('packages-loaded', {
-    candidates: packages,
-    all: packages,
-    fileNames: contents.map((c) => c.name),
-    warnings,
-  });
+  // Hochgeladene Dateien sind alle Kandidaten.
+  emit('packages-loaded', { candidates: packages, all: packages, warnings });
 }
 </script>
 

@@ -3,6 +3,13 @@
 > **Status:** freigegeben, noch nicht begonnen. Umsetzung startet bei Schritt 1
 > der Reihenfolge in Abschnitt 10.
 >
+> **Änderung 2026-09-10:** `configMode` und `modelFiles` sind entfallen.
+> Verweise auf Modellklassen entstehen immer über den nsURI; relative
+> Datei-Verweise sind eine Deployment-Konvention, die keine der drei
+> beteiligten Anwendungen herstellen kann (gene hat kein Dateisystem, der
+> Model Atlas liefert Objekte statt Pfade). Wer sie braucht, schreibt das XMI
+> von Hand. Betrifft die Abschnitte 1, 2, 3, 4, 6 und 8.
+>
 > **Änderungen 2026-09-09:**
 >
 > 1. Das Ziel-XMI entsteht über EMF (`saveToString()` plus zwei

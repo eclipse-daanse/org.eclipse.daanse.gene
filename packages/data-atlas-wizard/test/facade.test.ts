@@ -8,7 +8,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
-  ConfigMode,
   DataatlaswizardFactory,
   DataatlaswizardPackage,
   ExportKind,
@@ -32,11 +31,10 @@ describe('Fassadenmodell', () => {
     expect(pkg.getNsPrefix()).toBe('dataatlaswizard');
   });
 
-  it('die sechs Klassen der Fassade', () => {
+  it('die fünf Klassen der Fassade', () => {
     const namen = [...pkg.getEClassifiers()].map((c) => c.getName());
     expect(namen).toEqual([
       'AtlasSetup',
-      'ModelFileRef',
       'FileSourceConfig',
       'DatabaseSourceConfig',
       'DatasetConfig',
@@ -50,9 +48,7 @@ describe('Fassadenmodell', () => {
     expect(namen).toEqual([
       'instanceName',
       'instanceDescription',
-      'configMode',
       'modelPackage',
-      'modelFiles',
       'inputKind',
       'fileSource',
       'databaseSource',
@@ -70,7 +66,7 @@ describe('Fassadenmodell', () => {
 
   it('Pflichtfelder sind als lowerBound=1 markiert', () => {
     const setup = DataatlaswizardPackage.Literals.ATLAS_SETUP;
-    for (const name of ['instanceName', 'configMode', 'modelPackage', 'inputKind', 'serviceId', 'urlContext']) {
+    for (const name of ['instanceName', 'modelPackage', 'inputKind', 'serviceId', 'urlContext']) {
       expect(feature(setup, name).getLowerBound(), name).toBe(1);
     }
     // Beschreibung der Instanz bleibt optional
@@ -84,7 +80,7 @@ describe('Fassadenmodell', () => {
       expect(ref.isContainment(), name).toBe(true);
       expect(ref.getUpperBound(), name).toBe(1);
     }
-    for (const name of ['modelFiles', 'datasets', 'exports']) {
+    for (const name of ['datasets', 'exports']) {
       const ref = feature(setup, name) as unknown as { isContainment(): boolean; getUpperBound(): number };
       expect(ref.isContainment(), name).toBe(true);
       expect(ref.getUpperBound(), name).toBe(-1);
@@ -101,12 +97,10 @@ describe('Fassadenmodell', () => {
 
   it('Vorgabewerte stehen an einer frischen Instanz', () => {
     const setup = factory.createAtlasSetup();
-    expect(setup.configMode).toBe(ConfigMode.FILE);
     expect(setup.inputKind).toBe(InputKind.FILE);
     expect(setup.openApi).toBe(false);
     expect(setup.paginationOffsetParameterName).toBe('offset');
     expect(setup.paginationSizeParameterName).toBe('limit');
-    expect(setup.modelFiles).toEqual([]);
     expect(setup.datasets).toEqual([]);
     expect(setup.exports).toEqual([]);
   });
@@ -128,8 +122,8 @@ describe('Fassadenmodell', () => {
     expect(db.mappingKind).toBe(MappingKind.DERIVED);
   });
 
-  it('die vier Enums decken die Fälle des Plans ab', () => {
-    expect(Object.keys(ConfigMode)).toEqual(['FILE', 'ATLAS']);
+  it('die drei Enums decken die Fälle des Plans ab', () => {
+    // ConfigMode ist entfallen: Verweise entstehen immer über den nsURI
     expect(Object.keys(InputKind)).toEqual(['FILE', 'DATABASE']);
     expect(Object.keys(MappingKind)).toEqual(['DERIVED', 'IMPORTED']);
     expect(Object.keys(ExportKind)).toEqual(['JSON', 'XML', 'CSV', 'CSV_ZIP']);

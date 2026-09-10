@@ -107,7 +107,7 @@ describe.each(STEP_FILES)('%s', (datei) => {
 describe('Widget-Zuordnung', () => {
   it('Enum-Felder bekommen den EnumChooser, nicht den Default-Editor', () => {
     const uiModel = ladeSchritt('step-instance.xmi');
-    const feld = felder(formViews(uiModel)[0]).find((f) => lies(f, 'name') === 'configMode');
+    const feld = felder(formViews(uiModel)[0]).find((f) => lies(f, 'name') === 'inputKind');
     const feature = lies(feld!, 'feature') as EStructuralFeature;
     expect(componentRegistry.getComponentForFeature(feature)).toBe(EnumChooser);
   });

@@ -10,7 +10,6 @@ import type { EClass, EPackage } from '@emfts/core';
 import { setupPackages, registerEcoreFromString } from '../src/emf/setup';
 import {
   ATLAS_DATA_PREFIX,
-  addModelFile,
   buildDataset,
   concreteClasses,
   defaultFileUri,
@@ -18,13 +17,12 @@ import {
   initSetup,
   lowerCamel,
   selectedDatasets,
-  setConfigMode,
   setup,
   slugOf,
   titleCase,
   version,
 } from '../src/wizard/context';
-import { ConfigMode, InputKind } from '../src/generated';
+import { InputKind } from '../src/generated';
 
 /** Wie example/model/person.ecore, um eine abstrakte Klasse ergänzt. */
 const PERSON_ECORE = `<?xml version="1.0" encoding="UTF-8"?>
@@ -124,7 +122,6 @@ describe('initSetup', () => {
     const s = setup.value!;
     expect(s.instanceName).toBe('person');
     expect(s.instanceDescription).toBe('Minimal example domain model.');
-    expect(s.configMode).toBe(ConfigMode.FILE);
     expect(s.inputKind).toBe(InputKind.FILE);
     expect(s.modelPackage).toBe(personPackage);
   });
@@ -140,7 +137,7 @@ describe('initSetup', () => {
   it('beide Datenquellen sind vorbereitet', () => {
     const s = setup.value!;
     expect(s.fileSource!.id).toBe('person-file');
-    expect(s.fileSource!.fileUri).toBe('data/person.xmi');
+    expect(s.fileSource!.fileUri).toBe(`${ATLAS_DATA_PREFIX}data/person.xmi`);
     expect(s.databaseSource!.id).toBe('person-jpa');
     expect(s.databaseSource!.dataSourceId).toBe('person-db');
     expect(s.databaseSource!.dataSourceFilter).toBe('(dataSourceName=personDs)');
@@ -156,13 +153,6 @@ describe('initSetup', () => {
     expect(setup.value!.exports).toEqual([]);
   });
 
-  it('das Package steht als Datei-Referenz für den FILE-Modus drin', () => {
-    const s = setup.value!;
-    expect(s.modelFiles).toHaveLength(1);
-    expect(s.modelFiles[0].modelPackage).toBe(personPackage);
-    expect(s.modelFiles[0].fileName).toBe('model/person.ecore');
-  });
-
   it('touch() zählt hoch, damit die Oberfläche neu liest', () => {
     const vorher = version.value;
     initSetup(personPackage);
@@ -170,60 +160,9 @@ describe('initSetup', () => {
   });
 });
 
-describe('Datei-URI und Modus', () => {
-  beforeEach(() => {
-    initSetup(personPackage);
-  });
-
-  it('im Atlas-Modus absolut', () => {
-    expect(defaultFileUri(personPackage, ConfigMode.ATLAS)).toBe(
-      `${ATLAS_DATA_PREFIX}data/person.xmi`,
-    );
-    expect(defaultFileUri(personPackage, ConfigMode.FILE)).toBe('data/person.xmi');
-  });
-
-  it('der Moduswechsel zieht die Vorgabe mit', () => {
-    setConfigMode(ConfigMode.ATLAS);
-    expect(setup.value!.fileSource!.fileUri).toBe('/opt/dataatlas/runtime/data/data/person.xmi');
-    setConfigMode(ConfigMode.FILE);
-    expect(setup.value!.fileSource!.fileUri).toBe('data/person.xmi');
-  });
-
-  it('eine von Hand eingetragene URI bleibt stehen', () => {
-    setup.value!.fileSource!.fileUri = 'irgendwo/anders.xmi';
-    setConfigMode(ConfigMode.ATLAS);
-    expect(setup.value!.fileSource!.fileUri).toBe('irgendwo/anders.xmi');
-  });
-});
-
-describe('addModelFile', () => {
-  beforeEach(() => {
-    initSetup(personPackage);
-  });
-
-  it('nimmt ein weiteres Package auf, ohne Doppel', () => {
-    const zweites = registerEcoreFromString(
-      PERSON_ECORE.replace('name="person"', 'name="zweit"').replace(
-        'person/1.0.0',
-        'zweit/1.0.0',
-      ),
-      'model/zweit.ecore',
-    );
-    addModelFile(zweites);
-    addModelFile(zweites);
-    expect(setup.value!.modelFiles).toHaveLength(2);
-    expect(setup.value!.modelFiles[1].fileName).toBe('model/zweit.ecore');
-  });
-
-  it('ein eigener Dateiname wird übernommen', () => {
-    const drittes = registerEcoreFromString(
-      PERSON_ECORE.replace('name="person"', 'name="dritt"').replace(
-        'person/1.0.0',
-        'dritt/1.0.0',
-      ),
-      'model/dritt.ecore',
-    );
-    addModelFile(drittes, 'schemas/dritt.ecore');
-    expect(setup.value!.modelFiles[1].fileName).toBe('schemas/dritt.ecore');
+describe('Datei-URI', () => {
+  it('ist immer absolut — die Konfiguration kommt über HTTP', () => {
+    expect(defaultFileUri(personPackage)).toBe(`${ATLAS_DATA_PREFIX}data/person.xmi`);
+    expect(defaultFileUri(personPackage).startsWith('/')).toBe(true);
   });
 });

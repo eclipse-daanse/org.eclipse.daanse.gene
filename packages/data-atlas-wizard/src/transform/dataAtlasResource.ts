@@ -4,82 +4,36 @@
  * Das Ziel-XMI entsteht über EMF (`saveToString()`), nicht über einen
  * String-Builder — Escaping, Namespaces, `xsi:type` und Referenzlisten macht
  * damit der Serializer. Zwei Stellen bleiben, an denen emf.ts von Java EMF
- * abweicht und die deshalb hier überschrieben werden:
+ * abweicht:
  *
- *  a) **Href-Dialekt** — im `FILE`-Modus muss ein EClassifier als
- *     `model/person.ecore#//Person` erscheinen, im `ATLAS`-Modus als
- *     `<nsURI>#//Person`. Den Atlas-Fall trifft `XMLSave.getHref()` schon,
- *     weil EClassifier in emf.ts kein `eResource()` haben (emf.ts#80) und die
- *     Methode dann auf den nsURI zurückfällt. Für den Datei-Fall gibt es die
- *     Karte nsURI → Dateiname.
- *  b) **ID-Fragmente** — emf.ts wertet `iD="true"` beim Speichern nicht aus
+ *  a) **ID-Fragmente** — emf.ts wertet `iD="true"` beim Speichern nicht aus
  *     (emf.ts#84); ohne die Überschreibung stünde `dataInput="/0/0"` in der
  *     Datei statt `dataInput="persons-file"`. Der Weg über `resource.setID()`
  *     wirkt auch, schreibt aber zusätzlich ein `xmi:id`, das die Vorlagen des
  *     Data Atlas nicht haben.
+ *  b) **Fehlende Namespace-Deklaration** — beim eingebetteten eorm-Mapping
+ *     schreibt emf.ts Typpräfixe in Attributwerte
+ *     (`feature="ecore:EAttribute …"`), zählt für die Deklarationen aber nur
+ *     Präfixe, die von Elementen gebraucht werden (emf.ts#87).
+ *
+ * Der Href-Dialekt braucht **keine** Überschreibung: Verweise auf
+ * Modellklassen entstehen immer über den nsURI, und genau den liefert
+ * `XMLSave.getHref()` für einen EClassifier von sich aus (weil EClassifier in
+ * emf.ts kein `eResource()` haben, emf.ts#80).
  */
 import { URI, XMIResource, XMISave } from '@emfts/core';
 import type { EObject, XMLHelper } from '@emfts/core';
-import type { ConfigMode } from '../generated';
-
-/** Karte nsURI → Dateiname, wie sie aus `AtlasSetup.modelFiles` entsteht. */
-export type ModelFileMap = ReadonlyMap<string, string>;
 
 export interface DataAtlasResourceOptions {
-  /** `FILE` schreibt relative Datei-Hrefs, `ATLAS` nsURI-Hrefs. */
-  mode: ConfigMode;
-  /** Nur im `FILE`-Modus benutzt; fehlt ein Eintrag, wird geworfen. */
-  modelFiles?: ModelFileMap;
   /**
    * Zusätzliche Namespace-Deklarationen für den Dokumentkopf, als
-   * Präfix → nsURI.
-   *
-   * Nötig, weil emf.ts Typpräfixe in Href-Werten schreibt
-   * (`feature="ecore:EAttribute …"`), ohne das Präfix zu deklarieren
-   * (emf.ts#87). Ein Leser kann `ecore:EAttribute` dann nicht auflösen.
+   * Präfix → nsURI (emf.ts#87).
    */
   extraNamespaces?: Readonly<Record<string, string>>;
 }
 
 /** Ecore-Namespace — von eingebetteten eorm-Mappings gebraucht. */
 export const ECORE_NS_URI = 'http://www.eclipse.org/emf/2002/Ecore';
-
-/** Ist das Objekt ein EClassifier, also ein Verweis ins Metamodell? */
-function asClassifier(obj: EObject): { getName(): string | null; getEPackage(): { getNsURI(): string | null } | null } | null {
-  const kandidat = obj as unknown as {
-    getEPackage?: () => { getNsURI?: () => string | null } | null;
-    getName?: () => string | null;
-  };
-  if (typeof kandidat.getEPackage !== 'function' || typeof kandidat.getName !== 'function') {
-    return null;
-  }
-  return kandidat as never;
-}
-
-/**
- * Ist das Objekt ein EStructuralFeature? Ein eingebettetes eorm-Mapping
- * verweist auf Features (`…#//Person/firstName`), und die brauchen im
- * Datei-Modus denselben Dialekt — belegt durch `example/dataatlas-history.xmi`,
- * wo `<feature href="model/sensinact-history.ecore#//GeoData/latitude"/>`
- * steht.
- */
-function asFeature(
-  obj: EObject,
-): { getName(): string | null; owner: { getName(): string | null; nsURI: string | null } } | null {
-  const kandidat = obj as unknown as {
-    getEContainingClass?: () => { getName?: () => string | null; getEPackage?: () => { getNsURI?: () => string | null } | null } | null;
-    getName?: () => string | null;
-  };
-  if (typeof kandidat.getEContainingClass !== 'function' || typeof kandidat.getName !== 'function') {
-    return null;
-  }
-  const owner = kandidat.getEContainingClass();
-  if (!owner) return null;
-  return {
-    getName: () => kandidat.getName?.() ?? null,
-    owner: { getName: () => owner.getName?.() ?? null, nsURI: owner.getEPackage?.()?.getNsURI?.() ?? null },
-  };
-}
 
 export class DataAtlasSave extends XMISave {
   private options: DataAtlasResourceOptions;
@@ -89,12 +43,6 @@ export class DataAtlasSave extends XMISave {
     this.options = options;
   }
 
-  /**
-   * Im `FILE`-Modus wird der Href über die Datei aufgebaut, unter der das
-   * Package neben der Konfiguration liegt. Fehlt der Eintrag, ist das ein
-   * harter Fehler: ein nsURI-Href in einer Datei-Konfiguration sieht
-   * plausibel aus und löst beim Laden nicht auf.
-   */
   /**
    * Ergänzt die Deklarationen, die emf.ts nicht selbst schreibt. Ein Präfix,
    * das schon deklariert ist, wird nicht wiederholt.
@@ -107,48 +55,12 @@ export class DataAtlasSave extends XMISave {
       this.declaredNamespaces.set(nsURI, prefix);
     }
   }
-
-  protected override getHref(obj: EObject): string | null {
-    if (this.options.mode !== 'FILE') return super.getHref(obj);
-
-    const classifier = asClassifier(obj);
-    if (classifier) {
-      const nsURI = classifier.getEPackage()?.getNsURI() ?? null;
-      if (!nsURI) return super.getHref(obj);
-      return `${this.fileFor(nsURI, classifier.getName())}#//${classifier.getName() ?? ''}`;
-    }
-
-    const feature = asFeature(obj);
-    if (feature?.owner.nsURI) {
-      const datei = this.fileFor(feature.owner.nsURI, feature.getName());
-      return `${datei}#//${feature.owner.getName() ?? ''}/${feature.getName() ?? ''}`;
-    }
-
-    return super.getHref(obj);
-  }
-
-  /**
-   * Der Dateiname zu einem nsURI. Fehlt der Eintrag, ist das ein harter
-   * Fehler: ein nsURI-Href in einer Datei-Konfiguration sieht plausibel aus
-   * und löst beim Laden nicht auf.
-   */
-  private fileFor(nsURI: string, betroffen: string | null): string {
-    const datei = this.options.modelFiles?.get(nsURI);
-    if (!datei) {
-      throw new Error(
-        `Kein modelFiles-Eintrag für ${nsURI} — im FILE-Modus braucht jedes ` +
-          `referenzierte Package den Pfad seiner .ecore neben der Konfiguration ` +
-          `(betroffen: ${betroffen ?? '?'}).`,
-      );
-    }
-    return datei;
-  }
 }
 
 export class DataAtlasResource extends XMIResource {
   private options: DataAtlasResourceOptions;
 
-  constructor(uri: URI, options: DataAtlasResourceOptions) {
+  constructor(uri: URI, options: DataAtlasResourceOptions = {}) {
     super(uri);
     this.options = options;
   }
@@ -179,7 +91,7 @@ export class DataAtlasResource extends XMIResource {
  */
 export function createDataAtlasResource(
   fileName: string,
-  options: DataAtlasResourceOptions,
+  options: DataAtlasResourceOptions = {},
 ): DataAtlasResource {
   return new DataAtlasResource(URI.createURI(fileName), options);
 }

@@ -6,8 +6,7 @@
  * Datei-Konfiguration löst beim Laden nicht auf. Warnungen erscheinen in der
  * Zusammenfassung, halten den Nutzer aber nicht auf.
  */
-import type { EPackage } from '@emfts/core';
-import { ConfigMode, ExportKind, InputKind, MappingKind, type AtlasSetup } from '../generated';
+import { ExportKind, InputKind, MappingKind, type AtlasSetup } from '../generated';
 import { newResourceSet } from '../emf/setup';
 import { URI } from '@emfts/core';
 
@@ -93,11 +92,11 @@ export function findErrors(setup: AtlasSetup): string[] {
     } else {
       if (leer(quelle.id)) fehler.push('Datenquelle: id fehlt.');
       if (leer(quelle.fileUri)) fehler.push('Datenquelle: Pfad der Datendatei fehlt.');
-      else if (setup.configMode === ConfigMode.ATLAS && !quelle.fileUri.startsWith('/')) {
-        // Im Atlas-Modus liegt die Konfiguration im Model Atlas; ein
+      else if (!quelle.fileUri.startsWith('/') && !quelle.fileUri.includes('://')) {
+        // Die Konfiguration kommt über HTTP aus dem Model Atlas — ein
         // relativer Pfad hätte dort keinen Bezugspunkt.
         fehler.push(
-          `Im Atlas-Modus muss der Pfad der Datendatei absolut sein (ist: „${quelle.fileUri}").`,
+          `Der Pfad der Datendatei muss absolut sein (ist: „${quelle.fileUri}").`,
         );
       }
     }
@@ -129,25 +128,6 @@ export function findErrors(setup: AtlasSetup): string[] {
             `(gefunden: ${[...pakete].join(', ')}).`,
         );
       }
-    }
-  }
-
-  // Im Datei-Modus braucht jedes referenzierte Package seinen Dateinamen,
-  // sonst schreibt der Serializer einen Href, der nicht auflöst.
-  if (setup.configMode === ConfigMode.FILE) {
-    const bekannt = new Set(
-      setup.modelFiles
-        .map((ref) => ref.modelPackage?.getNsURI())
-        .filter((n): n is string => !!n),
-    );
-    const fehlend = new Map<string, string>();
-    for (const dataset of ausgewaehlt) {
-      const pkg = dataset.targetClass?.getEPackage() as EPackage | null;
-      const nsURI = pkg?.getNsURI();
-      if (nsURI && !bekannt.has(nsURI)) fehlend.set(nsURI, pkg?.getName() ?? '?');
-    }
-    for (const [nsURI, name] of fehlend) {
-      fehler.push(`Im Datei-Modus fehlt der Pfad der .ecore für „${name}" (${nsURI}).`);
     }
   }
 
