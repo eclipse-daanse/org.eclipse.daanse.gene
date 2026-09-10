@@ -555,6 +555,7 @@ sichtbar festgenagelt sein.
 | `test/context.test.ts` | Ableitungsregeln: ids, `path`, `description` aus GenModel-`documentation`, Modus-abhängige `fileUri` |
 | `test/validation.test.ts` | jede harte Regel und jede Warnung aus Abschnitt 4 einmal, dazu die Grundannahme: was `initSetup` liefert, ist ohne Zutun schreibbar |
 | `test/wizardUi.test.ts` | jedes `feature=`-Href der Schritt-XMIs löst auf und findet eine Registry-Komponente (fängt Umbenennungen im Fassadenmodell und den Codegen-Bug) |
+| `test/stepsWiring.test.ts` | die Kette Klick → Fassadenmodell → `touch()` in den handgeschriebenen Schritten. Braucht `// @vitest-environment jsdom` in der ersten Zeile, weil das Paket sonst auf `node` steht. Genau diese Verdrahtung war in gene schon mehrfach kaputt, ohne dass ein Unit-Test es sah |
 | `test/publish.test.ts` | gegen Mock-`fetch`: Reihenfolge eorm→configuration→Domäne in **beiden** Stages, Retry auf 5xx, Transition-Payload als XMI, Abbruch bei fehlendem Schema |
 
 
