@@ -7,9 +7,7 @@
 
 import { BasicEObject } from '@emfts/core';
 import type { EClass, EStructuralFeature, EPackage } from '@emfts/core';
-import type { DataSourceConfig } from './DataSourceConfig';
-import type { DatasetConfig } from './DatasetConfig';
-import type { ExportConfig } from './ExportConfig';
+import type { DataChain } from './DataChain';
 import type { AtlasSetup } from './AtlasSetup';
 import { DataatlaswizardPackage } from './DataatlaswizardPackage';
 
@@ -22,24 +20,20 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
   static readonly INSTANCE_NAME: number = 0;
   static readonly INSTANCE_DESCRIPTION: number = 1;
   static readonly MODEL_PACKAGE: number = 2;
-  static readonly DATA_SOURCES: number = 3;
-  static readonly DATASETS: number = 4;
-  static readonly EXPORTS: number = 5;
-  static readonly SERVICE_ID: number = 6;
-  static readonly SERVICE_NAME: number = 7;
-  static readonly SERVICE_DESCRIPTION: number = 8;
-  static readonly URL_CONTEXT: number = 9;
-  static readonly OPEN_API: number = 10;
-  static readonly PAGINATION_OFFSET_PARAMETER_NAME: number = 11;
-  static readonly PAGINATION_SIZE_PARAMETER_NAME: number = 12;
+  static readonly CHAINS: number = 3;
+  static readonly SERVICE_ID: number = 4;
+  static readonly SERVICE_NAME: number = 5;
+  static readonly SERVICE_DESCRIPTION: number = 6;
+  static readonly URL_CONTEXT: number = 7;
+  static readonly OPEN_API: number = 8;
+  static readonly PAGINATION_OFFSET_PARAMETER_NAME: number = 9;
+  static readonly PAGINATION_SIZE_PARAMETER_NAME: number = 10;
 
   // Private fields
   private _instanceName: string = "";
   private _instanceDescription?: string;
   private _modelPackage?: EPackage;
-  private _dataSources: DataSourceConfig[] = [];
-  private _datasets: DatasetConfig[] = [];
-  private _exports: ExportConfig[] = [];
+  private _chains: DataChain[] = [];
   private _serviceId: string = "";
   private _serviceName: string = "";
   private _serviceDescription: string = "";
@@ -128,73 +122,25 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
     }
   }
 
-  get dataSources(): DataSourceConfig[] {
-    return this._dataSources;
+  get chains(): DataChain[] {
+    return this._chains;
   }
 
-  set dataSources(value: DataSourceConfig[]) {
-    const oldValue = this._dataSources;
-    this._dataSources = value;
+  set chains(value: DataChain[]) {
+    const oldValue = this._chains;
+    this._chains = value;
     if (this.eDeliver()) {
       this.eNotify({
         getNotifier: () => this,
         getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.DATA_SOURCES),
+        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.CHAINS),
         getOldValue: () => oldValue,
         getNewValue: () => value,
         getPosition: () => -1,
         wasSet: () => true,
         isTouch: () => false,
         isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.DATA_SOURCES,
-        merge: () => false
-      });
-    }
-  }
-
-  get datasets(): DatasetConfig[] {
-    return this._datasets;
-  }
-
-  set datasets(value: DatasetConfig[]) {
-    const oldValue = this._datasets;
-    this._datasets = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.DATASETS),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.DATASETS,
-        merge: () => false
-      });
-    }
-  }
-
-  get exports(): ExportConfig[] {
-    return this._exports;
-  }
-
-  set exports(value: ExportConfig[]) {
-    const oldValue = this._exports;
-    this._exports = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.EXPORTS),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.EXPORTS,
+        getFeatureID: () => AtlasSetupImpl.CHAINS,
         merge: () => false
       });
     }
@@ -382,12 +328,8 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
         return this.instanceDescription;
       case AtlasSetupImpl.MODEL_PACKAGE:
         return this.modelPackage;
-      case AtlasSetupImpl.DATA_SOURCES:
-        return this.dataSources;
-      case AtlasSetupImpl.DATASETS:
-        return this.datasets;
-      case AtlasSetupImpl.EXPORTS:
-        return this.exports;
+      case AtlasSetupImpl.CHAINS:
+        return this.chains;
       case AtlasSetupImpl.SERVICE_ID:
         return this.serviceId;
       case AtlasSetupImpl.SERVICE_NAME:
@@ -425,16 +367,8 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
         this.modelPackage = newValue as EPackage;
         super.eSet(feature, newValue);
         break;
-      case AtlasSetupImpl.DATA_SOURCES:
-        this.dataSources = newValue as DataSourceConfig[];
-        super.eSet(feature, newValue);
-        break;
-      case AtlasSetupImpl.DATASETS:
-        this.datasets = newValue as DatasetConfig[];
-        super.eSet(feature, newValue);
-        break;
-      case AtlasSetupImpl.EXPORTS:
-        this.exports = newValue as ExportConfig[];
+      case AtlasSetupImpl.CHAINS:
+        this.chains = newValue as DataChain[];
         super.eSet(feature, newValue);
         break;
       case AtlasSetupImpl.SERVICE_ID:
@@ -482,12 +416,8 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
         return this._instanceDescription !== undefined;
       case AtlasSetupImpl.MODEL_PACKAGE:
         return this._modelPackage !== undefined;
-      case AtlasSetupImpl.DATA_SOURCES:
-        return this._dataSources !== undefined && this._dataSources.length > 0;
-      case AtlasSetupImpl.DATASETS:
-        return this._datasets !== undefined && this._datasets.length > 0;
-      case AtlasSetupImpl.EXPORTS:
-        return this._exports !== undefined && this._exports.length > 0;
+      case AtlasSetupImpl.CHAINS:
+        return this._chains !== undefined && this._chains.length > 0;
       case AtlasSetupImpl.SERVICE_ID:
         return this._serviceId !== "";
       case AtlasSetupImpl.SERVICE_NAME:
@@ -522,14 +452,8 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
       case AtlasSetupImpl.MODEL_PACKAGE:
         this._modelPackage = undefined;
         return;
-      case AtlasSetupImpl.DATA_SOURCES:
-        this._dataSources = [];
-        return;
-      case AtlasSetupImpl.DATASETS:
-        this._datasets = [];
-        return;
-      case AtlasSetupImpl.EXPORTS:
-        this._exports = [];
+      case AtlasSetupImpl.CHAINS:
+        this._chains = [];
         return;
       case AtlasSetupImpl.SERVICE_ID:
         this._serviceId = "";

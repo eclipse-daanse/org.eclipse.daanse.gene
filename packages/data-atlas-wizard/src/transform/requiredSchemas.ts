@@ -45,7 +45,8 @@ export function requiredSchemas(setup: AtlasSetup): RequiredSchema[] {
   ];
 
   const gesehen = new Set(liste.map((s) => s.nsUri));
-  for (const dataset of setup.datasets.filter((d) => d.selected)) {
+  const datasets = setup.chains.flatMap((c) => c.datasets.filter((d) => d.selected));
+  for (const dataset of datasets) {
     const pkg = dataset.targetClass?.getEPackage() as EPackage | null;
     const nsUri = pkg?.getNsURI();
     if (!pkg || !nsUri || gesehen.has(nsUri)) continue;

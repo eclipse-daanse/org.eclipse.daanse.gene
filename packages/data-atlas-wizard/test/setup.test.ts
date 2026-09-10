@@ -23,7 +23,7 @@ import {
   newResourceSet,
   setupPackages,
 } from '../src/emf/setup';
-import { DataatlaswizardFactory, DataatlaswizardPackage } from '../src/generated';
+import { DataatlaswizardFactory, DataatlaswizardPackage, InputKind } from '../src/generated';
 
 beforeAll(async () => {
   await setupPackages();
@@ -141,7 +141,10 @@ describe('Fixup der Codegen-Lücken (emf.ts#83)', () => {
     const dataset = DataatlaswizardFactory.eINSTANCE.createDatasetConfig();
     dataset.id = 'persons';
     dataset.batchSize = 500;
-    setup.datasets.push(dataset);
+    const chain = DataatlaswizardFactory.eINSTANCE.createDataChain();
+    chain.id = 'persons';
+    chain.datasets.push(dataset);
+    setup.chains.push(chain);
     raus.getContents().add(setup);
     const xmi = raus.saveToString();
 
@@ -151,8 +154,8 @@ describe('Fixup der Codegen-Lücken (emf.ts#83)', () => {
 
     expect(geladen.openApi).toBe(true);
     expect(typeof geladen.openApi).toBe('boolean');
-    expect(geladen.datasets[0].batchSize).toBe(500);
-    expect(typeof geladen.datasets[0].batchSize).toBe('number');
+    expect(geladen.chains[0].datasets[0].batchSize).toBe(500);
+    expect(typeof geladen.chains[0].datasets[0].batchSize).toBe('number');
   });
 
   it('Enums kommen als EEnumLiteral zurück, nicht als Name', () => {
@@ -166,24 +169,26 @@ describe('Fixup der Codegen-Lücken (emf.ts#83)', () => {
      * aufgebaut, nie aus XMI geladen. Wer sie einmal speichern und
      * zurücklesen will, braucht beim Lesen eine Normalisierung auf den Namen.
      */
-    const rs = newResourceSet();
-    const raus: any = rs.createResource(URI.createURI('enum.xmi'));
     const setup = DataatlaswizardFactory.eINSTANCE.createAtlasSetup();
     setup.instanceName = 'demo';
+    const quelle = DataatlaswizardFactory.eINSTANCE.createDataSourceConfig();
+    quelle.id = 'x';
+    const kette = DataatlaswizardFactory.eINSTANCE.createDataChain();
+    kette.id = 'x';
+    kette.source = quelle;
+    setup.chains.push(kette);
+
+    const raus: any = newResourceSet().createResource(URI.createURI('enum.xmi'));
     raus.getContents().add(setup);
     const xmi = raus.saveToString();
-    expect(xmi).toContain('instanceName="demo"');
+    // Geschrieben wird der Name — soweit wie in Java EMF
+    expect(xmi).toContain('kind="FILE"');
 
     const rein: any = newResourceSet().createResource(URI.createURI('enum-back.xmi'));
     rein.loadFromString(xmi);
-    const geladen = rein.getContents().get(0);
-    const quelle = DataatlaswizardFactory.eINSTANCE.createDataSourceConfig();
-    quelle.id = 'x';
-    setup.dataSources.push(quelle);
-    const xmi2 = newResourceSet()
-      .createResource(URI.createURI('enum2.xmi'));
-    (xmi2 as unknown as { getContents(): { add(o: unknown): void } }).getContents().add(setup);
-    const text = (xmi2 as unknown as { saveToString(): string }).saveToString();
-    expect(text).toContain('kind="FILE"');
+    const gelesen = rein.getContents().get(0).chains[0].source.kind;
+    // Zurück kommt aber das Literal, nicht der String des generierten Typs
+    expect(gelesen).not.toBe(InputKind.FILE);
+    expect(gelesen.getName()).toBe('FILE');
   });
 });

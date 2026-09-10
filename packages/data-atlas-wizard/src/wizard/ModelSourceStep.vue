@@ -34,7 +34,7 @@
       </select>
       <p v-if="setupValue" class="summary-line">
         <i class="pi pi-list" aria-hidden="true"></i>
-        {{ setupValue.datasets.length }} veröffentlichbare Klasse(n) gefunden
+        {{ klassenAnzahl }} veröffentlichbare Klasse(n) gefunden
       </p>
     </div>
   </section>
@@ -63,6 +63,7 @@ const setupValue = computed(() => {
   return setup.value;
 });
 const gewaehlterNsUri = computed(() => setupValue.value?.modelPackage?.getNsURI() ?? '');
+const klassenAnzahl = computed(() => setupValue.value?.chains[0]?.datasets.length ?? 0);
 
 /**
  * Die Metamodelle der Atlas-REST-API — Antwort-Parsing, keine Domänenmodelle.

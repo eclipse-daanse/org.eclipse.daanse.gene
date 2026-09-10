@@ -10,8 +10,9 @@ Diese XMI entstand bisher von Hand, mit reichlich Fallstricken: nsURI- gegen
 relative Hrefs je nach Ablageort, `xsi:type` bei abstrakten Features,
 ID-Referenzen als bloße Strings, die override-else-default-Trias und die Regel
 „ein einziger Export ersetzt die Vorgaben vollständig". Genau das macht dieser
-Assistent in Fachsprache: **welches Modell, woher die Daten, welche Klassen
-werden Datensätze, unter welchem Pfad, in welchen Formaten.**
+Assistent in Fachsprache: **welches Modell, und dann je Datenweg — woher die
+Daten, welche Klassen werden Datensätze, unter welchem Pfad, in welchen
+Formaten.**
 
 ## Ablauf
 
@@ -19,11 +20,18 @@ werden Datensätze, unter welchem Pfad, in welchen Formaten.**
 |---|---|
 | Modell | Domänenmodell aus einem Model-Atlas-Scope oder als Datei laden |
 | Instanz | Name und Beschreibung |
-| Datenquellen | Liste: XMI-Dateien (absoluter Pfad) und Datenbanken (DataSource-Filter, Mapping abgeleitet oder importiert) |
-| Datensätze | Häkchen je Klasse, dazu id, Name, Pfad, Beschreibung, **Datenquelle**, **Formate** und Batch-Grenzen |
+| Datenwege | Beliebig viele Ketten, jede mit **einer** Quelle, **ihren** Datensätzen und **ihren** Formaten |
 | Endpunkt | Basis-Pfad, Namen, OpenAPI, Pagination-Parameter |
-| Formate | JSON, XML, CSV, CSV-ZIP definieren; neu Angehaktes gilt für alle Datensätze, Abweichungen macht Schritt 4 |
 | Zusammenfassung | Prüfliste, XMI-Vorschau, Download oder Veröffentlichen im Model Atlas |
+
+### Ein Datenweg ist die Einheit
+
+Quelle, Datensätze und Formate gehören zusammen — die Zuordnung steckt in der
+Verschachtelung, nicht in ids, die aufeinander zeigen. Ein Weg hat entweder
+eine **eigene** Quelle (XMI-Datei mit absolutem Pfad oder Datenbank mit
+DataSource-Filter und Mapping abgeleitet/importiert) oder benutzt die eines
+anderen Wegs **mit** (`sharedSource`). Das ist die Wahl des Nutzers: bestehende
+auswählen oder neu anlegen.
 
 ## Verweise entstehen immer über den nsURI
 
@@ -67,14 +75,19 @@ Round-Trip der String `"true"` statt eines Wahrheitswerts zurück. Die Typen
 liest der Fixup aus derselben `.ecore`, aus der auch der Generator kommt — eine
 Modelländerung ist damit gedeckt, ohne eine Tabelle nachzuziehen.
 
-## Der Datensatz trägt die Zuordnung
+## Der Datenweg trägt die Zuordnung
 
-`DatasetConfig.sourceId` und `exportIds` stehen am Datensatz, nicht am Service.
-Das Zielmodell erlaubt beides auf beiden Ebenen und löst
-override-else-default auf; hier ist der Datensatz die Wahrheit und der Service
-nur die Abkürzung: sind sich alle Datensätze einig, schreibt der Transformer
-den Wert einmal am Service, sonst an jedem Datensatz. So funktioniert es auch
-mit mehreren Datenquellen, ohne dass eine davon ausgezeichnet wäre.
+Das Zielmodell führt **Register** (`dataInputs`, `dataSets`, `exports`), in
+denen alles einmal steht und mehrfach referenziert wird. Der Transformer
+flacht die Wege dorthin aus:
+
+- eine geteilte Quelle wird **ein** `DataInput`, seine `supportedEClasses`
+  sammeln die Klassen aller Wege, die aus ihr lesen — jede einmal
+- gleiche Formatvorlagen aus mehreren Wegen werden **ein** Eintrag
+- `dataInput` und `distributionExport` stehen am Service, solange alle Wege
+  einig sind, sonst an jedem Datensatz (override-else-default)
+
+Damit ist der Weg die Wahrheit und der Service nur die Abkürzung.
 
 ## Ableitungsregeln
 
@@ -84,10 +97,13 @@ Aus dem gewählten EPackage (`src/wizard/context.ts`):
 - je **konkreter** Klasse ein Datensatz: `id` = lowerCamel, `name` = Title
   Case, `path` = `id`, Beschreibung aus der GenModel-Annotation
 - `serviceId` = `<slug>-rest`, `urlContext` = `/<slug>`
-- eine Datei-Quelle `<slug>-file` mit
-  `/opt/dataatlas/runtime/data/data/<Paketname>.xmi`, und sie ist der
-  Vorgabe-Eingang
-- eine Datenbank-Quelle (auf Knopfdruck) mit `(dataSourceName=<slug>Ds)`
+- **ein** Datenweg `<slug>` mit einer Datei-Quelle `<slug>-file` auf
+  `/opt/dataatlas/runtime/data/data/<Paketname>.xmi` und allen konkreten
+  Klassen darin
+- weitere Wege auf Knopfdruck, Datei oder Datenbank
+  (`(dataSourceName=<slug>Ds)`); ihre Datensätze sind vorgeschlagen, aber
+  nicht angehakt — welche Klassen aus diesem Weg kommen, entscheidet der
+  Nutzer
 - `exports` bleibt leer → die Runtime-Vorgaben JSON und XML gelten
 
 **Nicht pluralisiert:** Die Vorlagen im data.atlas-Repo nennen den Datensatz
@@ -99,9 +115,12 @@ wäre geraten. Abgeleitet wird `person`, in der Tabelle mit einem Klick zu
 
 Harte Fehler halten das Erzeugen auf (`src/transform/validate.ts`), weil das
 Ergebnis sonst unbrauchbar wäre: leere Pflichtfelder (`name`, `description`
-und `path` sind im Zielmodell `lowerBound=1`), kein ausgewählter Datensatz,
-doppelte ids, relativer Pfad der Datendatei, `IMPORTED` ohne gültiges Mapping,
-und bei einer Datenbank Klassen aus mehreren Packages.
+und `path` sind im Zielmodell `lowerBound=1`), kein Datenweg, kein
+ausgewählter Datensatz, doppelte ids, ein Weg ohne Quelle oder mit eigener
+**und** geteilter, eine geteilte Quelle, die keinem Weg gehört, relativer Pfad
+der Datendatei, `IMPORTED` ohne gültiges Mapping, und bei einer Datenbank
+Klassen aus mehreren Packages — über alle Wege gezählt, die sich diese
+Datenbank teilen.
 
 Warnungen halten nicht auf: nur CSV gewählt (ersetzt die Vorgaben vollständig,
 alles andere wird mit 406 abgelehnt), abgeleitetes JPA-Mapping (Tabellenname

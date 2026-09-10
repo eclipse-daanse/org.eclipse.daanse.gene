@@ -31,16 +31,17 @@
     <eStructuralFeatures xsi:type="ecore:EReference" name="modelPackage" lowerBound="1"
         eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EPackage"/>
 
-    <!-- Die Dateneingänge. Eine Liste, weil das Zielmodell beliebig viele
-         DataInputs kennt und eine Transformation ohnehin einen zweiten
-         braucht (BridgeRepository liest einen anderen Eingang). -->
-    <eStructuralFeatures xsi:type="ecore:EReference" name="dataSources" upperBound="-1"
-        eType="#//DataSourceConfig" containment="true"/>
+    <!--
+      Die Datenwege. Ein Weg ist eine Kette: eine Quelle, die Klassen, die aus
+      ihr veröffentlicht werden, und die Formate dafür. Die Verschachtelung
+      drückt die Zugehörigkeit aus, statt sie über id-Felder herzustellen.
 
-    <eStructuralFeatures xsi:type="ecore:EReference" name="datasets" upperBound="-1"
-        eType="#//DatasetConfig" containment="true"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="exports" upperBound="-1"
-        eType="#//ExportConfig" containment="true"/>
+      Das Zielmodell führt stattdessen Register (alles einmal definiert, oft
+      referenziert) — der Transformer flacht die Ketten beim Schreiben wieder
+      dahin aus.
+    -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="chains" upperBound="-1"
+        eType="#//DataChain" containment="true"/>
 
     <!-- Identität des REST-Endpunkts (= RestDataService). Die Felder liegen
          flach am Setup, weil die Fassade genau einen Service kennt. -->
@@ -63,6 +64,26 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="paginationSizeParameterName"
         lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
         defaultValueLiteral="limit"/>
+  </eClassifiers>
+
+  <!--
+    Ein Datenweg: woher, was, in welchen Formaten.
+
+    Die Quelle gehört entweder der Kette (`source`) oder sie teilt sich die
+    einer anderen (`sharedSource`) — genau eines von beidem. Geteilt heißt im
+    Ergebnis: ein einziger DataInput, von mehreren Wegen benutzt.
+  -->
+  <eClassifiers xsi:type="ecore:EClass" name="DataChain">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="source"
+        eType="#//DataSourceConfig" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="sharedSource"
+        eType="#//DataSourceConfig"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="datasets" upperBound="-1"
+        eType="#//DatasetConfig" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="exports" upperBound="-1"
+        eType="#//ExportConfig" containment="true"/>
   </eClassifiers>
 
   <!--
@@ -115,18 +136,6 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" lowerBound="1"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="path" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <!--
-      Aus welchem Eingang dieser Datensatz liest, und in welchen Formaten er
-      ausgeliefert wird. Beides steht am Datensatz, nicht am Service: der
-      Datensatz ist die Wahrheit, der Service nur die Abkürzung. Sind alle
-      Datensätze einig, schreibt der Transformer den Wert einmal am Service
-      (override-else-default des Zielmodells) statt n-mal.
-    -->
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sourceId" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <!-- Leer heißt: die Vorgaben des Data Atlas (JSON und XML). -->
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="exportIds" upperBound="-1"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <!-- EInt statt EBigInteger: der Transformer schreibt den Dezimalstring.
          -1 bedeutet „nicht gesetzt" und wird nicht geschrieben. -->

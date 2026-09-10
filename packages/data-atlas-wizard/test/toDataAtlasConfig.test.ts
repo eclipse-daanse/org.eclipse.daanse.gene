@@ -10,7 +10,8 @@
  * Die Trias wird beim Vergleich **aufgelöst**: `dataInput` und
  * `distributionExport` dürfen am Datensatz oder am Service stehen — der Data
  * Atlas liest override-else-default, und die Vorlagen nutzen beide Formen. Der
- * Transformer schreibt am Service (Plan, Abschnitt 1).
+ * Transformer schreibt am Service, solange alle Datenwege einig sind, sonst an
+ * jedem Datensatz (Plan, Abschnitt 1).
  */
 import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -19,8 +20,22 @@ import { fileURLToPath } from 'node:url';
 import { URI, type BasicResourceSet, type EClass, type EObject, type EPackage } from '@emfts/core';
 import { newResourceSet, registerEcoreFromString, setupPackages } from '../src/emf/setup';
 import { buildDataAtlasXmi } from '../src/transform/toDataAtlasConfig';
-import { buildDatabaseSource, initSetup, setup as setupRef } from '../src/wizard/context';
-import { DataatlaswizardFactory, ExportKind, type AtlasSetup } from '../src/generated';
+import {
+  addChain,
+  buildChain,
+  buildDatabaseSource,
+  buildFileSource,
+  initSetup,
+  setup as setupRef,
+  shareSource,
+} from '../src/wizard/context';
+import {
+  DataatlaswizardFactory,
+  ExportKind,
+  type AtlasSetup,
+  type DataChain,
+  type ExportConfig,
+} from '../src/generated';
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 const lies = (name: string) => readFileSync(join(fixtures, name), 'utf-8');
@@ -171,15 +186,26 @@ function vergleiche(setup: AtlasSetup, fixture: string) {
 
 // ── Aufbau der Setups ─────────────────────────────────────────────────────
 
+/** Ein Format anlegen — die Vorlagen nennen id, Name und Beschreibung. */
+function format(kind: ExportKind, id: string, name: string, beschreibung: string): ExportConfig {
+  const e = DataatlaswizardFactory.eINSTANCE.createExportConfig();
+  e.kind = kind;
+  e.id = id;
+  e.name = name;
+  e.description = beschreibung;
+  return e;
+}
+
 /** Das Setup zum Beispiel aus `example/dataatlas-atlas.xmi`. */
 function beispielSetup(): AtlasSetup {
   initSetup(personPackage);
   const s = setupRef.value!;
   s.instanceName = 'example-atlas';
   s.instanceDescription = 'Example Data Atlas instance served from a Model Atlas.';
-  s.dataSources[0].id = 'persons-file';
-  s.dataSources[0].fileUri = '/opt/dataatlas/runtime/data/data/persons.xmi';
-  for (const d of s.datasets) d.sourceId = 'persons-file';
+  const kette = s.chains[0];
+  kette.id = 'persons';
+  kette.source!.id = 'persons-file';
+  kette.source!.fileUri = '/opt/dataatlas/runtime/data/data/persons.xmi';
   s.serviceId = 'persons-rest';
   s.serviceName = 'Persons REST';
   s.serviceDescription = 'REST endpoint publishing the example persons.';
@@ -188,7 +214,7 @@ function beispielSetup(): AtlasSetup {
 
   // Die Vorlagen benutzen Plural-Namen; abgeleitet wird person/Person
   // (context.ts erklärt, warum nicht pluralisiert wird).
-  const dataset = s.datasets[0];
+  const dataset = kette.datasets[0];
   dataset.id = 'persons';
   dataset.name = 'Persons';
   dataset.description = 'All persons of the example data set.';
@@ -221,8 +247,7 @@ describe('Grundfall gegen example/dataatlas-atlas.xmi', () => {
     zweiter.name = 'Orte';
     zweiter.description = 'Alle Orte.';
     zweiter.path = 'orte';
-    zweiter.sourceId = s.dataSources[0].id;
-    s.datasets.push(zweiter);
+    s.chains[0].datasets.push(zweiter);
 
     const { xmi } = buildDataAtlasXmi(s);
     const ids = [...xmi.matchAll(/<configuration id="([^"]+)"/g)].map((m) => m[1]);
@@ -250,8 +275,8 @@ describe('Pagination gegen fixtures/dataatlas-pagination.xmi', () => {
     s.urlContext = '/paged';
     s.paginationOffsetParameterName = 'start';
     s.paginationSizeParameterName = 'count';
-    s.datasets[0].batchSize = 2;
-    s.datasets[0].batchSizeLimit = 2;
+    s.chains[0].datasets[0].batchSize = 2;
+    s.chains[0].datasets[0].batchSizeLimit = 2;
 
     const { erzeugt, vorlage } = vergleiche(s, 'dataatlas-pagination.xmi');
     expect(erzeugt.services).toEqual(vorlage.services);
@@ -272,19 +297,10 @@ describe('Formate gegen fixtures/dataatlas-csv.xmi', () => {
    */
   it('CSV und JSON entsprechen der Vorlage', () => {
     const s = beispielSetup();
-    const factory = DataatlaswizardFactory.eINSTANCE;
-    const csv = factory.createExportConfig();
-    csv.kind = ExportKind.CSV;
-    csv.id = 'csv';
-    csv.name = 'CSV';
-    csv.description = 'Semicolon separated, no SQL-type row.';
-    const json = factory.createExportConfig();
-    json.kind = ExportKind.JSON;
-    json.id = 'json';
-    json.name = 'JSON';
-    json.description = 'Plain JSON, expressed through mediaType.';
-    s.exports.push(csv, json);
-    for (const d of s.datasets) d.exportIds = ['csv', 'json'];
+    s.chains[0].exports.push(
+      format(ExportKind.CSV, 'csv', 'CSV', 'Semicolon separated, no SQL-type row.'),
+      format(ExportKind.JSON, 'json', 'JSON', 'Plain JSON, expressed through mediaType.'),
+    );
 
     const { erzeugt, vorlage } = vergleiche(s, 'dataatlas-csv.xmi');
     expect(erzeugt.exports).toEqual(vorlage.exports);
@@ -292,14 +308,7 @@ describe('Formate gegen fixtures/dataatlas-csv.xmi', () => {
 
   it('die Formate gelten für den Datensatz', () => {
     const s = beispielSetup();
-    const factory = DataatlaswizardFactory.eINSTANCE;
-    const csv = factory.createExportConfig();
-    csv.kind = ExportKind.CSV;
-    csv.id = 'csv';
-    csv.name = 'CSV';
-    csv.description = 'CSV.';
-    s.exports.push(csv);
-    for (const d of s.datasets) d.exportIds = ['csv'];
+    s.chains[0].exports.push(format(ExportKind.CSV, 'csv', 'CSV', 'CSV.'));
 
     const { erzeugt } = vergleiche(s, 'dataatlas-csv.xmi');
     expect(erzeugt.dataSets[0].distributionExport).toEqual(['csv']);
@@ -307,27 +316,95 @@ describe('Formate gegen fixtures/dataatlas-csv.xmi', () => {
 
   it('CSV-ZIP setzt compressed', () => {
     const s = beispielSetup();
-    const zip = DataatlaswizardFactory.eINSTANCE.createExportConfig();
-    zip.kind = ExportKind.CSV_ZIP;
-    zip.id = 'csv-zip';
-    zip.name = 'CSV (ZIP)';
-    zip.description = 'Gepackt.';
-    s.exports.push(zip);
-    for (const d of s.datasets) d.exportIds = ['csv-zip'];
+    s.chains[0].exports.push(format(ExportKind.CSV_ZIP, 'csv-zip', 'CSV (ZIP)', 'Gepackt.'));
     const { xmi } = buildDataAtlasXmi(s);
     expect(xmi).toContain('compressed="true"');
   });
 
   it('nur CSV warnt — ein Format ersetzt die Vorgaben vollständig', () => {
     const s = beispielSetup();
-    const csv = DataatlaswizardFactory.eINSTANCE.createExportConfig();
-    csv.kind = ExportKind.CSV;
-    csv.id = 'csv';
-    csv.name = 'CSV';
-    csv.description = 'CSV.';
-    s.exports.push(csv);
-    for (const d of s.datasets) d.exportIds = ['csv'];
+    s.chains[0].exports.push(format(ExportKind.CSV, 'csv', 'CSV', 'CSV.'));
     expect(buildDataAtlasXmi(s).warnings.join(' ')).toMatch(/406/);
+  });
+});
+
+describe('Mehrere Datenwege', () => {
+  /**
+   * Ein zweiter Weg mit eigener Datei und eigenem Datensatz. Damit sind die
+   * Wege uneinig, und die Trias muss an den Datensätzen landen.
+   */
+  function zweiWege(): { setup: AtlasSetup; zweiter: DataChain } {
+    const s = beispielSetup();
+    const zweiter = addChain(buildChain('orte', buildFileSource('orte', '/data/orte.xmi')))!;
+    const dataset = DataatlaswizardFactory.eINSTANCE.createDatasetConfig();
+    dataset.targetClass = person;
+    dataset.id = 'orte';
+    dataset.name = 'Orte';
+    dataset.description = 'Alle Orte.';
+    dataset.path = 'orte';
+    zweiter.datasets.push(dataset);
+    return { setup: s, zweiter };
+  }
+
+  it('jede Quelle wird ein eigener DataInput', () => {
+    const { setup } = zweiWege();
+    const { xmi } = buildDataAtlasXmi(setup);
+    const wurzel = ladeKonfiguration(xmi);
+    expect(describeConfiguration(wurzel).dataInputs.map((i) => i.id)).toEqual([
+      'persons-file',
+      'orte-file',
+    ]);
+  });
+
+  it('bei uneinigen Wegen steht dataInput am Datensatz, nicht am Service', () => {
+    const { setup } = zweiWege();
+    const { xmi } = buildDataAtlasXmi(setup);
+    const wurzel = ladeKonfiguration(xmi);
+    const service = liste(wurzel, 'services')[0];
+    expect(feature(service, 'dataInput')).toBeFalsy();
+    // Der Vergleichsblick löst die Trias auf und sieht die Zuordnung
+    const beschreibung = describeConfiguration(wurzel);
+    expect(beschreibung.dataSets.map((d) => [d.id, d.dataInput])).toEqual([
+      ['persons', 'persons-file'],
+      ['orte', 'orte-file'],
+    ]);
+  });
+
+  it('eine geteilte Quelle wird nur ein DataInput — und wandert an den Service', () => {
+    const { setup, zweiter } = zweiWege();
+    shareSource(zweiter, setup.chains[0].source!);
+    const { xmi } = buildDataAtlasXmi(setup);
+    const beschreibung = describeConfiguration(ladeKonfiguration(xmi));
+    expect(beschreibung.dataInputs.map((i) => i.id)).toEqual(['persons-file']);
+    expect(beschreibung.dataSets.every((d) => d.dataInput === 'persons-file')).toBe(true);
+    // supportedEClasses des einen Eingangs deckt beide Datensätze ab
+    expect(beschreibung.dataInputs[0].supportedEClasses).toEqual([
+      'https://eclipse.org/fennec/data/atlas/example/person/1.0.0#//Person',
+    ]);
+  });
+
+  it('gleiche Formate in beiden Wegen ergeben einen Eintrag', () => {
+    const { setup, zweiter } = zweiWege();
+    setup.chains[0].exports.push(format(ExportKind.CSV, 'csv', 'CSV', 'CSV.'));
+    zweiter.exports.push(format(ExportKind.CSV, 'csv', 'CSV', 'CSV.'));
+    const { xmi } = buildDataAtlasXmi(setup);
+    const beschreibung = describeConfiguration(ladeKonfiguration(xmi));
+    expect(beschreibung.exports.map((e) => e.id)).toEqual(['csv']);
+    // Einig sind sie hier — der Wert steht am Service
+    expect(beschreibung.dataSets.every((d) => d.distributionExport[0] === 'csv')).toBe(true);
+  });
+
+  it('verschiedene Formate bleiben getrennt und stehen am Datensatz', () => {
+    const { setup, zweiter } = zweiWege();
+    setup.chains[0].exports.push(format(ExportKind.CSV, 'csv', 'CSV', 'CSV.'));
+    zweiter.exports.push(format(ExportKind.JSON, 'json', 'JSON', 'JSON.'));
+    const { xmi } = buildDataAtlasXmi(setup);
+    const beschreibung = describeConfiguration(ladeKonfiguration(xmi));
+    expect(beschreibung.exports.map((e) => e.id)).toEqual(['csv', 'json']);
+    expect(beschreibung.dataSets.map((d) => [d.id, d.distributionExport])).toEqual([
+      ['persons', ['csv']],
+      ['orte', ['json']],
+    ]);
   });
 });
 
@@ -347,27 +424,16 @@ describe('Datenbank gegen example/dataatlas-postgres-atlas.xmi', () => {
     quelle.dataSourceId = 'persons-db';
     quelle.dataSourceName = 'Persons DB';
     quelle.dataSourceFilter = '(dataSourceName=personsDs)';
-    s.dataSources = [quelle];
-    for (const d of s.datasets) d.sourceId = quelle.id;
+    s.chains[0].source = quelle;
     s.serviceId = 'persons-pg-rest';
     s.serviceName = 'Persons Postgres REST';
     s.serviceDescription = 'REST endpoint publishing the database-backed persons.';
     s.urlContext = '/pg';
-    s.datasets[0].description = 'All persons from the database, as CSV or JSON.';
-
-    const factory = DataatlaswizardFactory.eINSTANCE;
-    const csv = factory.createExportConfig();
-    csv.kind = ExportKind.CSV;
-    csv.id = 'csv';
-    csv.name = 'CSV';
-    csv.description = 'Semicolon separated, no SQL-type row.';
-    const json = factory.createExportConfig();
-    json.kind = ExportKind.JSON;
-    json.id = 'json';
-    json.name = 'JSON';
-    json.description = 'Plain JSON, kept alongside the CSV export.';
-    s.exports.push(csv, json);
-    for (const d of s.datasets) d.exportIds = ['csv', 'json'];
+    s.chains[0].datasets[0].description = 'All persons from the database, as CSV or JSON.';
+    s.chains[0].exports.push(
+      format(ExportKind.CSV, 'csv', 'CSV', 'Semicolon separated, no SQL-type row.'),
+      format(ExportKind.JSON, 'json', 'JSON', 'Plain JSON, kept alongside the CSV export.'),
+    );
     return s;
   }
 

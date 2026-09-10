@@ -30,7 +30,7 @@
         />
       </section>
 
-      <SourcesStep v-else-if="currentStep.id === 'source'" />
+      <ChainsStep v-else-if="currentStep.id === 'chains'" />
 
       <section v-else-if="currentStep.id === 'service'" class="composed">
         <h2>Endpunkt</h2>
@@ -43,8 +43,6 @@
         />
       </section>
 
-      <DatasetsStep v-else-if="currentStep.id === 'datasets'" />
-      <ExportsStep v-else-if="currentStep.id === 'exports'" />
       <SummaryStep v-else-if="currentStep.id === 'summary'" />
 
       <p v-if="ladefehler" class="fehler">{{ ladefehler }}</p>
@@ -85,9 +83,7 @@ import { computed, onMounted, ref, shallowRef } from 'vue';
 import { UIModelComposer } from '@emfts/uimodel-composer';
 import { loadWizardUiModels, type WizardUiModels } from './uiModels';
 import ModelSourceStep from './ModelSourceStep.vue';
-import SourcesStep from './SourcesStep.vue';
-import DatasetsStep from './DatasetsStep.vue';
-import ExportsStep from './ExportsStep.vue';
+import ChainsStep from './ChainsStep.vue';
 import SummaryStep from './SummaryStep.vue';
 import { setup, version } from './context';
 import { InputKind } from '../generated';
@@ -104,24 +100,14 @@ const steps = [
     lead: 'Name und Beschreibung der Data-Atlas-Instanz.',
   },
   {
-    id: 'source',
-    title: 'Datenquellen',
-    lead: 'Eine oder mehrere: XMI-Dateien und Datenbanken.',
-  },
-  {
-    id: 'datasets',
-    title: 'Datensätze',
-    lead: 'Welche Klassen des Modells werden als Datensatz veröffentlicht.',
+    id: 'chains',
+    title: 'Datenwege',
+    lead: 'Je Weg: eine Quelle, die Klassen daraus, die Formate.',
   },
   {
     id: 'service',
     title: 'Endpunkt',
     lead: 'Basis-Pfad, OpenAPI und die Namen der Pagination-Parameter.',
-  },
-  {
-    id: 'exports',
-    title: 'Formate',
-    lead: 'JSON, XML, CSV oder CSV-ZIP — leer bedeutet die Runtime-Defaults.',
   },
   {
     id: 'summary',
@@ -165,20 +151,19 @@ const blockReason = computed<string>(() => {
   switch (currentStep.value.id) {
     case 'instance':
       return s.instanceName?.trim() ? '' : 'Bitte geben Sie einen Namen für die Instanz an.';
-    case 'source': {
-      if (s.dataSources.length === 0) return 'Bitte legen Sie eine Datenquelle an.';
-      const unfertig = s.dataSources.find((q) =>
-        q.kind === InputKind.DATABASE
-          ? !q.dataSourceFilter?.trim()
-          : !q.fileUri?.trim(),
-      );
-      if (!unfertig) return '';
-      return unfertig.kind === InputKind.DATABASE
-        ? `Datenquelle „${unfertig.id}": bitte den Filter der DataSource angeben.`
-        : `Datenquelle „${unfertig.id}": bitte den Pfad der Datendatei angeben.`;
+    case 'chains': {
+      if (s.chains.length === 0) return 'Bitte legen Sie einen Datenweg an.';
+      const ohneAuswahl = s.chains.find((c) => !c.datasets.some((d) => d.selected));
+      if (ohneAuswahl) return `Datenweg „${ohneAuswahl.id}": kein Datensatz ausgewählt.`;
+      const unfertig = s.chains.find((c) => {
+        const quelle = c.source ?? c.sharedSource;
+        if (!quelle) return true;
+        return quelle.kind === InputKind.DATABASE
+          ? !quelle.dataSourceFilter?.trim()
+          : !quelle.fileUri?.trim();
+      });
+      return unfertig ? `Datenweg „${unfertig.id}": die Datenquelle ist unvollständig.` : '';
     }
-    case 'datasets':
-      return s.datasets.some((d) => d.selected) ? '' : 'Bitte wählen Sie mindestens einen Datensatz.';
     case 'service':
       if (!s.urlContext?.trim()) return 'Bitte geben Sie den Basis-Pfad an.';
       return s.serviceName?.trim() ? '' : 'Bitte geben Sie einen Namen für den Endpunkt an.';

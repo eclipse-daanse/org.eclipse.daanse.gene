@@ -22,7 +22,7 @@ import {
 } from '../generated';
 import { ECORE_NS_URI, createDataAtlasResource } from './dataAtlasResource';
 import { assertValid, findWarnings } from './validate';
-import { commonValue, sourceOf } from '../wizard/context';
+import { effectiveSource } from '../wizard/context';
 
 /** Der Dateiname, unter dem der Data Atlas die Konfiguration erwartet. */
 export const DEFAULT_FILE_NAME = 'dataatlas.xmi';
@@ -31,6 +31,12 @@ export interface DataAtlasResult {
   xmi: string;
   fileName: string;
   warnings: string[];
+}
+
+/** Der Wert, auf den sich alle einigen — oder `undefined`. */
+function commonValue<T>(werte: T[]): T | undefined {
+  if (werte.length === 0) return undefined;
+  return werte.every((w) => w === werte[0]) ? werte[0] : undefined;
 }
 
 /** Kleiner Helfer, damit die Bauvorschrift lesbar bleibt. */
@@ -138,78 +144,110 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
 
   const config = getConfigurationPackage();
   const builder = makeBuilder(config);
-  const datasets = setup.datasets.filter((d) => d.selected);
-  const exports = setup.exports.filter((e) => e.selected);
-
   const root = builder.create('DataAtlasConfiguration');
   builder.set(root, 'name', setup.instanceName);
   if (setup.instanceDescription?.trim()) {
     builder.set(root, 'description', setup.instanceDescription.trim());
   }
 
-  // ── Dateneingänge ────────────────────────────────────────────────────────
+  /*
+   * Die Ketten werden hier ausgeflacht: das Zielmodell führt Register, in
+   * denen alles einmal steht und mehrfach referenziert wird. Eine geteilte
+   * Quelle wird deshalb genau ein DataInput, und gleiche Exportvorlagen
+   * werden zu einem Eintrag zusammengefasst.
+   */
   let hatEingebettetesMapping = false;
-  const inputObjekte = new Map<string, EObject>();
-  for (const quelle of setup.dataSources) {
+
+  // ── Dateneingänge ────────────────────────────────────────────────────────
+  const inputObjekte = new Map<DataSourceConfig, EObject>();
+  for (const chain of setup.chains) {
+    const quelle = effectiveSource(chain);
+    if (!quelle || inputObjekte.has(quelle)) continue;
     const dataInput = buildDataInput(builder, root, quelle);
     if (quelle.kind === InputKind.DATABASE && quelle.mappingKind === MappingKind.IMPORTED) {
       hatEingebettetesMapping = true;
     }
-    inputObjekte.set(quelle.id, dataInput);
+    inputObjekte.set(quelle, dataInput);
     builder.add(root, 'dataInputs', dataInput);
+  }
+
+  // ── Formate ──────────────────────────────────────────────────────────────
+  // Gleiche Vorlagen aus mehreren Ketten werden ein Eintrag; verglichen wird
+  // über id und Einstellungen.
+  const exportObjekte = new Map<string, EObject>();
+  const exportSchluessel = (e: ExportConfig) =>
+    [e.id, e.kind, e.name, e.description, e.separator, e.includeTypeHeader].join('|');
+  const exportVon = new Map<ExportConfig, EObject>();
+  for (const chain of setup.chains) {
+    for (const exportConfig of chain.exports.filter((e) => e.selected)) {
+      const schluessel = exportSchluessel(exportConfig);
+      let exportObj = exportObjekte.get(schluessel);
+      if (!exportObj) {
+        exportObj = buildExport(builder, exportConfig);
+        exportObjekte.set(schluessel, exportObj);
+        builder.add(root, 'exports', exportObj);
+      }
+      exportVon.set(exportConfig, exportObj);
+    }
+  }
+
+  // ── Datensätze ───────────────────────────────────────────────────────────
+  const eintraege = setup.chains.flatMap((chain) =>
+    chain.datasets.filter((d) => d.selected).map((dataset) => ({ chain, dataset })),
+  );
+
+  /*
+   * Sind sich alle Wege einig, wandert der Wert an den Service — einmal statt
+   * n-mal, und genau so lesen die Vorlagen des data.atlas-Repos. Sonst steht
+   * er an jedem Datensatz (override-else-default).
+   */
+  const gemeinsameQuelle = commonValue(eintraege.map((e) => effectiveSource(e.chain)));
+  const gemeinsameFormate = commonValue(
+    eintraege.map((e) =>
+      e.chain.exports
+        .filter((x) => x.selected)
+        .map(exportSchluessel)
+        .sort()
+        .join(' '),
+    ),
+  );
+
+  const dataSetObjekte: { dataset: DatasetConfig; dataSet: EObject }[] = [];
+  for (const { chain, dataset } of eintraege) {
+    const dataSet = buildDataSet(builder, dataset);
+    if (!gemeinsameQuelle) {
+      const quelle = effectiveSource(chain);
+      const dataInput = quelle ? inputObjekte.get(quelle) : undefined;
+      if (dataInput) builder.set(dataSet, 'dataInput', dataInput);
+    }
+    if (gemeinsameFormate === undefined) {
+      for (const exportConfig of chain.exports.filter((e) => e.selected)) {
+        const exportObj = exportVon.get(exportConfig);
+        if (exportObj) builder.add(dataSet, 'distributionExport', exportObj);
+      }
+    }
+    dataSetObjekte.push({ dataset, dataSet });
+    builder.add(root, 'dataSets', dataSet);
   }
 
   /*
    * supportedEClasses je Eingang: die Klassen der Datensätze, die aus ihm
-   * lesen. Ein Eingang, den niemand benutzt, bleibt leer — das ist zulässig
-   * und sagt dem Data Atlas nur, dass er nichts liefern muss.
+   * lesen — jede einmal. Teilen sich zwei Wege eine Quelle und lesen dieselbe
+   * Klasse, stünde sie sonst doppelt im Eingang.
    */
-  for (const dataset of datasets) {
-    const quelle = sourceOf(setup, dataset);
-    const dataInput = quelle ? inputObjekte.get(quelle.id) : undefined;
-    if (dataInput) builder.add(dataInput, 'supportedEClasses', dataset.targetClass);
-  }
-
-  // ── Formate ──────────────────────────────────────────────────────────────
-  // Zuerst, weil Datensätze und Service sie referenzieren. Leer lassen heißt:
-  // die Vorgaben des Data Atlas (JSON und XML) gelten.
-  const exportObjekte = new Map<string, EObject>();
-  for (const exportConfig of exports) {
-    const exportObj = buildExport(builder, exportConfig);
-    exportObjekte.set(exportConfig.id, exportObj);
-    builder.add(root, 'exports', exportObj);
-  }
-  const exportObjekteVon = (dataset: DatasetConfig): EObject[] =>
-    dataset.exportIds
-      .map((id) => exportObjekte.get(id))
-      .filter((o): o is EObject => !!o);
-
-  /*
-   * Sind alle Datensätze einig, wandert der Wert an den Service — einmal statt
-   * n-mal, und genau so lesen die Vorlagen des data.atlas-Repos. Sonst steht
-   * er an jedem Datensatz (override-else-default).
-   */
-  const gemeinsamerEingang = commonValue(datasets, (d) => d.sourceId);
-  const gemeinsameFormate = commonValue(
-    datasets,
-    (d) => [...d.exportIds].sort().join(' '),
-  );
-
-  // ── Datensätze ───────────────────────────────────────────────────────────
-  const dataSetObjekte = new Map<DatasetConfig, EObject>();
-  for (const dataset of datasets) {
-    const dataSet = buildDataSet(builder, dataset);
-    if (!gemeinsamerEingang) {
-      const dataInput = inputObjekte.get(dataset.sourceId);
-      if (dataInput) builder.set(dataSet, 'dataInput', dataInput);
+  const klassenJeEingang = new Map<EObject, Set<EClass>>();
+  for (const { chain, dataset } of eintraege) {
+    const quelle = effectiveSource(chain);
+    const dataInput = quelle ? inputObjekte.get(quelle) : undefined;
+    if (!dataInput || !dataset.targetClass) continue;
+    let klassen = klassenJeEingang.get(dataInput);
+    if (!klassen) {
+      klassen = new Set();
+      klassenJeEingang.set(dataInput, klassen);
     }
-    if (gemeinsameFormate === undefined) {
-      for (const exportObj of exportObjekteVon(dataset)) {
-        builder.add(dataSet, 'distributionExport', exportObj);
-      }
-    }
-    dataSetObjekte.set(dataset, dataSet);
-    builder.add(root, 'dataSets', dataSet);
+    if (klassen.has(dataset.targetClass)) continue;
+    klassen.add(dataset.targetClass);
+    builder.add(dataInput, 'supportedEClasses', dataset.targetClass);
   }
 
   // ── Endpunkt ─────────────────────────────────────────────────────────────
@@ -219,14 +257,21 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
   builder.set(service, 'description', setup.serviceDescription);
   builder.set(service, 'urlContext', setup.urlContext);
   builder.set(service, 'openAPI', setup.openApi);
-  if (gemeinsamerEingang) {
-    const vorgabe = inputObjekte.get(gemeinsamerEingang);
-    if (vorgabe) builder.set(service, 'dataInput', vorgabe);
-  }
   builder.set(service, 'paginationOffsetParameterName', setup.paginationOffsetParameterName);
   builder.set(service, 'paginationSizeParameterName', setup.paginationSizeParameterName);
 
-  for (const [dataset, dataSet] of dataSetObjekte) {
+  if (gemeinsameQuelle) {
+    const dataInput = inputObjekte.get(gemeinsameQuelle);
+    if (dataInput) builder.set(service, 'dataInput', dataInput);
+  }
+  if (gemeinsameFormate !== undefined && eintraege.length > 0) {
+    for (const exportConfig of eintraege[0].chain.exports.filter((e) => e.selected)) {
+      const exportObj = exportVon.get(exportConfig);
+      if (exportObj) builder.add(service, 'distributionExport', exportObj);
+    }
+  }
+
+  for (const { dataset, dataSet } of dataSetObjekte) {
     const serviceConfig = builder.create('RestDataServiceConfiguration');
     // Der Wert bedeutet fachlich nichts und wird deshalb abgeleitet.
     builder.set(serviceConfig, 'id', `${dataset.id}-config`);
@@ -243,13 +288,6 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
     builder.add(service, 'configuration', serviceConfig);
   }
   builder.add(root, 'services', service);
-
-  // Die gemeinsamen Formate am Service — sonst stehen sie an den Datensätzen.
-  if (gemeinsameFormate !== undefined && datasets.length > 0) {
-    for (const exportObj of exportObjekteVon(datasets[0])) {
-      builder.add(service, 'distributionExport', exportObj);
-    }
-  }
 
   const resource = createDataAtlasResource(DEFAULT_FILE_NAME, {
     // Ein eingebettetes Mapping verweist mit Typpräfix auf Ecore-Features

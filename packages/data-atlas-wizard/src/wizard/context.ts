@@ -18,6 +18,7 @@ import {
   InputKind,
   MappingKind,
   type AtlasSetup,
+  type DataChain,
   type DataSourceConfig,
   type DatasetConfig,
 } from '../generated';
@@ -134,8 +135,8 @@ export function concreteClasses(pkg: EPackage): EClass[] {
   return klassen;
 }
 
-/** Eine EClass → Datensatz-Vorschlag. `sourceId` ist Pflicht. */
-export function buildDataset(eClass: EClass, sourceId: string): DatasetConfig {
+/** Eine EClass → Datensatz-Vorschlag. Die Kette sagt, woher er liest. */
+export function buildDataset(eClass: EClass): DatasetConfig {
   const factory = DataatlaswizardFactory.eINSTANCE;
   const dataset = factory.createDatasetConfig();
   const name = eClass.getName() ?? 'dataset';
@@ -145,7 +146,6 @@ export function buildDataset(eClass: EClass, sourceId: string): DatasetConfig {
   dataset.name = titleCase(name);
   dataset.path = dataset.id;
   dataset.description = documentationOf(eClass) ?? `Alle ${name}-Objekte.`;
-  dataset.sourceId = sourceId;
   return dataset;
 }
 
@@ -179,65 +179,76 @@ export function buildDatabaseSource(slug: string, name: string): DataSourceConfi
 }
 
 /**
- * Nimmt einen weiteren Eingang auf. Die id wird bei Bedarf durchnummeriert —
- * doppelte ids wären im Zieldokument nicht auflösbar.
+ * Ein Datenweg mit eigener Quelle. Die id wird bei Bedarf durchnummeriert:
+ * sie geht in die ids des Zieldokuments ein und muss eindeutig bleiben.
  */
-export function addDataSource(quelle: DataSourceConfig): DataSourceConfig | undefined {
+export function buildChain(id: string, source: DataSourceConfig): DataChain {
+  const chain = DataatlaswizardFactory.eINSTANCE.createDataChain();
+  chain.id = id;
+  chain.source = source;
+  return chain;
+}
+
+/** Nimmt einen Datenweg auf und macht seine id eindeutig. */
+export function addChain(chain: DataChain): DataChain | undefined {
   const s = setup.value;
   if (!s) return undefined;
-  const vergeben = new Set(s.dataSources.map((q) => q.id));
-  if (vergeben.has(quelle.id)) {
+  const vergeben = new Set(s.chains.map((c) => c.id));
+  if (vergeben.has(chain.id)) {
     let i = 2;
-    while (vergeben.has(`${quelle.id}-${i}`)) i++;
-    quelle.id = `${quelle.id}-${i}`;
+    while (vergeben.has(`${chain.id}-${i}`)) i++;
+    chain.id = `${chain.id}-${i}`;
   }
-  s.dataSources.push(quelle);
+  s.chains.push(chain);
   touch();
-  return quelle;
+  return chain;
 }
 
 /**
- * Entfernt einen Eingang. Datensätze, die aus ihm lasen, hängen danach auf dem
- * einzigen verbliebenen — oder auf keinem, dann meldet es die Prüfung.
+ * Entfernt einen Datenweg. Wege, die sich seine Quelle geteilt haben, würden
+ * ins Leere zeigen — sie erben die Quelle stattdessen.
  */
-export function removeDataSource(quelle: DataSourceConfig): void {
+export function removeChain(chain: DataChain): void {
   const s = setup.value;
   if (!s) return;
-  s.dataSources = s.dataSources.filter((q) => q !== quelle);
-  const ersatz = s.dataSources.length === 1 ? s.dataSources[0].id : '';
-  for (const d of s.datasets) {
-    if (d.sourceId === quelle.id) d.sourceId = ersatz;
+  const quelle = effectiveSource(chain);
+  s.chains = s.chains.filter((c) => c !== chain);
+  const erben = s.chains.filter((c) => c.sharedSource === quelle);
+  if (quelle && chain.source === quelle && erben.length > 0) {
+    // Der erste Erbe übernimmt die Quelle, die anderen teilen sich seine.
+    erben[0].source = quelle;
+    erben[0].sharedSource = undefined as never;
+    for (const weiterer of erben.slice(1)) weiterer.sharedSource = quelle;
   }
   touch();
 }
 
-/** Der Eingang, aus dem ein Datensatz liest. */
-export function sourceOf(
-  setupValue: AtlasSetup,
-  dataset: DatasetConfig,
-): DataSourceConfig | undefined {
-  return setupValue.dataSources.find((q) => q.id === dataset.sourceId);
+/** Die Quelle, aus der ein Weg liest — eigene oder geteilte. */
+export function effectiveSource(chain: DataChain): DataSourceConfig | undefined {
+  return chain.source ?? chain.sharedSource;
 }
 
-/**
- * Der Wert, auf den sich alle ausgewählten Datensätze einigen — oder
- * `undefined`. Grundlage dafür, ob der Transformer ihn einmal am Service
- * schreibt statt an jedem Datensatz.
- */
-export function commonValue<T>(
-  datasets: DatasetConfig[],
-  lies: (d: DatasetConfig) => T,
-  gleich: (a: T, b: T) => boolean = (a, b) => a === b,
-): T | undefined {
-  if (datasets.length === 0) return undefined;
-  const erster = lies(datasets[0]);
-  return datasets.every((d) => gleich(lies(d), erster)) ? erster : undefined;
+/** Alle Quellen, die als geteilte in Frage kommen (die eigenen der Wege). */
+export function ownedSources(setupValue: AtlasSetup): DataSourceConfig[] {
+  return setupValue.chains
+    .map((c) => c.source)
+    .filter((q): q is DataSourceConfig => !!q);
 }
 
-/** Formate eines Datensatzes, in der Reihenfolge der Definition. */
-export function exportsOf(setupValue: AtlasSetup, dataset: DatasetConfig) {
-  return setupValue.exports.filter((e) => e.selected && dataset.exportIds.includes(e.id));
+/** Lässt einen Weg die Quelle eines anderen mitbenutzen. */
+export function shareSource(chain: DataChain, quelle: DataSourceConfig): void {
+  chain.source = undefined as never;
+  chain.sharedSource = quelle;
+  touch();
 }
+
+/** Gibt dem Weg wieder eine eigene Quelle. */
+export function ownSource(chain: DataChain, quelle: DataSourceConfig): void {
+  chain.sharedSource = undefined as never;
+  chain.source = quelle;
+  touch();
+}
+
 
 /**
  * Legt das Fassadenmodell für ein EPackage an: Identität, beide Datenquellen
@@ -256,13 +267,12 @@ export function initSetup(pkg: EPackage): AtlasSetup {
   s.instanceDescription = documentationOf(pkg) ?? '';
   s.modelPackage = pkg;
 
-  // Ein Eingang als Vorschlag; weitere kommen über addDataSource() dazu.
-  const quelle = buildFileSource(slug, defaultFileUri(pkg));
-  s.dataSources.push(quelle);
-
+  // Ein Datenweg als Vorschlag: die Datei und alle konkreten Klassen daraus.
+  const chain = buildChain(slug, buildFileSource(slug, defaultFileUri(pkg)));
   for (const eClass of concreteClasses(pkg)) {
-    s.datasets.push(buildDataset(eClass, quelle.id));
+    chain.datasets.push(buildDataset(eClass));
   }
+  s.chains.push(chain);
 
   s.serviceId = `${slug}-rest`;
   s.serviceName = `${instanceName} REST`;
@@ -275,8 +285,15 @@ export function initSetup(pkg: EPackage): AtlasSetup {
   return s;
 }
 
-/** Die ausgewählten Datensätze — was der Transformer schreibt. */
+/** Die ausgewählten Datensätze aller Wege — was der Transformer schreibt. */
 export const selectedDatasets = computed<DatasetConfig[]>(() => {
   void version.value;
-  return setup.value?.datasets.filter((d) => d.selected) ?? [];
+  return (setup.value?.chains ?? []).flatMap((c) => c.datasets.filter((d) => d.selected));
 });
+
+/** Alle Datensätze mit ihrem Weg — für Prüfungen und die Zusammenfassung. */
+export function datasetsWithChain(setupValue: AtlasSetup): { chain: DataChain; dataset: DatasetConfig }[] {
+  return setupValue.chains.flatMap((chain) =>
+    chain.datasets.map((dataset) => ({ chain, dataset })),
+  );
+}

@@ -36,9 +36,7 @@ export class DataatlaswizardPackage extends BasicEPackage {
     ATLAS_SETUP__INSTANCE_NAME: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__INSTANCE_DESCRIPTION: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__MODEL_PACKAGE: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__DATA_SOURCES: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__DATASETS: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__EXPORTS: null as unknown as EAttribute | EReference,
+    ATLAS_SETUP__CHAINS: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__SERVICE_ID: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__SERVICE_NAME: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__SERVICE_DESCRIPTION: null as unknown as EAttribute | EReference,
@@ -46,6 +44,12 @@ export class DataatlaswizardPackage extends BasicEPackage {
     ATLAS_SETUP__OPEN_API: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__PAGINATION_OFFSET_PARAMETER_NAME: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__PAGINATION_SIZE_PARAMETER_NAME: null as unknown as EAttribute | EReference,
+    DATA_CHAIN: null as unknown as EClass,
+    DATA_CHAIN__ID: null as unknown as EAttribute | EReference,
+    DATA_CHAIN__SOURCE: null as unknown as EAttribute | EReference,
+    DATA_CHAIN__SHARED_SOURCE: null as unknown as EAttribute | EReference,
+    DATA_CHAIN__DATASETS: null as unknown as EAttribute | EReference,
+    DATA_CHAIN__EXPORTS: null as unknown as EAttribute | EReference,
     DATA_SOURCE_CONFIG: null as unknown as EClass,
     DATA_SOURCE_CONFIG__ID: null as unknown as EAttribute | EReference,
     DATA_SOURCE_CONFIG__KIND: null as unknown as EAttribute | EReference,
@@ -62,8 +66,6 @@ export class DataatlaswizardPackage extends BasicEPackage {
     DATASET_CONFIG__NAME: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__DESCRIPTION: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__PATH: null as unknown as EAttribute | EReference,
-    DATASET_CONFIG__SOURCE_ID: null as unknown as EAttribute | EReference,
-    DATASET_CONFIG__EXPORT_IDS: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__BATCH_SIZE: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__BATCH_SIZE_LIMIT: null as unknown as EAttribute | EReference,
     EXPORT_CONFIG: null as unknown as EClass,
@@ -121,32 +123,14 @@ export class DataatlaswizardPackage extends BasicEPackage {
     atlasSetupClass.getEStructuralFeatures().push(atlasSetup_modelPackage);
     DataatlaswizardPackage.Literals.ATLAS_SETUP__MODEL_PACKAGE = atlasSetup_modelPackage;
 
-    // Create dataSources feature
-    const atlasSetup_dataSources = new BasicEReference();
-    atlasSetup_dataSources.setContainment(true);
-    atlasSetup_dataSources.setName('dataSources');
-    atlasSetup_dataSources.setLowerBound(0);
-    atlasSetup_dataSources.setUpperBound(-1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_dataSources);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__DATA_SOURCES = atlasSetup_dataSources;
-
-    // Create datasets feature
-    const atlasSetup_datasets = new BasicEReference();
-    atlasSetup_datasets.setContainment(true);
-    atlasSetup_datasets.setName('datasets');
-    atlasSetup_datasets.setLowerBound(0);
-    atlasSetup_datasets.setUpperBound(-1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_datasets);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__DATASETS = atlasSetup_datasets;
-
-    // Create exports feature
-    const atlasSetup_exports = new BasicEReference();
-    atlasSetup_exports.setContainment(true);
-    atlasSetup_exports.setName('exports');
-    atlasSetup_exports.setLowerBound(0);
-    atlasSetup_exports.setUpperBound(-1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_exports);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__EXPORTS = atlasSetup_exports;
+    // Create chains feature
+    const atlasSetup_chains = new BasicEReference();
+    atlasSetup_chains.setContainment(true);
+    atlasSetup_chains.setName('chains');
+    atlasSetup_chains.setLowerBound(0);
+    atlasSetup_chains.setUpperBound(-1);
+    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_chains);
+    DataatlaswizardPackage.Literals.ATLAS_SETUP__CHAINS = atlasSetup_chains;
 
     // Create serviceId feature
     const atlasSetup_serviceId = new BasicEAttribute();
@@ -203,6 +187,59 @@ export class DataatlaswizardPackage extends BasicEPackage {
     atlasSetup_paginationSizeParameterName.setUpperBound(1);
     atlasSetupClass.getEStructuralFeatures().push(atlasSetup_paginationSizeParameterName);
     DataatlaswizardPackage.Literals.ATLAS_SETUP__PAGINATION_SIZE_PARAMETER_NAME = atlasSetup_paginationSizeParameterName;
+
+    // Create DataChain class
+    const dataChainClass = new BasicEClass();
+    dataChainClass.setName('DataChain');
+    dataChainClass.setAbstract(false);
+    dataChainClass.setInterface(false);
+    this.getEClassifiers().push(dataChainClass);
+    dataChainClass.setEPackage(this);
+    DataatlaswizardPackage.Literals.DATA_CHAIN = dataChainClass;
+
+    // Create id feature
+    const dataChain_id = new BasicEAttribute();
+    dataChain_id.setName('id');
+    dataChain_id.setLowerBound(1);
+    dataChain_id.setUpperBound(1);
+    dataChainClass.getEStructuralFeatures().push(dataChain_id);
+    DataatlaswizardPackage.Literals.DATA_CHAIN__ID = dataChain_id;
+
+    // Create source feature
+    const dataChain_source = new BasicEReference();
+    dataChain_source.setContainment(true);
+    dataChain_source.setName('source');
+    dataChain_source.setLowerBound(0);
+    dataChain_source.setUpperBound(1);
+    dataChainClass.getEStructuralFeatures().push(dataChain_source);
+    DataatlaswizardPackage.Literals.DATA_CHAIN__SOURCE = dataChain_source;
+
+    // Create sharedSource feature
+    const dataChain_sharedSource = new BasicEReference();
+    dataChain_sharedSource.setContainment(false);
+    dataChain_sharedSource.setName('sharedSource');
+    dataChain_sharedSource.setLowerBound(0);
+    dataChain_sharedSource.setUpperBound(1);
+    dataChainClass.getEStructuralFeatures().push(dataChain_sharedSource);
+    DataatlaswizardPackage.Literals.DATA_CHAIN__SHARED_SOURCE = dataChain_sharedSource;
+
+    // Create datasets feature
+    const dataChain_datasets = new BasicEReference();
+    dataChain_datasets.setContainment(true);
+    dataChain_datasets.setName('datasets');
+    dataChain_datasets.setLowerBound(0);
+    dataChain_datasets.setUpperBound(-1);
+    dataChainClass.getEStructuralFeatures().push(dataChain_datasets);
+    DataatlaswizardPackage.Literals.DATA_CHAIN__DATASETS = dataChain_datasets;
+
+    // Create exports feature
+    const dataChain_exports = new BasicEReference();
+    dataChain_exports.setContainment(true);
+    dataChain_exports.setName('exports');
+    dataChain_exports.setLowerBound(0);
+    dataChain_exports.setUpperBound(-1);
+    dataChainClass.getEStructuralFeatures().push(dataChain_exports);
+    DataatlaswizardPackage.Literals.DATA_CHAIN__EXPORTS = dataChain_exports;
 
     // Create DataSourceConfig class
     const dataSourceConfigClass = new BasicEClass();
@@ -335,22 +372,6 @@ export class DataatlaswizardPackage extends BasicEPackage {
     datasetConfigClass.getEStructuralFeatures().push(datasetConfig_path);
     DataatlaswizardPackage.Literals.DATASET_CONFIG__PATH = datasetConfig_path;
 
-    // Create sourceId feature
-    const datasetConfig_sourceId = new BasicEAttribute();
-    datasetConfig_sourceId.setName('sourceId');
-    datasetConfig_sourceId.setLowerBound(1);
-    datasetConfig_sourceId.setUpperBound(1);
-    datasetConfigClass.getEStructuralFeatures().push(datasetConfig_sourceId);
-    DataatlaswizardPackage.Literals.DATASET_CONFIG__SOURCE_ID = datasetConfig_sourceId;
-
-    // Create exportIds feature
-    const datasetConfig_exportIds = new BasicEAttribute();
-    datasetConfig_exportIds.setName('exportIds');
-    datasetConfig_exportIds.setLowerBound(0);
-    datasetConfig_exportIds.setUpperBound(-1);
-    datasetConfigClass.getEStructuralFeatures().push(datasetConfig_exportIds);
-    DataatlaswizardPackage.Literals.DATASET_CONFIG__EXPORT_IDS = datasetConfig_exportIds;
-
     // Create batchSize feature
     const datasetConfig_batchSize = new BasicEAttribute();
     datasetConfig_batchSize.setName('batchSize');
@@ -441,9 +462,11 @@ export class DataatlaswizardPackage extends BasicEPackage {
     // Set ETypes for EReferences (must be done after all classes are created)
     // ============================================
     (DataatlaswizardPackage.Literals.ATLAS_SETUP__MODEL_PACKAGE as BasicEReference).setEType(getEcorePackage().getEClassifier('EPackage')!);
-    (DataatlaswizardPackage.Literals.ATLAS_SETUP__DATA_SOURCES as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG);
-    (DataatlaswizardPackage.Literals.ATLAS_SETUP__DATASETS as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATASET_CONFIG);
-    (DataatlaswizardPackage.Literals.ATLAS_SETUP__EXPORTS as BasicEReference).setEType(DataatlaswizardPackage.Literals.EXPORT_CONFIG);
+    (DataatlaswizardPackage.Literals.ATLAS_SETUP__CHAINS as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATA_CHAIN);
+    (DataatlaswizardPackage.Literals.DATA_CHAIN__SOURCE as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG);
+    (DataatlaswizardPackage.Literals.DATA_CHAIN__SHARED_SOURCE as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG);
+    (DataatlaswizardPackage.Literals.DATA_CHAIN__DATASETS as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATASET_CONFIG);
+    (DataatlaswizardPackage.Literals.DATA_CHAIN__EXPORTS as BasicEReference).setEType(DataatlaswizardPackage.Literals.EXPORT_CONFIG);
     (DataatlaswizardPackage.Literals.DATASET_CONFIG__TARGET_CLASS as BasicEReference).setEType(getEcorePackage().getEClassifier('EClass')!);
 
     // ============================================

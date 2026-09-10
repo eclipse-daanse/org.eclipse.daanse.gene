@@ -10,6 +10,8 @@ import type { EClass, EObject } from '@emfts/core';
 import { DataatlaswizardPackage } from './DataatlaswizardPackage';
 import type { AtlasSetup } from './AtlasSetup';
 import { AtlasSetupImpl } from './AtlasSetupImpl';
+import type { DataChain } from './DataChain';
+import { DataChainImpl } from './DataChainImpl';
 import type { DataSourceConfig } from './DataSourceConfig';
 import { DataSourceConfigImpl } from './DataSourceConfigImpl';
 import type { DatasetConfig } from './DatasetConfig';
@@ -45,6 +47,13 @@ export class DataatlaswizardFactory extends BasicEFactory {
   }
 
   /**
+   * Create a new DataChain instance
+   */
+  createDataChain(): DataChain {
+    return new DataChainImpl();
+  }
+
+  /**
    * Create a new DataSourceConfig instance
    */
   createDataSourceConfig(): DataSourceConfig {
@@ -72,6 +81,8 @@ export class DataatlaswizardFactory extends BasicEFactory {
     switch (eClass.getName()) {
       case 'AtlasSetup':
         return this.createAtlasSetup();
+      case 'DataChain':
+        return this.createDataChain();
       case 'DataSourceConfig':
         return this.createDataSourceConfig();
       case 'DatasetConfig':

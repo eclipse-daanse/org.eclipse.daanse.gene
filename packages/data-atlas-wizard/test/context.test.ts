@@ -10,20 +10,24 @@ import type { EClass, EPackage } from '@emfts/core';
 import { setupPackages, registerEcoreFromString } from '../src/emf/setup';
 import {
   ATLAS_DATA_PREFIX,
-  addDataSource,
+  addChain,
+  buildChain,
   buildDatabaseSource,
   buildDataset,
   buildFileSource,
-  commonValue,
-  removeDataSource,
-  sourceOf,
   concreteClasses,
+  datasetsWithChain,
   defaultFileUri,
   documentationOf,
+  effectiveSource,
   initSetup,
   lowerCamel,
+  ownSource,
+  ownedSources,
+  removeChain,
   selectedDatasets,
   setup,
+  shareSource,
   slugOf,
   titleCase,
   version,
@@ -103,17 +107,17 @@ describe('concreteClasses', () => {
 
 describe('buildDataset', () => {
   it('leitet id, name, path und Beschreibung ab', () => {
-    const dataset = buildDataset(personPackage.getEClassifier('Person') as EClass, 'q1');
+    const dataset = buildDataset(personPackage.getEClassifier('Person') as EClass);
     expect(dataset.selected).toBe(true);
     expect(dataset.id).toBe('person');
     expect(dataset.name).toBe('Person');
     expect(dataset.path).toBe('person');
     expect(dataset.description).toBe('A person of the example data set.');
-    expect(dataset.sourceId).toBe('q1');
+    expect(dataset.targetClass).toBe(personPackage.getEClassifier('Person'));
   });
 
   it('bildet ohne Annotation einen Satz — description ist Pflicht', () => {
-    const dataset = buildDataset(personPackage.getEClassifier('WaterQuality') as EClass, 'q1');
+    const dataset = buildDataset(personPackage.getEClassifier('WaterQuality') as EClass);
     expect(dataset.id).toBe('waterQuality');
     expect(dataset.name).toBe('Water Quality');
     expect(dataset.description).toBe('Alle WaterQuality-Objekte.');
@@ -140,14 +144,15 @@ describe('initSetup', () => {
     expect(s.serviceDescription).toBeTruthy();
   });
 
-  it('eine Datei-Quelle als Vorschlag, und sie ist die Vorgabe', () => {
+  it('ein Datenweg als Vorschlag, mit eigener Datei-Quelle', () => {
     const s = setup.value!;
-    expect(s.dataSources).toHaveLength(1);
-    expect(s.dataSources[0].id).toBe('person-file');
-    expect(s.dataSources[0].kind).toBe(InputKind.FILE);
-    expect(s.dataSources[0].fileUri).toBe(`${ATLAS_DATA_PREFIX}data/person.xmi`);
-    // Jeder Datensatz zeigt darauf — der Datensatz ist die Wahrheit
-    expect(s.datasets.every((d) => d.sourceId === 'person-file')).toBe(true);
+    expect(s.chains).toHaveLength(1);
+    const chain = s.chains[0];
+    expect(chain.id).toBe('person');
+    expect(chain.source?.id).toBe('person-file');
+    expect(chain.source?.kind).toBe(InputKind.FILE);
+    expect(chain.source?.fileUri).toBe(`${ATLAS_DATA_PREFIX}data/person.xmi`);
+    expect(effectiveSource(chain)).toBe(chain.source);
   });
 
   it('eine Datenbank-Quelle bringt die JdbcDataSource-Angaben mit', () => {
@@ -159,49 +164,62 @@ describe('initSetup', () => {
     expect(quelle.mappingKind).toBe(MappingKind.DERIVED);
   });
 
-  it('addDataSource nummeriert doppelte ids durch', () => {
-    addDataSource(buildFileSource('person', '/x.xmi'));
-    expect(setup.value!.dataSources.map((q) => q.id)).toEqual(['person-file', 'person-file-2']);
+  it('addChain nummeriert doppelte ids durch', () => {
+    addChain(buildChain('person', buildFileSource('person', '/x.xmi')));
+    expect(setup.value!.chains.map((c) => c.id)).toEqual(['person', 'person-2']);
   });
 
-  it('removeDataSource hängt betroffene Datensätze auf den letzten Rest um', () => {
-    const zweite = addDataSource(buildFileSource('zweit', '/y.xmi'))!;
-    setup.value!.datasets[0].sourceId = zweite.id;
-    removeDataSource(zweite);
-    expect(setup.value!.dataSources.map((q) => q.id)).toEqual(['person-file']);
-    // Eine einzige verbliebene Quelle ist die einzig sinnvolle Wahl
-    expect(setup.value!.datasets[0].sourceId).toBe('person-file');
-  });
-
-  it('bleiben mehrere übrig, wird nichts geraten', () => {
-    const zweite = addDataSource(buildFileSource('zweit', '/y.xmi'))!;
-    const dritte = addDataSource(buildFileSource('dritt', '/z.xmi'))!;
-    setup.value!.datasets[0].sourceId = dritte.id;
-    removeDataSource(dritte);
-    expect(setup.value!.datasets[0].sourceId).toBe('');
-    void zweite;
-  });
-
-  it('sourceOf löst die id auf', () => {
+  it('ein Weg kann die Quelle eines anderen mitbenutzen', () => {
     const s = setup.value!;
-    expect(sourceOf(s, s.datasets[0])?.id).toBe('person-file');
+    const zweiter = addChain(buildChain('zweit', buildFileSource('zweit', '/y.xmi')))!;
+    const fremde = s.chains[0].source!;
+    shareSource(zweiter, fremde);
+    expect(zweiter.source).toBeFalsy();
+    expect(zweiter.sharedSource).toBe(fremde);
+    expect(effectiveSource(zweiter)).toBe(fremde);
+    // Nur eigene Quellen kommen als geteilte in Frage
+    expect(ownedSources(s).map((q) => q.id)).toEqual(['person-file']);
+
+    // und wieder zurück auf eine eigene
+    ownSource(zweiter, buildFileSource('zweit', '/y.xmi'));
+    expect(zweiter.sharedSource).toBeFalsy();
+    expect(zweiter.source?.fileUri).toBe('/y.xmi');
   });
 
-  it('commonValue erkennt Einigkeit', () => {
+  it('removeChain lässt die Erben die Quelle übernehmen', () => {
     const s = setup.value!;
-    expect(commonValue(s.datasets, (d) => d.sourceId)).toBe('person-file');
-    s.datasets[1].sourceId = 'anders';
-    expect(commonValue(s.datasets, (d) => d.sourceId)).toBeUndefined();
+    const erster = s.chains[0];
+    const quelle = erster.source!;
+    const zweiter = addChain(buildChain('zweit', buildFileSource('zweit', '/y.xmi')))!;
+    const dritter = addChain(buildChain('dritt', buildFileSource('dritt', '/z.xmi')))!;
+    shareSource(zweiter, quelle);
+    shareSource(dritter, quelle);
+
+    removeChain(erster);
+    expect(s.chains.map((c) => c.id)).toEqual(['zweit', 'dritt']);
+    // Der erste Erbe hält sie jetzt, der zweite teilt sich seine
+    expect(zweiter.source).toBe(quelle);
+    expect(zweiter.sharedSource).toBeFalsy();
+    expect(dritter.sharedSource).toBe(quelle);
+    expect(effectiveSource(dritter)).toBe(quelle);
+  });
+
+  it('datasetsWithChain nennt zu jedem Datensatz seinen Weg', () => {
+    const s = setup.value!;
+    const paare = datasetsWithChain(s);
+    expect(paare).toHaveLength(2);
+    expect(paare.every((p) => p.chain === s.chains[0])).toBe(true);
+    expect(paare.map((p) => p.dataset.id)).toEqual(['person', 'waterQuality']);
   });
 
   it('ein Datensatz je konkreter Klasse, alle ausgewählt', () => {
     const s = setup.value!;
-    expect(s.datasets.map((d) => d.id)).toEqual(['person', 'waterQuality']);
+    expect(s.chains[0].datasets.map((d) => d.id)).toEqual(['person', 'waterQuality']);
     expect(selectedDatasets.value).toHaveLength(2);
   });
 
   it('exports bleibt leer — sonst fielen die Runtime-Vorgaben weg', () => {
-    expect(setup.value!.exports).toEqual([]);
+    expect(setup.value!.chains[0].exports).toEqual([]);
   });
 
   it('touch() zählt hoch, damit die Oberfläche neu liest', () => {

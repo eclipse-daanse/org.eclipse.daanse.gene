@@ -18,8 +18,6 @@ export interface DatasetConfig extends EObject {
   name: string;
   description: string;
   path: string;
-  sourceId: string;
-  exportIds: string[];
   batchSize?: number;
   batchSizeLimit?: number;
 

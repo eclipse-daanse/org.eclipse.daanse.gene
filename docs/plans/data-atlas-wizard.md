@@ -1,10 +1,31 @@
 # Data-Atlas-Konfigurations-Wizard in `gene`
 
-> **Status:** freigegeben, noch nicht begonnen. Umsetzung startet bei Schritt 1
-> der Reihenfolge in Abschnitt 10.
+> **Status:** Iteration 1 umgesetzt (Abschnitt 10, Schritte 1–13), danach auf
+> Datenwege umgebaut — s. Änderung (3). Offen: die End-to-end-Verifikation aus
+> Abschnitt 9 gegen den Compose-Setup und der nächste Schritt QVT-O
+> (Abschnitt 11).
+>
+> **Änderung 2026-09-10 (3):** Die Einheit der Fassade ist die **Kette**
+> (`DataChain`), nicht mehr die einzelne Liste. Ein Weg trägt seine Quelle
+> (`source` containment **oder** `sharedSource` Referenz), seine `datasets`
+> und seine `exports`; `AtlasSetup.chains*` ersetzt `dataSources`, `datasets`
+> und `exports`, und `DatasetConfig.sourceId`/`exportIds` sind entfallen — die
+> Zuordnung steckt in der Verschachtelung. Grund: sobald Ketten aufeinander
+> aufbauen (Transformation, `BridgeRepository`), ist eine Konfiguration je
+> Kette die einzige, die sich noch lesen lässt. Ob eine Kette eine neue Quelle
+> anlegt oder eine bestehende mitbenutzt, überlässt der Assistent dem Nutzer.
+>
+> Die Schritte 3, 4 und 6 sind damit **ein** Schritt (`ChainsStep.vue`);
+> `SourcesStep.vue`, `DatasetsStep.vue` und `ExportsStep.vue` sind entfallen.
+> Der Ablauf ist: Modell → Instanz → Datenwege → Endpunkt → Zusammenfassung.
+> Der Transformer flacht die Wege in die Register des Zielmodells aus: eine
+> geteilte Quelle wird ein `DataInput` (mit den Klassen aller Wege, jede
+> einmal), gleiche Formatvorlagen werden ein Eintrag, und `dataInput`/
+> `distributionExport` stehen am Service, solange alle Wege einig sind, sonst
+> an jedem Datensatz.
 >
 > **Änderung 2026-09-10 (2):** Aus dem einen Dateneingang ist eine **Liste**
-> geworden, und der **Datensatz** trägt die Zuordnung: `DatasetConfig.sourceId`
+> geworden, und der **Datensatz** trug die Zuordnung: `DatasetConfig.sourceId`
 > (Pflicht) und `exportIds*`. Sind sich alle Datensätze einig, schreibt der
 > Transformer den Wert einmal am Service statt n-mal — das
 > override-else-default des Zielmodells, aber vom Datensatz her gedacht. Ein
@@ -13,8 +34,9 @@
 > weil die Fassade genau einen Eingang kannte — mit einer Transformation sind
 > es immer mindestens zwei (`BridgeRepository` liest einen anderen Eingang).
 > `FileSourceConfig`/`DatabaseSourceConfig` sind zu `DataSourceConfig` mit
-> `kind` verschmolzen, Schritt 3 ist jetzt handgeschrieben (`SourcesStep.vue`)
-> statt UIModel-getrieben.
+> `kind` verschmolzen, Schritt 3 wurde handgeschrieben (`SourcesStep.vue`)
+> statt UIModel-getrieben. *Überholt durch Änderung (3): die Listen hängen
+> jetzt an der Kette.*
 >
 > **Änderung 2026-09-10:** `configMode` und `modelFiles` sind entfallen.
 > Verweise auf Modellklassen entstehen immer über den nsURI; relative
@@ -107,8 +129,9 @@ Die Fassade **vereinfacht** bewusst gegenüber `configuration.ecore`:
 | Zielmodell erlaubt | Fassade in Iteration 1 | Grund |
 |---|---|---|
 | n `DataService`s | **genau einen** `RestDataService` | Service-Felder liegen flach am Setup; ein zweiter Endpunkt ist ein zweiter Wizard-Durchlauf |
-| Trias (`dataInput`/`transformation`/`distributionExport`) auf Service- **und** DataSet-Ebene | `dataInput` **nur am Service** (= Default für alle DataSets), `distributionExport` **nur am Service** | override-else-default ist der Fortgeschrittenen-Fall; die Fassade nutzt konsequent den Service-Default (Muster `tests/fixtures/dataatlas-servicedefault.xmi`) |
-| n `DataInput`s | **einer** (Datei *oder* Datenbank) | mehr Inputs = mehrere Durchläufe |
+| Trias (`dataInput`/`transformation`/`distributionExport`) auf Service- **und** DataSet-Ebene | am Service, solange alle Datenwege einig sind, sonst am DataSet | override-else-default rechnet der Transformer aus; einig ist der Normalfall und liest sich wie die Vorlagen (`tests/fixtures/dataatlas-servicedefault.xmi`) |
+| n `DataInput`s | n — **einer je Datenweg**, geteilte Quellen fallen zusammen | eine Transformation liest immer einen zweiten Eingang; die Kette ist die Einheit |
+| `transformation` | nicht abgebildet | Iteration 2a, Abschnitt 11 |
 | `DataSet.inputType ≠ outputType` | `inputType = outputType` | Abweichung braucht eine Transformation → spätere Iteration |
 | `childDataSet`/`parentDataSet`, `query` | nicht abgebildet | spätere Iteration |
 | `DistributionExport` frei | Enum `ExportKind` | vier real sinnvolle Kombinationen |
@@ -121,39 +144,44 @@ Die Fassade **vereinfacht** bewusst gegenüber `configuration.ecore`:
 |---|---|---|---|
 | `instanceName` | EString | 1 | Name der Data-Atlas-Instanz → `DataAtlasConfiguration.name` |
 | `instanceDescription` | EString | | Beschreibung |
-| `configMode` | `ConfigMode` | 1, `FILE` | „Wo liegt die Konfiguration später?" — steuert Href-Dialekt und URI-Absolutheit |
 | `modelPackage` | `Ecore#//EPackage` | 1 | das Domänen-Modell |
-| `modelFiles` | `ModelFileRef` | 0..* containment | nur `FILE`-Modus: unter welchem relativen Pfad liegt jede `.ecore` neben der Konfiguration |
-| `inputKind` | `InputKind` | 1, `FILE` | „Woher kommen die Daten?" |
-| `fileSource` | `FileSourceConfig` | 0..1 containment | sichtbar bei `inputKind = FILE` |
-| `databaseSource` | `DatabaseSourceConfig` | 0..1 containment | sichtbar bei `inputKind = DATABASE` |
-| `datasets` | `DatasetConfig` | 0..* containment | welche Klassen werden Datensätze |
-| `exports` | `ExportConfig` | 0..* containment | welche Formate |
+| `chains` | `DataChain` | 0..* containment | die Datenwege |
 | `serviceId`, `serviceName`, `serviceDescription` | EString | 1 | Identität des REST-Endpunkts |
 | `urlContext` | EString | 1 | Basis-Pfad, z. B. `/example` |
 | `openApi` | EBoolean | 1, `false` | OpenAPI-Beschreibung ausliefern |
 | `paginationOffsetParameterName` | EString | 1, `offset` | Query-Parameter-Namen |
 | `paginationSizeParameterName` | EString | 1, `limit` | |
 
-`inputKind` + zwei optionale Containments (statt abstrakter Subklassen), weil
-`visibilityCondition language="JS" body="self.inputKind === 'FILE'"` im
-UIModel damit direkt funktioniert.
+**`DataChain`** — die Einheit der Fassade: eine Quelle, die Klassen, die
+daraus veröffentlicht werden, und die Formate dafür.
 
-**`ModelFileRef`**: `modelPackage` → `Ecore#//EPackage`(1), `fileName`(1, z. B.
-`model/person.ecore`). Kein Gegenstück im Zielmodell — reiner
-Serialisierungskontext für die Hrefs des `FILE`-Modus. Als Liste, weil
-Cascade-Laden und Multi-File-Upload regelmäßig mehrere Packages einbringen;
-fehlt im `FILE`-Modus der Eintrag zu einem referenzierten Package, ist das ein
-harter Fehler (der Href würde sonst stillschweigend falsch).
+| Feature | Typ | Kard./Default | Bedeutung |
+|---|---|---|---|
+| `id` | EString | 1 | benennt den Weg in der Oberfläche und in den Meldungen |
+| `source` | `DataSourceConfig` | 0..1 containment | die **eigene** Quelle |
+| `sharedSource` | `DataSourceConfig` | 0..1 Referenz | die Quelle eines **anderen** Wegs mitbenutzen |
+| `datasets` | `DatasetConfig` | 0..* containment | welche Klassen werden Datensätze |
+| `exports` | `ExportConfig` | 0..* containment | welche Formate |
 
-**`FileSourceConfig`**: `id`(1), `fileUri`(1) — im `FILE`-Modus relativ
-(`data/persons.xmi`), im `ATLAS`-Modus **absolut**
-(`/opt/dataatlas/runtime/data/data/persons.xmi`); die Validierung erzwingt das.
+`source` **xor** `sharedSource` — beides gesetzt ist ein harter Fehler, keines
+auch. Kein `inputKindRef` und keine Zwischen-id: die Zuordnung steckt in der
+Verschachtelung, und damit kann sie nicht ins Leere zeigen. Wird ein Weg
+entfernt, erbt der erste Mitbenutzer die Quelle, die übrigen teilen sich
+seine (`removeChain` in `context.ts`).
 
-**`DatabaseSourceConfig`**: `id`(1), `dataSourceId`(1), `dataSourceName`(1),
-`dataSourceFilter`(1, LDAP, z. B. `(dataSourceName=personsDs)`),
-`mappingKind`: `MappingKind`(1, `DERIVED`), `eormXmi`: EString (0..1 — das
-importierte `EntityMappings`-Dokument als Rohtext, s. Abschnitt 3).
+**`DataSourceConfig`** — `inputKind` + flache Felder statt abstrakter
+Subklassen, weil `visibilityCondition language="JS"` im UIModel damit direkt
+funktioniert und der handgeschriebene Schritt es ebenso einfach hat.
+
+| Feature | Typ | Kard./Default | Bedeutung |
+|---|---|---|---|
+| `id` | EString | 1 | wird die id des `DataInput` |
+| `kind` | `InputKind` | 1, `FILE` | XMI-Datei oder Datenbank |
+| `fileUri` | EString | | bei `FILE`: **absoluter** Pfad (`/opt/dataatlas/runtime/data/data/persons.xmi`); die Validierung erzwingt das |
+| `dataSourceId`, `dataSourceName` | EString | | bei `DATABASE`: die `JdbcDataSource` |
+| `dataSourceFilter` | EString | | LDAP-Filter, z. B. `(dataSourceName=personsDs)` |
+| `mappingKind` | `MappingKind` | 1, `DERIVED` | JPA-Mapping ableiten lassen oder importieren |
+| `eormXmi` | EString | | das importierte `EntityMappings`-Dokument als Rohtext (s. Abschnitt 3) |
 
 **`DatasetConfig`**: `selected`: EBoolean (default `true`), `targetClass`:
 `Ecore#//EClass`(1) — **nicht** `eClass`, der Name kollidiert mit
@@ -168,8 +196,8 @@ importierte `EntityMappings`-Dokument als Rohtext, s. Abschnitt 3).
 
 ### Enums
 
-`ConfigMode { FILE, ATLAS }` · `InputKind { FILE, DATABASE }` ·
-`MappingKind { DERIVED, IMPORTED }` · `ExportKind { JSON, XML, CSV, CSV_ZIP }`
+`InputKind { FILE, DATABASE }` · `MappingKind { DERIVED, IMPORTED }` ·
+`ExportKind { JSON, XML, CSV, CSV_ZIP }`
 
 `ExportKind` → Ziel: `JSON`/`XML` als plain `DistributionExport` mit
 `mediaType`, `CSV`/`CSV_ZIP` als `CSVDistributionExport`
@@ -178,8 +206,10 @@ importierte `EntityMappings`-Dokument als Rohtext, s. Abschnitt 3).
 `model/data-atlas-wizard.genconfig.xmi` analog zu
 `packages/eorm-wizard/model/eorm-wizard.genconfig.xmi`
 (`ecorePackage` = nsURI + `#/`, `generation mode="emf" outputDir="src/generated"`).
-Generierten Code **einchecken**; `src/emf/wizardPackageFixup.ts` mit den vier
-Enums und allen EAttribut-Typen füllen.
+Generierten Code **einchecken**; `src/emf/wizardPackageFixup.ts` trägt die
+EEnums als Classifier und die fehlenden EAttribut-Typen nach — gelesen aus
+derselben `.ecore`, aus der der Generator kommt, damit eine Modelländerung
+keine Tabelle nachzuziehen verlangt (emf.ts#83).
 
 ## 2. Ableitungsregeln (`src/wizard/context.ts`)
 
@@ -203,19 +233,22 @@ Aus dem gewählten `EPackage`:
   verlassen.
 - `serviceId` = `${slug}-rest`, `serviceName` = `${instanceName} REST`,
   `urlContext` = `/${slug}`.
-- `fileSource.id` = `${slug}-file`, `fileUri` = modusabhängig
-  `data/${pkg.getName()}.xmi` bzw. der absolute Pfad darunter.
-- `databaseSource.id` = `${slug}-jpa` (so heißt der JPADataInput in
+- **ein** Datenweg `chains[0]` mit `id` = `slug`, einer eigenen Datei-Quelle
+  `${slug}-file` auf `/opt/dataatlas/runtime/data/data/${pkg.getName()}.xmi`
+  und einem `DatasetConfig` je konkreter Klasse, alle ausgewählt.
+- Eine Datenbank-Quelle entsteht erst auf Wunsch (`buildDatabaseSource`):
+  `id` = `${slug}-jpa` (so heißt der JPADataInput in
   `example/dataatlas-postgres.xmi`), `dataSourceId` = `${slug}-db`,
   `dataSourceName` = Title Case + „ DB", `dataSourceFilter` =
   `(dataSourceName=${lowerCamel(slug)}Ds)`.
-- Beide Datenquellen werden **vorab angelegt**, nicht erst beim Umschalten:
-  der Schritt „Datenquelle" schaltet dann nur `inputKind` um. Ein Moduswechsel
-  zieht die Datei-URI mit, aber nur solange sie noch der Vorgabe entspricht —
-  eine von Hand eingetragene URI zu überschreiben wäre stiller Datenverlust.
+- Ein **weiterer** Weg bekommt die Klassen des Modells als Vorschlag, aber
+  **nichts angehakt**: welche Klassen aus dieser Quelle kommen, weiß nur der
+  Nutzer. Statt einer eigenen Quelle kann er die eines anderen Wegs
+  mitbenutzen.
 - `exports` bleibt leer → Runtime-Defaults JSON + XML.
 - `supportedEClasses` des Inputs = die EClasses aller *selektierten* Datasets
-  (wird erst im Transformer eingesetzt, nicht im Setup gespeichert).
+  **aller Wege, die aus ihm lesen** — jede einmal (wird erst im Transformer
+  eingesetzt, nicht im Setup gespeichert).
 
 Zustandsmuster wie in den Vorbildern: `shallowRef` + `version = ref(0)` +
 `touch()`; jedes `computed` beginnt mit `void version.value;`.
@@ -224,19 +257,21 @@ Zustandsmuster wie in den Vorbildern: `shallowRef` + `version = ref(0)` +
 
 Die beiden Quell-Tabs melden ein **Objekt** (`ModelSourcePayload`) statt
 mehrerer Argumente: der Assistent braucht neben den Kandidaten auch alle
-nachgeladenen Packages **samt Dateinamen**, weil im Datei-Modus jedes
-referenzierte Package den Pfad seiner `.ecore` braucht. Beim Upload sind die
-Namen bekannt, beim Atlas greift die Ableitung `model/<Paketname>.ecore`.
+nachgeladenen Packages, weil ein Modell weitere nachziehen kann und die
+Auswahl sonst unvollständig aufgelöst würde.
 
 | # | Schritt | Art | `blockReason` |
 |---|---|---|---|
 | 1 | **Modell** — Atlas-Tab (Verbindung/Suche/Cascade-Load) oder Upload-Tab | handgeschrieben, aus `eorm-wizard` kopiert (`ModelSourceStep.vue`, `AtlasSourceTab.vue`, `UploadSourceTab.vue`) | kein EPackage gewählt |
-| 2 | **Instanz & Modus** — `instanceName`, `instanceDescription`, `configMode`, `inputKind` | UIModel `src/assets/wizard-ui/step-instance.xmi` | `instanceName` leer |
-| 3 | **Datenquelle** — Datei: `fileUri`; Datenbank: `dataSourceName`, `dataSourceFilter`, `mappingKind` | UIModel `step-source.xmi` mit `visibilityCondition` auf `inputKind`/`mappingKind`, plus handgeschriebener Import-Knopf für `mappingKind = IMPORTED` | Pflichtfeld leer; `ATLAS` + relative `fileUri`; `IMPORTED` ohne Mapping |
-| 4 | **Datensätze** — Häkchen je EClass, `id`/`name`/`description`/`path`/`batchSize` | handgeschriebene Tabelle `DatasetsStep.vue` (Vorbild `ColumnsStep.vue`) | kein Datensatz gewählt; doppelte `id`/`path`; Pflichtfeld leer |
-| 5 | **Endpunkt** — `serviceId`, `serviceName`, `serviceDescription`, `urlContext`, `openApi`, Pagination-Parameter | UIModel `step-service.xmi` | `urlContext` oder `serviceId`/`serviceName` leer |
-| 6 | **Formate** — Checkbox-Liste JSON/XML/CSV/CSV-ZIP + CSV-Optionen | handgeschrieben `ExportsStep.vue` | keiner (leer ist zulässig) — aber Warnung, s. u. |
-| 7 | **Zusammenfassung** — Prüfliste, XMI-Vorschau, Download, Publish-Panel | handgeschrieben `SummaryStep.vue` | — |
+| 2 | **Instanz** — `instanceName`, `instanceDescription` | UIModel `src/assets/wizard-ui/step-instance.xmi` | `instanceName` leer |
+| 3 | **Datenwege** — je Weg: id, Quelle (eigene Datei/Datenbank oder eine fremde mitbenutzen), Datensatz-Tabelle, Formate mit CSV-Optionen | handgeschrieben `ChainsStep.vue` | kein Weg; Weg ohne Quelle; kein Datensatz gewählt; doppelte `id`/`path`; `IMPORTED` ohne Mapping; relative `fileUri` |
+| 4 | **Endpunkt** — `serviceId`, `serviceName`, `serviceDescription`, `urlContext`, `openApi`, Pagination-Parameter | UIModel `step-service.xmi` | `urlContext` oder `serviceId`/`serviceName` leer |
+| 5 | **Zusammenfassung** — Prüfliste, XMI-Vorschau, Download, Publish-Panel | handgeschrieben `SummaryStep.vue` | — |
+
+Die Formate stehen bewusst **im** Weg und nicht in einem eigenen Schritt: sie
+gehören zu den Datensätzen, die daneben in derselben Karte stehen. Ein
+Format-Schritt am Ende hätte wieder die Frage aufgeworfen, auf welchen der
+Wege er sich bezieht.
 
 ### JPA-Mapping: Wiederverwendung statt Nachbau
 
@@ -297,15 +332,11 @@ Von Hand bleiben genau zwei Stellen, beide weil emf.ts dort von Java EMF
 abweicht. `XMLResource` bietet die Erweiterungspunkte, die Java EMF auch hat
 (`protected createXMLSave()`, `getURIFragment()`) — zusammen rund 40 Zeilen.
 
-**a) Href-Dialekt** — `class DataAtlasSave extends XMISave`, `getHref()`
-überschrieben. `XMLSave.getHref` liefert für einen EClassifier den nsURI-Href,
-weil EClassifier in emf.ts kein `eResource()` haben (emf.ts#80); der
-`ATLAS`-Fall stimmt damit bereits. Im `FILE`-Modus schlägt die Überschreibung
-zuerst in der Karte nsURI → Dateiname nach, die aus `setup.modelFiles`
-entsteht, und liefert `model/person.ecore#//Person`. Fehlt dort der Eintrag zu
-einem referenzierten Package, wirft sie — das ist der harte Fehler aus
-Abschnitt 1, und dies ist der einzige Ort, an dem beide Informationen
-zusammenkommen.
+**a) Href über den nsURI** — **keine** Überschreibung nötig.
+`XMLSave.getHref` liefert für einen EClassifier von sich aus den
+nsURI-Href, weil EClassifier in emf.ts kein `eResource()` haben (emf.ts#80).
+Das ist genau der Dialekt, den der Assistent will; der relative
+Datei-Dialekt ist mit `configMode` entfallen (Änderung 2026-09-10).
 
 **b) ID-Fragmente** — `class DataAtlasResource extends XMIResource`,
 `getURIFragment()` überschrieben: Wert des `iD="true"`-Attributs, sonst
@@ -321,24 +352,22 @@ Präfixe, die von Elementen gebraucht werden — `xmlns:ecore` fehlt dann
 (emf.ts#87). Die Unterklasse trägt es nach, und zwar nur, wenn ein Mapping
 eingebettet ist; ohne bleibt der Dokumentkopf schlank.
 
-Der Href-Dialekt gilt auch für **Features**: ein eorm-Mapping verweist auf
-`…#//Person/firstName`, und im Datei-Modus muss daraus
-`model/person.ecore#//Person/firstName` werden — belegt durch
-`example/dataatlas-history.xmi`.
-
-`configMode` steuert damit keine Zeichenketten mehr, sondern nur noch die
-Dialekt-Karte — der Modus liegt an einer Stelle statt an jeder Href-Stelle.
+Das gilt auch für **Features**: ein eingebettetes eorm-Mapping verweist auf
+`…#//Person/firstName`, und auch dort entsteht der nsURI-Href von selbst —
+nur das Präfix muss deklariert werden, s. c).
 
 ### Was der Wizard weiter selbst prüft
 
 Die Validierung gehört vor das Serialisieren, nicht in den Serializer.
 
 - **Harte Fehler** (throw, im UI in einem `computed` gefangen): kein EPackage,
-  kein selektierter Datensatz, leeres Pflichtfeld, `IMPORTED` ohne gültiges
-  Mapping, `ATLAS` + relative `fileUri`, doppelte ids, im `FILE`-Modus ein
-  referenziertes Package ohne `modelFiles`-Eintrag. `name` und `description`
-  sind an `DataProvider` und `DistributionExport` `lowerBound=1` — leer ist
-  also ein harter Fehler, keine Warnung.
+  kein Datenweg, kein selektierter Datensatz, leeres Pflichtfeld, ein Weg ohne
+  Quelle oder mit eigener **und** geteilter, eine geteilte Quelle ohne
+  Besitzer, `IMPORTED` ohne gültiges Mapping, relative `fileUri`, doppelte
+  ids, und bei einer Datenbank Klassen aus mehreren Packages — über alle Wege
+  gezählt, die sich diese Datenbank teilen. `name` und `description` sind an
+  `DataProvider` und `DistributionExport` `lowerBound=1` — leer ist also ein
+  harter Fehler, keine Warnung.
 - **Warnungen**: CSV gewählt ohne JSON/XML (≥ 1 Export ersetzt die
   Runtime-Defaults **vollständig**, alles andere wird `406`); `DERIVED` bei
   JPA (Namens-Asymmetrie); `batchSizeLimit < batchSize`.
@@ -467,15 +496,15 @@ packages/data-atlas-wizard/
 ├── src/generated/**                  emfts-codegen, eingecheckt
 ├── src/assets/configuration.ecore    Kopie (sync)
 ├── src/assets/eorm.ecore             Kopie (sync)
-├── src/assets/wizard-ui/step-{instance,source,service}.xmi
+├── src/assets/wizard-ui/step-{instance,service}.xmi
 ├── src/emf/{setup.ts,wizardPackageFixup.ts}
 ├── src/wizard/{WizardShell.vue,context.ts,uiModels.ts,
 │              ModelSourceStep.vue,AtlasSourceTab.vue,UploadSourceTab.vue,
-│              SourceStep.vue,DatasetsStep.vue,ServiceStep.vue,
-│              ExportsStep.vue,SummaryStep.vue}
-├── src/transform/toDataAtlasConfig.ts Fassade → Zielmodell → saveToString()
+│              ChainsStep.vue,SummaryStep.vue}
+├── src/transform/toDataAtlasConfig.ts Wege → Zielmodell → saveToString()
+├── src/transform/{validate.ts,requiredSchemas.ts}
 ├── src/transform/dataAtlasResource.ts XMISave/XMIResource-Unterklassen:
-│                                     Href-Dialekt + iD-Fragmente
+│                                     Namespaces + iD-Fragmente
 ├── src/atlas/{ModelAtlasClient.ts,clientFactory.ts,atlasSource.ts,
 │              cascadeLoader.ts,publish.ts}
 ├── src/widgets/{register.ts,InputFieldWidget.vue,EnumChooser.vue}
@@ -529,7 +558,8 @@ Bekannte Fallen:
   der Generator kommt — eine Modelländerung ist damit automatisch gedeckt.
 - **Enums: der Loader liefert `EEnumLiteral`, der generierte Typ verspricht
   einen String** (Kommentar an emf.ts#83). Geschrieben wird der Name richtig;
-  `setup.configMode === 'FILE'` ist nach einem Round-Trip aber immer falsch.
+  `quelle.kind === InputKind.FILE` ist nach einem Round-Trip aber immer falsch
+  (`test/setup.test.ts` nagelt das fest).
   In Iteration 1 ohne Folgen, weil die Fassade nur in der Oberfläche entsteht —
   wer sie speichern und zurücklesen will, braucht eine Normalisierung.
 - **emf.ts wertet `iD="true"` beim Speichern nicht aus** (emf.ts#84) →
@@ -537,13 +567,13 @@ Bekannte Fallen:
   der ids in den Referenzattributen. Betrifft nur das Schreiben; beim Laden löst
   `XMLHandler.resolveReference()` ID-Referenzen auf.
 - **EClassifier haben in emf.ts kein `eResource()`** (emf.ts#80) → der
-  `FILE`-Href-Dialekt fällt *nicht* aus der Resource-Lage heraus, sondern muss
-  über die `modelFiles`-Karte kommen.
+  nsURI-Href entsteht dadurch von selbst; ein relativer Datei-Href wäre nur
+  über eine eigene Karte zu bekommen, und die gibt es nicht mehr.
 - **Einwertige Cross-Document-Referenzen schreibt emf.ts als Attribut**, nicht
   als `href`-Element (emf.ts#85, `XMLSave.js:318` gegen `writeElements`
   Z. 711) — gegen den Java-Data-Atlas zu verifizieren, s. Abschnitt 4. Im
   eingebetteten eorm-Mapping heißt das
-  `feature="ecore:EAttribute model/person.ecore#//Person/id"` statt
+  `feature="ecore:EAttribute https://…/person/1.0.0#//Person/id"` statt
   `<feature href="…"/>`.
 - **Typpräfixe in Attributwerten bleiben undeklariert** (emf.ts#87) →
   `writeNamespaces()` erweitern, sonst fehlt `xmlns:ecore` im Kopf.
@@ -587,18 +617,18 @@ scheitern. Der Prüfstein ist stattdessen: erzeugtes XMI **und** Vorlage in je
 ein ResourceSet laden und die Objektgraphen vergleichen — Typen, Attributwerte,
 und die Referenzen als aufgelöste Objekte. Das prüft mehr als ein Textvergleich,
 weil es die Hrefs mitprüft. Zusätzlich ein Textvergleich der `href="…"`-Werte
-und der `xsi:type`-Attribute, denn genau die sind modusabhängig und sollen
-sichtbar festgenagelt sein.
+und der `xsi:type`-Attribute, damit sie sichtbar festgenagelt sind.
 
 | Datei | prüft |
 |---|---|
-| `test/toDataAtlasConfig.test.ts` | Graphgleichheit gegen `dataatlas.xmi` (File-Modus), `dataatlas-atlas.xmi` (Atlas-Dialekt), **`dataatlas-postgres.xmi`** (JPA + CSV/JSON — bewusst der File-Zwilling, weil die Atlas-Variante `publication`/`<publications>` trägt, was Iteration 1 nicht erzeugt), `dataatlas-pagination.xmi`, `dataatlas-csv.xmi` (nur der `<exports>`-Block). Dazu der **Round-Trip**: erzeugtes XMI in ein ResourceSet laden, in dem `configuration.ecore`/`eorm.ecore` registriert sind und `person.ecore` unter der URI `model/person.ecore` liegt; geprüft werden `services[0].dataInput`, `configuration[0].dataSet` und `distributionExport` als **Objekte**. Bekanntes Rauschen: `configuration.ecore` verweist auf die nicht mitgelieferten Packages `query`, `eorm` und `qvtoperational` → „Forward ref UNRESOLVED" für `DataSet.query`, `JPADataInput.persistenceConfig` und `DataTransformation.transformation`; bewusst ignorieren, Iteration 1 emittiert nur `persistenceConfig` und lädt `eorm.ecore` dafür mit |
-| `test/dataAtlasResource.test.ts` | die zwei Überschreibungen einzeln: `getHref()` liefert je Modus den richtigen Dialekt und **wirft**, wenn im `FILE`-Modus der `modelFiles`-Eintrag fehlt; `getURIFragment()` liefert den `iD`-Wert und schreibt **kein** `xmi:id` |
-| `test/persistenceConfig.test.ts` | das importierte `EntityMappings` landet als `persistenceConfig`-Containment, die inneren Hrefs folgen dem Modus; Zielbild `dataatlas-history-atlas.xmi` (ersetzt den früheren `embedEormMapping`-Test) |
-| `test/context.test.ts` | Ableitungsregeln: ids, `path`, `description` aus GenModel-`documentation`, Modus-abhängige `fileUri` |
+| `test/toDataAtlasConfig.test.ts` | Graphgleichheit gegen `dataatlas-atlas.xmi`, **`dataatlas-postgres-atlas.xmi`** (JPA + CSV/JSON), `dataatlas-pagination.xmi` (nur die Endpunkte), `dataatlas-csv.xmi` (nur der `<exports>`-Block). Dazu **mehrere Datenwege**: jede Quelle ein `DataInput`, eine geteilte Quelle genau einer (mit den Klassen beider Wege, jede einmal), gleiche Formate ein Eintrag, und die Trias am Service nur, solange die Wege einig sind. Und der **Round-Trip**: erzeugtes XMI in ein ResourceSet laden, in dem `configuration.ecore`/`eorm.ecore` registriert sind und `person.ecore` unter der URI `model/person.ecore` liegt; geprüft werden `services[0].dataInput`, `configuration[0].dataSet` und `distributionExport` als **Objekte**. Bekanntes Rauschen: `configuration.ecore` verweist auf die nicht mitgelieferten Packages `query`, `eorm` und `qvtoperational` → „Forward ref UNRESOLVED" für `DataSet.query`, `JPADataInput.persistenceConfig` und `DataTransformation.transformation`; bewusst ignorieren, Iteration 1 emittiert nur `persistenceConfig` und lädt `eorm.ecore` dafür mit |
+| `test/dataAtlasResource.test.ts` | die zwei Überschreibungen einzeln: `writeNamespaces()` deklariert das Ecore-Präfix nur bei eingebettetem Mapping; `getURIFragment()` liefert den `iD`-Wert und schreibt **kein** `xmi:id` |
+| `test/persistenceConfig.test.ts` | das importierte `EntityMappings` landet als `persistenceConfig`-Containment, die inneren Hrefs entstehen über den nsURI; Zielbild `dataatlas-history-atlas.xmi` |
+| `test/context.test.ts` | Ableitungsregeln: ids, `path`, `description` aus GenModel-`documentation`, absolute `fileUri`, und die Wege-Operationen (`addChain` nummeriert, `shareSource`/`ownSource`, `removeChain` vererbt die Quelle) |
 | `test/validation.test.ts` | jede harte Regel und jede Warnung aus Abschnitt 4 einmal, dazu die Grundannahme: was `initSetup` liefert, ist ohne Zutun schreibbar |
 | `test/wizardUi.test.ts` | jedes `feature=`-Href der Schritt-XMIs löst auf und findet eine Registry-Komponente (fängt Umbenennungen im Fassadenmodell und den Codegen-Bug) |
-| `test/stepsWiring.test.ts` | die Kette Klick → Fassadenmodell → `touch()` in den handgeschriebenen Schritten. Braucht `// @vitest-environment jsdom` in der ersten Zeile, weil das Paket sonst auf `node` steht. Genau diese Verdrahtung war in gene schon mehrfach kaputt, ohne dass ein Unit-Test es sah |
+| `test/facade.test.ts` | Namen, Kardinalitäten und Vorgaben des Fassadenmodells — die Namen tauchen in den Schritt-XMIs, im Fixup und im Transformer wieder auf, ohne dass der Compiler sie verbindet |
+| `test/stepsWiring.test.ts` | die Kette Klick → Fassadenmodell → `touch()` in den handgeschriebenen Schritten, samt Wege-Bedienung (zweiter Weg, Quelle mitbenutzen, letzten Weg nicht entfernbar). Braucht `// @vitest-environment jsdom` in der ersten Zeile, weil das Paket sonst auf `node` steht. Genau diese Verdrahtung war in gene schon mehrfach kaputt, ohne dass ein Unit-Test es sah |
 | `test/publish.test.ts` | gegen einen Stellvertreter: Reihenfolge eorm→configuration→Domäne in **beiden** Stages, Retry auf 5xx und **keiner** auf 4xx, Abbruch bei fehlendem Schema, Fortschrittsmeldungen, `requiredSchemas` samt Fehlerfall |
 | `test/publishHttp.test.ts` | derselbe Flow durch den **echten** Client gegen einen HTTP-Server im Test: Pfade, Query-Parameter, Content-Types (`application/xml` fürs Schema, `application/xmi` für Objekt und Transition) und der `StageTransitionRequest`-Rumpf. Genau daran scheitert es gegen den echten Atlas, und ein Stellvertreter merkt es nie |
 | `test/pluginIntegration.test.ts` | `startupModules` in **beiden** Listen, Manifest-Angaben, und dass `activate()` Perspektive, Panel, Activity und den Opener registriert |
@@ -646,10 +676,10 @@ als Attribut (emf.ts#85).
 | 2. Fassadenmodell + Codegen | `model/data-atlas-wizard.ecore` + genconfig, `npm run generate` erzeugt `src/generated`, eingecheckt |
 | 3. EMF-Setup | `setup.ts` + `wizardPackageFixup.ts`; ein Smoke-Test registriert Fassade, `configuration.ecore` und `eorm.ecore` ohne Fehler, und der Round-Trip behält Wahrheitswerte und Zahlen (Gegenprobe: ohne Fixup fällt er um) |
 | 4. Ableitungsregeln | `context.ts` + `test/context.test.ts` grün |
-| 5. Serializer-Unterklassen | `dataAtlasResource.ts` + `test/dataAtlasResource.test.ts` grün: beide Href-Dialekte, Wurf bei fehlendem `modelFiles`-Eintrag, `iD`-Fragment ohne `xmi:id` |
-| 6. Transformer Datei-Grundfall | `test/toDataAtlasConfig.test.ts` grün gegen `dataatlas.xmi` und `dataatlas-atlas.xmi` — Graphgleichheit plus Href-Vergleich, nicht zeichenweise (Abschnitt 8); der Round-Trip löst alle Referenzen zu Objekten auf |
-| 7. Transformer JPA | `dataatlas-postgres.xmi` reproduziert; `persistenceConfig.test.ts` grün |
-| 8. UI-Schritte | alle sieben Schritte durchklickbar, `blockReason` je Schritt greift, `wizardUi.test.ts` grün |
+| 5. Serializer-Unterklassen | `dataAtlasResource.ts` + `test/dataAtlasResource.test.ts` grün: nsURI-Href, Namespace-Deklaration nur bei eingebettetem Mapping, `iD`-Fragment ohne `xmi:id` |
+| 6. Transformer Grundfall | `test/toDataAtlasConfig.test.ts` grün gegen `dataatlas-atlas.xmi` — Graphgleichheit plus Href-Vergleich, nicht zeichenweise (Abschnitt 8); der Round-Trip löst alle Referenzen zu Objekten auf |
+| 7. Transformer JPA | `dataatlas-postgres-atlas.xmi` reproduziert; `persistenceConfig.test.ts` grün |
+| 8. UI-Schritte | alle fünf Schritte durchklickbar, `blockReason` je Schritt greift, `wizardUi.test.ts` und `stepsWiring.test.ts` grün |
 | 9. Download | XMI-Datei landet im Browser-Download, Vorschau im Summary |
 | 10. Publish | `publish.ts` + `test/publish.test.ts` grün; das Panel im Summary lädt hoch und schiebt weiter (Verdrahtungstest gegen einen Stellvertreter). Der Lauf gegen `mock-atlas.mjs` bzw. den echten Atlas gehört zu Schritt 12 |
 | 11. Plugin-Integration | `startupModules`-Eintrag in **beiden** Listen, `build:plugin` läuft ohne Externals-Warnung (572 kB, davon 279 kB die beiden eingebetteten Metamodelle), `pluginIntegration.test.ts` grün |

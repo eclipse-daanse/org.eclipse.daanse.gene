@@ -25,8 +25,8 @@
           <dd>{{ datensatzText }}</dd>
           <dt><i class="pi pi-link" aria-hidden="true"></i> Endpunkt</dt>
           <dd>{{ setupValue?.urlContext }}</dd>
-          <dt><i class="pi pi-download" aria-hidden="true"></i> Formate</dt>
-          <dd>{{ formatText }}</dd>
+          <dt><i class="pi pi-sitemap" aria-hidden="true"></i> Datenwege</dt>
+          <dd>{{ wegeText }}</dd>
         </dl>
       </div>
 
@@ -170,37 +170,43 @@ const quelleText = computed(() => {
   void version.value;
   const s = setup.value;
   if (!s) return '';
-  return s.dataSources
-    .map((q) => {
-      if (q.kind === InputKind.FILE) return `${q.id}: Datei ${q.fileUri ?? ''}`;
+  // Geteilte Quellen nur einmal nennen
+  const gesehen = new Set<unknown>();
+  const texte: string[] = [];
+  for (const chain of s.chains) {
+    const q = chain.source ?? chain.sharedSource;
+    if (!q || gesehen.has(q)) continue;
+    gesehen.add(q);
+    if (q.kind === InputKind.FILE) {
+      texte.push(`${q.id}: Datei ${q.fileUri ?? ''}`);
+    } else {
       const art =
         q.mappingKind === MappingKind.IMPORTED ? 'importiertes Mapping' : 'abgeleitetes Mapping';
-      return `${q.id}: Datenbank ${q.dataSourceFilter ?? ''} (${art})`;
+      texte.push(`${q.id}: Datenbank ${q.dataSourceFilter ?? ''} (${art})`);
+    }
+  }
+  return texte.join(' · ');
+});
+
+/** Je Weg: wie viele Datensätze und welche Formate. */
+const wegeText = computed(() => {
+  void version.value;
+  return (setup.value?.chains ?? [])
+    .map((c) => {
+      const anzahl = c.datasets.filter((d) => d.selected).length;
+      const formate = c.exports.filter((e) => e.selected).map((e) => e.id);
+      return `${c.id}: ${anzahl} Datensätze, ${formate.length ? formate.join('/') : 'Vorgaben'}`;
     })
     .join(' · ');
 });
 
 const datensatzText = computed(() => {
   void version.value;
-  const ausgewaehlt = setup.value?.datasets.filter((d) => d.selected) ?? [];
+  const ausgewaehlt = (setup.value?.chains ?? []).flatMap((c) =>
+    c.datasets.filter((d) => d.selected),
+  );
   if (ausgewaehlt.length === 0) return 'keine';
   return `${ausgewaehlt.length}: ${ausgewaehlt.map((d) => d.id).join(', ')}`;
-});
-
-const formatText = computed(() => {
-  void version.value;
-  const s = setup.value;
-  if (!s) return '';
-  const ausgewaehlt = s.datasets.filter((d) => d.selected);
-  if (ausgewaehlt.every((d) => d.exportIds.length === 0)) {
-    return 'Vorgaben des Data Atlas (JSON, XML)';
-  }
-  // Sind alle einig, genügt eine Zeile
-  const einheitlich = ausgewaehlt.every(
-    (d) => [...d.exportIds].sort().join(' ') === [...ausgewaehlt[0].exportIds].sort().join(' '),
-  );
-  if (einheitlich) return ausgewaehlt[0].exportIds.join(', ');
-  return ausgewaehlt.map((d) => `${d.id}: ${d.exportIds.join(', ') || 'Vorgaben'}`).join(' · ');
 });
 
 // ── Veröffentlichen ────────────────────────────────────────────────────────
