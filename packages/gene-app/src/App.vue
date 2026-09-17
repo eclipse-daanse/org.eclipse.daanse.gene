@@ -21,6 +21,7 @@ const OCL_SOURCES = ['http://www.eclipse.org/fennec/m2x/ocl/1.0', 'http://www.ec
 function isOclSource(s: string | null | undefined): boolean { return !!s && OCL_SOURCES.includes(s) }
 import type { PerspectiveManager } from 'ui-perspectives'
 import { registerWorkspaceActions } from './services/WorkspaceActionService'
+import { ensurePackagesForInstance } from './services/packageResolution'
 import type { WorkspaceActionService, FileEntryLike } from './services/WorkspaceActionService'
 
 // EditorContext injection key (matches the one in editorContext.ts)
@@ -854,6 +855,9 @@ async function loadInstancesFromEditorConfig(workspaceEntry: any) {
         // Clear previous errors for this file
         problemsService.clearIssuesForFile(location)
 
+        // Metamodelle muessen vor dem Parsen registriert sein
+        await resolveMetamodels(fileEntry, content, location)
+
         try {
           await instanceTreeComposables.value.loadInstancesFromXMI(content, location)
           console.log('[App] Instances loaded from:', location)
@@ -1303,6 +1307,42 @@ async function reloadFailedInstanceFiles(sourceId: string) {
 }
 
 // Handle adding instances (.xmi file) to the workspace
+/**
+ * Fehlende Metamodelle beschaffen, bevor eine Instanz geladen wird.
+ *
+ * Kommt die Instanz aus dem Model Atlas, liegt ihr Ecore dort im selben Scope
+ * — der Loader von emf.ts holt es aber nicht von sich aus (emf.ts#88), er
+ * bricht beim ersten unbekannten Praefix ab. Also vorher aufloesen und
+ * registrieren; was nirgends liegt, wird genannt, statt nur als Praefix im
+ * Parserfehler aufzutauchen.
+ */
+async function resolveMetamodels(entry: any, content: string, filePath: string): Promise<void> {
+  try {
+    // Der Model Browser wird sonst erst beim Perspektivwechsel geholt
+    const mb =
+      (modelBrowserComposables.value as any) ?? tsm.getService<any>('ui.model-browser.composables')
+    const ergebnis = await ensurePackagesForInstance(content, entry, {
+      editorConfig: getGlobalEditorConfig(),
+      modelBrowserComposables: mb
+    })
+    if (ergebnis.registered.length > 0) {
+      console.log('[App] Metamodelle aus dem Atlas nachgeladen:', ergebnis.registered.join(', '))
+    }
+    for (const nsURI of ergebnis.missing) {
+      problemsService.addIssue({
+        severity: 'error',
+        message: `Metamodell nicht gefunden: ${nsURI}`,
+        source: 'xmi-parser',
+        objectLabel: entry?.name || filePath.split('/').pop() || filePath,
+        eClassName: 'XMI Parser',
+        filePath
+      })
+    }
+  } catch (e) {
+    console.warn('[App] Metamodell-Aufloesung fehlgeschlagen:', e)
+  }
+}
+
 async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE' | 'MERGE' | 'REPLACE') {
   console.log('[App] Adding instances to workspace:', entry.name, 'content length:', content?.length)
 
@@ -1322,6 +1362,9 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
 
   // Clear previous errors for this file
   problemsService.clearIssuesForFile(entry.path)
+
+  // Metamodelle muessen vor dem Parsen registriert sein
+  await resolveMetamodels(entry, content, entry.path)
 
   try {
     console.log('[App] Calling instance load, mode:', mode)

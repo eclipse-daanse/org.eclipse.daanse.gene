@@ -61,8 +61,8 @@ export async function activate(context: ModuleContext): Promise<void> {
   context.services.register('gene.atlas.objectActions', objectActionRegistry)
 
   // Register cascade resolver service
-  const { createAtlasURIConverter } = await import('./composables/atlasURIConverter')
-  const { ModelAtlasClient } = await import('storage-model-atlas')
+  // Der Converter gehoert zur Atlas-Anbindung, nicht zum Browser-Plugin
+  const { createAtlasURIConverter, ModelAtlasClient } = await import('storage-model-atlas')
 
   context.services.register('gene.atlas.cascadeResolver', {
     async configure(editorConfig: any, resourceSet: any) {

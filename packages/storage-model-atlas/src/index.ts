@@ -31,6 +31,18 @@ export { WorkflowApiPackage, WorkflowApiFactory } from './generated/workflowapi'
 export type { ErrorResponse, StageTransitionRequest, EPackageInfo } from './generated/rest'
 export { RestPackage, RestFactory } from './generated/rest'
 
+// Re-export Schema-Identitaet (objectId/Property -> nsURI)
+export { schemaNsUri, safeAtob } from './schemaIdentity'
+
+// Re-export Schema-Aufloesung (nsURI -> Ecore aus dem Atlas)
+export {
+  collectNsUris,
+  fetchSchemas,
+  providersForScope,
+  createAtlasURIConverter,
+  type AtlasProvider
+} from './schemaResolver'
+
 // Re-export XMI parsing helpers
 export {
   parseXMI,
