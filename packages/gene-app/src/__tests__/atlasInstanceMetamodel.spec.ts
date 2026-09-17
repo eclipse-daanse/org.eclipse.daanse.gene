@@ -1,19 +1,22 @@
 /**
  * Instanz aus dem Model Atlas oeffnen: das Metamodell wird nicht aufgeloest.
  *
- * Der Assistent-Weg im Explorer liefert den Inhalt einer Registry-Datei, und
- * der Instanzbaum laedt ihn. Steht das zugehoerige Ecore nur im Model Atlas —
- * und dort steht es, im selben Scope, unter genau dem nsURI aus dem
- * Instanzdokument — dann bricht das Laden mit „Package not found for prefix"
- * ab. gene fragt das Schema nie nach.
+ * Der Weg im Explorer liefert den Inhalt einer Registry-Datei, und der
+ * Instanzbaum laedt ihn. Steht das zugehoerige Ecore nur im Model Atlas — und
+ * dort steht es, im selben Scope, unter genau dem nsURI aus dem
+ * Instanzdokument — dann bricht der Loader mit „Package not found for prefix"
+ * ab: er holt sich fehlende Packages nicht selbst (emf.ts#88).
  *
- * Der Test haelt beides fest: was heute passiert, und was passieren muesste
- * (`it.fails`, schlaegt um, sobald es behoben ist). Siehe Issue zur
- * Schema-Aufloesung aus dem Model Atlas (#152).
+ * `ensurePackagesForInstance` schliesst die Luecke: es liest die nsURIs aus
+ * dem Dokument, holt fehlende Schemas aus dem Scope der Instanz und
+ * registriert sie ueber den gewohnten Modell-Weg. Danach laedt die Instanz.
+ * Siehe #152 und emf.ts#88.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useFileSystem } from 'ui-file-explorer'
 import { loadInstancesFromXMI } from 'ui-instance-tree'
+import { useModelRegistry } from 'ui-model-browser'
+import { ensurePackagesForInstance } from '../services/packageResolution'
 
 const NS = 'https://example.org/person/1.0.0'
 
@@ -109,7 +112,7 @@ describe('Instanz aus dem Model Atlas', () => {
     expect(await fs.readTextFile(instanz as never)).toContain(`xmlns:person="${NS}"`)
   })
 
-  it('das Laden bricht ab, weil das Metamodell fehlt', async () => {
+  it('der Loader allein bricht ab — er kennt das Metamodell nicht', async () => {
     const { fs, quelle } = await atlasQuelle()
     const instanz = fs.getFileByPath(quelle.id, 'configurations/draft/persons.xmi')
     const inhalt = await fs.readTextFile(instanz as never)
@@ -119,7 +122,7 @@ describe('Instanz aus dem Model Atlas', () => {
     )
   })
 
-  it('und niemand hat das Schema dafuer angefragt', async () => {
+  it('und er fragt das Schema auch nicht nach (emf.ts#88)', async () => {
     const { fs, quelle } = await atlasQuelle()
     const instanz = fs.getFileByPath(quelle.id, 'configurations/draft/persons.xmi')
     const inhalt = await fs.readTextFile(instanz as never)
@@ -129,12 +132,47 @@ describe('Instanz aus dem Model Atlas', () => {
     expect(schemaAbrufe).toEqual([])
   })
 
-  it.fails('Soll: das Schema aus demselben Scope wird nachgeladen', async () => {
+  it('mit Vorauflösung kommt das Schema aus demselben Scope', async () => {
     const { fs, quelle } = await atlasQuelle()
     const instanz = fs.getFileByPath(quelle.id, 'configurations/draft/persons.xmi')
     const inhalt = await fs.readTextFile(instanz as never)
 
+    const aufgeloest = await ensurePackagesForInstance(inhalt, instanz, {
+      modelBrowserComposables: useModelRegistry(),
+    })
+    expect(aufgeloest.registered).toEqual([NS])
+    expect(aufgeloest.missing).toEqual([])
+
     const ergebnis = await loadInstancesFromXMI(inhalt, instanz!.path)
     expect(ergebnis.loadedCount).toBe(1)
+    expect(ergebnis.errors).toEqual([])
+  })
+
+  it('ein nsURI, den niemand kennt, wird genannt statt verschwiegen', async () => {
+    const { fs, quelle } = await atlasQuelle()
+    const fremd = `<?xml version="1.0" encoding="UTF-8"?>
+<x:Thing xmlns:x="https://example.org/unbekannt/1.0.0" xmlns:xmi="http://www.omg.org/XMI"
+    xmi:version="2.0"/>`
+    const instanz = fs.getFileByPath(quelle.id, 'configurations/draft/persons.xmi')
+
+    const aufgeloest = await ensurePackagesForInstance(fremd, instanz, {
+      modelBrowserComposables: useModelRegistry(),
+    })
+    expect(aufgeloest.registered).toEqual([])
+    expect(aufgeloest.missing).toEqual(['https://example.org/unbekannt/1.0.0'])
+  })
+
+  it('technische Namensraeume werden nicht gesucht', async () => {
+    const { fs, quelle } = await atlasQuelle()
+    const instanz = fs.getFileByPath(quelle.id, 'configurations/draft/persons.xmi')
+    const nurTechnisch = `<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="leer" nsURI="x" nsPrefix="l"/>`
+
+    const aufgeloest = await ensurePackagesForInstance(nurTechnisch, instanz, {
+      modelBrowserComposables: useModelRegistry(),
+    })
+    expect(aufgeloest).toEqual({ registered: [], missing: [] })
   })
 })

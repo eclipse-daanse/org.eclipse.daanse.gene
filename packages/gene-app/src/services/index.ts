@@ -6,3 +6,4 @@
 
 export * from './modelLoader'
 export * from './instanceLoader'
+export * from './packageResolution'
