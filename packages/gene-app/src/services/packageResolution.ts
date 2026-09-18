@@ -57,45 +57,86 @@ function atlasHandle(entry: any): any | null {
 }
 
 /**
- * Die Fundstellen für eine Instanz: erst der Scope, aus dem sie stammt (ihre
- * eigene Stage zuerst), dann die im Workspace konfigurierte Resolver-Kette.
+ * Die Fundstellen eines einzelnen Scopes, und wie sein Elternscope heisst.
+ *
+ * Welche Registry die Schemas führt und welche Stages es gibt, sagt der Scope
+ * selbst. Der Kurzweg `/schema` gilt nur, wenn er keine eigene
+ * Schema-Registry ausweist — sonst antwortet der Server mit 400.
+ */
+async function stellenFuerScope(
+  client: any,
+  scopeName: string,
+  bevorzugteStage: string | undefined,
+  hilfen: {
+    providersForScope: (...args: any[]) => Fundstelle[]
+    parseScopeXmi: (xmi: string) => any
+  },
+): Promise<{ stellen: Fundstelle[]; parentScope?: string }> {
+  let schemaRegistry: string | undefined
+  let stages: string[] = []
+  let parentScope: string | undefined
+  try {
+    const scopeXmi = await client.getScope(scopeName)
+    const scope = scopeXmi ? hilfen.parseScopeXmi(scopeXmi) : null
+    parentScope = scope?.parentScope || undefined
+    const registries = (scope?.registries || []) as any[]
+    schemaRegistry = registries.find((r) => r?.type === 'SCHEMA')?.name
+    const eigene = registries.filter((r) => !schemaRegistry || r?.name === schemaRegistry)
+    stages = [
+      ...new Set(
+        eigene.flatMap((r: any) => (r.stages || []).map((s: any) => s.name).filter(Boolean)),
+      ),
+    ] as string[]
+  } catch {
+    // Ohne Scope-Antwort bleibt die Stage der Instanz
+  }
+  if (stages.length === 0 && bevorzugteStage) stages = [bevorzugteStage]
+
+  const stellen = hilfen.providersForScope(
+    client,
+    scopeName,
+    stages,
+    bevorzugteStage,
+    schemaRegistry,
+  )
+  // Manche Server führen Schemas zusätzlich unter dem Kurzweg '/schema'.
+  // Listet der nichts, kostet der Versuch nur eine leere Antwort — heisst
+  // die Registry aber selbst 'schema', waere es derselbe Bestand zweimal.
+  if (schemaRegistry && schemaRegistry !== 'schema') {
+    stellen.push(...hilfen.providersForScope(client, scopeName, stages, bevorzugteStage))
+  }
+  return { stellen, parentScope }
+}
+
+/** Mehr Ebenen hat keine sinnvolle Scope-Hierarchie — und Zyklen enden hier. */
+const MAX_SCOPE_TIEFE = 10
+
+/**
+ * Die Fundstellen für eine Instanz: der Scope, aus dem sie stammt, **samt
+ * seiner geerbten Eltern-Scopes**, dann die im Workspace konfigurierte
+ * Resolver-Kette.
+ *
+ * Die Vererbung ist der Regelfall, nicht die Ausnahme: gemeinsame Metamodelle
+ * liegen im Plattform-Scope, und die Registry-Liste eines Kind-Scopes führt
+ * sie nicht mit auf. Wer nur dort sucht, findet sie nie.
  */
 async function fundstellen(entry: any, editorConfig: any): Promise<Fundstelle[]> {
   const { ModelAtlasClient, providersForScope, parseScopeXmi } = await import('storage-model-atlas')
+  const hilfen = { providersForScope, parseScopeXmi } as any
   const stellen: Fundstelle[] = []
 
-  // 1. Implizit: der Scope der Instanz. Welche Registry die Schemas führt und
-  //    welche Stages es gibt, sagt der Scope selbst.
+  // 1. Implizit: der Scope der Instanz und seine Eltern
   const handle = atlasHandle(entry)
   if (handle) {
     const client = new ModelAtlasClient({ baseUrl: handle.atlasBaseUrl, token: handle.token })
-    let schemaRegistry: string | undefined
-    let stages: string[] = []
-    try {
-      const scopeXmi = await client.getScope(handle.scopeName)
-      const scope = scopeXmi ? parseScopeXmi(scopeXmi) : null
-      const registries = (scope?.registries || []) as any[]
-      // Der Kurzweg '/schema' gilt nur, wenn der Scope keine eigene
-      // Schema-Registry ausweist — sonst antwortet der Server mit 400.
-      schemaRegistry = registries.find((r) => r?.type === 'SCHEMA')?.name
-      const eigene = registries.filter((r) => !schemaRegistry || r?.name === schemaRegistry)
-      stages = [
-        ...new Set(
-          eigene.flatMap((r: any) => (r.stages || []).map((s: any) => s.name).filter(Boolean)),
-        ),
-      ] as string[]
-    } catch {
-      // Ohne Scope-Antwort bleibt die Stage der Instanz
-    }
-    if (stages.length === 0 && handle.stage) stages = [handle.stage]
-    stellen.push(
-      ...providersForScope(client, handle.scopeName, stages, handle.stage, schemaRegistry),
-    )
-    // Manche Server führen Schemas zusätzlich unter dem Kurzweg '/schema'.
-    // Listet der nichts, kostet der Versuch nur eine leere Antwort — heisst
-    // die Registry aber selbst 'schema', waere es derselbe Bestand zweimal.
-    if (schemaRegistry && schemaRegistry !== 'schema') {
-      stellen.push(...providersForScope(client, handle.scopeName, stages, handle.stage))
+    const gesehen = new Set<string>()
+    let scopeName: string | undefined = handle.scopeName
+    for (let tiefe = 0; scopeName && tiefe < MAX_SCOPE_TIEFE; tiefe++) {
+      if (gesehen.has(scopeName)) break
+      gesehen.add(scopeName)
+      const ergebnis = await stellenFuerScope(client, scopeName, handle.stage, hilfen)
+      stellen.push(...ergebnis.stellen)
+      scopeName = ergebnis.parentScope
     }
   }
 
