@@ -7,7 +7,17 @@
 
 import { ref, shallowRef, computed, triggerRef, toRaw, type Ref } from 'tsm:vue'
 import type { EObject, EClass, EReference, Resource } from '@emfts/core'
-import { XMIResource, URI, BasicResourceSet, EContentAdapter, type Notification } from '@emfts/core'
+import {
+  XMIResource,
+  XMIResourceFactory,
+  // Traegt DEFAULT_EXTENSION; der gleichnamige Typ kommt aus dem type-Import
+  Resource as ResourceKonstanten,
+  URI,
+  BasicResourceSet,
+  EContentAdapter,
+  type Notification,
+  type URIConverter
+} from '@emfts/core'
 import { copyDeep, checkContainment, addToContainment, acceptingReferences, type ContainmentResult } from 'model-editing'
 import type { InstanceTreeNode, TreeSelection, AnyTreeNode } from '../types'
 import { getObjectId, getObjectLabel, getObjectIcon, getObjectIconInfo } from '../types'
@@ -31,8 +41,32 @@ function getResourceSet(): BasicResourceSet {
     resourceSet = _canonicalRegistry
       ? new BasicResourceSet(_canonicalRegistry)
       : new BasicResourceSet()
+    /*
+     * Fällt beim Laden ein unbekannter nsURI an, holt ihn der Loader über den
+     * URIConverter des ResourceSet — und legt dafür eine Resource unter dem
+     * nsURI an. Ein nsURI hat keine brauchbare Endung; ohne diesen
+     * Auffang-Eintrag entstünde eine BasicResource, deren `load()` nur ein
+     * Platzhalter ist, und der Converter würde nie gefragt.
+     */
+    resourceSet
+      .getResourceFactoryRegistry()
+      .getExtensionToFactoryMap()
+      .set(ResourceKonstanten.DEFAULT_EXTENSION, new XMIResourceFactory())
   }
   return resourceSet
+}
+
+/**
+ * Woher fehlende Metamodelle kommen.
+ *
+ * In EMF ist der nsURI eines Packages ein gewöhnlicher Resource-URI, und der
+ * URIConverter sagt, wo das Ecore wirklich liegt (`XMLHandler.getPackageForURI`).
+ * Wer die Modelle woanders hält — etwa in einem Model Atlas —, hängt hier
+ * seinen Converter ein; der Instanzbaum kennt die Quelle nicht.
+ */
+export function setPackageURIConverter(converter: URIConverter | null): void {
+  const rs = getResourceSet()
+  if (converter) rs.setURIConverter(converter)
 }
 
 /**
@@ -1569,6 +1603,8 @@ export interface XMILoadResult {
   loadedCount: number
   /** Errors encountered during loading */
   errors: Array<{ message: string; line?: number; column?: number }>
+  /** nsURIs, die auch der URIConverter nicht auflösen konnte */
+  missingPackages: string[]
 }
 
 /**
@@ -1596,7 +1632,12 @@ export async function loadInstancesFromXMI(xmiContent: string, filePath: string)
     const uri = URI.createURI(filePath)
     const loadResource = new XMIResource(uri)
     loadResource.setResourceSet(rs)
-    await loadResource.loadFromString(xmiContent)
+    /*
+     * Async, damit der Loader fehlende Packages über den URIConverter
+     * nachholen und noch einmal parsen kann (emf.ts#88). Ohne Converter und
+     * ohne Fund verhält es sich wie loadFromString().
+     */
+    await loadResource.loadFromStringAsync(xmiContent)
 
     // Check for errors collected during parsing
     const resourceErrors = loadResource.getErrors?.() || []
@@ -1635,7 +1676,8 @@ export async function loadInstancesFromXMI(xmiContent: string, filePath: string)
     // Return result with errors (for caller to handle warnings even when some objects loaded)
     return {
       loadedCount,
-      errors
+      errors,
+      missingPackages: (loadResource.getMissingPackages?.() ?? []).map((m: any) => m.nsURI)
     }
   } finally {
     state.isLoading.value = false

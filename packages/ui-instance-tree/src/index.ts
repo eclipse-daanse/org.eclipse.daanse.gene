@@ -45,6 +45,7 @@ export {
   getSharedResource,
   getInstanceLoadingState,
   loadInstancesFromXMI,
+  setPackageURIConverter,
   getObjectSourcePath,
   setObjectSourcePath,
   setCanonicalPackageRegistry,
@@ -131,6 +132,7 @@ import {
   loadInstancesFromXMI,
   loadResourceStandalone,
   setInstanceFileReader,
+  setPackageURIConverter,
   getObjectSourcePath,
   setObjectSourcePath,
   getXmiId,
@@ -300,6 +302,7 @@ export async function activate(context: ModuleContext): Promise<void> {
     loadInstancesFromXMI,
     loadResourceStandalone,
     setInstanceFileReader,
+    setPackageURIConverter,
     getObjectSourcePath,
     setObjectSourcePath,
     // XMI ID functions
