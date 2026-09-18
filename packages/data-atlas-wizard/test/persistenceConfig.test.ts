@@ -111,13 +111,14 @@ describe('Einbetten', () => {
     const { xmi } = buildDataAtlasXmi(s);
     // eorm deklariert der Serializer selbst (es gibt eorm-typisierte Elemente)
     expect(xmi).toContain('xmlns:eorm="https://eclipse.org/fennec/persistence/eorm/1.0.0"');
-    // ecore muss der Wizard nachtragen: das Präfix kommt nur in
-    // Attributwerten vor, und die zählt emf.ts nicht mit (#87)
+    // Das Präfix wird gebraucht und deshalb auch deklariert — seit
+    // @emfts/core 0.3 (emf.ts#85/#87) ohne Zutun des Assistenten
     expect(xmi).toContain('xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"');
     expect(xmi).toContain('xsi:type="eorm:EClassObject"');
     expect(xmi).toContain('xsi:type="eorm:EFeatureObject"');
-    // Der Ecore-Typ steht im Attributwert des Verweises, nicht als xsi:type
-    expect(xmi).toMatch(/feature="ecore:EAttribute /);
+    // Einwertige Cross-Document-Referenzen stehen als href-Kindelement mit
+    // xsi:type — wie in Java EMF und wie in der Vorlage
+    expect(xmi).toMatch(/<feature xsi:type="ecore:EAttribute" href="/);
     // kein zweiter Dokumentkopf des fremden Dokuments
     expect(xmi.match(/<\?xml/g)).toHaveLength(1);
     expect(xmi).not.toContain('EntityMappings');
@@ -131,9 +132,11 @@ describe('Einbetten', () => {
      * stimmt, und der Round-Trip loest ihn auf.
      */
     const { xmi } = buildDataAtlasXmi(s);
-    expect(xmi).toContain(`eclass="${PERSON_NS}#//Person"`);
-    expect(xmi).toContain(`feature="ecore:EAttribute ${PERSON_NS}#//Person/id"`);
-    expect(xmi).toContain(`class="ecore:EClass ${PERSON_NS}#//Person"`);
+    expect(xmi).toContain(`<eclass href="${PERSON_NS}#//Person"/>`);
+    expect(xmi).toContain(
+      `<feature xsi:type="ecore:EAttribute" href="${PERSON_NS}#//Person/id"/>`,
+    );
+    expect(xmi).toContain(`<class xsi:type="ecore:EClass" href="${PERSON_NS}#//Person"/>`);
   });
 });
 

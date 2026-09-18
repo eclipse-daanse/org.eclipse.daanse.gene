@@ -282,9 +282,18 @@ describe('Pagination gegen fixtures/dataatlas-pagination.xmi', () => {
     expect(erzeugt.services).toEqual(vorlage.services);
   });
 
-  it('Vorgabewerte werden nicht geschrieben', () => {
+  it('was der Assistent setzt, steht in der Datei — was er auslässt, nicht', () => {
+    /*
+     * Seit @emfts/core 0.3 schreibt der Serializer auch Werte, die dem
+     * Vorgabewert entsprechen (emf.ts#95 — vorher fielen so auch Pflichtfelder
+     * weg). Der Endpunkt traegt seine Pagination-Namen also sichtbar, und das
+     * ist richtig: der Assistent hat sie gesetzt.
+     *
+     * batchSize dagegen setzt er nur, wenn der Nutzer eine Grenze angibt —
+     * ein nicht gesetztes Feature schreibt der Serializer weiterhin nicht.
+     */
     const { xmi } = vergleiche(beispielSetup(), 'dataatlas-atlas.xmi');
-    expect(xmi).not.toContain('paginationOffsetParameterName');
+    expect(xmi).toContain('paginationOffsetParameterName="offset"');
     expect(xmi).not.toContain('batchSize');
   });
 });

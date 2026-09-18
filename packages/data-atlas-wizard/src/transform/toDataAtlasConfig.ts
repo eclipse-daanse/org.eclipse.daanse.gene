@@ -20,7 +20,7 @@ import {
   type DatasetConfig,
   type ExportConfig,
 } from '../generated';
-import { ECORE_NS_URI, createDataAtlasResource } from './dataAtlasResource';
+import { createDataAtlasResource } from './dataAtlasResource';
 import { assertValid, findWarnings } from './validate';
 import { effectiveSource } from '../wizard/context';
 
@@ -156,17 +156,12 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
    * Quelle wird deshalb genau ein DataInput, und gleiche Exportvorlagen
    * werden zu einem Eintrag zusammengefasst.
    */
-  let hatEingebettetesMapping = false;
-
   // ── Dateneingänge ────────────────────────────────────────────────────────
   const inputObjekte = new Map<DataSourceConfig, EObject>();
   for (const chain of setup.chains) {
     const quelle = effectiveSource(chain);
     if (!quelle || inputObjekte.has(quelle)) continue;
     const dataInput = buildDataInput(builder, root, quelle);
-    if (quelle.kind === InputKind.DATABASE && quelle.mappingKind === MappingKind.IMPORTED) {
-      hatEingebettetesMapping = true;
-    }
     inputObjekte.set(quelle, dataInput);
     builder.add(root, 'dataInputs', dataInput);
   }
@@ -289,12 +284,7 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
   }
   builder.add(root, 'services', service);
 
-  const resource = createDataAtlasResource(DEFAULT_FILE_NAME, {
-    // Ein eingebettetes Mapping verweist mit Typpräfix auf Ecore-Features
-    // (`feature="ecore:EAttribute …"`); ohne die Deklaration wäre das Präfix
-    // unbekannt (emf.ts#87). Ohne Mapping bleibt der Kopf schlank.
-    extraNamespaces: hatEingebettetesMapping ? { ecore: ECORE_NS_URI } : undefined,
-  });
+  const resource = createDataAtlasResource(DEFAULT_FILE_NAME);
   resource.getContents().add(root);
 
   return { xmi: resource.saveToString(), fileName: DEFAULT_FILE_NAME, warnings };

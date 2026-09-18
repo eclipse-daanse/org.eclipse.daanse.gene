@@ -75,9 +75,18 @@ export function fixupWizardPackage(): EPackage {
   const parsed = parseFacadeEcore();
   const ecore = getEcorePackage();
 
+  /*
+   * Über eine **Kopie** laufen: seit @emfts/core 0.3 setzt `eClassifiers` den
+   * Container (emf.ts#80), das Einhängen am generierten Package nimmt den
+   * Classifier also aus der Liste des geparsten heraus. Wer dabei über die
+   * Live-Liste iteriert, überspringt jedes zweite Element — von drei EEnums
+   * kamen so nur zwei an.
+   */
+  const geparsteClassifier = [...parsed.getEClassifiers()];
+
   // 1. EEnums als Classifier übernehmen — dieselben Objekte, auf die gleich
   //    die Attribut-eTypes zeigen.
-  for (const classifier of parsed.getEClassifiers()) {
+  for (const classifier of geparsteClassifier) {
     if (!isEEnum(classifier)) continue;
     const name = classifier.getName();
     if (!name || generated.getEClassifier(name)) continue;
@@ -86,7 +95,7 @@ export function fixupWizardPackage(): EPackage {
 
   // 2. Fehlende Attribut-eTypes setzen. Die Referenzen hat der Generator
   //    schon verdrahtet, die bleiben unangetastet.
-  for (const classifier of parsed.getEClassifiers()) {
+  for (const classifier of geparsteClassifier) {
     if (!isEClass(classifier)) continue;
     const className = classifier.getName();
     const target = className ? (generated.getEClassifier(className) as EClass | null) : null;

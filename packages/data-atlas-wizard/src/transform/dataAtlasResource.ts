@@ -11,62 +11,71 @@
  *     Datei statt `dataInput="persons-file"`. Der Weg über `resource.setID()`
  *     wirkt auch, schreibt aber zusätzlich ein `xmi:id`, das die Vorlagen des
  *     Data Atlas nicht haben.
- *  b) **Fehlende Namespace-Deklaration** — beim eingebetteten eorm-Mapping
- *     schreibt emf.ts Typpräfixe in Attributwerte
- *     (`feature="ecore:EAttribute …"`), zählt für die Deklarationen aber nur
- *     Präfixe, die von Elementen gebraucht werden (emf.ts#87).
- *
- * Der Href-Dialekt braucht **keine** Überschreibung: Verweise auf
- * Modellklassen entstehen immer über den nsURI, und genau den liefert
- * `XMLSave.getHref()` für einen EClassifier von sich aus (weil EClassifier in
- * emf.ts kein `eResource()` haben, emf.ts#80).
+ *  b) **Href-Dialekt** — Verweise auf Modellklassen müssen über den nsURI
+ *     gehen. Bis @emfts/core 0.2 ergab sich das von selbst, weil EClassifier
+ *     kein `eResource()` hatten (emf.ts#80); seit 0.3 haben sie eins, und
+ *     `XMLSave.getHref()` schreibt den Verweis relativ zum Dokument
+ *     (`model/person.ecore#//Person`). Das ist für eine Datei neben dem
+ *     Modell richtig — die Konfiguration kommt aber über HTTP aus dem Model
+ *     Atlas und hätte für einen relativen Pfad keinen Bezugspunkt.
  */
 import { URI, XMIResource, XMISave } from '@emfts/core';
-import type { EObject, XMLHelper } from '@emfts/core';
+import type { EObject } from '@emfts/core';
 
-export interface DataAtlasResourceOptions {
-  /**
-   * Zusätzliche Namespace-Deklarationen für den Dokumentkopf, als
-   * Präfix → nsURI (emf.ts#87).
-   */
-  extraNamespaces?: Readonly<Record<string, string>>;
+/** Was ein Modellelement ausmacht, ohne auf Klassen zu prüfen. */
+interface ModellElement {
+  getName?: () => string | null;
+  getEPackage?: () => { getNsURI?: () => string | null } | null;
+  getEContainingClass?: () => {
+    getName?: () => string | null;
+    getEPackage?: () => { getNsURI?: () => string | null } | null;
+  } | null;
 }
 
-/** Ecore-Namespace — von eingebetteten eorm-Mappings gebraucht. */
-export const ECORE_NS_URI = 'http://www.eclipse.org/emf/2002/Ecore';
+/**
+ * Der nsURI-Href eines Modellelements, oder `null`, wenn es keines ist.
+ *
+ * Ein Proxy bleibt aussen vor: sein Ziel steht noch nicht fest, und der
+ * Serializer löst ihn mit seiner eigenen URI auf.
+ */
+function modellHref(obj: EObject): string | null {
+  if ((obj as { eIsProxy?: () => boolean }).eIsProxy?.()) return null;
+  const element = obj as unknown as ModellElement;
 
-export class DataAtlasSave extends XMISave {
-  private options: DataAtlasResourceOptions;
-
-  constructor(helper: XMLHelper | undefined, options: DataAtlasResourceOptions) {
-    super(helper);
-    this.options = options;
+  const containingClass = element.getEContainingClass?.();
+  if (containingClass) {
+    const nsURI = containingClass.getEPackage?.()?.getNsURI?.();
+    const className = containingClass.getName?.();
+    const featureName = element.getName?.();
+    if (nsURI && className && featureName) return `${nsURI}#//${className}/${featureName}`;
+    return null;
   }
 
+  if (typeof element.getEPackage === 'function') {
+    const nsURI = element.getEPackage()?.getNsURI?.();
+    const name = element.getName?.();
+    if (nsURI && name) return `${nsURI}#//${name}`;
+  }
+  return null;
+}
+
+export class DataAtlasSave extends XMISave {
   /**
-   * Ergänzt die Deklarationen, die emf.ts nicht selbst schreibt. Ein Präfix,
-   * das schon deklariert ist, wird nicht wiederholt.
+   * Verweise auf Modellelemente immer über den nsURI.
+   *
+   * Betrifft EClassifier (`nsURI#//Person`) und EStructuralFeature
+   * (`nsURI#//Person/firstName`, aus eingebetteten eorm-Mappings). Alles
+   * andere — dokumentinterne Verweise, Proxies — bleibt beim Serializer.
    */
-  protected override writeNamespaces(obj: EObject): void {
-    super.writeNamespaces(obj);
-    for (const [prefix, nsURI] of Object.entries(this.options.extraNamespaces ?? {})) {
-      if (this.declaredNamespaces.has(nsURI)) continue;
-      this.output.push(` xmlns:${prefix}="${nsURI}"`);
-      this.declaredNamespaces.set(nsURI, prefix);
-    }
+  override getHref(obj: EObject): string | null {
+    const nsHref = modellHref(obj);
+    return nsHref ?? super.getHref(obj);
   }
 }
 
 export class DataAtlasResource extends XMIResource {
-  private options: DataAtlasResourceOptions;
-
-  constructor(uri: URI, options: DataAtlasResourceOptions = {}) {
-    super(uri);
-    this.options = options;
-  }
-
   protected override createXMLSave(): XMISave {
-    return new DataAtlasSave(this.xmlHelper, this.options);
+    return new DataAtlasSave(this.xmlHelper);
   }
 
   /**
@@ -89,9 +98,6 @@ export class DataAtlasResource extends XMIResource {
  * taucht in der Ausgabe nicht auf, bestimmt aber, welche Verweise als
  * dokumentintern gelten.
  */
-export function createDataAtlasResource(
-  fileName: string,
-  options: DataAtlasResourceOptions = {},
-): DataAtlasResource {
-  return new DataAtlasResource(URI.createURI(fileName), options);
+export function createDataAtlasResource(fileName: string): DataAtlasResource {
+  return new DataAtlasResource(URI.createURI(fileName));
 }
