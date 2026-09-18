@@ -33,6 +33,7 @@ function getActions() {
 
 // Connect dialog state
 const showConnectDialog = ref(false)
+const showDeleteDialog = ref(false)
 const connectForm = ref<ConnectFormData>({
   baseUrl: 'http://localhost:8185/rest',
   scopeName: 'main',
@@ -107,6 +108,41 @@ async function handleConnect() {
 }
 
 const saveFeedback = ref<'saving' | 'saved' | 'error' | null>(null)
+
+/*
+ * Deleting: ask first, then say what happened.
+ *
+ * A delete cannot be taken back, and it used to be a single click in the
+ * context menu — success silently refreshed the tree, a refusal went to the
+ * console only. Both now show in the dialog and in the header.
+ */
+const deleteTarget = ref<AtlasTreeNodeData | null>(null)
+const deleteLabel = ref('')
+const deleting = ref(false)
+const deleteError = ref<string | null>(null)
+const atlasFeedback = ref<{ kind: 'ok' | 'error'; text: string } | null>(null)
+
+function showFeedback(kind: 'ok' | 'error', text: string) {
+  atlasFeedback.value = { kind, text }
+  setTimeout(() => {
+    if (atlasFeedback.value?.text === text) atlasFeedback.value = null
+  }, kind === 'ok' ? 4000 : 8000)
+}
+
+/** Where the object lives, for the confirmation question. */
+const deleteLocation = computed(() => {
+  const d = deleteTarget.value
+  if (!d) return ''
+  return [d.scopeName, d.registryName, d.stageName].filter(Boolean).join(' / ')
+})
+
+function askDeleteFromAtlas(data: AtlasTreeNodeData) {
+  deleteTarget.value = data
+  deleteLabel.value =
+    data.metadata?.objectName || (data.isSchemaRegistry ? schemaNsUri(data.metadata, data.objectId) : data.objectId) || ''
+  deleteError.value = null
+  showDeleteDialog.value = true
+}
 
 // Save current connection to workspace EditorConfig
 function handleSaveToWorkspace() {
@@ -316,7 +352,7 @@ function handleContextMenu(event: MouseEvent, node: TreeNode) {
       items.push({
         label: 'Delete from Atlas',
         icon: 'pi pi-trash',
-        command: () => handleDeleteFromAtlas(data)
+        command: () => askDeleteFromAtlas(data)
       })
     }
   } else if (data.type === 'object') {
@@ -330,7 +366,7 @@ function handleContextMenu(event: MouseEvent, node: TreeNode) {
       items.push({
         label: 'Delete from Atlas',
         icon: 'pi pi-trash',
-        command: () => handleDeleteFromAtlas(data)
+        command: () => askDeleteFromAtlas(data)
       })
     }
   } else if (data.type === 'scope') {
@@ -404,35 +440,42 @@ function isStageWritable(node: TreeNode): boolean {
   return false
 }
 
-// Delete schema or object from Atlas
-async function handleDeleteFromAtlas(data: AtlasTreeNodeData) {
+// Delete schema or object from Atlas, after the user confirmed
+async function handleDeleteFromAtlas() {
+  const data = deleteTarget.value
+  if (!data) return
   const client = browser.getClient(data.connectionId)
-  if (!client) return
+  if (!client) {
+    deleteError.value = 'Keine Verbindung zu diesem Atlas.'
+    return
+  }
 
-  // Schemas werden per nsURI gelöscht, Objekte per objectId. Die nsURI steht
-  // in den Metadaten (Property `nsUri`), nicht in der objectId.
+  // Schemas are deleted by nsURI, objects by objectId. The nsURI sits in the
+  // metadata (property `nsUri`), not in the objectId.
   const decodedId = data.isSchemaRegistry
     ? schemaNsUri(data.metadata, data.objectId)
     : (data.objectId || '')
 
+  deleting.value = true
+  deleteError.value = null
   try {
-    let success = false
     if (data.isSchemaRegistry) {
-      // Delete schema by nsUri (objectId is the nsUri)
-      success = await client.deleteSchema(data.scopeName!, data.stageName!, decodedId)
+      await client.deleteSchema(data.scopeName!, data.stageName!, decodedId)
     } else {
-      success = await client.deleteObject(data.scopeName!, data.registryName!, data.stageName!, decodedId)
+      await client.deleteObject(data.scopeName!, data.registryName!, data.stageName!, decodedId)
     }
 
-    if (success) {
-
-      // Refresh the parent stage
-      await browser.refreshStage(data.connectionId, data.scopeName!, data.registryName!, data.stageName!)
-    } else {
-      console.error('[AtlasBrowser] Delete failed')
-    }
+    // Only now is it gone — refresh the stage it hung in
+    await browser.refreshStage(data.connectionId, data.scopeName!, data.registryName!, data.stageName!)
+    showDeleteDialog.value = false
+    showFeedback('ok', `Gelöscht: ${deleteLabel.value}`)
+    deleteTarget.value = null
   } catch (e: any) {
-    console.error('[AtlasBrowser] Delete error:', e.message)
+    // The dialog stays open: the reason belongs next to the question
+    deleteError.value = e?.message || 'Löschen fehlgeschlagen.'
+    console.error('[AtlasBrowser] Delete failed:', e)
+  } finally {
+    deleting.value = false
   }
 }
 
@@ -547,6 +590,15 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
       />
       <span v-if="saveFeedback === 'saved'" class="save-feedback saved"><i class="pi pi-check"></i> Saved</span>
       <span v-if="saveFeedback === 'error'" class="save-feedback error"><i class="pi pi-times"></i> Error</span>
+      <span
+        v-if="atlasFeedback"
+        class="save-feedback"
+        :class="atlasFeedback.kind === 'ok' ? 'saved' : 'error'"
+        :title="atlasFeedback.text"
+      >
+        <i :class="atlasFeedback.kind === 'ok' ? 'pi pi-check' : 'pi pi-times'"></i>
+        {{ atlasFeedback.text }}
+      </span>
     </div>
 
     <!-- Loading indicator -->
@@ -676,10 +728,49 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
         />
       </template>
     </Dialog>
+
+    <!-- Delete confirmation: irreversible, and the server may refuse -->
+    <Dialog
+      v-model:visible="showDeleteDialog"
+      header="Aus dem Model Atlas löschen"
+      :modal="true"
+      :style="{ width: '440px' }"
+    >
+      <div class="delete-form">
+        <p class="delete-frage">
+          <strong>{{ deleteLabel }}</strong> endgültig löschen?
+        </p>
+        <p class="delete-ort">
+          <i class="pi pi-server" aria-hidden="true"></i> {{ deleteLocation }}
+        </p>
+        <div v-if="deleteError" class="connect-error">
+          <i class="pi pi-exclamation-triangle"></i>
+          {{ deleteError }}
+        </div>
+      </div>
+      <template #footer>
+        <Button label="Abbrechen" severity="secondary" @click="showDeleteDialog = false" />
+        <Button
+          label="Löschen"
+          icon="pi pi-trash"
+          severity="danger"
+          :loading="deleting"
+          @click="handleDeleteFromAtlas"
+        />
+      </template>
+    </Dialog>
   </div>
 </template>
 
 <style scoped>
+.delete-form { display: flex; flex-direction: column; gap: 10px; }
+.delete-frage { margin: 0; }
+.delete-ort {
+  margin: 0; display: flex; align-items: baseline; gap: 6px;
+  font-family: ui-monospace, monospace; font-size: 0.85rem;
+  color: var(--text-color-secondary, #888);
+}
+
 .atlas-browser-tree {
   display: flex;
   flex-direction: column;
