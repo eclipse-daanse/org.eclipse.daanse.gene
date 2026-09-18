@@ -121,6 +121,7 @@ export async function fetchSchemas(
   nsUris: string[],
   providers: AtlasProvider[],
   bericht?: string[],
+  bekannt?: Set<string>,
 ): Promise<Map<string, string>> {
   const gefunden = new Map<string, string>()
   // Listen je Fundstelle nur einmal holen, auch bei mehreren nsURIs
@@ -138,17 +139,19 @@ export async function fetchSchemas(
       }
     }
   }
-  if (bericht) {
-    for (const [p, bestand] of bestaende) {
-      bericht.push(`${describeProvider(p)}: ${bestand.size} Schema(s)`)
-    }
+  for (const [p, bestand] of bestaende) {
+    bericht?.push(`${describeProvider(p)}: ${bestand.size} Schema(s)`)
+    // Was dort liegt, ist die einzige Gegenprobe zu "ist nicht da": ein
+    // Tippfehler im nsURI oder eine schiefe Metadaten-Abbildung sieht man
+    // nur, wenn man die gefuehrten nsURIs danebenlegt.
+    for (const nsURI of bestand.keys()) bekannt?.add(nsURI)
   }
   return gefunden
 }
 
 /** Eine Fundstelle in einem Wort — für Meldungen. */
 export function describeProvider(p: AtlasProvider): string {
-  return `${p.scopeName}/${p.registryName ?? 'schema'}/${p.stage}`
+  return `${p.scopeName}/${p.registryName ?? '(kurzweg)'}/${p.stage}`
 }
 
 /**

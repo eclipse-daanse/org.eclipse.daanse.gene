@@ -33,6 +33,8 @@ export interface PackageResolutionResult {
   missing: string[]
   /** Wo gesucht wurde und was dort lag — für die Fehlersuche */
   searched: string[]
+  /** Welche nsURIs die durchsuchten Stellen führen — Gegenprobe zu „ist nicht da" */
+  known: string[]
   /** Warum nichts passiert ist, falls nichts passiert ist */
   note?: string
 }
@@ -130,7 +132,7 @@ export async function ensurePackagesForInstance(
     packageRegistry?: { getEPackage(nsURI: string): unknown }
   },
 ): Promise<PackageResolutionResult> {
-  const leer: PackageResolutionResult = { registered: [], missing: [], searched: [] }
+  const leer: PackageResolutionResult = { registered: [], missing: [], searched: [], known: [] }
   const loadEcoreFile = deps.modelBrowserComposables?.loadEcoreFile
   if (!loadEcoreFile) {
     return { ...leer, note: 'Model Browser nicht verfügbar — nichts registrierbar' }
@@ -147,12 +149,14 @@ export async function ensurePackagesForInstance(
       registered: [],
       missing: fehlend,
       searched: [],
+      known: [],
       note: 'keine Fundstelle — die Datei nennt keine Atlas-Herkunft, und es ist keine Resolver-Kette konfiguriert',
     }
   }
 
   const searched: string[] = []
-  const gefunden = await fetchSchemas(fehlend, stellen, searched)
+  const bekannt = new Set<string>()
+  const gefunden = await fetchSchemas(fehlend, stellen, searched, bekannt)
   const registered: string[] = []
   for (const [nsURI, ecore] of gefunden) {
     try {
@@ -169,5 +173,6 @@ export async function ensurePackagesForInstance(
     registered,
     missing: fehlend.filter((nsURI) => !registered.includes(nsURI)),
     searched,
+    known: [...bekannt],
   }
 }

@@ -1334,6 +1334,11 @@ async function resolveMetamodels(entry: any, content: string, filePath: string):
       '- durchsucht:', ergebnis.searched.join(' | ') || '(nichts)',
       ergebnis.note ? `- ${ergebnis.note}` : ''
     )
+    if (ergebnis.missing.length > 0 && ergebnis.known.length > 0) {
+      // Die Gegenprobe: was dort tatsaechlich liegt. Ein Tippfehler im nsURI
+      // oder eine schiefe Metadaten-Abbildung faellt nur so auf.
+      console.log('[App] dort gefuehrte Metamodelle:', ergebnis.known.join(', '))
+    }
     // Der Grund gehoert in die Meldung: wer das Panel liest, soll nicht erst
     // die Konsole aufmachen muessen, um "nirgends gesucht" von "gesucht, aber
     // nicht da" zu unterscheiden.
