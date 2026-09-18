@@ -155,10 +155,42 @@ export async function activate(context: ModuleContext): Promise<void> {
   watch(sharedBrowser.showValidationDialog, () => renderDialog())
   renderDialog()
 
+  /*
+   * Mount the login dialog the same way and make it the credential prompt.
+   *
+   * From here on every Atlas request that needs a secret and has none asks
+   * the user — once per session, and again after a 401. The credential store
+   * knows nothing about Vue; this is the only place the two meet.
+   */
+  const { AtlasLoginDialog } = await import('./components')
+  const { setCredentialPrompt } = await import('storage-model-atlas')
+  const loginHost = document.createElement('div')
+  loginHost.id = 'atlas-login-dialog-host'
+  document.body.appendChild(loginHost)
+
+  function renderLoginDialog() {
+    const vnode = h(AtlasLoginDialog, {
+      visible: sharedBrowser.showLoginDialog.value,
+      request: sharedBrowser.loginRequest.value,
+      onSubmit: (secret: string | null) => sharedBrowser.resolveCredential(secret)
+    })
+    if (appInstance) {
+      vnode.appContext = appInstance._context
+    }
+    render(vnode, loginHost)
+  }
+
+  watch(sharedBrowser.showLoginDialog, () => renderLoginDialog())
+  renderLoginDialog()
+  setCredentialPrompt((request) => sharedBrowser.requestCredential(request))
+
   // Store for cleanup on deactivate
   context.services.register('gene.atlas.validation.cleanup', () => {
     render(null, dialogHost)
     dialogHost.remove()
+    render(null, loginHost)
+    loginHost.remove()
+    setCredentialPrompt(null)
   })
 
   // Register Model Atlas perspective

@@ -11,7 +11,10 @@ import {
   parseMetadataListXmi,
   parseMetadataXmi,
   schemaNsUri,
-  safeAtob
+  safeAtob,
+  setCredential,
+  type AtlasAuth,
+  type AtlasCredentialRequest
 } from 'storage-model-atlas'
 import type { ObjectMetadata, Scope, Stage, StageTransition } from 'storage-model-atlas'
 import type { AtlasConnection, AtlasTreeNodeData, ConnectFormData } from '../types'
@@ -67,21 +70,29 @@ function createAtlasBrowser() {
    */
   async function connect(form: ConnectFormData): Promise<AtlasConnection> {
     const id = `atlas-${++connectionCounter}`
+    /*
+     * The connection keeps only how to authenticate. The secret goes into the
+     * session store of storage-model-atlas, where every client of this base
+     * URL finds it — and from where it disappears with the tab.
+     */
+    const auth: AtlasAuth = {
+      kind: form.authKind ?? (form.token ? 'bearer' : 'none'),
+      user: form.user || undefined
+    }
+    if (form.token) setCredential(form.baseUrl, auth.user, form.token)
+
     const connection: AtlasConnection = {
       id,
       label: `${form.scopeName}@${new URL(form.baseUrl).host}`,
       baseUrl: form.baseUrl,
       scopeName: form.scopeName,
-      token: form.token || undefined,
+      auth,
       status: 'connecting'
     }
 
     connections.value = [...connections.value, connection]
 
-    const client = new ModelAtlasClient({
-      baseUrl: form.baseUrl,
-      token: form.token || undefined
-    })
+    const client = new ModelAtlasClient({ baseUrl: form.baseUrl, auth })
     clients.set(id, client)
 
     try {
@@ -429,7 +440,7 @@ function createAtlasBrowser() {
     if (!connection) return undefined
     return {
       atlasBaseUrl: connection.baseUrl,
-      token: connection.token,
+      auth: connection.auth,
       scopeName: nodeData.scopeName || connection.scopeName,
       registryName: nodeData.registryName,
       stage: nodeData.stageName,
@@ -442,7 +453,15 @@ function createAtlasBrowser() {
   /**
    * Get content for adding to workspace
    */
-  async function getContentForWorkspace(nodeData: AtlasTreeNodeData): Promise<{ content: string; filename: string; isSchema: boolean } | null> {
+  async function getContentForWorkspace(
+    nodeData: AtlasTreeNodeData
+  ): Promise<{
+    content: string
+    filename: string
+    isSchema: boolean
+    /** Where it came from — see `atlasHandle` */
+    handle?: Record<string, unknown>
+  } | null> {
     console.log('[useAtlasBrowser] getContentForWorkspace called, nodeData:', { connectionId: nodeData.connectionId, objectId: nodeData.objectId, isSchemaRegistry: nodeData.isSchemaRegistry })
     const client = clients.get(nodeData.connectionId)
     if (!client || !nodeData.objectId) {
@@ -679,6 +698,38 @@ function createAtlasBrowser() {
     }
   }
 
+  /*
+   * Login dialog — same promise pattern as the validation dialog above.
+   *
+   * The credential store in storage-model-atlas calls this whenever a secret
+   * is needed and none is held for the session, and again after a 401. The
+   * store knows nothing about Vue, and this plugin nothing about where the
+   * request came from.
+   */
+  const showLoginDialog = ref(false)
+  const loginRequest = shallowRef<AtlasCredentialRequest | null>(null)
+  let loginResolve: ((secret: string | null) => void) | null = null
+
+  function requestCredential(request: AtlasCredentialRequest): Promise<string | null> {
+    return new Promise((resolve) => {
+      // A second request while one is open would leave the first unanswered
+      if (loginResolve) loginResolve(null)
+      loginResolve = resolve
+      loginRequest.value = request
+      showLoginDialog.value = true
+    })
+  }
+
+  /** Called by the dialog: the secret, or null when cancelled. */
+  function resolveCredential(secret: string | null) {
+    showLoginDialog.value = false
+    loginRequest.value = null
+    if (loginResolve) {
+      loginResolve(secret)
+      loginResolve = null
+    }
+  }
+
   // Track which content was loaded for the current selection (avoid re-fetching)
   let lastLoadedObjectId: string | null = null
 
@@ -857,6 +908,10 @@ function createAtlasBrowser() {
 
     // Validation dialog
     showValidationDialog,
+    showLoginDialog,
+    loginRequest,
+    requestCredential,
+    resolveCredential,
     requestValidationChoice,
     resolveValidationChoice,
 

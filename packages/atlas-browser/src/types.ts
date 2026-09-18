@@ -16,8 +16,15 @@ export interface AtlasConnection {
   baseUrl: string
   /** Scope name */
   scopeName: string
-  /** Authentication token (optional) */
+  /**
+   * Authentication token (optional).
+   *
+   * @deprecated Kept for callers that still pass one; it counts as Bearer and
+   * moves into the session credential store. Use `auth` instead.
+   */
   token?: string
+  /** How this connection authenticates — never the secret itself */
+  auth?: { kind: 'none' | 'bearer' | 'basic'; user?: string }
   /** Connection status */
   status: 'disconnected' | 'connecting' | 'connected' | 'error'
   /** Error message if status is 'error' */
@@ -67,5 +74,13 @@ export interface AtlasTreeNodeData {
 export interface ConnectFormData {
   baseUrl: string
   scopeName: string
+  /**
+   * The secret as entered: a Bearer token or a Basic password. It is handed to
+   * the session credential store and not kept on the connection.
+   */
   token: string
+  /** 'none' | 'bearer' | 'basic'; defaults to bearer when a token is given */
+  authKind?: 'none' | 'bearer' | 'basic'
+  /** User name for Basic */
+  user?: string
 }
