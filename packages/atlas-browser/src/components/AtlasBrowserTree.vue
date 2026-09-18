@@ -129,6 +129,28 @@ function showFeedback(kind: 'ok' | 'error', text: string) {
   }, kind === 'ok' ? 4000 : 8000)
 }
 
+/**
+ * How a connection authenticates, for the key on its scope node.
+ *
+ * Only the kind and the user name — the secret is never here (see
+ * `storage-model-atlas/auth.ts`).
+ */
+function authOf(connectionId?: string) {
+  if (!connectionId) return null
+  const conn = browser.connections.value.find((c: any) => c.id === connectionId)
+  const auth = conn?.auth
+  return auth && auth.kind !== 'none' ? auth : null
+}
+
+/** Tooltip for the key: which kind, and as whom. */
+function authTitle(connectionId?: string): string {
+  const auth = authOf(connectionId)
+  if (!auth) return ''
+  return auth.kind === 'basic'
+    ? `Basic${auth.user ? ` als ${auth.user}` : ''}`
+    : 'Token (Bearer)'
+}
+
 /** Where the object lives, for the confirmation question. */
 const deleteLocation = computed(() => {
   const d = deleteTarget.value
@@ -638,6 +660,12 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
           @contextmenu.prevent="handleContextMenu($event, node)"
         >
           {{ node.label }}
+          <i
+            v-if="node.data?.type === 'scope' && authOf(node.data?.connectionId)"
+            class="pi pi-key atlas-auth-key"
+            :title="authTitle(node.data?.connectionId)"
+            aria-hidden="true"
+          ></i>
           <span v-if="node.data?.metadata?.version" class="atlas-version">
             v{{ node.data.metadata.version }}
           </span>
@@ -763,6 +791,13 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
 </template>
 
 <style scoped>
+.atlas-auth-key {
+  margin-left: 4px;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary, #888);
+  vertical-align: baseline;
+}
+
 .delete-form { display: flex; flex-direction: column; gap: 10px; }
 .delete-frage { margin: 0; }
 .delete-ort {
