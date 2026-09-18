@@ -534,6 +534,58 @@ function createAtlasBrowser() {
   }
 
   /**
+   * Ein Objekt in eine Registry-Stufe hochladen.
+   *
+   * Das Gegenstueck zu uploadSchema fuer alles, was kein Metamodell ist —
+   * etwa eine Instanz, die im Model-Editor bearbeitet wurde. Registry und
+   * objectId gehoeren hier zwingend dazu: anders als Schemas haben Objekte
+   * keinen nsURI, ueber den der Server sie wiederfinden koennte.
+   */
+  async function uploadObject(
+    connectionId: string,
+    registryName: string,
+    stageName: string,
+    objectId: string,
+    content: string,
+    options?: { name?: string; version?: string; overwrite?: boolean }
+  ): Promise<{ success: boolean; error?: string }> {
+    const client = clients.get(connectionId)
+    const connection = connections.value.find(c => c.id === connectionId)
+    if (!client || !connection) {
+      return { success: false, error: 'Connection not found' }
+    }
+
+    try {
+      await client.uploadObject(connection.scopeName, registryName, stageName, objectId, content, {
+        name: options?.name,
+        version: options?.version,
+        override: options?.overwrite
+      })
+      return { success: true }
+    } catch (e: any) {
+      return { success: false, error: e.message || 'Upload failed' }
+    }
+  }
+
+  /**
+   * Objekt-Registries des Scopes einer Verbindung — alles, was keine
+   * Schema-Registry ist. Dorthin gehoeren Instanzen.
+   */
+  function getObjectRegistries(connectionId: string): Array<{ name: string; stages: Array<{ name: string; final: boolean }> }> {
+    const scopeNode = treeNodes.value.find(n => (n.data as AtlasTreeNodeData).connectionId === connectionId)
+    if (!scopeNode?.children) return []
+    return scopeNode.children
+      .filter(n => !(n.data as AtlasTreeNodeData).isSchemaRegistry)
+      .map(registryNode => ({
+        name: (registryNode.data as AtlasTreeNodeData).registryName || 'unknown',
+        stages: (registryNode.children ?? []).map(stageNode => {
+          const data = stageNode.data as AtlasTreeNodeData
+          return { name: data.stageName || 'unknown', final: data.stageFinal === true }
+        })
+      }))
+  }
+
+  /**
    * Schema-Registries des Scopes einer Verbindung.
    *
    * Der Scope ist der Mandant und steht mit der Verbindung fest; die Registry
@@ -790,8 +842,10 @@ function createAtlasBrowser() {
     loadRawContent,
     getContentForWorkspace,
     uploadSchema,
+    uploadObject,
     getSchemaStages,
     getSchemaRegistries,
+    getObjectRegistries,
     getAllLoadedMetadata,
     showGraph,
     showSchemaTree,
