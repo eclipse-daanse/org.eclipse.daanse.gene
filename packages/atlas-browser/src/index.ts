@@ -485,34 +485,8 @@ export async function activate(context: ModuleContext): Promise<void> {
     const editorConfig = context.services.get<any>('gene.editor.config')
     const config = editorConfig?.editorConfig?.value
     if (!config) return
-
-    const eClass = config.eClass?.()
-    const atlasFeature = eClass?.getEStructuralFeature?.('atlasConnections')
-    if (!atlasFeature) return
-
-    const atlasConnections = config.eGet(atlasFeature) || []
-    for (const conn of atlasConnections) {
-      const acClass = conn.eClass()
-      const get = (name: string) => {
-        const f = acClass.getEStructuralFeature(name)
-        return f ? conn.eGet(f) : undefined
-      }
-      if (get('enabled') === false || get('autoConnect') === false) continue
-      const baseUrl = get('baseUrl')
-      const scopeName = get('scopeName')
-      const token = get('token')
-      if (baseUrl && scopeName) {
-        const alreadyConnected = sharedBrowser.connections.value.some(
-          (c: any) => c.baseUrl === baseUrl && c.scopeName === scopeName && c.status === 'connected'
-        )
-        if (!alreadyConnected) {
-          context.log.info(`Auto-connecting to Atlas: ${scopeName}@${baseUrl}`)
-          sharedBrowser.connect({ baseUrl, scopeName, token: token || '' }).catch((e: any) => {
-            context.log.warn(`Auto-connect failed for ${scopeName}: ${e.message}`)
-          })
-        }
-      }
-    }
+    context.log.info('Auto-connecting Atlas connections from workspace')
+    void sharedBrowser.autoConnectFromWorkspace(config)
   })
 
   // Register commands from ecore
