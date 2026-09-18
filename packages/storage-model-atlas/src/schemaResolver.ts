@@ -67,11 +67,20 @@ export function collectNsUris(xmi: string): string[] {
   return [...gefunden]
 }
 
-/** nsURI → objectId einer benannten Schema-Registry, einmal je Fundstelle. */
-async function objectIdsOf(p: AtlasProvider): Promise<Map<string, string>> {
+/**
+ * Was eine Fundstelle führt: nsURI → objectId, aus ihrer Metadatenliste.
+ *
+ * Erst listen, dann gezielt holen — das ist der einzige verlässliche Weg. Die
+ * `objectId` eines Schemas ist serverabhängig (UUID oder Base64 des nsURI),
+ * und nur die Metadaten sagen, welcher nsURI dahintersteckt. Nebeneffekt: ein
+ * „nicht gefunden" ist danach eine Aussage über den Bestand der Stelle und
+ * nicht über eine geratene URL.
+ */
+async function bestandVon(p: AtlasProvider): Promise<Map<string, string>> {
   const karte = new Map<string, string>()
-  if (!p.registryName) return karte
-  const xmi = await p.client.listObjects(p.scopeName, p.registryName, p.stage)
+  const xmi = p.registryName
+    ? await p.client.listObjects(p.scopeName, p.registryName, p.stage)
+    : await p.client.listSchemas(p.scopeName, p.stage)
   for (const meta of parseMetadataListXmi(xmi)) {
     const nsURI = schemaNsUri(meta, meta.objectId)
     if (nsURI) karte.set(nsURI, meta.objectId)
@@ -83,20 +92,25 @@ async function objectIdsOf(p: AtlasProvider): Promise<Map<string, string>> {
 async function schemaVon(
   p: AtlasProvider,
   nsURI: string,
-  karten: Map<AtlasProvider, Map<string, string>>,
+  bestaende: Map<AtlasProvider, Map<string, string>>,
 ): Promise<string | null> {
-  if (!p.registryName) {
-    // Kurzweg: der Server kennt seine Schemas unter dem nsURI
-    return p.client.getSchemaContent(p.scopeName, p.stage, nsURI)
+  let bestand = bestaende.get(p)
+  if (!bestand) {
+    bestand = await bestandVon(p)
+    bestaende.set(p, bestand)
   }
-  let karte = karten.get(p)
-  if (!karte) {
-    karte = await objectIdsOf(p)
-    karten.set(p, karte)
-  }
-  const objectId = karte.get(nsURI)
+  const objectId = bestand.get(nsURI)
   if (!objectId) return null
-  return p.client.getObjectContent(p.scopeName, p.registryName, p.stage, objectId)
+
+  if (p.registryName) {
+    return p.client.getObjectContent(p.scopeName, p.registryName, p.stage, objectId)
+  }
+  // Kurzweg: der Content-Endpunkt nimmt den nsURI. Ältere Server adressieren
+  // ihn über die objectId — deshalb der zweite Versuch.
+  const ueberNsUri = await p.client.getSchemaContent(p.scopeName, p.stage, nsURI)
+  if (ueberNsUri && ueberNsUri.trim()) return ueberNsUri
+  if (objectId === nsURI) return null
+  return p.client.getSchemaContent(p.scopeName, p.stage, objectId)
 }
 
 /**
@@ -106,24 +120,35 @@ async function schemaVon(
 export async function fetchSchemas(
   nsUris: string[],
   providers: AtlasProvider[],
+  bericht?: string[],
 ): Promise<Map<string, string>> {
   const gefunden = new Map<string, string>()
   // Listen je Fundstelle nur einmal holen, auch bei mehreren nsURIs
-  const karten = new Map<AtlasProvider, Map<string, string>>()
+  const bestaende = new Map<AtlasProvider, Map<string, string>>()
   for (const nsURI of nsUris) {
     for (const p of providers) {
       try {
-        const inhalt = await schemaVon(p, nsURI, karten)
+        const inhalt = await schemaVon(p, nsURI, bestaende)
         if (inhalt && inhalt.trim()) {
           gefunden.set(nsURI, inhalt)
           break
         }
-      } catch {
-        // Diese Stelle antwortet nicht — die nächste versuchen
+      } catch (e) {
+        bericht?.push(`${describeProvider(p)}: ${(e as Error)?.message || e}`)
       }
     }
   }
+  if (bericht) {
+    for (const [p, bestand] of bestaende) {
+      bericht.push(`${describeProvider(p)}: ${bestand.size} Schema(s)`)
+    }
+  }
   return gefunden
+}
+
+/** Eine Fundstelle in einem Wort — für Meldungen. */
+export function describeProvider(p: AtlasProvider): string {
+  return `${p.scopeName}/${p.registryName ?? 'schema'}/${p.stage}`
 }
 
 /**

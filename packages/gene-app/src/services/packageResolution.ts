@@ -31,6 +31,8 @@ export interface PackageResolutionResult {
   registered: string[]
   /** nsURIs, die nirgends zu finden waren */
   missing: string[]
+  /** Wo gesucht wurde und was dort lag — für die Fehlersuche */
+  searched: string[]
 }
 
 /** Liest ein Feature eines EObject, egal ob getypt oder reflektiv. */
@@ -85,6 +87,11 @@ async function fundstellen(entry: any, editorConfig: any): Promise<Fundstelle[]>
     stellen.push(
       ...providersForScope(client, handle.scopeName, stages, handle.stage, schemaRegistry),
     )
+    // Manche Server führen Schemas zusätzlich unter dem Kurzweg '/schema'.
+    // Listet der nichts, kostet der Versuch nur eine leere Antwort.
+    if (schemaRegistry) {
+      stellen.push(...providersForScope(client, handle.scopeName, stages, handle.stage))
+    }
   }
 
   // 2. Ergänzend: die Resolver-Kette aus den Workspace Settings
@@ -121,7 +128,7 @@ export async function ensurePackagesForInstance(
     packageRegistry?: { getEPackage(nsURI: string): unknown }
   },
 ): Promise<PackageResolutionResult> {
-  const leer: PackageResolutionResult = { registered: [], missing: [] }
+  const leer: PackageResolutionResult = { registered: [], missing: [], searched: [] }
   const loadEcoreFile = deps.modelBrowserComposables?.loadEcoreFile
   if (!loadEcoreFile) return leer
 
@@ -131,9 +138,10 @@ export async function ensurePackagesForInstance(
   if (fehlend.length === 0) return leer
 
   const stellen = await fundstellen(entry, deps.editorConfig)
-  if (stellen.length === 0) return { registered: [], missing: fehlend }
+  if (stellen.length === 0) return { registered: [], missing: fehlend, searched: [] }
 
-  const gefunden = await fetchSchemas(fehlend, stellen)
+  const searched: string[] = []
+  const gefunden = await fetchSchemas(fehlend, stellen, searched)
   const registered: string[] = []
   for (const [nsURI, ecore] of gefunden) {
     try {
@@ -146,5 +154,9 @@ export async function ensurePackagesForInstance(
     }
   }
 
-  return { registered, missing: fehlend.filter((nsURI) => !registered.includes(nsURI)) }
+  return {
+    registered,
+    missing: fehlend.filter((nsURI) => !registered.includes(nsURI)),
+    searched,
+  }
 }

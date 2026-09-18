@@ -38,6 +38,7 @@ export { schemaNsUri, safeAtob } from './schemaIdentity'
 export {
   collectNsUris,
   fetchSchemas,
+  describeProvider,
   providersForScope,
   createAtlasURIConverter,
   type AtlasProvider
