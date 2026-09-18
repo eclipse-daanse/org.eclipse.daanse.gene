@@ -209,11 +209,18 @@ export class ModelAtlasClient {
     throw new Error(`Update schema failed (${resp.status}): ${errorText}`)
   }
 
-  async deleteSchema(scopeName: string, stage: string, nsUri: string): Promise<boolean> {
+  /**
+   * Delete a schema. Throws with the server's reason when it refuses.
+   *
+   * A boolean used to come back here, and only for status 200 — a `204 No
+   * Content`, the usual answer to a DELETE, counted as failure, and the reason
+   * for a real refusal (403 on a read-only stage, say) was lost on the way.
+   */
+  async deleteSchema(scopeName: string, stage: string, nsUri: string): Promise<void> {
     const resp = await this.del(
       `/${enc(scopeName)}/schema/stages/${enc(stage)}?nsUri=${enc(nsUri)}`
     )
-    return resp.status === 200
+    await throwUnlessOk(resp, `Schema ${nsUri}`)
   }
 
   /**
@@ -331,16 +338,17 @@ export class ModelAtlasClient {
     throw new Error(`Update object failed (${resp.status}): ${errorText}`)
   }
 
+  /** Delete an object. Throws with the server's reason when it refuses. */
   async deleteObject(
     scopeName: string,
     registryName: string,
     stage: string,
     objectId: string
-  ): Promise<boolean> {
+  ): Promise<void> {
     const resp = await this.del(
       `/${enc(scopeName)}/registries/${enc(registryName)}/stages/${enc(stage)}?objectId=${enc(objectId)}`
     )
-    return resp.status === 200
+    await throwUnlessOk(resp, objectId)
   }
 
   /**
@@ -642,6 +650,21 @@ export class ModelAtlasClient {
 
     return resp
   }
+}
+
+/**
+ * Passes 2xx through, throws otherwise — with status and body, because that is
+ * what a user can act on.
+ */
+async function throwUnlessOk(resp: Response, what: string): Promise<void> {
+  if (resp.ok) return
+  let detail = ''
+  try {
+    detail = (await resp.text()).trim().slice(0, 300)
+  } catch {
+    // A body is a bonus; the status carries the message
+  }
+  throw new Error(`${what}: HTTP ${resp.status}${detail ? ` — ${detail}` : ''}`)
 }
 
 /** URL-encode a path segment */

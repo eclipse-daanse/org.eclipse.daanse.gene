@@ -136,3 +136,37 @@ describe('authFromToken', () => {
     expect(authFromToken(' eyJabc ')).toEqual({ auth: { kind: 'bearer' }, secret: 'eyJabc' })
   })
 })
+
+describe('deleting', () => {
+  beforeEach(() => {
+    clearAllCredentials()
+    setCredentialPrompt(null)
+  })
+
+  it('takes 204 No Content for an answer', async () => {
+    // The usual answer to a DELETE. It used to count as failure, because only
+    // status 200 was accepted — the object was gone and gene said nothing.
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 204 })))
+    const client = new ModelAtlasClient({ baseUrl: BASE })
+    await expect(client.deleteObject('jena', 'configurations', 'draft', 'x')).resolves.toBeUndefined()
+  })
+
+  it('throws with status and reason when the server refuses', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('stage is read-only', { status: 403 })),
+    )
+    const client = new ModelAtlasClient({ baseUrl: BASE })
+    await expect(
+      client.deleteSchema('jena', 'release', 'https://example.org/person/1.0.0'),
+    ).rejects.toThrow(/HTTP 403 — stage is read-only/)
+  })
+
+  it('names what could not be deleted', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 404 })))
+    const client = new ModelAtlasClient({ baseUrl: BASE })
+    await expect(client.deleteObject('jena', 'configurations', 'draft', 'persons')).rejects.toThrow(
+      /^persons: HTTP 404$/,
+    )
+  })
+})
