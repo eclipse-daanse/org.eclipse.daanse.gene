@@ -1334,10 +1334,16 @@ async function resolveMetamodels(entry: any, content: string, filePath: string):
       '- durchsucht:', ergebnis.searched.join(' | ') || '(nichts)',
       ergebnis.note ? `- ${ergebnis.note}` : ''
     )
+    // Der Grund gehoert in die Meldung: wer das Panel liest, soll nicht erst
+    // die Konsole aufmachen muessen, um "nirgends gesucht" von "gesucht, aber
+    // nicht da" zu unterscheiden.
+    const woSteht = ergebnis.searched.length > 0
+      ? ` (durchsucht: ${ergebnis.searched.join(' | ')})`
+      : ergebnis.note ? ` (${ergebnis.note})` : ''
     for (const nsURI of ergebnis.missing) {
       problemsService.addIssue({
         severity: 'error',
-        message: `Metamodell nicht gefunden: ${nsURI}`,
+        message: `Metamodell nicht gefunden: ${nsURI}${woSteht}`,
         source: 'xmi-parser',
         objectLabel: entry?.name || filePath.split('/').pop() || filePath,
         eClassName: 'XMI Parser',
