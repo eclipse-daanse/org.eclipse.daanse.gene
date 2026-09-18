@@ -158,6 +158,16 @@ const deleteLocation = computed(() => {
   return [d.scopeName, d.registryName, d.stageName].filter(Boolean).join(' / ')
 })
 
+/** Retry a connection that failed — asks for the secret if one is needed. */
+async function handleReconnect(data: AtlasTreeNodeData) {
+  try {
+    await browser.reconnect(data.connectionId)
+    showFeedback('ok', `Verbunden: ${data.scopeName}`)
+  } catch (e: any) {
+    showFeedback('error', e?.message || 'Verbinden fehlgeschlagen.')
+  }
+}
+
 function askDeleteFromAtlas(data: AtlasTreeNodeData) {
   deleteTarget.value = data
   deleteLabel.value =
@@ -395,6 +405,18 @@ function handleContextMenu(event: MouseEvent, node: TreeNode) {
     items.push({
       label: 'Disconnect',
       icon: 'pi pi-power-off',
+      command: () => browser.disconnect(data.connectionId)
+    })
+  } else if (data.type === 'error') {
+    // A failed connection: try again (the session may know the secret by now)
+    items.push({
+      label: 'Erneut verbinden',
+      icon: 'pi pi-refresh',
+      command: () => handleReconnect(data)
+    })
+    items.push({
+      label: 'Entfernen',
+      icon: 'pi pi-times',
       command: () => browser.disconnect(data.connectionId)
     })
   } else if (data.type === 'stage') {
@@ -661,7 +683,10 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
         >
           {{ node.label }}
           <i
-            v-if="node.data?.type === 'scope' && authOf(node.data?.connectionId)"
+            v-if="
+              (node.data?.type === 'scope' || node.data?.type === 'error') &&
+              authOf(node.data?.connectionId)
+            "
             class="pi pi-key atlas-auth-key"
             :title="authTitle(node.data?.connectionId)"
             aria-hidden="true"

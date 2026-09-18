@@ -34,7 +34,7 @@ const host = computed(() => {
 // Never carry a secret over into the next request
 watch(
   () => props.visible,
-  (open) => {
+  (open: boolean) => {
     if (open) secret.value = ''
   },
 )
