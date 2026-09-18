@@ -95,7 +95,18 @@ export async function resolveAuthorization(
   if (options.retry) clearCredential(baseUrl, auth.user)
 
   let secret = getCredential(baseUrl, auth.user)
-  if (!secret && prompt) {
+  if (!secret) {
+    if (!prompt) {
+      /*
+       * Nobody can be asked, so the request goes out unauthenticated and the
+       * server will turn it away. Saying so beats a silent 401 somewhere else:
+       * it means the plugin that owns the dialog is not active.
+       */
+      console.warn(
+        `[atlas-auth] ${auth.kind} required for ${baseUrl}, no secret in this session and no login dialog registered`,
+      )
+      return undefined
+    }
     const entered = await prompt({ baseUrl, auth, retry: !!options.retry })
     if (entered) {
       secret = entered

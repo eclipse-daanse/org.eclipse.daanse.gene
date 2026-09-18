@@ -142,12 +142,47 @@ function createAtlasBrowser() {
 
       return connections.value.find(c => c.id === id)!
     } catch (e: any) {
-      updateConnection(id, {
-        status: 'error',
-        error: e.message || 'Connection failed'
-      })
+      const error = e.message || 'Connection failed'
+      updateConnection(id, { status: 'error', error })
+      /*
+       * A failed connection used to leave nothing behind but a console line:
+       * no tree node, and so no sign that it was even tried. It now shows as
+       * a node with its reason — from there it can be retried or removed.
+       */
+      treeNodes.value = [
+        ...treeNodes.value,
+        {
+          key: `${id}/error`,
+          label: `${form.scopeName} — ${error}`,
+          icon: 'pi pi-exclamation-triangle',
+          data: {
+            type: 'error',
+            connectionId: id,
+            scopeName: form.scopeName
+          } as AtlasTreeNodeData
+        }
+      ]
       throw e
     }
+  }
+
+  /**
+   * Try a failed connection again, with what the session knows by now.
+   *
+   * The usual case after a restored workspace: the connection needs a secret,
+   * nobody had asked yet, and the first attempt was turned away.
+   */
+  async function reconnect(connectionId: string): Promise<void> {
+    const connection = connections.value.find((c: AtlasConnection) => c.id === connectionId)
+    if (!connection) return
+    disconnect(connectionId)
+    await connect({
+      baseUrl: connection.baseUrl,
+      scopeName: connection.scopeName,
+      token: '',
+      authKind: connection.auth?.kind ?? 'none',
+      user: connection.auth?.user
+    })
   }
 
   /**
@@ -887,6 +922,7 @@ function createAtlasBrowser() {
 
     // Actions
     connect,
+    reconnect,
     disconnect,
     loadStageChildren,
     selectNode,

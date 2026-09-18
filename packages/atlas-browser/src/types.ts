@@ -34,7 +34,15 @@ export interface AtlasConnection {
 /**
  * Types of nodes in the atlas tree
  */
-export type AtlasNodeType = 'connection' | 'scope' | 'registry' | 'stage' | 'schema' | 'object'
+export type AtlasNodeType =
+  | 'connection'
+  | 'scope'
+  | 'registry'
+  | 'stage'
+  | 'schema'
+  | 'object'
+  /** A connection that could not be established — carries its reason */
+  | 'error'
 
 /**
  * Atlas tree node data (attached to PrimeVue TreeNode)
