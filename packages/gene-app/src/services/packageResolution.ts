@@ -92,8 +92,9 @@ async function fundstellen(entry: any, editorConfig: any): Promise<Fundstelle[]>
       ...providersForScope(client, handle.scopeName, stages, handle.stage, schemaRegistry),
     )
     // Manche Server führen Schemas zusätzlich unter dem Kurzweg '/schema'.
-    // Listet der nichts, kostet der Versuch nur eine leere Antwort.
-    if (schemaRegistry) {
+    // Listet der nichts, kostet der Versuch nur eine leere Antwort — heisst
+    // die Registry aber selbst 'schema', waere es derselbe Bestand zweimal.
+    if (schemaRegistry && schemaRegistry !== 'schema') {
       stellen.push(...providersForScope(client, handle.scopeName, stages, handle.stage))
     }
   }

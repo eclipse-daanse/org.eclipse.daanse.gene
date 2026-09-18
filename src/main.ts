@@ -35,6 +35,7 @@ import Dropdown from 'primevue/dropdown'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Checkbox from 'primevue/checkbox'
+import RadioButton from 'primevue/radiobutton'
 import InputNumber from 'primevue/inputnumber'
 import Calendar from 'primevue/calendar'
 import DataTable from 'primevue/datatable'
@@ -85,7 +86,7 @@ async function bootstrap(): Promise<void> {
       PrimeVue, Tooltip, Aura,
       // Components
       Tree, Button, Dialog, ContextMenu, Dropdown, InputText, Textarea,
-      Checkbox, InputNumber, Calendar, DataTable, Column, Menu, Breadcrumb,
+      Checkbox, RadioButton, InputNumber, Calendar, DataTable, Column, Menu, Breadcrumb,
       Card, Fieldset, Message, Tag, Splitter, SplitterPanel, Tabs, TabList,
       Tab, TabPanels, TabPanel, Select, SelectButton, Panel, ToggleSwitch, Toolbar,
       IconField, InputIcon, ProgressBar, ProgressSpinner, Editor
