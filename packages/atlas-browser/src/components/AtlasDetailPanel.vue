@@ -105,7 +105,13 @@ async function handleAddToWorkspace() {
     }
 
     const actions = getActions()
-    const entry = { name: result.filename, path: `atlas://${result.filename}`, sourceId: 'atlas' }
+    const entry = {
+      name: result.filename,
+      path: `atlas://${result.filename}`,
+      sourceId: 'atlas',
+      // Herkunft: damit fehlende Metamodelle im selben Scope gesucht werden
+      handle: result.handle
+    }
     if (isSchema.value) {
       actions?.loadModel(entry, result.content)
     } else {

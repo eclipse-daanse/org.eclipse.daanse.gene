@@ -33,6 +33,8 @@ export interface PackageResolutionResult {
   missing: string[]
   /** Wo gesucht wurde und was dort lag — für die Fehlersuche */
   searched: string[]
+  /** Warum nichts passiert ist, falls nichts passiert ist */
+  note?: string
 }
 
 /** Liest ein Feature eines EObject, egal ob getypt oder reflektiv. */
@@ -130,15 +132,24 @@ export async function ensurePackagesForInstance(
 ): Promise<PackageResolutionResult> {
   const leer: PackageResolutionResult = { registered: [], missing: [], searched: [] }
   const loadEcoreFile = deps.modelBrowserComposables?.loadEcoreFile
-  if (!loadEcoreFile) return leer
+  if (!loadEcoreFile) {
+    return { ...leer, note: 'Model Browser nicht verfügbar — nichts registrierbar' }
+  }
 
   const { collectNsUris, fetchSchemas } = await import('storage-model-atlas')
   const registry = deps.packageRegistry ?? EPackageRegistry.INSTANCE
   const fehlend = collectNsUris(xmiContent).filter((nsURI) => !registry.getEPackage(nsURI))
-  if (fehlend.length === 0) return leer
+  if (fehlend.length === 0) return { ...leer, note: 'alle Packages bereits registriert' }
 
   const stellen = await fundstellen(entry, deps.editorConfig)
-  if (stellen.length === 0) return { registered: [], missing: fehlend, searched: [] }
+  if (stellen.length === 0) {
+    return {
+      registered: [],
+      missing: fehlend,
+      searched: [],
+      note: 'keine Fundstelle — die Datei nennt keine Atlas-Herkunft, und es ist keine Resolver-Kette konfiguriert',
+    }
+  }
 
   const searched: string[] = []
   const gefunden = await fetchSchemas(fehlend, stellen, searched)

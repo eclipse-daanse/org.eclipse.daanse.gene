@@ -420,6 +420,26 @@ function createAtlasBrowser() {
   }
 
   /**
+   * Die Herkunft eines Knotens, in der Form, die der File Explorer fuer
+   * Atlas-Dateien benutzt. Damit finden nachgelagerte Schritte — etwa das
+   * Nachladen fehlender Metamodelle — zurueck zum Scope.
+   */
+  function atlasHandle(nodeData: AtlasTreeNodeData): Record<string, unknown> | undefined {
+    const connection = connections.value.find(c => c.id === nodeData.connectionId)
+    if (!connection) return undefined
+    return {
+      atlasBaseUrl: connection.baseUrl,
+      token: connection.token,
+      scopeName: nodeData.scopeName || connection.scopeName,
+      registryName: nodeData.registryName,
+      stage: nodeData.stageName,
+      objectId: nodeData.objectId,
+      isSchema: !!nodeData.isSchemaRegistry,
+      metadata: nodeData.metadata
+    }
+  }
+
+  /**
    * Get content for adding to workspace
    */
   async function getContentForWorkspace(nodeData: AtlasTreeNodeData): Promise<{ content: string; filename: string; isSchema: boolean } | null> {
@@ -467,7 +487,11 @@ function createAtlasBrowser() {
       return {
         content,
         filename,
-        isSchema: !!nodeData.isSchemaRegistry
+        isSchema: !!nodeData.isSchemaRegistry,
+        // Die Herkunft mitgeben: ohne sie weiss die Werkbank nicht, aus
+        // welchem Scope die Datei stammt, und kann fehlende Metamodelle nicht
+        // dort nachschlagen.
+        handle: atlasHandle(nodeData)
       }
     } catch (e: any) {
       console.error('[useAtlasBrowser] getContentForWorkspace error:', e)
