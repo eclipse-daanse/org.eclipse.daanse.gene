@@ -1328,6 +1328,15 @@ async function resolveMetamodels(entry: any, content: string, filePath: string):
     if (ergebnis.registered.length > 0) {
       console.log('[App] Metamodelle aus dem Atlas nachgeladen:', ergebnis.registered.join(', '))
     }
+    if (ergebnis.missing.length > 0) {
+      // Wo gesucht wurde, gehoert in die Konsole — in der Meldung waere es Laerm
+      console.warn(
+        '[App] Metamodell nicht gefunden:',
+        ergebnis.missing.join(', '),
+        '— durchsucht:',
+        ergebnis.searched.join(' | ') || '(keine Fundstelle)'
+      )
+    }
     for (const nsURI of ergebnis.missing) {
       problemsService.addIssue({
         severity: 'error',

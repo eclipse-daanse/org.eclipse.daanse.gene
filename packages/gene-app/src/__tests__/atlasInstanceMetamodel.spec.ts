@@ -160,6 +160,8 @@ describe('Instanz aus dem Model Atlas', () => {
     })
     expect(aufgeloest.registered).toEqual([])
     expect(aufgeloest.missing).toEqual(['https://example.org/unbekannt/1.0.0'])
+    // Der Bericht sagt, wo gesucht wurde und was dort lag
+    expect(aufgeloest.searched).toContain('jena/atlas-schema-registry/draft: 1 Schema(s)')
   })
 
   it('technische Namensraeume werden nicht gesucht', async () => {
@@ -173,6 +175,9 @@ describe('Instanz aus dem Model Atlas', () => {
     const aufgeloest = await ensurePackagesForInstance(nurTechnisch, instanz, {
       modelBrowserComposables: useModelRegistry(),
     })
-    expect(aufgeloest).toEqual({ registered: [], missing: [] })
+    expect(aufgeloest.registered).toEqual([])
+    expect(aufgeloest.missing).toEqual([])
+    // Gar nicht erst gesucht — kein einziger Abruf
+    expect(aufgeloest.searched).toEqual([])
   })
 })
