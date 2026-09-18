@@ -31,6 +31,22 @@ export { WorkflowApiPackage, WorkflowApiFactory } from './generated/workflowapi'
 export type { ErrorResponse, StageTransitionRequest, EPackageInfo } from './generated/rest'
 export { RestPackage, RestFactory } from './generated/rest'
 
+// Re-export Anmeldung (Art + Sitzungsspeicher fuer das Geheimnis)
+export {
+  authorizationHeader,
+  resolveAuthorization,
+  setCredentialPrompt,
+  setCredential,
+  getCredential,
+  clearCredential,
+  clearAllCredentials,
+  authFromToken,
+  type AtlasAuth,
+  type AtlasAuthKind,
+  type AtlasCredentialRequest,
+  type CredentialPrompt
+} from './auth'
+
 // Re-export Schema-Identitaet (objectId/Property -> nsURI)
 export { schemaNsUri, safeAtob } from './schemaIdentity'
 

@@ -1,17 +1,17 @@
 /**
- * Die nsURI eines Schemas aus seinen Metadaten.
+ * The nsURI of a schema, from its metadata.
  *
- * Die `objectId` eines Schemas ist serverabhängig: manche Server kodieren den
- * nsURI in Base64, der Fennec Atlas vergibt UUIDs. Verlässlich ist nur die
- * Property `nsUri` — und die kommt Java-serialisiert und hexkodiert. Wer ein
- * Schema über seinen nsURI sucht, braucht diese Abbildung.
+ * A schema's `objectId` is server-dependent: some servers encode the nsURI in
+ * base64, the Fennec Atlas hands out UUIDs. Only the `nsUri` property is
+ * reliable — and it arrives Java-serialized and hex-encoded. Anyone looking a
+ * schema up by its nsURI needs this mapping.
  */
 
 import type { ObjectMetadata } from './generated/management'
 
 /**
- * `ACED0005 74 <len:2> <UTF-8>` — Stream-Magic, Version, TC_STRING, Länge.
- * Alles andere ist kein serialisierter String.
+ * `ACED0005 74 <len:2> <UTF-8>` — stream magic, version, TC_STRING, length.
+ * Anything else is not a serialized string.
  */
 function decodeJavaSerializedString(hex: string): string | null {
   if (!/^[0-9A-Fa-f]+$/.test(hex) || hex.length < 16) return null
@@ -26,11 +26,11 @@ function decodeJavaSerializedString(hex: string): string | null {
 }
 
 /**
- * Base64 dekodieren, aber nur wenn das Ergebnis wie ein URI aussieht.
+ * Decode base64, but keep the result only if it reads like a URI.
  *
- * Eine UUID übersteht die URL-sichere Rückersetzung ('-' → '+') als gültiges
- * Base64 und zerfällt zu Binärmüll, statt zu werfen — der wanderte früher in
- * Content- und Transition-Anfragen.
+ * A UUID survives the URL-safe replacement ('-' → '+') as valid base64 and
+ * decodes to binary garbage instead of throwing — which used to travel into
+ * content and transition requests.
  */
 export function safeAtob(encoded: string): string {
   if (!encoded) return encoded
@@ -46,8 +46,8 @@ export function safeAtob(encoded: string): string {
 }
 
 /**
- * nsURI eines Schemas. Reihenfolge: Property `nsUri` (Java-serialisiert oder
- * Klartext), sonst die Base64-objectId älterer Server.
+ * A schema's nsURI. In order: the `nsUri` property (Java-serialized or plain),
+ * otherwise the base64 objectId of older servers.
  */
 export function schemaNsUri(
   metadata: ObjectMetadata | null | undefined,

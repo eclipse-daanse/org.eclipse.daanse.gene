@@ -1,23 +1,23 @@
 /**
- * Metamodelle aus dem Model Atlas auflösen — auf dem Weg, den EMF dafür hat.
+ * Resolving metamodels from a Model Atlas — the way EMF has for it.
  *
- * In EMF ist der nsURI eines Packages ein gewöhnlicher Resource-URI, und der
- * **URIConverter des ResourceSet** sagt, wo das Ecore wirklich liegt:
- * `XMLHandler.getPackageForURI` holt es von dort und stellt es selbst in die
- * Registry. Seit `@emfts/core` 0.3 (emf.ts#88) kann der Loader das auch —
- * `loadFromStringAsync` sammelt beim ersten Durchgang die unbekannten nsURIs,
- * lädt sie über den Converter nach und parst erneut.
+ * In EMF a package's nsURI is an ordinary resource URI, and the **resource
+ * set's URI converter** says where the Ecore really is:
+ * `XMLHandler.getPackageForURI` fetches it from there and puts it into the
+ * registry itself. Since `@emfts/core` 0.3 (emf.ts#88) the loader can do that
+ * too — `loadFromStringAsync` collects the unknown nsURIs on the first pass,
+ * fetches them through the converter and parses again.
  *
- * Hier wird deshalb nur noch **eingehängt**: welche Fundstellen für dieses
- * Dokument gelten (der Scope, aus dem es stammt, samt geerbter Eltern, dazu
- * die im Workspace konfigurierte Resolver-Kette), und der Converter dazu ans
- * ResourceSet des Instanzbaums. Das Laden macht dann der Loader.
+ * So all that happens here is **installing**: which providers apply to this
+ * document (the scope it came from, including inherited parents, plus the
+ * resolver chain configured in the workspace), and the converter for them on
+ * the instance tree's resource set. The loading is the loader's job.
  *
- * gene-app ist der Ort dafür, weil nur hier Explorer, Atlas-Anbindung und
- * Instanzbaum zusammenkommen.
+ * gene-app is the place for it, because only here do the explorer, the Atlas
+ * connection and the instance tree meet.
  */
 
-/** Was ein Explorer-Eintrag über seine Atlas-Herkunft mitbringt. */
+/** What an explorer entry carries about its Atlas origin. */
 interface AtlasHandle {
   atlasBaseUrl: string
   scopeName: string
@@ -25,7 +25,7 @@ interface AtlasHandle {
   stage?: string
 }
 
-/** Liest ein Feature eines EObject, egal ob getypt oder reflektiv. */
+/** Reads a feature of an EObject, typed or reflective. */
 function featureValue(obj: any, name: string): any {
   if (!obj) return undefined
   if (obj[name] !== undefined) return obj[name]
@@ -36,51 +36,51 @@ function featureValue(obj: any, name: string): any {
   return undefined
 }
 
-/** Steckt in dem Explorer-Eintrag eine Atlas-Herkunft? */
+/** Does this explorer entry carry an Atlas origin? */
 function atlasHandle(entry: any): AtlasHandle | null {
   const handle = entry?.handle
   return handle?.atlasBaseUrl && handle?.scopeName ? (handle as AtlasHandle) : null
 }
 
 export interface AtlasResolutionSetup {
-  /** Wo gesucht werden wird — für Meldungen */
+  /** Where the loader will look — for messages */
   searched: string[]
-  /** Warum nichts eingehängt wurde, falls nichts eingehängt wurde */
+  /** Why nothing was installed, if nothing was */
   note?: string
 }
 
 /**
  * Hängt den Atlas-Converter für dieses Dokument ein.
  *
- * Wirft nicht: ohne Fundstelle bleibt es beim bisherigen Verhalten, der Loader
+ * Wirft nicht: ohne Provider bleibt es beim bisherigen Verhalten, der Loader
  * meldet die offenen nsURIs dann selbst.
  */
 export async function prepareAtlasResolution(
   entry: any,
   deps: {
     editorConfig?: any
-    /** Der Haken des Instanzbaums; der Converter-Typ kommt aus @emfts/core */
+    /** The instance tree's hook; the converter type comes from @emfts/core */
     instanceTreeComposables?: { setPackageURIConverter?: (c: never) => void }
   },
 ): Promise<AtlasResolutionSetup> {
-  const einhaengen = deps.instanceTreeComposables?.setPackageURIConverter
-  if (!einhaengen) {
+  const install = deps.instanceTreeComposables?.setPackageURIConverter
+  if (!install) {
     return { searched: [], note: 'Instanzbaum bietet keinen URIConverter-Haken' }
   }
 
   const { ModelAtlasClient, providersForScopeChain, createAtlasURIConverter, describeProvider } =
     await import('storage-model-atlas')
 
-  const stellen: any[] = []
+  const providers: any[] = []
 
-  // 1. Implizit: der Scope der Instanz und seine geerbten Eltern
+  // 1. Implicit: the instance's own scope and its inherited parents
   const handle = atlasHandle(entry)
   if (handle) {
     const client = new ModelAtlasClient({ baseUrl: handle.atlasBaseUrl, token: handle.token })
-    stellen.push(...(await providersForScopeChain(client, handle.scopeName, handle.stage)))
+    providers.push(...(await providersForScopeChain(client, handle.scopeName, handle.stage)))
   }
 
-  // 2. Ergänzend: die Resolver-Kette aus den Workspace Settings
+  // 2. In addition: the resolver chain from the workspace settings
   const chain = deps.editorConfig?.packageResolverChain?.value
   const resolvers = chain ? featureValue(chain.__v_raw || chain, 'resolvers') || [] : []
   for (const resolver of resolvers) {
@@ -89,20 +89,20 @@ export async function prepareAtlasResolution(
     const baseUrl = featureValue(resolver, 'baseUrl')
     const scopeName = featureValue(resolver, 'scopeName')
     if (!baseUrl || !scopeName) continue
-    stellen.push({
+    providers.push({
       client: new ModelAtlasClient({ baseUrl, token: featureValue(resolver, 'token') }),
       scopeName,
       stage: featureValue(resolver, 'stage') || 'release',
     })
   }
 
-  if (stellen.length === 0) {
+  if (providers.length === 0) {
     return {
       searched: [],
       note: 'keine Fundstelle — die Datei nennt keine Atlas-Herkunft, und es ist keine Resolver-Kette konfiguriert',
     }
   }
 
-  einhaengen(createAtlasURIConverter(stellen) as never)
-  return { searched: stellen.map((p) => describeProvider(p)) }
+  install(createAtlasURIConverter(providers) as never)
+  return { searched: providers.map((p) => describeProvider(p)) }
 }

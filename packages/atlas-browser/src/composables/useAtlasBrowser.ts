@@ -29,9 +29,9 @@ interface TreeNode {
 let connectionCounter = 0
 
 /*
- * nsURI und objectId eines Schemas gehoeren zur Atlas-Anbindung — sie liegen
- * in `storage-model-atlas` und werden hier nur weitergereicht, damit die
- * bestehenden Importe dieses Plugins gueltig bleiben.
+ * A schema's nsURI and objectId belong to the Atlas connection — they live in
+ * `storage-model-atlas` and are only re-exported here, so the existing imports
+ * of this plugin keep working.
  */
 export { schemaNsUri, safeAtob }
 
@@ -420,9 +420,9 @@ function createAtlasBrowser() {
   }
 
   /**
-   * Die Herkunft eines Knotens, in der Form, die der File Explorer fuer
-   * Atlas-Dateien benutzt. Damit finden nachgelagerte Schritte — etwa das
-   * Nachladen fehlender Metamodelle — zurueck zum Scope.
+   * A node's origin, in the shape the file explorer uses for Atlas files. It
+   * lets later steps — fetching missing metamodels, say — find their way back
+   * to the scope.
    */
   function atlasHandle(nodeData: AtlasTreeNodeData): Record<string, unknown> | undefined {
     const connection = connections.value.find(c => c.id === nodeData.connectionId)
@@ -488,9 +488,9 @@ function createAtlasBrowser() {
         content,
         filename,
         isSchema: !!nodeData.isSchemaRegistry,
-        // Die Herkunft mitgeben: ohne sie weiss die Werkbank nicht, aus
-        // welchem Scope die Datei stammt, und kann fehlende Metamodelle nicht
-        // dort nachschlagen.
+        // Pass the origin along: without it the workbench does not know which
+        // scope the file came from and cannot look missing metamodels up
+        // there.
         handle: atlasHandle(nodeData)
       }
     } catch (e: any) {
@@ -534,12 +534,12 @@ function createAtlasBrowser() {
   }
 
   /**
-   * Ein Objekt in eine Registry-Stufe hochladen.
+   * Upload an object into a registry stage.
    *
-   * Das Gegenstueck zu uploadSchema fuer alles, was kein Metamodell ist —
-   * etwa eine Instanz, die im Model-Editor bearbeitet wurde. Registry und
-   * objectId gehoeren hier zwingend dazu: anders als Schemas haben Objekte
-   * keinen nsURI, ueber den der Server sie wiederfinden koennte.
+   * The counterpart to uploadSchema for everything that is not a metamodel —
+   * an instance edited in the model editor, say. Registry and objectId are
+   * mandatory here: unlike schemas, objects have no nsURI the server could
+   * find them by.
    */
   async function uploadObject(
     connectionId: string,
@@ -568,8 +568,8 @@ function createAtlasBrowser() {
   }
 
   /**
-   * Objekt-Registries des Scopes einer Verbindung — alles, was keine
-   * Schema-Registry ist. Dorthin gehoeren Instanzen.
+   * The object registries of a connection's scope — everything that is not a
+   * schema registry. That is where instances belong.
    */
   function getObjectRegistries(connectionId: string): Array<{ name: string; stages: Array<{ name: string; final: boolean }> }> {
     const scopeNode = treeNodes.value.find(n => (n.data as AtlasTreeNodeData).connectionId === connectionId)

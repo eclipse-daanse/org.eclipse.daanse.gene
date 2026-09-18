@@ -861,12 +861,12 @@ async function loadInstancesFromEditorConfig(workspaceEntry: any) {
         // Clear previous errors for this file
         problemsService.clearIssuesForFile(location)
 
-        // Wo der Loader fehlende Metamodelle holen darf
-        const fundstellen = await prepareMetamodelResolution(fileEntry, location)
+        // Where the loader may fetch missing metamodels from
+        const providers = await prepareMetamodelResolution(fileEntry, location)
 
         try {
-          const ergebnis = await instanceTreeComposables.value.loadInstancesFromXMI(content, location)
-          reportMissingPackages((ergebnis as any)?.missingPackages, fundstellen, fileEntry, location)
+          const result = await instanceTreeComposables.value.loadInstancesFromXMI(content, location)
+          reportMissingPackages((result as any)?.missingPackages, providers, fileEntry, location)
           console.log('[App] Instances loaded from:', location)
         } catch (loadErr: any) {
           console.error('[App] XMI parsing error:', location, loadErr)
@@ -1315,14 +1315,14 @@ async function reloadFailedInstanceFiles(sourceId: string) {
 
 // Handle adding instances (.xmi file) to the workspace
 /**
- * Den Atlas-Weg fuer fehlende Metamodelle einhaengen, bevor geladen wird.
+ * Installs the Atlas route for missing metamodels before loading.
  *
- * Das Nachladen macht seit @emfts/core 0.3 der Loader selbst (emf.ts#88): er
- * sammelt die unbekannten nsURIs, holt sie ueber den URIConverter des
- * ResourceSet und parst erneut. Hier wird nur gesagt, wo gesucht werden darf —
- * im Scope, aus dem die Datei stammt, samt seiner geerbten Eltern.
+ * Since @emfts/core 0.3 the loader fetches them itself (emf.ts#88): it collects
+ * the unknown nsURIs, gets them through the resource set's URI converter and
+ * parses again. All that is said here is where it may look — in the scope the
+ * file came from, including its inherited parents.
  *
- * Rueckgabe: die Fundstellen, fuer die Meldung danach.
+ * Returns the providers, for the message afterwards.
  */
 async function prepareMetamodelResolution(entry: any, filePath: string): Promise<string[]> {
   try {
@@ -1343,9 +1343,9 @@ async function prepareMetamodelResolution(entry: any, filePath: string): Promise
 }
 
 /**
- * Was der Loader nicht aufloesen konnte, gehoert ins Problems-Panel — mit
- * nsURI und den durchsuchten Stellen, sonst bleibt nur das Praefix aus dem
- * Parserfehler.
+ * What the loader could not resolve belongs in the problems panel — with the
+ * nsURI and the providers searched, otherwise only the prefix from the parser
+ * error is left.
  */
 function reportMissingPackages(
   missing: string[] | undefined,
@@ -1354,12 +1354,12 @@ function reportMissingPackages(
   filePath: string
 ): void {
   if (!missing?.length) return
-  const woSteht = searched.length > 0 ? ` (durchsucht: ${searched.join(' | ')})` : ''
-  console.warn('[App] Metamodell nicht gefunden:', missing.join(', '), woSteht)
+  const where = searched.length > 0 ? ` (durchsucht: ${searched.join(' | ')})` : ''
+  console.warn('[App] Metamodell nicht gefunden:', missing.join(', '), where)
   for (const nsURI of missing) {
     problemsService.addIssue({
       severity: 'error',
-      message: `Metamodell nicht gefunden: ${nsURI}${woSteht}`,
+      message: `Metamodell nicht gefunden: ${nsURI}${where}`,
       source: 'xmi-parser',
       objectLabel: entry?.name || filePath.split('/').pop() || filePath,
       eClassName: 'XMI Parser',
@@ -1388,8 +1388,8 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
   // Clear previous errors for this file
   problemsService.clearIssuesForFile(entry.path)
 
-  // Wo der Loader fehlende Metamodelle holen darf
-  const fundstellen = await prepareMetamodelResolution(entry, entry.path)
+  // Where the loader may fetch missing metamodels from
+  const providers = await prepareMetamodelResolution(entry, entry.path)
 
   try {
     console.log('[App] Calling instance load, mode:', mode)
@@ -1404,7 +1404,7 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
       result = await itc.loadInstancesFromXMI(content, entry.path)
     }
     console.log('[App] Instances loaded from:', entry.name, 'count:', result.loadedCount, 'errors:', result.errors.length)
-    reportMissingPackages(result.missingPackages, fundstellen, entry, entry.path)
+    reportMissingPackages(result.missingPackages, providers, entry, entry.path)
 
     // Check instance tree state after loading
     const tree = instanceTreeComposables.value.useSharedInstanceTree()
@@ -1436,10 +1436,10 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
     // Add to EditorConfig for persistence (only if some objects loaded)
     if (result.loadedCount > 0) {
       /*
-       * Wer Instanzen hinzufuegt, will sie sehen. Der Metamodell-Weg macht es
-       * ebenso (handleMetamodelEdit wechselt in den Metamodeler); aus dem
-       * Atlas-Browser blieb man dagegen stehen und musste die Perspektive von
-       * Hand wechseln.
+       * Adding instances means wanting to see them. The metamodel route does
+       * the same (handleMetamodelEdit switches to the metamodeler); coming
+       * from the Atlas browser you used to stay put and had to switch the
+       * perspective by hand.
        */
       if (currentPerspective.value !== 'model-editor') {
         handlePerspectiveChange('model-editor')
