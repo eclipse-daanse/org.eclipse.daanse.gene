@@ -167,6 +167,56 @@ function createAtlasBrowser() {
   }
 
   /**
+   * Connect everything the workspace declares and that is not up yet.
+   *
+   * Two places used to do this with their own copy — the plugin's
+   * `gene:workspace-loaded` listener and the tree's `onMounted` — and they had
+   * drifted apart: one of them still passed only a token, so a connection
+   * restored from a workspace came up with `kind: 'none'`. No key, nobody
+   * asked for credentials, and the tree's copy then skipped it as "already
+   * connected".
+   */
+  async function autoConnectFromWorkspace(config: unknown): Promise<void> {
+    const cfg = config as { eClass?: () => any; eGet?: (f: unknown) => unknown } | null
+    const feature = cfg?.eClass?.()?.getEStructuralFeature?.('atlasConnections')
+    if (!feature || !cfg?.eGet) return
+
+    const declared = (cfg.eGet(feature) as Iterable<any>) || []
+    for (const conn of declared) {
+      const read = (name: string) => {
+        const f = conn.eClass?.()?.getEStructuralFeature?.(name)
+        return f ? conn.eGet(f) : undefined
+      }
+      // The XMI carries booleans as strings — see istWahr (#136)
+      if (!istWahr(read('enabled'), true) || !istWahr(read('autoConnect'), true)) continue
+
+      const baseUrl = read('baseUrl')
+      const scopeName = read('scopeName')
+      if (!baseUrl || !scopeName) continue
+
+      const alreadyConnected = connections.value.some(
+        (c) => c.baseUrl === baseUrl && c.scopeName === scopeName && c.status === 'connected'
+      )
+      if (alreadyConnected) continue
+
+      // Older workspaces carry a token here; it counts as Bearer for this
+      // session and is never written back.
+      const token = read('token')
+      try {
+        await connect({
+          baseUrl,
+          scopeName,
+          token: token || '',
+          authKind: read('authKind') || (token ? 'bearer' : 'none'),
+          user: read('user') || undefined
+        })
+      } catch (e: any) {
+        console.warn(`[AtlasBrowser] Auto-connect failed for ${scopeName}:`, e?.message || e)
+      }
+    }
+  }
+
+  /**
    * Try a failed connection again, with what the session knows by now.
    *
    * The usual case after a restored workspace: the connection needs a secret,
@@ -922,6 +972,7 @@ function createAtlasBrowser() {
 
     // Actions
     connect,
+    autoConnectFromWorkspace,
     reconnect,
     disconnect,
     loadStageChildren,

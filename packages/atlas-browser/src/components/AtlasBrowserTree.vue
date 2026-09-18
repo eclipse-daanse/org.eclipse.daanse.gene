@@ -254,58 +254,15 @@ const isWorkspaceOpen = computed(() => {
 })
 
 // Auto-connect from workspace EditorConfig on mount
+//
+// The same thing happens on the 'gene:workspace-loaded' event in the plugin's
+// activate(); whichever comes first wins, the other finds the connection
+// standing. Both go through the composable, so they cannot drift apart again.
 onMounted(async () => {
   const editorConfig = tsm?.getService('gene.editor.config')
   const config = editorConfig?.editorConfig?.value
   if (!config) return
-
-  const eClass = config.eClass?.()
-  const atlasFeature = eClass?.getEStructuralFeature?.('atlasConnections')
-  if (!atlasFeature) return
-
-  const atlasConnections = config.eGet(atlasFeature) || []
-  for (const conn of atlasConnections) {
-    const acClass = conn.eClass()
-    const get = (name: string) => {
-      const f = acClass.getEStructuralFeature(name)
-      return f ? conn.eGet(f) : undefined
-    }
-
-    const enabled = get('enabled')
-    const autoConnect = get('autoConnect')
-    if (enabled === false || autoConnect === false) continue
-
-    const baseUrl = get('baseUrl')
-    const scopeName = get('scopeName')
-    // Older workspaces still carry a token here. It is taken as a Bearer
-    // secret for this session, but never written back (see above).
-    const token = get('token')
-
-    if (baseUrl && scopeName) {
-      // Skip if already connected to this scope+url
-      const alreadyConnected = browser.connections.value.some(
-        (c: any) => c.baseUrl === baseUrl && c.scopeName === scopeName && c.status === 'connected'
-      )
-      if (alreadyConnected) continue
-
-      try {
-
-        const authKind = get('authKind')
-        const user = get('user')
-        await browser.connect({
-          baseUrl,
-          scopeName,
-          token: token || '',
-          // Without a stored kind: a token means Bearer, nothing means none.
-          // The secret itself is asked for when a request needs it.
-          authKind: authKind || (token ? 'bearer' : 'none'),
-          user: user || undefined
-        })
-      } catch (e: any) {
-        console.warn(`[AtlasBrowser] Auto-connect failed for ${scopeName}:`, e.message)
-      }
-    }
-  }
+  await browser.autoConnectFromWorkspace(config)
 })
 
 // Handle node expand (lazy loading for stage nodes)
