@@ -5,6 +5,30 @@
 > Abschnitt 9 gegen den Compose-Setup und der nächste Schritt QVT-O
 > (Abschnitt 11).
 >
+> **Änderung 2026-09-18 (@emfts/core 0.3.0-next.1):** Vier der fünf gemeldeten
+> Abweichungen sind behoben, eine Annahme ist dadurch weggefallen:
+>
+> - **#85/#87**: einwertige Cross-Document-Referenzen stehen jetzt als
+>   `href`-Kindelement mit `xsi:type` — wie in Java EMF. Damit deklariert der
+>   Serializer das `ecore`-Präfix von selbst, die `writeNamespaces()`-
+>   Überschreibung und `extraNamespaces` sind entfallen.
+> - **#86**: `getEAnnotations()` sieht die geladenen Annotationen am EPackage;
+>   der Umweg über `eGet` in `annotationsOf()` ist entfallen.
+> - **#95**: gesetzte Attribute werden geschrieben, auch wenn sie dem
+>   Vorgabewert entsprechen. Der Endpunkt trägt seine Pagination-Namen also
+>   sichtbar; nicht gesetzte Features (`batchSize`) bleiben weiter weg.
+> - **#84** bleibt offen: `getURIFragment()` ignoriert `iD="true"`, die
+>   Überschreibung bleibt.
+> - **Neu nötig**: der **Href-Dialekt**. Mit #80 haben EClassifier jetzt eine
+>   Resource, und der Serializer schreibt den Verweis relativ zum Dokument
+>   (`model/person.ecore#//Person`). Der Assistent erzwingt den nsURI über
+>   `getHref()` — s. Abschnitt 4a, das ist die Rückkehr der Überschreibung,
+>   die mit der FILE-Entfernung wegfiel.
+> - **Stolperstelle im Fixup**: `eClassifiers` setzt seit 0.3 den Container,
+>   das Einhängen nimmt den Classifier also aus der Quellliste. Wer über die
+>   Live-Liste iteriert, überspringt jedes zweite Element — `wizardPackageFixup`
+>   läuft jetzt über eine Kopie.
+>
 > **Änderung 2026-09-10 (3):** Die Einheit der Fassade ist die **Kette**
 > (`DataChain`), nicht mehr die einzelne Liste. Ein Weg trägt seine Quelle
 > (`source` containment **oder** `sharedSource` Referenz), seine `datasets`
@@ -332,11 +356,15 @@ Von Hand bleiben genau zwei Stellen, beide weil emf.ts dort von Java EMF
 abweicht. `XMLResource` bietet die Erweiterungspunkte, die Java EMF auch hat
 (`protected createXMLSave()`, `getURIFragment()`) — zusammen rund 40 Zeilen.
 
-**a) Href über den nsURI** — **keine** Überschreibung nötig.
-`XMLSave.getHref` liefert für einen EClassifier von sich aus den
-nsURI-Href, weil EClassifier in emf.ts kein `eResource()` haben (emf.ts#80).
-Das ist genau der Dialekt, den der Assistent will; der relative
-Datei-Dialekt ist mit `configMode` entfallen (Änderung 2026-09-10).
+**a) Href über den nsURI** — `getHref()` überschreiben.
+Bis `@emfts/core` 0.2 ergab sich der nsURI-Href von selbst, weil EClassifier
+kein `eResource()` hatten (emf.ts#80). Seit 0.3 haben sie eins, und der
+Serializer schreibt — wie Java EMF — einen gegen das Dokument aufgelösten
+Verweis (`model/person.ecore#//Person`). Für eine Datei neben dem Modell ist
+das richtig, für eine Konfiguration, die über HTTP aus dem Model Atlas kommt,
+nicht: sie hat keinen Bezugspunkt. Die Überschreibung liefert deshalb für
+EClassifier `nsURI#//Name` und für EStructuralFeature
+`nsURI#//Klasse/Feature`; alles andere bleibt beim Serializer.
 
 **b) ID-Fragmente** — `class DataAtlasResource extends XMIResource`,
 `getURIFragment()` überschrieben: Wert des `iD="true"`-Attributs, sonst
@@ -345,12 +373,10 @@ Datei-Dialekt ist mit `configMode` entfallen (Änderung 2026-09-10).
 Der Weg über `resource.setID()` wirkt auch, schreibt aber zusätzlich ein
 `xmi:id`, das die Vorlagen nicht haben.
 
-**c) Fehlende Namespace-Deklaration** — `writeNamespaces()` erweitert.
-Beim eingebetteten eorm-Mapping schreibt emf.ts Typpräfixe in Attributwerte
-(`feature="ecore:EAttribute …"`), zählt für die Deklarationen aber nur
-Präfixe, die von Elementen gebraucht werden — `xmlns:ecore` fehlt dann
-(emf.ts#87). Die Unterklasse trägt es nach, und zwar nur, wenn ein Mapping
-eingebettet ist; ohne bleibt der Dokumentkopf schlank.
+**c) Fehlende Namespace-Deklaration** — mit `@emfts/core` 0.3 **entfallen**.
+Einwertige Cross-Document-Referenzen stehen jetzt als `href`-Kindelement mit
+`xsi:type` (emf.ts#85), nicht mehr als Attributwert mit Typpräfix; damit zählt
+der Serializer das `ecore`-Präfix selbst mit und deklariert es (emf.ts#87).
 
 Das gilt auch für **Features**: ein eingebettetes eorm-Mapping verweist auf
 `…#//Person/firstName`, und auch dort entsteht der nsURI-Href von selbst —

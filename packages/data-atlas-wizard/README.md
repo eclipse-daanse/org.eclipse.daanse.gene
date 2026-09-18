@@ -57,16 +57,28 @@ Wizard das **Zielmodell** und lässt `saveToString()` schreiben. Escaping,
 Namespaces, `xsi:type`, Elementreihenfolge und die Referenzformate macht damit
 der Serializer.
 
-Von Hand bleiben zwei Überschreibungen in `src/transform/dataAtlasResource.ts`,
-beide weil emf.ts dort von Java EMF abweicht:
+Von Hand bleiben zwei Überschreibungen in `src/transform/dataAtlasResource.ts`:
 
 | Was | Warum | Ticket |
 |---|---|---|
-| `getURIFragment()` | `iD="true"` wird beim Speichern nicht ausgewertet — sonst stünde `dataInput="/0/0"` in der Datei | [emf.ts#84](https://github.com/eclipse-fennec/emf.ts/issues/84) |
-| `writeNamespaces()` | Typpräfixe in Attributwerten werden geschrieben, das Präfix aber nicht deklariert | [emf.ts#87](https://github.com/eclipse-fennec/emf.ts/issues/87) |
+| `getURIFragment()` | `iD="true"` wird beim Speichern nicht ausgewertet — sonst stünde `dataInput="/0/0"` in der Datei | [emf.ts#84](https://github.com/eclipse-fennec/emf.ts/issues/84), offen |
+| `getHref()` | Verweise auf Modellklassen müssen den nsURI tragen, nicht einen Pfad relativ zum Dokument | Absicht, kein Fehler |
 
-Den nsURI-Href liefert `XMLSave.getHref()` von selbst, weil EClassifier in
-emf.ts kein `eResource()` haben ([emf.ts#80](https://github.com/eclipse-fennec/emf.ts/issues/80)).
+Der Href-Dialekt war bis `@emfts/core` 0.2 geschenkt: EClassifier hatten kein
+`eResource()` ([emf.ts#80](https://github.com/eclipse-fennec/emf.ts/issues/80)),
+also blieb nur der nsURI. Seit 0.3 haben sie eins, und der Serializer schreibt
+— wie Java EMF — einen Verweis relativ zum Dokument
+(`model/person.ecore#//Person`). Für eine Datei neben dem Modell ist das
+richtig; diese Konfiguration kommt aber über HTTP aus dem Model Atlas und hätte
+dafür keinen Bezugspunkt. Deshalb erzwingt der Assistent den nsURI.
+
+Entfallen mit 0.3: die `writeNamespaces()`-Überschreibung
+([emf.ts#87](https://github.com/eclipse-fennec/emf.ts/issues/87)) — einwertige
+Cross-Document-Referenzen stehen jetzt als `href`-Kindelement mit `xsi:type`
+([emf.ts#85](https://github.com/eclipse-fennec/emf.ts/issues/85)), womit das
+Präfix von selbst deklariert wird — und der Umweg über `eGet` für die
+Annotationen eines geladenen EPackage
+([emf.ts#86](https://github.com/eclipse-fennec/emf.ts/issues/86)).
 
 Ebenso trägt `src/emf/wizardPackageFixup.ts` nach, was `emfts-codegen`
 ausgelassen hat ([emf.ts#83](https://github.com/eclipse-fennec/emf.ts/issues/83)):
@@ -121,6 +133,12 @@ ausgewählter Datensatz, doppelte ids, ein Weg ohne Quelle oder mit eigener
 der Datendatei, `IMPORTED` ohne gültiges Mapping, und bei einer Datenbank
 Klassen aus mehreren Packages — über alle Wege gezählt, die sich diese
 Datenbank teilen.
+
+Was der Assistent setzt, steht auch in der Datei — auch wenn es dem
+Vorgabewert entspricht
+([emf.ts#95](https://github.com/eclipse-fennec/emf.ts/issues/95): vorher fielen
+so auch Pflichtfelder weg). Nicht gesetzte Features bleiben weg, etwa
+`batchSize` ohne Grenze.
 
 Warnungen halten nicht auf: nur CSV gewählt (ersetzt die Vorgaben vollständig,
 alles andere wird mit 406 abgelehnt), abgeleitetes JPA-Mapping (Tabellenname

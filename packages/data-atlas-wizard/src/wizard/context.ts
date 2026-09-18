@@ -83,30 +83,23 @@ export function titleCase(name: string): string {
     .join(' ');
 }
 
-type AnnotationLike = { getSource?: () => string | null; getDetails?: () => { getByKey?: (key: string) => unknown } };
+type AnnotationLike = {
+  getSource?: () => string | null;
+  getDetails?: () => { getByKey?: (key: string) => unknown };
+};
 
 /**
  * Die Annotationen eines Modellelements.
  *
- * Bei einem EPackage sieht der typisierte Getter die geladenen Annotationen
- * nicht — `BasicEPackage` führt dafür zwei getrennte Behälter, und der Loader
- * schreibt in den reflektiven (emf.ts#86). Deshalb hier beide Wege: erst der
- * Getter, dann `eGet`. Bei EClass und EAttribute genügt der Getter.
+ * Bis @emfts/core 0.2 sah der typisierte Getter am EPackage die geladenen
+ * Annotationen nicht — `BasicEPackage` führte zwei getrennte Behälter, und der
+ * Loader schrieb in den reflektiven (emf.ts#86). Seit 0.3 ist das behoben, der
+ * Getter genügt.
  */
 function annotationsOf(element: object): AnnotationLike[] {
   const typisiert = (element as { getEAnnotations?: () => Iterable<AnnotationLike> })
     .getEAnnotations?.();
-  const ausGetter = typisiert ? [...typisiert] : [];
-  if (ausGetter.length > 0) return ausGetter;
-
-  const reflektiv = element as {
-    eClass?: () => { getEStructuralFeature(name: string): unknown } | null;
-    eGet?: (feature: unknown) => unknown;
-  };
-  const feature = reflektiv.eClass?.()?.getEStructuralFeature('eAnnotations');
-  if (!feature || !reflektiv.eGet) return [];
-  const werte = reflektiv.eGet(feature) as Iterable<AnnotationLike> | null;
-  return werte ? [...werte] : [];
+  return typisiert ? [...typisiert] : [];
 }
 
 /**
