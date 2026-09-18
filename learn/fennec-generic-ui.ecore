@@ -2605,7 +2605,19 @@
 
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="token" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
       <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
-        <details key="documentation" value="Optional authentication token."/>
+        <details key="documentation" value="Deprecated: authentication token. Older workspaces carry one here; it is read as a Bearer secret for the session and never written back. Secrets do not belong in a shared workspace file."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="authKind" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="How this connection authenticates: none, bearer or basic. The secret itself is asked for per session and is not stored."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="user" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="User name for basic authentication. Not a secret; the password is asked for per session."/>
       </eAnnotations>
     </eStructuralFeatures>
 

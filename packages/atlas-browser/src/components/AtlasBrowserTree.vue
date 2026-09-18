@@ -7,7 +7,7 @@
  */
 
 import { ref, computed, inject, onMounted } from 'tsm:vue'
-import { Tree, Button, Dialog, InputText, ContextMenu, ProgressSpinner } from 'tsm:primevue'
+import { Tree, Button, Dialog, Dropdown, InputText, ContextMenu, ProgressSpinner } from 'tsm:primevue'
 import { useSharedAtlasBrowser, schemaNsUri, istWahr } from '../composables/useAtlasBrowser'
 import type { AtlasTreeNodeData, ConnectFormData } from '../types'
 
@@ -36,8 +36,17 @@ const showConnectDialog = ref(false)
 const connectForm = ref<ConnectFormData>({
   baseUrl: 'http://localhost:8185/rest',
   scopeName: 'main',
-  token: ''
+  token: '',
+  authKind: 'none',
+  user: ''
 })
+
+/** What the server wants: nothing, a token, or user and password. */
+const authKinds = [
+  { label: 'ohne Anmeldung', value: 'none' },
+  { label: 'Token (Bearer)', value: 'bearer' },
+  { label: 'Benutzer und Passwort (Basic)', value: 'basic' }
+]
 const connectError = ref<string | null>(null)
 const connecting = ref(false)
 
@@ -83,7 +92,13 @@ async function handleConnect() {
   try {
     await browser.connect({ ...connectForm.value })
     showConnectDialog.value = false
-    connectForm.value = { baseUrl: 'http://localhost:8185/rest', scopeName: 'main', token: '' }
+    connectForm.value = {
+      baseUrl: 'http://localhost:8185/rest',
+      scopeName: 'main',
+      token: '',
+      authKind: 'none',
+      user: ''
+    }
   } catch (e: any) {
     connectError.value = e.message || 'Connection failed'
   } finally {
@@ -134,7 +149,13 @@ function handleSaveToWorkspace() {
     set('name', conn.label || `${conn.scopeName}@${conn.baseUrl}`)
     set('baseUrl', conn.baseUrl)
     set('scopeName', conn.scopeName)
-    set('token', conn.token || '')
+    /*
+     * How to authenticate is restored, the secret is not: the workspace file
+     * is shared and committed. Basic credentials in particular never expire —
+     * they are the password. The secret is asked for once per session instead.
+     */
+    set('authKind', conn.auth?.kind || 'none')
+    set('user', conn.auth?.user || '')
     set('autoConnect', true)
     set('enabled', true)
     connections.push(atlasConn)
@@ -188,6 +209,8 @@ onMounted(async () => {
 
     const baseUrl = get('baseUrl')
     const scopeName = get('scopeName')
+    // Older workspaces still carry a token here. It is taken as a Bearer
+    // secret for this session, but never written back (see above).
     const token = get('token')
 
     if (baseUrl && scopeName) {
@@ -199,7 +222,17 @@ onMounted(async () => {
 
       try {
 
-        await browser.connect({ baseUrl, scopeName, token: token || '' })
+        const authKind = get('authKind')
+        const user = get('user')
+        await browser.connect({
+          baseUrl,
+          scopeName,
+          token: token || '',
+          // Without a stored kind: a token means Bearer, nothing means none.
+          // The secret itself is asked for when a request needs it.
+          authKind: authKind || (token ? 'bearer' : 'none'),
+          user: user || undefined
+        })
       } catch (e: any) {
         console.warn(`[AtlasBrowser] Auto-connect failed for ${scopeName}:`, e.message)
       }
@@ -590,14 +623,39 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
           />
         </div>
         <div class="form-field">
-          <label for="atlas-token">Token (optional)</label>
+          <label for="atlas-auth-kind">Anmeldung</label>
+          <Dropdown
+            id="atlas-auth-kind"
+            v-model="connectForm.authKind"
+            :options="authKinds"
+            optionLabel="label"
+            optionValue="value"
+            class="w-full"
+          />
+        </div>
+        <div v-if="connectForm.authKind === 'basic'" class="form-field">
+          <label for="atlas-user">Benutzer</label>
+          <InputText
+            id="atlas-user"
+            v-model="connectForm.user"
+            autocomplete="username"
+            class="w-full"
+          />
+        </div>
+        <div v-if="connectForm.authKind !== 'none'" class="form-field">
+          <label for="atlas-token">
+            {{ connectForm.authKind === 'basic' ? 'Passwort' : 'Token' }}
+          </label>
           <InputText
             id="atlas-token"
             v-model="connectForm.token"
             type="password"
-            placeholder="Authentication token"
+            autocomplete="off"
             class="w-full"
           />
+          <small class="feld-hinweis">
+            Gilt nur für diese Sitzung — gespeichert wird nichts.
+          </small>
         </div>
         <div v-if="connectError" class="connect-error">
           <i class="pi pi-exclamation-triangle"></i>

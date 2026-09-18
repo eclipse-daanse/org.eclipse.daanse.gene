@@ -28,7 +28,7 @@
     "plugins:watch": "run-p plugins:watch:*",
     "plugins:watch:indexeddb": "npm run watch:tsm --workspace=storage-indexeddb",
     "plugins:watch:git": "npm run watch:tsm --workspace=storage-git",
-    "generate": "emfts-codegen generate -m learn/fennec-generic-ui.ecore -c learn/fennec-generic-ui.genconfig -o src/generated/fennecui",
+    "generate": "emfts-codegen generate -m learn/fennec-generic-ui.ecore -c learn/fennec-generic-ui.genconfig -o src/generated",
     "generate:storage": "npm run generate --workspace=storage-model"
   },
   "dependencies": {

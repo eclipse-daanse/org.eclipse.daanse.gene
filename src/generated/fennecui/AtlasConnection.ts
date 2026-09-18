@@ -16,6 +16,8 @@ export interface AtlasConnection extends EObject {
   baseUrl: string;
   scopeName: string;
   token?: string;
+  authKind?: string;
+  user?: string;
   autoConnect?: boolean;
   enabled?: boolean;
 

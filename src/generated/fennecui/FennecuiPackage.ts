@@ -377,6 +377,8 @@ export class FennecuiPackage extends BasicEPackage {
     ATLAS_CONNECTION__BASE_URL: null as unknown as EAttribute | EReference,
     ATLAS_CONNECTION__SCOPE_NAME: null as unknown as EAttribute | EReference,
     ATLAS_CONNECTION__TOKEN: null as unknown as EAttribute | EReference,
+    ATLAS_CONNECTION__AUTH_KIND: null as unknown as EAttribute | EReference,
+    ATLAS_CONNECTION__USER: null as unknown as EAttribute | EReference,
     ATLAS_CONNECTION__AUTO_CONNECT: null as unknown as EAttribute | EReference,
     ATLAS_CONNECTION__ENABLED: null as unknown as EAttribute | EReference,
     CUSTOM_ICON_DEFINITION: null as unknown as EClass,
@@ -3264,6 +3266,22 @@ export class FennecuiPackage extends BasicEPackage {
     atlasConnection_token.setUpperBound(1);
     atlasConnectionClass.getEStructuralFeatures().push(atlasConnection_token);
     FennecuiPackage.Literals.ATLAS_CONNECTION__TOKEN = atlasConnection_token;
+
+    // Create authKind feature
+    const atlasConnection_authKind = new BasicEAttribute();
+    atlasConnection_authKind.setName('authKind');
+    atlasConnection_authKind.setLowerBound(0);
+    atlasConnection_authKind.setUpperBound(1);
+    atlasConnectionClass.getEStructuralFeatures().push(atlasConnection_authKind);
+    FennecuiPackage.Literals.ATLAS_CONNECTION__AUTH_KIND = atlasConnection_authKind;
+
+    // Create user feature
+    const atlasConnection_user = new BasicEAttribute();
+    atlasConnection_user.setName('user');
+    atlasConnection_user.setLowerBound(0);
+    atlasConnection_user.setUpperBound(1);
+    atlasConnectionClass.getEStructuralFeatures().push(atlasConnection_user);
+    FennecuiPackage.Literals.ATLAS_CONNECTION__USER = atlasConnection_user;
 
     // Create autoConnect feature
     const atlasConnection_autoConnect = new BasicEAttribute();

@@ -20,14 +20,18 @@ export class AtlasConnectionImpl extends BasicEObject implements AtlasConnection
   static readonly BASE_URL: number = 1;
   static readonly SCOPE_NAME: number = 2;
   static readonly TOKEN: number = 3;
-  static readonly AUTO_CONNECT: number = 4;
-  static readonly ENABLED: number = 5;
+  static readonly AUTH_KIND: number = 4;
+  static readonly USER: number = 5;
+  static readonly AUTO_CONNECT: number = 6;
+  static readonly ENABLED: number = 7;
 
   // Private fields
   private _name?: string;
   private _baseUrl: string = "";
   private _scopeName: string = "";
   private _token?: string;
+  private _authKind?: string;
+  private _user?: string;
   private _autoConnect: boolean = true;
   private _enabled: boolean = true;
 
@@ -135,6 +139,54 @@ export class AtlasConnectionImpl extends BasicEObject implements AtlasConnection
     }
   }
 
+  get authKind(): string {
+    return this._authKind!;
+  }
+
+  set authKind(value: string) {
+    const oldValue = this._authKind;
+    this._authKind = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(AtlasConnectionImpl.AUTH_KIND),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => AtlasConnectionImpl.AUTH_KIND,
+        merge: () => false
+      });
+    }
+  }
+
+  get user(): string {
+    return this._user!;
+  }
+
+  set user(value: string) {
+    const oldValue = this._user;
+    this._user = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(AtlasConnectionImpl.USER),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => AtlasConnectionImpl.USER,
+        merge: () => false
+      });
+    }
+  }
+
   get autoConnect(): boolean {
     return this._autoConnect!;
   }
@@ -199,6 +251,10 @@ export class AtlasConnectionImpl extends BasicEObject implements AtlasConnection
         return this.scopeName;
       case AtlasConnectionImpl.TOKEN:
         return this.token;
+      case AtlasConnectionImpl.AUTH_KIND:
+        return this.authKind;
+      case AtlasConnectionImpl.USER:
+        return this.user;
       case AtlasConnectionImpl.AUTO_CONNECT:
         return this.autoConnect;
       case AtlasConnectionImpl.ENABLED:
@@ -230,6 +286,14 @@ export class AtlasConnectionImpl extends BasicEObject implements AtlasConnection
         this.token = newValue as string;
         super.eSet(feature, newValue);
         break;
+      case AtlasConnectionImpl.AUTH_KIND:
+        this.authKind = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case AtlasConnectionImpl.USER:
+        this.user = newValue as string;
+        super.eSet(feature, newValue);
+        break;
       case AtlasConnectionImpl.AUTO_CONNECT:
         this.autoConnect = newValue as boolean;
         super.eSet(feature, newValue);
@@ -257,6 +321,10 @@ export class AtlasConnectionImpl extends BasicEObject implements AtlasConnection
         return this._scopeName !== "";
       case AtlasConnectionImpl.TOKEN:
         return this._token !== undefined;
+      case AtlasConnectionImpl.AUTH_KIND:
+        return this._authKind !== undefined;
+      case AtlasConnectionImpl.USER:
+        return this._user !== undefined;
       case AtlasConnectionImpl.AUTO_CONNECT:
         return this._autoConnect !== true;
       case AtlasConnectionImpl.ENABLED:
@@ -283,6 +351,12 @@ export class AtlasConnectionImpl extends BasicEObject implements AtlasConnection
         return;
       case AtlasConnectionImpl.TOKEN:
         this._token = undefined;
+        return;
+      case AtlasConnectionImpl.AUTH_KIND:
+        this._authKind = undefined;
+        return;
+      case AtlasConnectionImpl.USER:
+        this._user = undefined;
         return;
       case AtlasConnectionImpl.AUTO_CONNECT:
         this._autoConnect = true;
