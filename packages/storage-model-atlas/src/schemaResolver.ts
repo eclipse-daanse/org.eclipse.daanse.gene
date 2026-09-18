@@ -7,17 +7,17 @@
  * und stellt es selbst in die Registry). Dieses Paket kennt den Ort — also
  * gehört der Converter hierher, nicht zu einem UI-Plugin.
  *
- * Der XMI-Loader von emf.ts fragt ihn beim Parsen allerdings nicht: fehlt ein
- * nsURI in der Registry, bricht er sofort ab (emf.ts#88). Solange das so ist,
- * braucht der Aufrufer die Packages **vor** dem Laden — dafür `collectNsUris`
- * und `fetchSchemas`, die denselben Weg ohne den Umweg über den Converter
- * gehen. Fällt weg, sobald der Loader nachlädt.
+ * Seit `@emfts/core` 0.3 fragt der Loader ihn auch: `loadFromStringAsync`
+ * sammelt beim ersten Durchgang die unbekannten nsURIs, holt sie über den
+ * Converter und parst erneut (emf.ts#88). Der Aufrufer muss nur die
+ * Fundstellen kennen — `providersForScopeChain` — und den Converter
+ * einhängen.
  */
 
 import type { URIConverter } from '@emfts/core'
 import { URI } from '@emfts/core'
 import { ModelAtlasClient } from './ModelAtlasClient'
-import { parseMetadataListXmi } from './AtlasResourceSet'
+import { parseMetadataListXmi, parseScopeXmi } from './AtlasResourceSet'
 import { schemaNsUri } from './schemaIdentity'
 
 /**
@@ -34,37 +34,6 @@ export interface AtlasProvider {
   scopeName: string
   stage: string
   registryName?: string
-}
-
-/**
- * Namensräume, die nie ein Domänen-Package sind: Sie stehen in jedem Dokument
- * und sind entweder eingebaut oder rein technisch.
- */
-const TECHNISCHE_NS = new Set([
-  'http://www.omg.org/XMI',
-  'http://www.w3.org/2001/XMLSchema-instance',
-  'http://www.w3.org/XML/1998/namespace',
-  'http://www.eclipse.org/emf/2002/Ecore',
-  'http://www.eclipse.org/emf/2003/XMLType',
-])
-
-const XMLNS = /\sxmlns(?::[A-Za-z_][\w.-]*)?\s*=\s*"([^"]*)"/g
-
-/**
- * Die nsURIs, die ein Dokument braucht — aus seinen xmlns-Deklarationen.
- *
- * Das ist dieselbe Quelle, aus der der Loader seine Präfixe auflöst; er nennt
- * im Fehlerfall aber nur das Präfix, nicht den nsURI. Deshalb hier selbst
- * lesen, statt den Fehler auszuwerten.
- */
-export function collectNsUris(xmi: string): string[] {
-  const gefunden = new Set<string>()
-  // Nur der Dokumentkopf ist interessant; xmlns steht am Wurzelelement.
-  for (const treffer of xmi.matchAll(XMLNS)) {
-    const nsURI = treffer[1]?.trim()
-    if (nsURI && !TECHNISCHE_NS.has(nsURI)) gefunden.add(nsURI)
-  }
-  return [...gefunden]
 }
 
 /**
@@ -172,6 +141,68 @@ export function providersForScope(
     ? [bevorzugt, ...stages.filter((s) => s !== bevorzugt)]
     : [...stages]
   return geordnet.map((stage) => ({ client, scopeName, stage, registryName }))
+}
+
+/** Mehr Ebenen hat keine sinnvolle Scope-Hierarchie — und Zyklen enden hier. */
+const MAX_SCOPE_TIEFE = 10
+
+/**
+ * Alle Fundstellen eines Scopes **samt seiner geerbten Eltern**.
+ *
+ * Die Vererbung ist der Regelfall: gemeinsame Metamodelle liegen im
+ * Plattform-Scope, und die Registry-Liste eines Kind-Scopes führt sie nicht
+ * mit auf. Wer nur dort sucht, findet sie nie.
+ *
+ * Je Scope sagt der Server selbst, welche Registry die Schemas führt und
+ * welche Stages es gibt. Der Kurzweg `/schema` gilt nur, wenn keine eigene
+ * Schema-Registry ausgewiesen ist — sonst antwortet er mit 400; heisst die
+ * Registry selbst `schema`, wäre er derselbe Bestand ein zweites Mal.
+ */
+export async function providersForScopeChain(
+  client: ModelAtlasClient,
+  scopeName: string,
+  bevorzugteStage?: string,
+): Promise<AtlasProvider[]> {
+  const stellen: AtlasProvider[] = []
+  const gesehen = new Set<string>()
+  let aktuell: string | undefined = scopeName
+
+  for (let tiefe = 0; aktuell && tiefe < MAX_SCOPE_TIEFE; tiefe++) {
+    if (gesehen.has(aktuell)) break
+    gesehen.add(aktuell)
+
+    let schemaRegistry: string | undefined
+    let stages: string[] = []
+    let parentScope: string | undefined
+    try {
+      const scopeXmi = await client.getScope(aktuell)
+      const scope = scopeXmi ? parseScopeXmi(scopeXmi) : null
+      parentScope = scope?.parentScope || undefined
+      const registries = (scope?.registries ?? []) as Array<{
+        name?: string
+        type?: string
+        stages?: Array<{ name?: string }>
+      }>
+      schemaRegistry = registries.find((r) => r?.type === 'SCHEMA')?.name
+      const eigene = registries.filter((r) => !schemaRegistry || r.name === schemaRegistry)
+      stages = [
+        ...new Set(
+          eigene.flatMap((r) => (r.stages ?? []).map((st) => st.name).filter(Boolean) as string[]),
+        ),
+      ]
+    } catch {
+      // Ohne Scope-Antwort bleibt die Stage, aus der die Instanz kommt
+    }
+    if (stages.length === 0 && bevorzugteStage) stages = [bevorzugteStage]
+
+    stellen.push(...providersForScope(client, aktuell, stages, bevorzugteStage, schemaRegistry))
+    if (schemaRegistry && schemaRegistry !== 'schema') {
+      stellen.push(...providersForScope(client, aktuell, stages, bevorzugteStage))
+    }
+    aktuell = parentScope
+  }
+
+  return stellen
 }
 
 /**

@@ -36,10 +36,10 @@ export { schemaNsUri, safeAtob } from './schemaIdentity'
 
 // Re-export Schema-Aufloesung (nsURI -> Ecore aus dem Atlas)
 export {
-  collectNsUris,
   fetchSchemas,
   describeProvider,
   providersForScope,
+  providersForScopeChain,
   createAtlasURIConverter,
   type AtlasProvider
 } from './schemaResolver'

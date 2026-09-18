@@ -21,7 +21,7 @@ const OCL_SOURCES = ['http://www.eclipse.org/fennec/m2x/ocl/1.0', 'http://www.ec
 function isOclSource(s: string | null | undefined): boolean { return !!s && OCL_SOURCES.includes(s) }
 import type { PerspectiveManager } from 'ui-perspectives'
 import { registerWorkspaceActions } from './services/WorkspaceActionService'
-import { ensurePackagesForInstance } from './services/packageResolution'
+import { prepareAtlasResolution } from './services/atlasResolution'
 import type { WorkspaceActionService, FileEntryLike } from './services/WorkspaceActionService'
 
 // EditorContext injection key (matches the one in editorContext.ts)
@@ -861,11 +861,12 @@ async function loadInstancesFromEditorConfig(workspaceEntry: any) {
         // Clear previous errors for this file
         problemsService.clearIssuesForFile(location)
 
-        // Metamodelle muessen vor dem Parsen registriert sein
-        await resolveMetamodels(fileEntry, content, location)
+        // Wo der Loader fehlende Metamodelle holen darf
+        const fundstellen = await prepareMetamodelResolution(fileEntry, location)
 
         try {
-          await instanceTreeComposables.value.loadInstancesFromXMI(content, location)
+          const ergebnis = await instanceTreeComposables.value.loadInstancesFromXMI(content, location)
+          reportMissingPackages((ergebnis as any)?.missingPackages, fundstellen, fileEntry, location)
           console.log('[App] Instances loaded from:', location)
         } catch (loadErr: any) {
           console.error('[App] XMI parsing error:', location, loadErr)
@@ -1314,55 +1315,56 @@ async function reloadFailedInstanceFiles(sourceId: string) {
 
 // Handle adding instances (.xmi file) to the workspace
 /**
- * Fehlende Metamodelle beschaffen, bevor eine Instanz geladen wird.
+ * Den Atlas-Weg fuer fehlende Metamodelle einhaengen, bevor geladen wird.
  *
- * Kommt die Instanz aus dem Model Atlas, liegt ihr Ecore dort im selben Scope
- * — der Loader von emf.ts holt es aber nicht von sich aus (emf.ts#88), er
- * bricht beim ersten unbekannten Praefix ab. Also vorher aufloesen und
- * registrieren; was nirgends liegt, wird genannt, statt nur als Praefix im
- * Parserfehler aufzutauchen.
+ * Das Nachladen macht seit @emfts/core 0.3 der Loader selbst (emf.ts#88): er
+ * sammelt die unbekannten nsURIs, holt sie ueber den URIConverter des
+ * ResourceSet und parst erneut. Hier wird nur gesagt, wo gesucht werden darf —
+ * im Scope, aus dem die Datei stammt, samt seiner geerbten Eltern.
+ *
+ * Rueckgabe: die Fundstellen, fuer die Meldung danach.
  */
-async function resolveMetamodels(entry: any, content: string, filePath: string): Promise<void> {
+async function prepareMetamodelResolution(entry: any, filePath: string): Promise<string[]> {
   try {
-    // Der Model Browser wird sonst erst beim Perspektivwechsel geholt
-    const mb =
-      (modelBrowserComposables.value as any) ?? tsm.getService<any>('ui.model-browser.composables')
-    const ergebnis = await ensurePackagesForInstance(content, entry, {
+    const setup = await prepareAtlasResolution(entry, {
       editorConfig: getGlobalEditorConfig(),
-      modelBrowserComposables: mb
+      instanceTreeComposables: instanceTreeComposables.value as any
     })
-    // Immer eine Zeile: ein stiller Durchlauf ist sonst nicht von einem
-    // ausgefallenen zu unterscheiden.
     console.log(
       '[App] Metamodell-Aufloesung fuer', entry?.name || filePath,
-      '- registriert:', ergebnis.registered.join(', ') || '(nichts)',
-      '- offen:', ergebnis.missing.join(', ') || '(nichts)',
-      '- durchsucht:', ergebnis.searched.join(' | ') || '(nichts)',
-      ergebnis.note ? `- ${ergebnis.note}` : ''
+      '- Fundstellen:', setup.searched.join(' | ') || '(keine)',
+      setup.note ? `- ${setup.note}` : ''
     )
-    if (ergebnis.missing.length > 0 && ergebnis.known.length > 0) {
-      // Die Gegenprobe: was dort tatsaechlich liegt. Ein Tippfehler im nsURI
-      // oder eine schiefe Metadaten-Abbildung faellt nur so auf.
-      console.log('[App] dort gefuehrte Metamodelle:', ergebnis.known.join(', '))
-    }
-    // Der Grund gehoert in die Meldung: wer das Panel liest, soll nicht erst
-    // die Konsole aufmachen muessen, um "nirgends gesucht" von "gesucht, aber
-    // nicht da" zu unterscheiden.
-    const woSteht = ergebnis.searched.length > 0
-      ? ` (durchsucht: ${ergebnis.searched.join(' | ')})`
-      : ergebnis.note ? ` (${ergebnis.note})` : ''
-    for (const nsURI of ergebnis.missing) {
-      problemsService.addIssue({
-        severity: 'error',
-        message: `Metamodell nicht gefunden: ${nsURI}${woSteht}`,
-        source: 'xmi-parser',
-        objectLabel: entry?.name || filePath.split('/').pop() || filePath,
-        eClassName: 'XMI Parser',
-        filePath
-      })
-    }
+    return setup.searched
   } catch (e) {
-    console.warn('[App] Metamodell-Aufloesung fehlgeschlagen:', e)
+    console.warn('[App] Metamodell-Aufloesung liess sich nicht einhaengen:', e)
+    return []
+  }
+}
+
+/**
+ * Was der Loader nicht aufloesen konnte, gehoert ins Problems-Panel — mit
+ * nsURI und den durchsuchten Stellen, sonst bleibt nur das Praefix aus dem
+ * Parserfehler.
+ */
+function reportMissingPackages(
+  missing: string[] | undefined,
+  searched: string[],
+  entry: any,
+  filePath: string
+): void {
+  if (!missing?.length) return
+  const woSteht = searched.length > 0 ? ` (durchsucht: ${searched.join(' | ')})` : ''
+  console.warn('[App] Metamodell nicht gefunden:', missing.join(', '), woSteht)
+  for (const nsURI of missing) {
+    problemsService.addIssue({
+      severity: 'error',
+      message: `Metamodell nicht gefunden: ${nsURI}${woSteht}`,
+      source: 'xmi-parser',
+      objectLabel: entry?.name || filePath.split('/').pop() || filePath,
+      eClassName: 'XMI Parser',
+      filePath
+    })
   }
 }
 
@@ -1386,8 +1388,8 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
   // Clear previous errors for this file
   problemsService.clearIssuesForFile(entry.path)
 
-  // Metamodelle muessen vor dem Parsen registriert sein
-  await resolveMetamodels(entry, content, entry.path)
+  // Wo der Loader fehlende Metamodelle holen darf
+  const fundstellen = await prepareMetamodelResolution(entry, entry.path)
 
   try {
     console.log('[App] Calling instance load, mode:', mode)
@@ -1402,6 +1404,7 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
       result = await itc.loadInstancesFromXMI(content, entry.path)
     }
     console.log('[App] Instances loaded from:', entry.name, 'count:', result.loadedCount, 'errors:', result.errors.length)
+    reportMissingPackages(result.missingPackages, fundstellen, entry, entry.path)
 
     // Check instance tree state after loading
     const tree = instanceTreeComposables.value.useSharedInstanceTree()

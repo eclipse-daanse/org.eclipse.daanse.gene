@@ -7,16 +7,17 @@
  * Instanzdokument — dann bricht der Loader mit „Package not found for prefix"
  * ab: er holt sich fehlende Packages nicht selbst (emf.ts#88).
  *
- * `ensurePackagesForInstance` schliesst die Luecke: es liest die nsURIs aus
- * dem Dokument, holt fehlende Schemas aus dem Scope der Instanz und
- * registriert sie ueber den gewohnten Modell-Weg. Danach laedt die Instanz.
- * Siehe #152 und emf.ts#88.
+ * Seit @emfts/core 0.3 macht das Nachladen der Loader selbst (emf.ts#88): er
+ * sammelt die unbekannten nsURIs, holt sie ueber den URIConverter des
+ * ResourceSet und parst erneut. `prepareAtlasResolution` haengt dafuer nur den
+ * Atlas-Converter ein — mit den Fundstellen des Scopes, aus dem die Datei
+ * stammt, samt seiner geerbten Eltern. Siehe #152.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useFileSystem } from 'ui-file-explorer'
 import { loadInstancesFromXMI } from 'ui-instance-tree'
-import { useModelRegistry } from 'ui-model-browser'
-import { ensurePackagesForInstance } from '../services/packageResolution'
+import { setPackageURIConverter } from 'ui-instance-tree'
+import { prepareAtlasResolution } from '../services/atlasResolution'
 
 const NS = 'https://example.org/person/1.0.0'
 /** Eigener nsURI fuer den Vererbungsfall — NS ist da laengst registriert. */
@@ -119,6 +120,13 @@ function fakeAtlas(url: string): Response {
   return new Response('not found', { status: 404 })
 }
 
+/** Haengt den Atlas-Converter fuer diesen Eintrag ein, wie die App es tut. */
+async function haengeEin(entry: unknown) {
+  return prepareAtlasResolution(entry, {
+    instanceTreeComposables: { setPackageURIConverter },
+  })
+}
+
 /** Der Scope im Explorer, wie nach „Add Source → Model Atlas". */
 async function atlasQuelle() {
   const fs = useFileSystem()
@@ -147,68 +155,53 @@ describe('Instanz aus dem Model Atlas', () => {
     expect(await fs.readTextFile(instanz as never)).toContain(`xmlns:person="${NS}"`)
   })
 
-  it('der Loader allein bricht ab — er kennt das Metamodell nicht', async () => {
+  it('ohne eingehängten Converter bricht das Laden ab', async () => {
     const { fs, quelle } = await atlasQuelle()
     const instanz = fs.getFileByPath(quelle.id, 'configurations/draft/persons.xmi')
     const inhalt = await fs.readTextFile(instanz as never)
 
+    // Nur die Fundstellen fehlen — der Loader nennt jetzt immerhin den nsURI
     await expect(loadInstancesFromXMI(inhalt, instanz!.path)).rejects.toThrow(
-      /Package not found for prefix 'person'/,
+      new RegExp(`Package not found for prefix 'person' \\(nsURI '${NS}'\\)`),
     )
   })
 
-  it('und er fragt das Schema auch nicht nach (emf.ts#88)', async () => {
-    const { fs, quelle } = await atlasQuelle()
-    const instanz = fs.getFileByPath(quelle.id, 'configurations/draft/persons.xmi')
-    const inhalt = await fs.readTextFile(instanz as never)
-    await loadInstancesFromXMI(inhalt, instanz!.path).catch(() => undefined)
-
-    const schemaAbrufe = gefragt.filter((u) => u.includes('atlas-schema-registry') && u.includes('/content'))
-    expect(schemaAbrufe).toEqual([])
-  })
-
-  it('mit Vorauflösung kommt das Schema aus demselben Scope', async () => {
+  it('mit eingehängtem Converter holt der Loader das Schema selbst', async () => {
     const { fs, quelle } = await atlasQuelle()
     const instanz = fs.getFileByPath(quelle.id, 'configurations/draft/persons.xmi')
     const inhalt = await fs.readTextFile(instanz as never)
 
-    const aufgeloest = await ensurePackagesForInstance(inhalt, instanz, {
-      modelBrowserComposables: useModelRegistry(),
-    })
-    expect(aufgeloest.registered).toEqual([NS])
-    expect(aufgeloest.missing).toEqual([])
+    const setup = await haengeEin(instanz)
+    expect(setup.searched).toContain('jena/atlas-schema-registry/draft')
 
     const ergebnis = await loadInstancesFromXMI(inhalt, instanz!.path)
     expect(ergebnis.loadedCount).toBe(1)
     expect(ergebnis.errors).toEqual([])
+    expect(ergebnis.missingPackages).toEqual([])
+    // Das Schema kam über den Atlas, nicht aus dem Nichts
+    expect(gefragt.some((u) => u.includes('atlas-schema-registry') && u.includes('/content'))).toBe(
+      true,
+    )
   })
 
-  it('ein nsURI, den niemand kennt, wird genannt statt verschwiegen', async () => {
+  it('ein nsURI, den niemand kennt, wird mit nsURI gemeldet', async () => {
     const { fs, quelle } = await atlasQuelle()
-    const fremd = `<?xml version="1.0" encoding="UTF-8"?>
-<x:Thing xmlns:x="https://example.org/unbekannt/1.0.0" xmlns:xmi="http://www.omg.org/XMI"
-    xmi:version="2.0"/>`
     const instanz = fs.getFileByPath(quelle.id, 'configurations/draft/persons.xmi')
+    const fremd = PERSONS_XMI.replace(NS, 'https://example.org/unbekannt/1.0.0')
 
-    const aufgeloest = await ensurePackagesForInstance(fremd, instanz, {
-      modelBrowserComposables: useModelRegistry(),
-    })
-    expect(aufgeloest.registered).toEqual([])
-    expect(aufgeloest.missing).toEqual(['https://example.org/unbekannt/1.0.0'])
-    // Der Bericht sagt, wo gesucht wurde und was dort lag
-    expect(aufgeloest.searched).toContain('jena/atlas-schema-registry/draft: 1 Schema(s)')
-    // …und welche nsURIs dort liegen — die Gegenprobe zu „ist nicht da"
-    expect(aufgeloest.known).toEqual([NS])
+    await haengeEin(instanz)
+    // Der Loader versucht es, findet nichts und nennt den nsURI — nicht nur
+    // das Präfix, aus dem sich nichts nachladen liesse
+    await expect(loadInstancesFromXMI(fremd, 'unbekannt.xmi')).rejects.toThrow(
+      /nsURI 'https:\/\/example\.org\/unbekannt\/1\.0\.0'/,
+    )
   })
 
-  it('ohne Herkunft sagt das Ergebnis, warum nichts ging', async () => {
+  it('ohne Herkunft wird gar nicht erst eingehängt — mit Begründung', async () => {
     // Genau der Fall des Atlas-Browsers, bevor er seine Herkunft mitgab
-    const inhalt = PERSONS_XMI.replace(NS, 'https://example.org/ohne-herkunft/1.0.0')
-    const aufgeloest = await ensurePackagesForInstance(inhalt, { name: 'x.xmi', path: 'atlas://x.xmi' }, {
-      modelBrowserComposables: useModelRegistry(),
-    })
-    expect(aufgeloest.missing).toEqual(['https://example.org/ohne-herkunft/1.0.0'])
-    expect(aufgeloest.note).toMatch(/keine Fundstelle/)
+    const setup = await haengeEin({ name: 'x.xmi', path: 'atlas://x.xmi' })
+    expect(setup.searched).toEqual([])
+    expect(setup.note).toMatch(/keine Fundstelle/)
   })
 
   it('das Schema darf im geerbten Plattform-Scope liegen', async () => {
@@ -219,27 +212,11 @@ describe('Instanz aus dem Model Atlas', () => {
     const instanz = fs.getFileByPath(quelle.id, 'configurations/draft/persons.xmi')
     const inhalt = PERSONS_XMI.replace(NS, NS_GEERBT)
 
-    const aufgeloest = await ensurePackagesForInstance(inhalt, instanz, {
-      modelBrowserComposables: useModelRegistry(),
-    })
-    expect(aufgeloest.registered).toEqual([NS_GEERBT])
-    expect(aufgeloest.searched).toContain('platform/atlas-schema-registry/release: 1 Schema(s)')
-  })
+    const setup = await haengeEin(instanz)
+    expect(setup.searched).toContain('platform/atlas-schema-registry/release')
 
-  it('technische Namensraeume werden nicht gesucht', async () => {
-    const { fs, quelle } = await atlasQuelle()
-    const instanz = fs.getFileByPath(quelle.id, 'configurations/draft/persons.xmi')
-    const nurTechnisch = `<?xml version="1.0" encoding="UTF-8"?>
-<ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="leer" nsURI="x" nsPrefix="l"/>`
-
-    const aufgeloest = await ensurePackagesForInstance(nurTechnisch, instanz, {
-      modelBrowserComposables: useModelRegistry(),
-    })
-    expect(aufgeloest.registered).toEqual([])
-    expect(aufgeloest.missing).toEqual([])
-    // Gar nicht erst gesucht — kein einziger Abruf
-    expect(aufgeloest.searched).toEqual([])
+    const ergebnis = await loadInstancesFromXMI(inhalt, 'geerbt.xmi')
+    expect(ergebnis.loadedCount).toBe(1)
+    expect(ergebnis.missingPackages).toEqual([])
   })
 })
