@@ -162,6 +162,8 @@ describe('Instanz aus dem Model Atlas', () => {
     expect(aufgeloest.missing).toEqual(['https://example.org/unbekannt/1.0.0'])
     // Der Bericht sagt, wo gesucht wurde und was dort lag
     expect(aufgeloest.searched).toContain('jena/atlas-schema-registry/draft: 1 Schema(s)')
+    // …und welche nsURIs dort liegen — die Gegenprobe zu „ist nicht da"
+    expect(aufgeloest.known).toEqual([NS])
   })
 
   it('ohne Herkunft sagt das Ergebnis, warum nichts ging', async () => {
