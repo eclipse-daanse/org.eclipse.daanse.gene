@@ -19,6 +19,8 @@ import { useModelRegistry } from 'ui-model-browser'
 import { ensurePackagesForInstance } from '../services/packageResolution'
 
 const NS = 'https://example.org/person/1.0.0'
+/** Eigener nsURI fuer den Vererbungsfall — NS ist da laengst registriert. */
+const NS_GEERBT = 'https://example.org/geerbt/1.0.0'
 
 const PERSON_ECORE = `<?xml version="1.0" encoding="UTF-8"?>
 <ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0"
@@ -47,6 +49,20 @@ const SCOPE_XMI = `<?xml version="1.0" encoding="UTF-8"?>
   </registries>
 </workflowapi:Scope>`
 
+/**
+ * Derselbe Scope, aber mit geerbtem Plattform-Scope — und ohne eigenes
+ * Schema. Genau die Lage im Betrieb: gemeinsame Metamodelle liegen oben.
+ */
+const SCOPE_MIT_ELTERN = SCOPE_XMI.replace('name="jena"', 'name="jena" parentScope="platform"')
+
+const PLATFORM_SCOPE_XMI = `<?xml version="1.0" encoding="UTF-8"?>
+<workflowapi:Scope xmlns:workflowapi="http://eclipse.org/fennec/model/atlas/workflow/api/1.0.0"
+    xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0" name="platform">
+  <registries name="atlas-schema-registry" type="SCHEMA">
+    <stages name="release"/>
+  </registries>
+</workflowapi:Scope>`
+
 function metaListe(objectId: string, objectName: string): string {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <management:ObjectMetadataContainer xmlns:management="http://eclipse.org/fennec/model/atlas/management/1.0.0"
@@ -57,6 +73,8 @@ function metaListe(objectId: string, objectName: string): string {
 
 /** Alle URLs, die der Explorer angefragt hat — daran haengt die Aussage. */
 let gefragt: string[] = []
+/** Liegt das Schema im Elternscope statt im eigenen? */
+let geerbt = false
 
 /** Ein Model Atlas, der nur seine dokumentierten Wege beantwortet. */
 function fakeAtlas(url: string): Response {
@@ -65,9 +83,25 @@ function fakeAtlas(url: string): Response {
   const p = u.pathname
   const q = (name: string) => u.searchParams.get(name)
 
-  if (p === '/atlas/rest/scopes/jena') return new Response(SCOPE_XMI, { status: 200 })
+  if (p === '/atlas/rest/scopes/jena') {
+    return new Response(geerbt ? SCOPE_MIT_ELTERN : SCOPE_XMI, { status: 200 })
+  }
+  if (p === '/atlas/rest/scopes/platform') {
+    return new Response(PLATFORM_SCOPE_XMI, { status: 200 })
+  }
   if (p === '/atlas/rest/jena/registries/atlas-schema-registry/stages/draft') {
-    return new Response(metaListe(NS, 'person'), { status: 200 })
+    // Im geerbten Aufbau fuehrt der eigene Scope das Schema nicht
+    return new Response(geerbt ? metaListe('', '') : metaListe(NS, 'person'), { status: 200 })
+  }
+  if (p === '/atlas/rest/platform/registries/atlas-schema-registry/stages/release') {
+    return new Response(metaListe(NS_GEERBT, 'geerbt'), { status: 200 })
+  }
+  if (p === '/atlas/rest/platform/registries/atlas-schema-registry/stages/release/content') {
+    return q('objectId') === NS_GEERBT
+      ? new Response(PERSON_ECORE.replace(NS, NS_GEERBT).replace('name="person"', 'name="geerbt"'), {
+          status: 200,
+        })
+      : new Response('not found', { status: 404 })
   }
   if (p === '/atlas/rest/jena/registries/configurations/stages/draft') {
     return new Response(metaListe('persons', 'persons'), { status: 200 })
@@ -96,6 +130,7 @@ async function atlasQuelle() {
 describe('Instanz aus dem Model Atlas', () => {
   beforeEach(() => {
     gefragt = []
+    geerbt = false
     vi.stubGlobal('fetch', vi.fn(async (input: any) => fakeAtlas(String(input))))
   })
 
@@ -174,6 +209,21 @@ describe('Instanz aus dem Model Atlas', () => {
     })
     expect(aufgeloest.missing).toEqual(['https://example.org/ohne-herkunft/1.0.0'])
     expect(aufgeloest.note).toMatch(/keine Fundstelle/)
+  })
+
+  it('das Schema darf im geerbten Plattform-Scope liegen', async () => {
+    // Der eigene Scope fuehrt es nicht — seine Registry-Liste nennt geerbte
+    // Schemas nicht mit. Ohne die Elternkette bliebe es unauffindbar.
+    geerbt = true
+    const { fs, quelle } = await atlasQuelle()
+    const instanz = fs.getFileByPath(quelle.id, 'configurations/draft/persons.xmi')
+    const inhalt = PERSONS_XMI.replace(NS, NS_GEERBT)
+
+    const aufgeloest = await ensurePackagesForInstance(inhalt, instanz, {
+      modelBrowserComposables: useModelRegistry(),
+    })
+    expect(aufgeloest.registered).toEqual([NS_GEERBT])
+    expect(aufgeloest.searched).toContain('platform/atlas-schema-registry/release: 1 Schema(s)')
   })
 
   it('technische Namensraeume werden nicht gesucht', async () => {
