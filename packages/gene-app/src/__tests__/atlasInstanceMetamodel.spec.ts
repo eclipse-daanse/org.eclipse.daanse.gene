@@ -164,6 +164,16 @@ describe('Instanz aus dem Model Atlas', () => {
     expect(aufgeloest.searched).toContain('jena/atlas-schema-registry/draft: 1 Schema(s)')
   })
 
+  it('ohne Herkunft sagt das Ergebnis, warum nichts ging', async () => {
+    // Genau der Fall des Atlas-Browsers, bevor er seine Herkunft mitgab
+    const inhalt = PERSONS_XMI.replace(NS, 'https://example.org/ohne-herkunft/1.0.0')
+    const aufgeloest = await ensurePackagesForInstance(inhalt, { name: 'x.xmi', path: 'atlas://x.xmi' }, {
+      modelBrowserComposables: useModelRegistry(),
+    })
+    expect(aufgeloest.missing).toEqual(['https://example.org/ohne-herkunft/1.0.0'])
+    expect(aufgeloest.note).toMatch(/keine Fundstelle/)
+  })
+
   it('technische Namensraeume werden nicht gesucht', async () => {
     const { fs, quelle } = await atlasQuelle()
     const instanz = fs.getFileByPath(quelle.id, 'configurations/draft/persons.xmi')

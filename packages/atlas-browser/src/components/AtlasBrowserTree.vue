@@ -334,7 +334,13 @@ async function addToWorkspace(data: AtlasTreeNodeData, isSchema: boolean) {
   if (!result) return
 
   const actions = getActions()
-  const entry = { name: result.filename, path: `atlas://${result.filename}`, sourceId: 'atlas' }
+  const entry = {
+      name: result.filename,
+      path: `atlas://${result.filename}`,
+      sourceId: 'atlas',
+      // Herkunft: damit fehlende Metamodelle im selben Scope gesucht werden
+      handle: result.handle
+    }
   if (isSchema) {
     actions?.loadModel(entry, result.content)
   } else {

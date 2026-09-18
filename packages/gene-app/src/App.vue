@@ -1325,18 +1325,15 @@ async function resolveMetamodels(entry: any, content: string, filePath: string):
       editorConfig: getGlobalEditorConfig(),
       modelBrowserComposables: mb
     })
-    if (ergebnis.registered.length > 0) {
-      console.log('[App] Metamodelle aus dem Atlas nachgeladen:', ergebnis.registered.join(', '))
-    }
-    if (ergebnis.missing.length > 0) {
-      // Wo gesucht wurde, gehoert in die Konsole — in der Meldung waere es Laerm
-      console.warn(
-        '[App] Metamodell nicht gefunden:',
-        ergebnis.missing.join(', '),
-        '— durchsucht:',
-        ergebnis.searched.join(' | ') || '(keine Fundstelle)'
-      )
-    }
+    // Immer eine Zeile: ein stiller Durchlauf ist sonst nicht von einem
+    // ausgefallenen zu unterscheiden.
+    console.log(
+      '[App] Metamodell-Aufloesung fuer', entry?.name || filePath,
+      '- registriert:', ergebnis.registered.join(', ') || '(nichts)',
+      '- offen:', ergebnis.missing.join(', ') || '(nichts)',
+      '- durchsucht:', ergebnis.searched.join(' | ') || '(nichts)',
+      ergebnis.note ? `- ${ergebnis.note}` : ''
+    )
     for (const nsURI of ergebnis.missing) {
       problemsService.addIssue({
         severity: 'error',
