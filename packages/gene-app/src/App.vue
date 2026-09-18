@@ -1435,6 +1435,16 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
 
     // Add to EditorConfig for persistence (only if some objects loaded)
     if (result.loadedCount > 0) {
+      /*
+       * Wer Instanzen hinzufuegt, will sie sehen. Der Metamodell-Weg macht es
+       * ebenso (handleMetamodelEdit wechselt in den Metamodeler); aus dem
+       * Atlas-Browser blieb man dagegen stehen und musste die Perspektive von
+       * Hand wechseln.
+       */
+      if (currentPerspective.value !== 'model-editor') {
+        handlePerspectiveChange('model-editor')
+      }
+
       const editorConfig = getGlobalEditorConfig()
       if (editorConfig) {
         editorConfig.addInstanceSource(entry.path, entry.name, {
