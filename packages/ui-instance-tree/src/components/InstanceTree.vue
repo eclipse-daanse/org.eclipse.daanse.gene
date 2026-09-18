@@ -781,16 +781,16 @@ function getValidClassesForRef(ref: EReference): EClass[] {
 }
 
 /*
- * Hochladen in den Model Atlas.
+ * Uploading to the Model Atlas.
  *
- * Der Eintrag haengt an der Resource, weil genau sie hochgeladen wird — der
- * Instanzbaum kann mehrere zugleich fuehren. Atlas-Anbindung und Dialog
- * kommen ueber TSM-Dienste; ein Import auf das Atlas-Plugin waere eine
- * Abhaengigkeit, die dieses Modul nicht braucht.
+ * The entry hangs on the resource, because that is exactly what gets uploaded
+ * — the instance tree can hold several at once. The Atlas connection and the
+ * dialog come through TSM services; importing the Atlas plugin would be a
+ * dependency this module does not need.
  */
 
-/** Gibt es eine verbundene Atlas-Verbindung? Sonst bleibt der Eintrag weg. */
-function atlasVerbunden(): boolean {
+/** Is there a connected Atlas? Otherwise the entry stays away. */
+function isAtlasConnected(): boolean {
   const upload = tsm?.getService?.('gene.atlas.upload')
   if (!upload?.getConnections) return false
   try {
@@ -800,7 +800,7 @@ function atlasVerbunden(): boolean {
   }
 }
 
-/** Der Dateiname einer Resource — Grundlage fuer die vorgeschlagene objectId. */
+/** A resource's file name — the basis for the suggested objectId. */
 function resourceFileName(res: any): string {
   const uri = toRaw(res)?.getURI?.()?.toString?.() || 'instances.xmi'
   const name = uri.split('/').pop() || uri
@@ -808,16 +808,16 @@ function resourceFileName(res: any): string {
 }
 
 function uploadResourceToAtlas(res: any): void {
-  const oeffnen = tsm?.getService?.('gene.atlas.openUpload')
-  if (!oeffnen) {
-    console.warn('[InstanceTree] Atlas-Upload-Dialog nicht verfuegbar')
+  const openDialog = tsm?.getService?.('gene.atlas.openUpload')
+  if (!openDialog) {
+    console.warn('[InstanceTree] Atlas upload dialog not available')
     return
   }
   try {
-    const inhalt = (toRaw(res) as any).saveToString()
-    oeffnen(inhalt, resourceFileName(res), 'object')
+    const content = (toRaw(res) as any).saveToString()
+    openDialog(content, resourceFileName(res), 'object')
   } catch (e) {
-    console.error('[InstanceTree] Resource liess sich nicht serialisieren:', e)
+    console.error('[InstanceTree] Resource could not be serialized:', e)
   }
 }
 
@@ -841,7 +841,7 @@ const contextMenuItems = computed(() => {
       },
       { separator: true },
       { label: 'Save…', icon: 'pi pi-save', command: () => eventBus?.emit('save-instances-request') },
-      ...(atlasVerbunden()
+      ...(isAtlasConnected()
         ? [{
             label: 'In den Model Atlas…',
             icon: 'pi pi-cloud-upload',

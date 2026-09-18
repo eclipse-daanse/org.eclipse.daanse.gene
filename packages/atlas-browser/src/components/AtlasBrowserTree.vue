@@ -338,7 +338,7 @@ async function addToWorkspace(data: AtlasTreeNodeData, isSchema: boolean) {
       name: result.filename,
       path: `atlas://${result.filename}`,
       sourceId: 'atlas',
-      // Herkunft: damit fehlende Metamodelle im selben Scope gesucht werden
+      // Origin, so missing metamodels are looked for in the same scope
       handle: result.handle
     }
   if (isSchema) {

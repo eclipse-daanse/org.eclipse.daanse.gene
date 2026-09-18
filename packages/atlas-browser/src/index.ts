@@ -43,7 +43,7 @@ export async function activate(context: ModuleContext): Promise<void> {
   const sharedBrowser = useSharedAtlasBrowser()
   const uploadService = {
     uploadSchema: sharedBrowser.uploadSchema,
-    // Instanzen gehen denselben Weg wie Schemas, nur in eine Objekt-Registry
+    // Instances take the same route as schemas, only into an object registry
     uploadObject: sharedBrowser.uploadObject,
     getConnections: () => sharedBrowser.connections.value,
     getSchemaStages: sharedBrowser.getSchemaStages,
@@ -64,7 +64,7 @@ export async function activate(context: ModuleContext): Promise<void> {
   context.services.register('gene.atlas.objectActions', objectActionRegistry)
 
   // Register cascade resolver service
-  // Der Converter gehoert zur Atlas-Anbindung, nicht zum Browser-Plugin
+  // The converter belongs to the Atlas connection, not to the browser plugin
   const { createAtlasURIConverter, ModelAtlasClient } = await import('storage-model-atlas')
 
   context.services.register('gene.atlas.cascadeResolver', {

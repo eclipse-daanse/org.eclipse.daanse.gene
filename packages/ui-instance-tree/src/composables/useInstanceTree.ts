@@ -10,7 +10,7 @@ import type { EObject, EClass, EReference, Resource } from '@emfts/core'
 import {
   XMIResource,
   XMIResourceFactory,
-  // Traegt DEFAULT_EXTENSION; der gleichnamige Typ kommt aus dem type-Import
+  // Carries DEFAULT_EXTENSION; the type of the same name comes from the type import
   Resource as ResourceKonstanten,
   URI,
   BasicResourceSet,
@@ -42,11 +42,11 @@ function getResourceSet(): BasicResourceSet {
       ? new BasicResourceSet(_canonicalRegistry)
       : new BasicResourceSet()
     /*
-     * Fällt beim Laden ein unbekannter nsURI an, holt ihn der Loader über den
-     * URIConverter des ResourceSet — und legt dafür eine Resource unter dem
-     * nsURI an. Ein nsURI hat keine brauchbare Endung; ohne diesen
-     * Auffang-Eintrag entstünde eine BasicResource, deren `load()` nur ein
-     * Platzhalter ist, und der Converter würde nie gefragt.
+     * When an unknown nsURI turns up while loading, the loader fetches it
+     * through the resource set's URI converter — and creates a resource under
+     * that nsURI for it. A nsURI has no usable extension; without this
+     * catch-all entry a BasicResource would be created, whose `load()` is only
+     * a placeholder, and the converter would never be asked.
      */
     resourceSet
       .getResourceFactoryRegistry()
@@ -57,12 +57,12 @@ function getResourceSet(): BasicResourceSet {
 }
 
 /**
- * Woher fehlende Metamodelle kommen.
+ * Where missing metamodels come from.
  *
- * In EMF ist der nsURI eines Packages ein gewöhnlicher Resource-URI, und der
- * URIConverter sagt, wo das Ecore wirklich liegt (`XMLHandler.getPackageForURI`).
- * Wer die Modelle woanders hält — etwa in einem Model Atlas —, hängt hier
- * seinen Converter ein; der Instanzbaum kennt die Quelle nicht.
+ * In EMF a package's nsURI is an ordinary resource URI, and the URI converter
+ * says where the Ecore really is (`XMLHandler.getPackageForURI`). Whoever
+ * keeps the models elsewhere — a Model Atlas, say — installs their converter
+ * here; the instance tree does not know the source.
  */
 export function setPackageURIConverter(converter: URIConverter | null): void {
   const rs = getResourceSet()
@@ -1603,7 +1603,7 @@ export interface XMILoadResult {
   loadedCount: number
   /** Errors encountered during loading */
   errors: Array<{ message: string; line?: number; column?: number }>
-  /** nsURIs, die auch der URIConverter nicht auflösen konnte */
+  /** nsURIs the URI converter could not resolve either */
   missingPackages: string[]
 }
 
@@ -1633,9 +1633,9 @@ export async function loadInstancesFromXMI(xmiContent: string, filePath: string)
     const loadResource = new XMIResource(uri)
     loadResource.setResourceSet(rs)
     /*
-     * Async, damit der Loader fehlende Packages über den URIConverter
-     * nachholen und noch einmal parsen kann (emf.ts#88). Ohne Converter und
-     * ohne Fund verhält es sich wie loadFromString().
+     * Async, so the loader can fetch missing packages through the URI
+     * converter and parse once more (emf.ts#88). Without a converter, or
+     * without a hit, it behaves like loadFromString().
      */
     await loadResource.loadFromStringAsync(xmiContent)
 

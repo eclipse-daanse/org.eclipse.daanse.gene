@@ -206,14 +206,26 @@ export function useFileSystem() {
   /**
    * Add a Model Atlas source
    */
-  function addAtlasSource(name: string, baseUrl: string, scopeName: string, token?: string): FileSource {
+  /**
+   * `auth` only describes **how** to authenticate (kind and user) — the secret
+   * lives in the session store of `storage-model-atlas` and is carried
+   * nowhere. The old `token` parameter stays for callers that still pass one;
+   * it then counts as Bearer.
+   */
+  function addAtlasSource(
+    name: string,
+    baseUrl: string,
+    scopeName: string,
+    token?: string,
+    auth?: { kind: 'none' | 'bearer' | 'basic'; user?: string }
+  ): FileSource {
     const source: FileSource = {
       id: `atlas-${Date.now()}`,
       name,
       type: 'model-atlas',
       icon: getSourceIcon('model-atlas'),
       connected: false, // Need to connect first
-      data: { baseUrl, scopeName, token }
+      data: { baseUrl, scopeName, token, auth }
     }
 
     sources.value.push(source)
@@ -375,12 +387,12 @@ export function useFileSystem() {
    * Scan a Model Atlas scope and build file tree using EMFTs for XMI parsing
    */
   async function scanAtlasScope(data: any, sourceId: string): Promise<FileEntry[]> {
-    const { baseUrl, scopeName, token } = data
+    const { baseUrl, scopeName, token, auth } = data
 
     // Import EMFTs-based client and parsers from storage-model-atlas
     const { ModelAtlasClient, parseScopeXmi, parseMetadataListXmi } = await import('storage-model-atlas')
 
-    const client = new ModelAtlasClient({ baseUrl, token })
+    const client = new ModelAtlasClient({ baseUrl, token, auth })
 
     // Get scope using XMI and parse with EMFTs
     const scopeXmi = await client.getScope(scopeName)
@@ -464,7 +476,7 @@ export function useFileSystem() {
               extension: ext,
               isWorkspace: ext === '.wsp' || ext === '.workspace',
               handle: {
-                atlasBaseUrl: baseUrl, scopeName, token,
+                atlasBaseUrl: baseUrl, scopeName, token, auth,
                 registryName, stage: stageName,
                 objectId: meta.objectId, isSchema, nutztKurzweg,
                 metadata: meta
@@ -508,24 +520,28 @@ export function useFileSystem() {
         // TODO: Implement
         throw new Error('Git read not implemented')
       case 'model-atlas': {
+        /*
+         * Through the client, not through a fetch of our own: the client knows
+         * the paths, the authentication and the second attempt after a 401.
+         * The copy that used to live here built its URLs itself — and encoded
+         * the nsUri differently from every other caller.
+         */
         const h = entry.handle
         if (!h?.atlasBaseUrl) throw new Error('No Atlas handle for file')
-        const headers: Record<string, string> = { 'Accept': 'application/xml' }
-        if (h.token) headers['Authorization'] = `Bearer ${h.token}`
+        const { ModelAtlasClient } = await import('storage-model-atlas')
+        const client = new ModelAtlasClient({
+          baseUrl: h.atlasBaseUrl,
+          token: h.token,
+          auth: h.auth
+        })
 
-        // Kurzweg '/schema' nur fuer die synthetische Registry; eine echte
-        // Schema-Registry wird ueber ihren Namen angesprochen (sonst 400).
-        let url: string
-        if (h.nutztKurzweg) {
-          const nsUriB64 = btoa(h.objectId).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-          url = `${h.atlasBaseUrl}/${encodeURIComponent(h.scopeName)}/schema/stages/${encodeURIComponent(h.stage)}/content?nsUri=${nsUriB64}`
-        } else {
-          url = `${h.atlasBaseUrl}/${encodeURIComponent(h.scopeName)}/registries/${encodeURIComponent(h.registryName)}/stages/${encodeURIComponent(h.stage)}/content?objectId=${encodeURIComponent(h.objectId)}`
-        }
-
-        const resp = await fetch(url, { headers })
-        if (!resp.ok) throw new Error(`Atlas read failed: ${resp.status}`)
-        return await resp.text()
+        // The '/schema' shortcut is for the synthetic registry only; a real
+        // schema registry is addressed by its name (otherwise 400).
+        const content = h.nutztKurzweg
+          ? await client.getSchemaContent(h.scopeName, h.stage, h.objectId)
+          : await client.getObjectContent(h.scopeName, h.registryName, h.stage, h.objectId)
+        if (content === null) throw new Error(`Atlas read failed: ${entry.path}`)
+        return content
       }
       default:
         throw new Error('Unknown source type')
@@ -558,25 +574,24 @@ export function useFileSystem() {
         // TODO: Implement
         throw new Error('Git write not implemented')
       case 'model-atlas': {
+        // Through the client here as well — same paths, same authentication
         const h = entry.handle
         if (!h?.atlasBaseUrl) throw new Error('No Atlas handle for file')
-        const headers: Record<string, string> = { 'Content-Type': 'application/xml', 'Accept': 'application/json' }
-        if (h.token) headers['Authorization'] = `Bearer ${h.token}`
+        const { ModelAtlasClient } = await import('storage-model-atlas')
+        const client = new ModelAtlasClient({
+          baseUrl: h.atlasBaseUrl,
+          token: h.token,
+          auth: h.auth
+        })
 
-        // Kurzweg '/schema' nur fuer die synthetische Registry; eine echte
-        // Schema-Registry wird ueber ihren Namen angesprochen (sonst 400).
-        let url: string
+        // The '/schema' shortcut is for the synthetic registry only; a real
+        // schema registry is addressed by its name (otherwise 400).
         if (h.nutztKurzweg) {
-          const nsUriB64 = btoa(h.objectId).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-          url = `${h.atlasBaseUrl}/${encodeURIComponent(h.scopeName)}/schema/stages/${encodeURIComponent(h.stage)}/content?nsUri=${nsUriB64}`
+          await client.updateSchemaContent(h.scopeName, h.stage, h.objectId, content)
         } else {
-          url = `${h.atlasBaseUrl}/${encodeURIComponent(h.scopeName)}/registries/${encodeURIComponent(h.registryName)}/stages/${encodeURIComponent(h.stage)}/content?objectId=${encodeURIComponent(h.objectId)}&version=1.0.0`
-        }
-
-        const resp = await fetch(url, { method: 'PUT', headers, body: content })
-        if (!resp.ok) {
-          const errText = await resp.text()
-          throw new Error(`Atlas write failed (${resp.status}): ${errText}`)
+          await client.updateObjectContent(h.scopeName, h.registryName, h.stage, h.objectId, content, {
+            version: '1.0.0'
+          })
         }
         break
       }

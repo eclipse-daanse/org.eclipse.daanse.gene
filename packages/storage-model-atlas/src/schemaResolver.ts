@@ -1,17 +1,16 @@
 /**
- * Schemas eines Model-Atlas-Scopes auflösen.
+ * Resolving the schemas of a Model Atlas scope.
  *
- * In EMF ist der nsURI eines Packages ein ganz normaler Resource-URI, und der
- * URIConverter des ResourceSet sagt, wo das Ecore wirklich liegt
- * (`XMLHandler.getPackageForURI` in org.eclipse.emf.ecore.xmi holt es von dort
- * und stellt es selbst in die Registry). Dieses Paket kennt den Ort — also
- * gehört der Converter hierher, nicht zu einem UI-Plugin.
+ * In EMF a package's nsURI is an ordinary resource URI, and the resource set's
+ * URI converter says where the Ecore really is (`XMLHandler.getPackageForURI`
+ * in org.eclipse.emf.ecore.xmi fetches it from there and puts it into the
+ * registry itself). This package knows the location — so the converter belongs
+ * here, not in a UI plugin.
  *
- * Seit `@emfts/core` 0.3 fragt der Loader ihn auch: `loadFromStringAsync`
- * sammelt beim ersten Durchgang die unbekannten nsURIs, holt sie über den
- * Converter und parst erneut (emf.ts#88). Der Aufrufer muss nur die
- * Fundstellen kennen — `providersForScopeChain` — und den Converter
- * einhängen.
+ * Since `@emfts/core` 0.3 the loader asks it too: `loadFromStringAsync`
+ * collects the unknown nsURIs on the first pass, fetches them through the
+ * converter and parses again (emf.ts#88). Callers only need to know the
+ * providers — `providersForScopeChain` — and to install the converter.
  */
 
 import type { URIConverter } from '@emfts/core'
@@ -21,13 +20,13 @@ import { parseMetadataListXmi, parseScopeXmi } from './AtlasResourceSet'
 import { schemaNsUri } from './schemaIdentity'
 
 /**
- * Eine Fundstelle: ein Scope in einer Stage.
+ * One place to look: a scope in a stage.
  *
- * `registryName` nennt die Schema-Registry, wenn der Scope eine eigene hat.
- * Der Kurzweg `/{scope}/schema/...` gilt nur für die synthetische Registry;
- * eine benannte wird über ihren Namen angesprochen, und dort ist die
- * `objectId` eines Schemas serverabhängig — deshalb der Umweg über die
- * Metadatenliste (s. `schemaNsUri`).
+ * `registryName` names the schema registry when the scope has one of its own.
+ * The shortcut `/{scope}/schema/...` only applies to the synthetic registry; a
+ * named one is addressed by its name, and there a schema's `objectId` is
+ * server-dependent — hence the detour via the metadata listing (see
+ * `schemaNsUri`).
  */
 export interface AtlasProvider {
   client: ModelAtlasClient
@@ -37,145 +36,144 @@ export interface AtlasProvider {
 }
 
 /**
- * Was eine Fundstelle führt: nsURI → objectId, aus ihrer Metadatenliste.
+ * What a provider holds: nsURI → objectId, from its metadata listing.
  *
- * Erst listen, dann gezielt holen — das ist der einzige verlässliche Weg. Die
- * `objectId` eines Schemas ist serverabhängig (UUID oder Base64 des nsURI),
- * und nur die Metadaten sagen, welcher nsURI dahintersteckt. Nebeneffekt: ein
- * „nicht gefunden" ist danach eine Aussage über den Bestand der Stelle und
- * nicht über eine geratene URL.
+ * List first, then fetch on purpose — the only reliable way. A schema's
+ * `objectId` is server-dependent (UUID or base64 of the nsURI), and only the
+ * metadata says which nsURI is behind it. Side effect: a "not found" is then a
+ * statement about what the provider holds, not about a guessed URL.
  */
-async function bestandVon(p: AtlasProvider): Promise<Map<string, string>> {
-  const karte = new Map<string, string>()
+async function listingOf(p: AtlasProvider): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
   const xmi = p.registryName
     ? await p.client.listObjects(p.scopeName, p.registryName, p.stage)
     : await p.client.listSchemas(p.scopeName, p.stage)
   for (const meta of parseMetadataListXmi(xmi)) {
     const nsURI = schemaNsUri(meta, meta.objectId)
-    if (nsURI) karte.set(nsURI, meta.objectId)
+    if (nsURI) map.set(nsURI, meta.objectId)
   }
-  return karte
+  return map
 }
 
-/** Holt ein Schema von genau einer Fundstelle. */
-async function schemaVon(
+/** Fetches one schema from exactly one provider. */
+async function schemaFrom(
   p: AtlasProvider,
   nsURI: string,
-  bestaende: Map<AtlasProvider, Map<string, string>>,
+  listings: Map<AtlasProvider, Map<string, string>>,
 ): Promise<string | null> {
-  let bestand = bestaende.get(p)
-  if (!bestand) {
-    bestand = await bestandVon(p)
-    bestaende.set(p, bestand)
+  let listing = listings.get(p)
+  if (!listing) {
+    listing = await listingOf(p)
+    listings.set(p, listing)
   }
-  const objectId = bestand.get(nsURI)
+  const objectId = listing.get(nsURI)
   if (!objectId) return null
 
   if (p.registryName) {
     return p.client.getObjectContent(p.scopeName, p.registryName, p.stage, objectId)
   }
-  // Kurzweg: der Content-Endpunkt nimmt den nsURI. Ältere Server adressieren
-  // ihn über die objectId — deshalb der zweite Versuch.
-  const ueberNsUri = await p.client.getSchemaContent(p.scopeName, p.stage, nsURI)
-  if (ueberNsUri && ueberNsUri.trim()) return ueberNsUri
+  // Shortcut: the content endpoint takes the nsURI. Older servers address it
+  // by objectId — hence the second attempt.
+  const byNsUri = await p.client.getSchemaContent(p.scopeName, p.stage, nsURI)
+  if (byNsUri && byNsUri.trim()) return byNsUri
   if (objectId === nsURI) return null
   return p.client.getSchemaContent(p.scopeName, p.stage, objectId)
 }
 
 /**
- * Holt zu jedem nsURI das Ecore aus der ersten Stelle, die es kennt.
- * Rückgabe: nsURI → Ecore-Quelltext. Was nirgends liegt, fehlt in der Karte.
+ * Fetches the Ecore for each nsURI from the first provider that has it.
+ * Returns nsURI → Ecore source. What is nowhere is missing from the map.
  */
 export async function fetchSchemas(
   nsUris: string[],
   providers: AtlasProvider[],
-  bericht?: string[],
-  bekannt?: Set<string>,
+  report?: string[],
+  known?: Set<string>,
 ): Promise<Map<string, string>> {
-  const gefunden = new Map<string, string>()
-  // Listen je Fundstelle nur einmal holen, auch bei mehreren nsURIs
-  const bestaende = new Map<AtlasProvider, Map<string, string>>()
+  const found = new Map<string, string>()
+  // Fetch each provider's listing only once, even for several nsURIs
+  const listings = new Map<AtlasProvider, Map<string, string>>()
   for (const nsURI of nsUris) {
     for (const p of providers) {
       try {
-        const inhalt = await schemaVon(p, nsURI, bestaende)
-        if (inhalt && inhalt.trim()) {
-          gefunden.set(nsURI, inhalt)
+        const content = await schemaFrom(p, nsURI, listings)
+        if (content && content.trim()) {
+          found.set(nsURI, content)
           break
         }
       } catch (e) {
-        bericht?.push(`${describeProvider(p)}: ${(e as Error)?.message || e}`)
+        report?.push(`${describeProvider(p)}: ${(e as Error)?.message || e}`)
       }
     }
   }
-  for (const [p, bestand] of bestaende) {
-    bericht?.push(`${describeProvider(p)}: ${bestand.size} Schema(s)`)
-    // Was dort liegt, ist die einzige Gegenprobe zu "ist nicht da": ein
-    // Tippfehler im nsURI oder eine schiefe Metadaten-Abbildung sieht man
-    // nur, wenn man die gefuehrten nsURIs danebenlegt.
-    for (const nsURI of bestand.keys()) bekannt?.add(nsURI)
+  for (const [p, listing] of listings) {
+    report?.push(`${describeProvider(p)}: ${listing.size} Schema(s)`)
+    // What a provider holds is the only counter-check to "it is not there": a
+    // typo in the nsURI or a skewed metadata mapping only shows when the
+    // listed nsURIs are put next to it.
+    for (const nsURI of listing.keys()) known?.add(nsURI)
   }
-  return gefunden
+  return found
 }
 
-/** Eine Fundstelle in einem Wort — für Meldungen. */
+/** One provider in a single word — for messages. */
 export function describeProvider(p: AtlasProvider): string {
-  return `${p.scopeName}/${p.registryName ?? '(kurzweg)'}/${p.stage}`
+  return `${p.scopeName}/${p.registryName ?? '(shortcut)'}/${p.stage}`
 }
 
 /**
- * Alle Stages eines Scopes als Fundstellen, `bevorzugt` zuerst.
+ * All stages of a scope as providers, `preferred` first.
  *
- * Ein Schema liegt selten in derselben Stage wie die Instanz — die Stage der
- * Instanz ist trotzdem die wahrscheinlichste, und danach zählt die Reihenfolge
- * des Servers.
+ * A schema rarely sits in the same stage as the instance — the instance's
+ * stage is still the most likely one, and after that the server's order
+ * counts.
  */
 export function providersForScope(
   client: ModelAtlasClient,
   scopeName: string,
   stages: string[],
-  bevorzugt?: string,
+  preferred?: string,
   registryName?: string,
 ): AtlasProvider[] {
-  const geordnet = bevorzugt
-    ? [bevorzugt, ...stages.filter((s) => s !== bevorzugt)]
+  const ordered = preferred
+    ? [preferred, ...stages.filter((s) => s !== preferred)]
     : [...stages]
-  return geordnet.map((stage) => ({ client, scopeName, stage, registryName }))
+  return ordered.map((stage) => ({ client, scopeName, stage, registryName }))
 }
 
-/** Mehr Ebenen hat keine sinnvolle Scope-Hierarchie — und Zyklen enden hier. */
-const MAX_SCOPE_TIEFE = 10
+/** No sensible scope hierarchy is deeper — and cycles end here. */
+const MAX_SCOPE_DEPTH = 10
 
 /**
- * Alle Fundstellen eines Scopes **samt seiner geerbten Eltern**.
+ * All providers of a scope **including its inherited parents**.
  *
- * Die Vererbung ist der Regelfall: gemeinsame Metamodelle liegen im
- * Plattform-Scope, und die Registry-Liste eines Kind-Scopes führt sie nicht
- * mit auf. Wer nur dort sucht, findet sie nie.
+ * Inheritance is the normal case: shared metamodels live in the platform
+ * scope, and a child scope's registry listing does not carry them. Looking
+ * only there never finds them.
  *
- * Je Scope sagt der Server selbst, welche Registry die Schemas führt und
- * welche Stages es gibt. Der Kurzweg `/schema` gilt nur, wenn keine eigene
- * Schema-Registry ausgewiesen ist — sonst antwortet er mit 400; heisst die
- * Registry selbst `schema`, wäre er derselbe Bestand ein zweites Mal.
+ * For each scope the server itself says which registry holds the schemas and
+ * which stages exist. The `/schema` shortcut only applies when no schema
+ * registry of its own is declared — otherwise the server answers 400; and if
+ * the registry is itself called `schema`, it would be the same listing twice.
  */
 export async function providersForScopeChain(
   client: ModelAtlasClient,
   scopeName: string,
-  bevorzugteStage?: string,
+  preferredStage?: string,
 ): Promise<AtlasProvider[]> {
-  const stellen: AtlasProvider[] = []
-  const gesehen = new Set<string>()
-  let aktuell: string | undefined = scopeName
+  const providers: AtlasProvider[] = []
+  const seen = new Set<string>()
+  let current: string | undefined = scopeName
 
-  for (let tiefe = 0; aktuell && tiefe < MAX_SCOPE_TIEFE; tiefe++) {
-    if (gesehen.has(aktuell)) break
-    gesehen.add(aktuell)
+  for (let depth = 0; current && depth < MAX_SCOPE_DEPTH; depth++) {
+    if (seen.has(current)) break
+    seen.add(current)
 
     let schemaRegistry: string | undefined
     let stages: string[] = []
     let parentScope: string | undefined
     try {
-      const scopeXmi = await client.getScope(aktuell)
+      const scopeXmi = await client.getScope(current)
       const scope = scopeXmi ? parseScopeXmi(scopeXmi) : null
       parentScope = scope?.parentScope || undefined
       const registries = (scope?.registries ?? []) as Array<{
@@ -184,30 +182,30 @@ export async function providersForScopeChain(
         stages?: Array<{ name?: string }>
       }>
       schemaRegistry = registries.find((r) => r?.type === 'SCHEMA')?.name
-      const eigene = registries.filter((r) => !schemaRegistry || r.name === schemaRegistry)
+      const own = registries.filter((r) => !schemaRegistry || r.name === schemaRegistry)
       stages = [
         ...new Set(
-          eigene.flatMap((r) => (r.stages ?? []).map((st) => st.name).filter(Boolean) as string[]),
+          own.flatMap((r) => (r.stages ?? []).map((st) => st.name).filter(Boolean) as string[]),
         ),
       ]
     } catch {
-      // Ohne Scope-Antwort bleibt die Stage, aus der die Instanz kommt
+      // Without a scope answer the instance's own stage is all we have
     }
-    if (stages.length === 0 && bevorzugteStage) stages = [bevorzugteStage]
+    if (stages.length === 0 && preferredStage) stages = [preferredStage]
 
-    stellen.push(...providersForScope(client, aktuell, stages, bevorzugteStage, schemaRegistry))
+    providers.push(...providersForScope(client, current, stages, preferredStage, schemaRegistry))
     if (schemaRegistry && schemaRegistry !== 'schema') {
-      stellen.push(...providersForScope(client, aktuell, stages, bevorzugteStage))
+      providers.push(...providersForScope(client, current, stages, preferredStage))
     }
-    aktuell = parentScope
+    current = parentScope
   }
 
-  return stellen
+  return providers
 }
 
 /**
- * Ein URIConverter, der nsURIs über eine Kette von Atlas-Fundstellen auflöst.
- * Löst keine auf, greift der optionale Vorgänger (z. B. lokale Dateien).
+ * A URI converter that resolves nsURIs through a chain of Atlas providers.
+ * If none resolves, the optional fallback takes over (e.g. local files).
  */
 export function createAtlasURIConverter(
   providers: AtlasProvider[],
@@ -220,12 +218,12 @@ export function createAtlasURIConverter(
 
     async createInputStream(uri: URI): Promise<ReadableStream> {
       const nsURI = uri.toString()
-      const gefunden = await fetchSchemas([nsURI], providers)
-      const inhalt = gefunden.get(nsURI)
-      if (inhalt !== undefined) {
+      const found = await fetchSchemas([nsURI], providers)
+      const content = found.get(nsURI)
+      if (content !== undefined) {
         return new ReadableStream({
           start(controller) {
-            controller.enqueue(new TextEncoder().encode(inhalt))
+            controller.enqueue(new TextEncoder().encode(content))
             controller.close()
           },
         })
@@ -237,8 +235,8 @@ export function createAtlasURIConverter(
 
     async exists(uri: URI): Promise<boolean> {
       const nsURI = uri.toString()
-      const gefunden = await fetchSchemas([nsURI], providers)
-      if (gefunden.has(nsURI)) return true
+      const found = await fetchSchemas([nsURI], providers)
+      if (found.has(nsURI)) return true
       return fallback?.exists(uri) ?? false
     },
 

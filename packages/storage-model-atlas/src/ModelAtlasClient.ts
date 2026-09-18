@@ -11,6 +11,7 @@
 
 import type { AtlasMediaType } from './types'
 import { ATLAS_MEDIA_TYPES } from './types'
+import { authFromToken, resolveAuthorization, setCredential, type AtlasAuth } from './auth'
 
 /** Diagnostic result from server-side validation */
 export interface ValidationDiagnostic {
@@ -25,8 +26,13 @@ export interface ValidationDiagnostic {
 export interface ModelAtlasClientOptions {
   /** Base URL of the Model Atlas REST API */
   baseUrl: string
-  /** Authentication token */
+  /**
+   * Bearer token. Older callers pass it directly; it then moves into the
+   * session store and counts as `auth: { kind: 'bearer' }`.
+   */
   token?: string
+  /** How this connection authenticates — without the secret (see `auth.ts`). */
+  auth?: AtlasAuth
 }
 
 /**
@@ -49,11 +55,24 @@ function transitionRequestXmi(objectId: string, targetStage: string): string {
 
 export class ModelAtlasClient {
   private baseUrl: string
-  private token?: string
+  private auth: AtlasAuth
 
   constructor(options: ModelAtlasClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, '')
-    this.token = options.token
+    if (options.auth) {
+      this.auth = options.auth
+    } else {
+      // The old way: a token passed in counts as Bearer and moves into the
+      // session store, so other clients of the same connection find it too.
+      const { auth, secret } = authFromToken(options.token)
+      this.auth = auth
+      if (secret) setCredential(this.baseUrl, undefined, secret)
+    }
+  }
+
+  /** How this connection authenticates — the secret lives elsewhere. */
+  getAuth(): AtlasAuth {
+    return this.auth
   }
 
   // ============================================
@@ -598,12 +617,30 @@ export class ModelAtlasClient {
     if (body !== undefined) {
       headers['Content-Type'] = options?.contentType || ATLAS_MEDIA_TYPES.ECORE_XMI
     }
-    if (this.token) headers['Authorization'] = `Bearer ${this.token}`
 
     const init: RequestInit = { method, headers }
     if (body !== undefined) init.body = body
 
-    return fetch(url, init)
+    const authorization = await resolveAuthorization(this.baseUrl, this.auth)
+    if (authorization) headers['Authorization'] = authorization
+
+    const resp = await fetch(url, init)
+
+    /*
+     * A 401 means the secret is no good (any more) — a Bearer token expires, a
+     * password may be mistyped. Ask again once and retry; without that the
+     * user would stay locked out for the session, because the bad secret would
+     * remain in memory.
+     */
+    if (resp.status === 401 && this.auth.kind !== 'none') {
+      const retryHeader = await resolveAuthorization(this.baseUrl, this.auth, { retry: true })
+      if (retryHeader && retryHeader !== authorization) {
+        headers['Authorization'] = retryHeader
+        return fetch(url, { ...init, headers })
+      }
+    }
+
+    return resp
   }
 }
 
