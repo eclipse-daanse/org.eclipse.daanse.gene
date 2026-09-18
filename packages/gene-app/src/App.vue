@@ -87,8 +87,13 @@ const atlasBrowserComponents = shallowRef<{
 const showAtlasUploadDialog = ref(false)
 const atlasUploadContent = ref('')
 const atlasUploadFilename = ref('')
+const atlasUploadKind = ref<'schema' | 'object'>('schema')
 
-function openAtlasUploadDialog(content: string, filename: string) {
+function openAtlasUploadDialog(
+  content: string,
+  filename: string,
+  kind: 'schema' | 'object' = 'schema'
+) {
   // Die Dialog-Komponente kommt aus dem Atlas-Browser-Plugin. Sie wird sonst
   // nur vom Service-Polling eingesammelt, das stoppt, sobald die Kern-Module
   // stehen — lädt atlas-browser danach, blieb der Dialog für immer leer und
@@ -103,6 +108,7 @@ function openAtlasUploadDialog(content: string, filename: string) {
   }
   atlasUploadContent.value = content
   atlasUploadFilename.value = filename
+  atlasUploadKind.value = kind
   showAtlasUploadDialog.value = true
 }
 
@@ -2629,6 +2635,7 @@ onMounted(() => {
     v-model:visible="showAtlasUploadDialog"
     :content="atlasUploadContent"
     :filename="atlasUploadFilename"
+    :kind="atlasUploadKind"
   />
 
   <!-- Command Palette -->

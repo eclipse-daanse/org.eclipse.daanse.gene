@@ -10,7 +10,7 @@
  * - Metamodeler: shows .ecore elements as instances of Ecore.ecore
  */
 
-import { ref, computed, watch, inject, nextTick } from 'tsm:vue'
+import { ref, computed, watch, inject, nextTick, toRaw } from 'tsm:vue'
 import { Tree } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
 import { ContextMenu } from 'tsm:primevue'
@@ -780,6 +780,47 @@ function getValidClassesForRef(ref: EReference): EClass[] {
   return result
 }
 
+/*
+ * Hochladen in den Model Atlas.
+ *
+ * Der Eintrag haengt an der Resource, weil genau sie hochgeladen wird — der
+ * Instanzbaum kann mehrere zugleich fuehren. Atlas-Anbindung und Dialog
+ * kommen ueber TSM-Dienste; ein Import auf das Atlas-Plugin waere eine
+ * Abhaengigkeit, die dieses Modul nicht braucht.
+ */
+
+/** Gibt es eine verbundene Atlas-Verbindung? Sonst bleibt der Eintrag weg. */
+function atlasVerbunden(): boolean {
+  const upload = tsm?.getService?.('gene.atlas.upload')
+  if (!upload?.getConnections) return false
+  try {
+    return upload.getConnections().some((c: any) => c.status === 'connected')
+  } catch {
+    return false
+  }
+}
+
+/** Der Dateiname einer Resource — Grundlage fuer die vorgeschlagene objectId. */
+function resourceFileName(res: any): string {
+  const uri = toRaw(res)?.getURI?.()?.toString?.() || 'instances.xmi'
+  const name = uri.split('/').pop() || uri
+  return name.includes('.') ? name : `${name}.xmi`
+}
+
+function uploadResourceToAtlas(res: any): void {
+  const oeffnen = tsm?.getService?.('gene.atlas.openUpload')
+  if (!oeffnen) {
+    console.warn('[InstanceTree] Atlas-Upload-Dialog nicht verfuegbar')
+    return
+  }
+  try {
+    const inhalt = (toRaw(res) as any).saveToString()
+    oeffnen(inhalt, resourceFileName(res), 'object')
+  } catch (e) {
+    console.error('[InstanceTree] Resource liess sich nicht serialisieren:', e)
+  }
+}
+
 // Context menu items
 const contextMenuItems = computed(() => {
   const menuNode = ctxMenuNode.value
@@ -800,6 +841,13 @@ const contextMenuItems = computed(() => {
       },
       { separator: true },
       { label: 'Save…', icon: 'pi pi-save', command: () => eventBus?.emit('save-instances-request') },
+      ...(atlasVerbunden()
+        ? [{
+            label: 'In den Model Atlas…',
+            icon: 'pi pi-cloud-upload',
+            command: () => uploadResourceToAtlas(res)
+          }]
+        : []),
       { label: 'Rename…', icon: 'pi pi-pencil', command: () => renameResourcePrompt(res) },
       { label: 'Delete Resource', icon: 'pi pi-trash', command: () => (ctx as any).deleteResource?.(res) }
     ]

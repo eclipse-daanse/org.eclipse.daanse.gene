@@ -2,18 +2,27 @@
 /**
  * AtlasUploadDialog Component
  *
- * Dialog for uploading .ecore schemas to a Model Atlas server.
- * Allows selecting a connection and stage, then uploads the content.
+ * Laedt Inhalte in einen Model Atlas: ein `.ecore` als **Schema** oder eine
+ * `.xmi` als **Objekt** (`kind`). Der Unterschied steckt nicht nur im
+ * Endpunkt: ein Schema findet der Server ueber seinen nsURI wieder, ein
+ * Objekt braucht eine objectId, und die Registry ist eine andere.
  */
 
 import { ref, computed, watch, inject } from 'tsm:vue'
 import { Dialog, Button, Dropdown, InputText, Checkbox } from 'tsm:primevue'
 
-const props = defineProps<{
-  visible: boolean
-  content: string
-  filename: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    visible: boolean
+    content: string
+    filename: string
+    /** 'schema' = Metamodell (.ecore), 'object' = Instanz (.xmi) */
+    kind?: 'schema' | 'object'
+  }>(),
+  { kind: 'schema' },
+)
+
+const istObjekt = computed(() => props.kind === 'object')
 
 const emit = defineEmits<{
   'update:visible': [value: boolean]
@@ -47,11 +56,13 @@ const connections = computed(() => {
   return service.getConnections().filter((c: any) => c.status === 'connected')
 })
 
-// Schema-Registries des Scopes dieser Verbindung
+// Registries des Scopes dieser Verbindung — je nach Art des Inhalts
 const registries = computed(() => {
   if (!selectedConnectionId.value) return []
   const service = getUploadService()
-  return service?.getSchemaRegistries?.(selectedConnectionId.value) ?? []
+  return istObjekt.value
+    ? (service?.getObjectRegistries?.(selectedConnectionId.value) ?? [])
+    : (service?.getSchemaRegistries?.(selectedConnectionId.value) ?? [])
 })
 
 // Stufen der gewaehlten Registry; ohne Auswahl die des Kurzwegs
@@ -101,10 +112,10 @@ watch(stages, (stgs) => {
   }
 }, { immediate: true })
 
-// Extract name from filename
+// Name aus dem Dateinamen — bei Objekten ist er zugleich die objectId
 watch(() => props.filename, (fn) => {
   if (fn) {
-    schemaName.value = fn.replace(/\.ecore$/, '')
+    schemaName.value = fn.replace(/\.(ecore|xmi)$/, '')
   }
 }, { immediate: true })
 
@@ -127,6 +138,8 @@ const canUpload = computed(() =>
   !!selectedConnectionId.value &&
   !!selectedStage.value &&
   !!props.content &&
+  // Ein Objekt ohne id koennte der Server nicht wiederfinden
+  (!istObjekt.value || (!!selectedRegistry.value && !!schemaName.value.trim())) &&
   !uploading.value &&
   !uploadSuccess.value
 )
@@ -144,16 +157,25 @@ async function handleUpload() {
   uploading.value = true
   uploadError.value = null
 
-  const result = await service.uploadSchema(
-    selectedConnectionId.value!,
-    selectedStage.value!,
-    props.content,
-    {
-      name: schemaName.value || undefined,
-      overwrite: overwrite.value,
-      registryName: selectedRegistry.value || undefined
-    }
-  )
+  const result = istObjekt.value
+    ? await service.uploadObject(
+        selectedConnectionId.value!,
+        selectedRegistry.value!,
+        selectedStage.value!,
+        schemaName.value.trim(),
+        props.content,
+        { name: schemaName.value.trim(), overwrite: overwrite.value }
+      )
+    : await service.uploadSchema(
+        selectedConnectionId.value!,
+        selectedStage.value!,
+        props.content,
+        {
+          name: schemaName.value || undefined,
+          overwrite: overwrite.value,
+          registryName: selectedRegistry.value || undefined
+        }
+      )
 
   uploading.value = false
 
@@ -178,7 +200,7 @@ function handleClose() {
   <Dialog
     :visible="visible"
     @update:visible="(v: boolean) => emit('update:visible', v)"
-    header="Publish Schema to Atlas"
+    :header="istObjekt ? 'Instanz in den Model Atlas' : 'Publish Schema to Atlas'"
     :modal="true"
     :style="{ width: '450px' }"
   >
@@ -218,8 +240,13 @@ function handleClose() {
             class="w-full"
           />
           <small v-if="selectedConnectionId && registryOptions.length === 0" class="hinweis">
-            Keine Schema-Registry im Scope gefunden — es wird der Kurzweg
-            <code>/schema</code> benutzt.
+            <template v-if="istObjekt">
+              Keine Objekt-Registry im Scope — dorthin gehören Instanzen.
+            </template>
+            <template v-else>
+              Keine Schema-Registry im Scope gefunden — es wird der Kurzweg
+              <code>/schema</code> benutzt.
+            </template>
           </small>
         </div>
 
@@ -243,13 +270,17 @@ function handleClose() {
 
         <!-- Schema name -->
         <div class="form-field">
-          <label for="upload-name">Schema Name</label>
+          <label for="upload-name">{{ istObjekt ? 'objectId' : 'Schema Name' }}</label>
           <InputText
             id="upload-name"
             v-model="schemaName"
-            placeholder="e.g. MyModel"
+            :placeholder="istObjekt ? 'z. B. dataatlas' : 'e.g. MyModel'"
             class="w-full"
           />
+          <small v-if="istObjekt" class="field-hint">
+            Unter dieser id liegt die Instanz in der Registry — eine bestehende
+            id überschreibt sie (Haken unten).
+          </small>
         </div>
 
         <!-- Overwrite -->
@@ -272,7 +303,7 @@ function handleClose() {
       <!-- Success -->
       <div v-if="uploadSuccess" class="upload-success">
         <i class="pi pi-check-circle"></i>
-        Schema uploaded successfully!
+        {{ istObjekt ? 'Instanz hochgeladen.' : 'Schema uploaded successfully!' }}
       </div>
     </div>
 

@@ -43,11 +43,14 @@ export async function activate(context: ModuleContext): Promise<void> {
   const sharedBrowser = useSharedAtlasBrowser()
   const uploadService = {
     uploadSchema: sharedBrowser.uploadSchema,
+    // Instanzen gehen denselben Weg wie Schemas, nur in eine Objekt-Registry
+    uploadObject: sharedBrowser.uploadObject,
     getConnections: () => sharedBrowser.connections.value,
     getSchemaStages: sharedBrowser.getSchemaStages,
     // Ohne diese Durchreichung blieb die Registry-Auswahl im Upload-Dialog
     // leer, und der Upload lief immer auf die erstbeste Schema-Registry.
-    getSchemaRegistries: sharedBrowser.getSchemaRegistries
+    getSchemaRegistries: sharedBrowser.getSchemaRegistries,
+    getObjectRegistries: sharedBrowser.getObjectRegistries
   }
   context.services.register('ui.atlas-browser.upload', uploadService)
   context.services.register('gene.atlas.upload', uploadService)
