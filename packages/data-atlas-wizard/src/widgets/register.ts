@@ -25,18 +25,11 @@ const ENUM_FEATURES: [keyof typeof DataatlaswizardPackage.Literals, string][] = 
 
 /** Text- und Zahlfelder der Formular-Schritte → eigenes Eingabefeld. */
 const INPUT_FEATURES: [keyof typeof DataatlaswizardPackage.Literals, string[]][] = [
+  // Only the instance step is UIModel-driven; chains and endpoints are
+  // handwritten and bring their own controls.
   [
     'ATLAS_SETUP',
-    [
-      'instanceName',
-      'instanceDescription',
-      'serviceId',
-      'serviceName',
-      'serviceDescription',
-      'urlContext',
-      'paginationOffsetParameterName',
-      'paginationSizeParameterName',
-    ],
+    ['instanceName', 'instanceDescription'],
   ],
 ];
 

@@ -11,6 +11,10 @@ import { setupPackages, registerEcoreFromString } from '../src/emf/setup';
 import {
   ATLAS_DATA_PREFIX,
   addChain,
+  addEndpoint,
+  buildEndpoint,
+  endpointChains,
+  endpointShape,
   buildChain,
   buildDatabaseSource,
   buildDataset,
@@ -32,7 +36,7 @@ import {
   titleCase,
   version,
 } from '../src/wizard/context';
-import { InputKind, MappingKind } from '../src/generated';
+import { EndpointKind, InputKind, MappingKind } from '../src/generated';
 
 /** Wie example/model/person.ecore, um eine abstrakte Klasse ergänzt. */
 const PERSON_ECORE = `<?xml version="1.0" encoding="UTF-8"?>
@@ -106,12 +110,11 @@ describe('concreteClasses', () => {
 });
 
 describe('buildDataset', () => {
-  it('leitet id, name, path und Beschreibung ab', () => {
+  it('leitet id, name und Beschreibung ab', () => {
     const dataset = buildDataset(personPackage.getEClassifier('Person') as EClass);
     expect(dataset.selected).toBe(true);
     expect(dataset.id).toBe('person');
     expect(dataset.name).toBe('Person');
-    expect(dataset.path).toBe('person');
     expect(dataset.description).toBe('A person of the example data set.');
     expect(dataset.targetClass).toBe(personPackage.getEClassifier('Person'));
   });
@@ -136,12 +139,43 @@ describe('initSetup', () => {
     expect(s.modelPackage).toBe(personPackage);
   });
 
-  it('der REST-Endpunkt', () => {
+  it('ein REST-Endpunkt als Vorschlag, mit Eintrag je Datensatz', () => {
     const s = setup.value!;
-    expect(s.serviceId).toBe('person-rest');
-    expect(s.serviceName).toBe('person REST');
-    expect(s.urlContext).toBe('/person');
-    expect(s.serviceDescription).toBeTruthy();
+    expect(s.endpoints).toHaveLength(1);
+    const endpoint = s.endpoints[0];
+    expect(endpoint.kind).toBe(EndpointKind.REST);
+    expect(endpoint.id).toBe('person-rest');
+    expect(endpoint.name).toBe('person REST');
+    expect(endpoint.urlContext).toBe('/person');
+    expect(endpoint.description).toBeTruthy();
+    // Leere Auswahl heisst: alle Wege
+    expect(endpoint.chains).toEqual([]);
+    expect(endpoint.entries.map((e) => e.dataset.id)).toEqual(['person', 'waterQuality']);
+    // Der Pfad folgt der id des Datensatzes
+    expect(endpoint.entries[0].path).toBe('person');
+  });
+
+  it('ein zweiter Endpunkt anderer Art bekommt eigene Eintraege', () => {
+    const s = setup.value!;
+    const geo = addEndpoint(buildEndpoint('person', 'person', EndpointKind.GEOJSON))!;
+    expect(geo.id).toBe('person-geojson');
+    expect(geo.entries).toHaveLength(2);
+    expect(s.endpoints).toHaveLength(2);
+  });
+
+  it('eine Art ohne Konfiguration je Datensatz hat keine Eintraege', () => {
+    // OgcFeatures kennt im Zielmodell gar keine configuration-Referenz
+    const ogc = addEndpoint(buildEndpoint('person', 'person', EndpointKind.OGC_FEATURES))!;
+    expect(ogc.entries).toEqual([]);
+    expect(endpointShape(ogc.kind).hasEntries).toBe(false);
+  });
+
+  it('endpointChains: leere Auswahl heisst alle Wege', () => {
+    const s = setup.value!;
+    const endpoint = s.endpoints[0];
+    expect(endpointChains(s, endpoint)).toEqual(s.chains);
+    endpoint.chains = [s.chains[0]];
+    expect(endpointChains(s, endpoint)).toEqual([s.chains[0]]);
   });
 
   it('ein Datenweg als Vorschlag, mit eigener Datei-Quelle', () => {

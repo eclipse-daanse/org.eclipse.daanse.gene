@@ -8,6 +8,7 @@
 import { BasicEObject } from '@emfts/core';
 import type { EClass, EStructuralFeature, EPackage } from '@emfts/core';
 import type { DataChain } from './DataChain';
+import type { EndpointConfig } from './EndpointConfig';
 import type { AtlasSetup } from './AtlasSetup';
 import { DataatlaswizardPackage } from './DataatlaswizardPackage';
 
@@ -21,26 +22,14 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
   static readonly INSTANCE_DESCRIPTION: number = 1;
   static readonly MODEL_PACKAGE: number = 2;
   static readonly CHAINS: number = 3;
-  static readonly SERVICE_ID: number = 4;
-  static readonly SERVICE_NAME: number = 5;
-  static readonly SERVICE_DESCRIPTION: number = 6;
-  static readonly URL_CONTEXT: number = 7;
-  static readonly OPEN_API: number = 8;
-  static readonly PAGINATION_OFFSET_PARAMETER_NAME: number = 9;
-  static readonly PAGINATION_SIZE_PARAMETER_NAME: number = 10;
+  static readonly ENDPOINTS: number = 4;
 
   // Private fields
   private _instanceName: string = "";
   private _instanceDescription?: string;
   private _modelPackage?: EPackage;
   private _chains: DataChain[] = [];
-  private _serviceId: string = "";
-  private _serviceName: string = "";
-  private _serviceDescription: string = "";
-  private _urlContext: string = "";
-  private _openApi: boolean = false;
-  private _paginationOffsetParameterName: string = "offset";
-  private _paginationSizeParameterName: string = "limit";
+  private _endpoints: EndpointConfig[] = [];
 
   /**
    * Returns the EClass of this object
@@ -146,169 +135,25 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
     }
   }
 
-  get serviceId(): string {
-    return this._serviceId!;
+  get endpoints(): EndpointConfig[] {
+    return this._endpoints;
   }
 
-  set serviceId(value: string) {
-    const oldValue = this._serviceId;
-    this._serviceId = value;
+  set endpoints(value: EndpointConfig[]) {
+    const oldValue = this._endpoints;
+    this._endpoints = value;
     if (this.eDeliver()) {
       this.eNotify({
         getNotifier: () => this,
         getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.SERVICE_ID),
+        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.ENDPOINTS),
         getOldValue: () => oldValue,
         getNewValue: () => value,
         getPosition: () => -1,
         wasSet: () => true,
         isTouch: () => false,
         isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.SERVICE_ID,
-        merge: () => false
-      });
-    }
-  }
-
-  get serviceName(): string {
-    return this._serviceName!;
-  }
-
-  set serviceName(value: string) {
-    const oldValue = this._serviceName;
-    this._serviceName = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.SERVICE_NAME),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.SERVICE_NAME,
-        merge: () => false
-      });
-    }
-  }
-
-  get serviceDescription(): string {
-    return this._serviceDescription!;
-  }
-
-  set serviceDescription(value: string) {
-    const oldValue = this._serviceDescription;
-    this._serviceDescription = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.SERVICE_DESCRIPTION),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.SERVICE_DESCRIPTION,
-        merge: () => false
-      });
-    }
-  }
-
-  get urlContext(): string {
-    return this._urlContext!;
-  }
-
-  set urlContext(value: string) {
-    const oldValue = this._urlContext;
-    this._urlContext = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.URL_CONTEXT),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.URL_CONTEXT,
-        merge: () => false
-      });
-    }
-  }
-
-  get openApi(): boolean {
-    return this._openApi!;
-  }
-
-  set openApi(value: boolean) {
-    const oldValue = this._openApi;
-    this._openApi = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.OPEN_API),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.OPEN_API,
-        merge: () => false
-      });
-    }
-  }
-
-  get paginationOffsetParameterName(): string {
-    return this._paginationOffsetParameterName!;
-  }
-
-  set paginationOffsetParameterName(value: string) {
-    const oldValue = this._paginationOffsetParameterName;
-    this._paginationOffsetParameterName = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.PAGINATION_OFFSET_PARAMETER_NAME),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.PAGINATION_OFFSET_PARAMETER_NAME,
-        merge: () => false
-      });
-    }
-  }
-
-  get paginationSizeParameterName(): string {
-    return this._paginationSizeParameterName!;
-  }
-
-  set paginationSizeParameterName(value: string) {
-    const oldValue = this._paginationSizeParameterName;
-    this._paginationSizeParameterName = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(AtlasSetupImpl.PAGINATION_SIZE_PARAMETER_NAME),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => AtlasSetupImpl.PAGINATION_SIZE_PARAMETER_NAME,
+        getFeatureID: () => AtlasSetupImpl.ENDPOINTS,
         merge: () => false
       });
     }
@@ -330,20 +175,8 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
         return this.modelPackage;
       case AtlasSetupImpl.CHAINS:
         return this.chains;
-      case AtlasSetupImpl.SERVICE_ID:
-        return this.serviceId;
-      case AtlasSetupImpl.SERVICE_NAME:
-        return this.serviceName;
-      case AtlasSetupImpl.SERVICE_DESCRIPTION:
-        return this.serviceDescription;
-      case AtlasSetupImpl.URL_CONTEXT:
-        return this.urlContext;
-      case AtlasSetupImpl.OPEN_API:
-        return this.openApi;
-      case AtlasSetupImpl.PAGINATION_OFFSET_PARAMETER_NAME:
-        return this.paginationOffsetParameterName;
-      case AtlasSetupImpl.PAGINATION_SIZE_PARAMETER_NAME:
-        return this.paginationSizeParameterName;
+      case AtlasSetupImpl.ENDPOINTS:
+        return this.endpoints;
       default:
         return super.eGet(feature);
     }
@@ -371,32 +204,8 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
         this.chains = newValue as DataChain[];
         super.eSet(feature, newValue);
         break;
-      case AtlasSetupImpl.SERVICE_ID:
-        this.serviceId = newValue as string;
-        super.eSet(feature, newValue);
-        break;
-      case AtlasSetupImpl.SERVICE_NAME:
-        this.serviceName = newValue as string;
-        super.eSet(feature, newValue);
-        break;
-      case AtlasSetupImpl.SERVICE_DESCRIPTION:
-        this.serviceDescription = newValue as string;
-        super.eSet(feature, newValue);
-        break;
-      case AtlasSetupImpl.URL_CONTEXT:
-        this.urlContext = newValue as string;
-        super.eSet(feature, newValue);
-        break;
-      case AtlasSetupImpl.OPEN_API:
-        this.openApi = newValue as boolean;
-        super.eSet(feature, newValue);
-        break;
-      case AtlasSetupImpl.PAGINATION_OFFSET_PARAMETER_NAME:
-        this.paginationOffsetParameterName = newValue as string;
-        super.eSet(feature, newValue);
-        break;
-      case AtlasSetupImpl.PAGINATION_SIZE_PARAMETER_NAME:
-        this.paginationSizeParameterName = newValue as string;
+      case AtlasSetupImpl.ENDPOINTS:
+        this.endpoints = newValue as EndpointConfig[];
         super.eSet(feature, newValue);
         break;
       default:
@@ -418,20 +227,8 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
         return this._modelPackage !== undefined;
       case AtlasSetupImpl.CHAINS:
         return this._chains !== undefined && this._chains.length > 0;
-      case AtlasSetupImpl.SERVICE_ID:
-        return this._serviceId !== "";
-      case AtlasSetupImpl.SERVICE_NAME:
-        return this._serviceName !== "";
-      case AtlasSetupImpl.SERVICE_DESCRIPTION:
-        return this._serviceDescription !== "";
-      case AtlasSetupImpl.URL_CONTEXT:
-        return this._urlContext !== "";
-      case AtlasSetupImpl.OPEN_API:
-        return this._openApi !== false;
-      case AtlasSetupImpl.PAGINATION_OFFSET_PARAMETER_NAME:
-        return this._paginationOffsetParameterName !== "offset";
-      case AtlasSetupImpl.PAGINATION_SIZE_PARAMETER_NAME:
-        return this._paginationSizeParameterName !== "limit";
+      case AtlasSetupImpl.ENDPOINTS:
+        return this._endpoints !== undefined && this._endpoints.length > 0;
       default:
         return super.eIsSet(feature);
     }
@@ -455,26 +252,8 @@ export class AtlasSetupImpl extends BasicEObject implements AtlasSetup {
       case AtlasSetupImpl.CHAINS:
         this._chains = [];
         return;
-      case AtlasSetupImpl.SERVICE_ID:
-        this._serviceId = "";
-        return;
-      case AtlasSetupImpl.SERVICE_NAME:
-        this._serviceName = "";
-        return;
-      case AtlasSetupImpl.SERVICE_DESCRIPTION:
-        this._serviceDescription = "";
-        return;
-      case AtlasSetupImpl.URL_CONTEXT:
-        this._urlContext = "";
-        return;
-      case AtlasSetupImpl.OPEN_API:
-        this._openApi = false;
-        return;
-      case AtlasSetupImpl.PAGINATION_OFFSET_PARAMETER_NAME:
-        this._paginationOffsetParameterName = "offset";
-        return;
-      case AtlasSetupImpl.PAGINATION_SIZE_PARAMETER_NAME:
-        this._paginationSizeParameterName = "limit";
+      case AtlasSetupImpl.ENDPOINTS:
+        this._endpoints = [];
         return;
       default:
         super.eUnset(feature);

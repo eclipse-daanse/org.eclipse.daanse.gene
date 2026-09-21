@@ -9,11 +9,9 @@ import type { XMIResource } from '@emfts/core';
 import type { UIModel } from '@emfts/uimodel-composer';
 import { newResourceSet } from '../emf/setup';
 import instanceXmi from '../assets/wizard-ui/step-instance.xmi?raw';
-import serviceXmi from '../assets/wizard-ui/step-service.xmi?raw';
 
 export interface WizardUiModels {
   instance: UIModel;
-  service: UIModel;
 }
 
 export async function loadWizardUiModels(): Promise<WizardUiModels> {
@@ -29,6 +27,5 @@ export async function loadWizardUiModels(): Promise<WizardUiModels> {
 
   return {
     instance: load('step-instance.xmi', instanceXmi),
-    service: load('step-service.xmi', serviceXmi),
   };
 }

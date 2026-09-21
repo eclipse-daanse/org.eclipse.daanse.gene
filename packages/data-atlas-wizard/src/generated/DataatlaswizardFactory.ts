@@ -18,6 +18,10 @@ import type { DatasetConfig } from './DatasetConfig';
 import { DatasetConfigImpl } from './DatasetConfigImpl';
 import type { ExportConfig } from './ExportConfig';
 import { ExportConfigImpl } from './ExportConfigImpl';
+import type { EndpointConfig } from './EndpointConfig';
+import { EndpointConfigImpl } from './EndpointConfigImpl';
+import type { EndpointEntry } from './EndpointEntry';
+import { EndpointEntryImpl } from './EndpointEntryImpl';
 
 /**
  * Factory for creating Dataatlaswizard model objects
@@ -75,6 +79,20 @@ export class DataatlaswizardFactory extends BasicEFactory {
   }
 
   /**
+   * Create a new EndpointConfig instance
+   */
+  createEndpointConfig(): EndpointConfig {
+    return new EndpointConfigImpl();
+  }
+
+  /**
+   * Create a new EndpointEntry instance
+   */
+  createEndpointEntry(): EndpointEntry {
+    return new EndpointEntryImpl();
+  }
+
+  /**
    * Create an instance of the given class
    */
   override create(eClass: EClass): EObject {
@@ -89,6 +107,10 @@ export class DataatlaswizardFactory extends BasicEFactory {
         return this.createDatasetConfig();
       case 'ExportConfig':
         return this.createExportConfig();
+      case 'EndpointConfig':
+        return this.createEndpointConfig();
+      case 'EndpointEntry':
+        return this.createEndpointEntry();
       default:
         throw new Error(`Unknown class: ${eClass.getName()}`);
     }

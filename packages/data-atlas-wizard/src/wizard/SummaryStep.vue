@@ -23,8 +23,8 @@
           <dd>{{ quelleText }}</dd>
           <dt><i class="pi pi-list" aria-hidden="true"></i> Datensätze</dt>
           <dd>{{ datensatzText }}</dd>
-          <dt><i class="pi pi-link" aria-hidden="true"></i> Endpunkt</dt>
-          <dd>{{ setupValue?.urlContext }}</dd>
+          <dt><i class="pi pi-link" aria-hidden="true"></i> Endpunkte</dt>
+          <dd>{{ endpunktText }}</dd>
           <dt><i class="pi pi-sitemap" aria-hidden="true"></i> Datenwege</dt>
           <dd>{{ wegeText }}</dd>
         </dl>
@@ -131,7 +131,7 @@
  */
 import { computed, onMounted, ref, watch } from 'vue';
 import { InputKind, MappingKind } from '../generated';
-import { atlasSource, setup, version } from './context';
+import { atlasSource, endpointShape, setup, version } from './context';
 import { buildDataAtlasXmi, type DataAtlasResult } from '../transform/toDataAtlasConfig';
 import { findErrors } from '../transform/validate';
 import { requiredSchemas } from '../transform/requiredSchemas';
@@ -186,6 +186,14 @@ const quelleText = computed(() => {
     }
   }
   return texte.join(' · ');
+});
+
+/** Je Endpunkt: Art und Basis-Pfad. */
+const endpunktText = computed(() => {
+  void version.value;
+  return (setup.value?.endpoints ?? [])
+    .map((e) => `${e.id} (${endpointShape(e.kind).label}) ${e.urlContext}`)
+    .join(' · ');
 });
 
 /** Je Weg: wie viele Datensätze und welche Formate. */

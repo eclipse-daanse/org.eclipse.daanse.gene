@@ -6,9 +6,16 @@
  * Zusammenfassung, halten den Nutzer aber nicht auf.
  */
 import { URI } from '@emfts/core';
-import { ExportKind, InputKind, MappingKind, type AtlasSetup, type DataChain } from '../generated';
+import {
+  ExportKind,
+  InputKind,
+  MappingKind,
+  type AtlasSetup,
+  type DataChain,
+  type EndpointConfig,
+} from '../generated';
 import { newResourceSet } from '../emf/setup';
-import { effectiveSource } from '../wizard/context';
+import { effectiveSource, endpointShape, resolvedEntries } from '../wizard/context';
 
 export class SetupInvalidError extends Error {
   constructor(public readonly reasons: string[]) {
@@ -42,7 +49,7 @@ function auswahl(setup: AtlasSetup) {
 
 /** Alle im Zieldokument vergebenen ids — Dubletten wären nicht auflösbar. */
 export function collectIds(setup: AtlasSetup): string[] {
-  const ids: string[] = [setup.serviceId];
+  const ids: string[] = setup.endpoints.map((e) => e.id);
   const quellen = new Set<unknown>();
   for (const chain of setup.chains) {
     const quelle = effectiveSource(chain);
@@ -78,10 +85,10 @@ export function findErrors(setup: AtlasSetup): string[] {
 
   // name und description sind an DataProvider lowerBound=1 — leer ist ein
   // Fehler, keine Warnung.
-  if (leer(setup.serviceId)) fehler.push('Die id des REST-Endpunkts fehlt.');
-  if (leer(setup.serviceName)) fehler.push('Der Name des REST-Endpunkts fehlt.');
-  if (leer(setup.serviceDescription)) fehler.push('Die Beschreibung des REST-Endpunkts fehlt.');
-  if (leer(setup.urlContext)) fehler.push('Der Basis-Pfad (urlContext) fehlt.');
+  if (setup.endpoints.length === 0) fehler.push('Kein Endpunkt angelegt.');
+  for (const endpoint of setup.endpoints) {
+    fehler.push(...pruefeEndpunkt(endpoint, setup));
+  }
 
   for (const chain of setup.chains) {
     if (leer(chain.id)) fehler.push('Ein Datenweg hat keine id.');
@@ -99,7 +106,6 @@ export function findErrors(setup: AtlasSetup): string[] {
     if (leer(dataset.id)) fehler.push(`Datensatz „${bezeichnung}": id fehlt.`);
     if (leer(dataset.name)) fehler.push(`Datensatz „${bezeichnung}": Name fehlt.`);
     if (leer(dataset.description)) fehler.push(`Datensatz „${bezeichnung}": Beschreibung fehlt.`);
-    if (leer(dataset.path)) fehler.push(`Datensatz „${bezeichnung}": Pfad fehlt.`);
     if (!dataset.targetClass) fehler.push(`Datensatz „${bezeichnung}": keine Klasse zugeordnet.`);
     void chain;
   }
@@ -110,6 +116,40 @@ export function findErrors(setup: AtlasSetup): string[] {
     fehler.push(`Die id „${id}" ist mehrfach vergeben.`);
   }
 
+  return fehler;
+}
+
+/** Ein Endpunkt: Pflichtfelder und was seine Art je Datensatz verlangt. */
+function pruefeEndpunkt(endpoint: EndpointConfig, setup: AtlasSetup): string[] {
+  const fehler: string[] = [];
+  const bezeichnung = endpoint.id || endpoint.kind;
+  const shape = endpointShape(endpoint.kind);
+
+  if (leer(endpoint.id)) fehler.push('Ein Endpunkt hat keine id.');
+  if (leer(endpoint.name)) fehler.push(`Endpunkt „${bezeichnung}": Name fehlt.`);
+  if (leer(endpoint.description)) fehler.push(`Endpunkt „${bezeichnung}": Beschreibung fehlt.`);
+  if (leer(endpoint.urlContext)) fehler.push(`Endpunkt „${bezeichnung}": Basis-Pfad fehlt.`);
+
+  // Eine Auswahl, die auf nichts zeigt, veröffentlicht nichts
+  if (endpoint.chains.some((c) => !setup.chains.includes(c))) {
+    fehler.push(`Endpunkt „${bezeichnung}": ein gewählter Datenweg gehört nicht zum Setup.`);
+  }
+
+  if (!shape.hasEntries) return fehler;
+
+  for (const entry of resolvedEntries(setup, endpoint)) {
+    const datensatz = entry.dataset?.id || 'Datensatz';
+    if (shape.hasPath && leer(entry.path)) {
+      fehler.push(`Endpunkt „${bezeichnung}", Datensatz „${datensatz}": Pfad fehlt.`);
+    }
+    // XMLA und QGis verlangen die Klasse im Zielmodell (lowerBound=1)
+    if (shape.classFeature === 'mapping' && !entry.mapping) {
+      fehler.push(`Endpunkt „${bezeichnung}", Datensatz „${datensatz}": mapping-Klasse fehlt.`);
+    }
+    if (shape.classFeature === 'layer' && !entry.layer) {
+      fehler.push(`Endpunkt „${bezeichnung}", Datensatz „${datensatz}": layer-Klasse fehlt.`);
+    }
+  }
   return fehler;
 }
 
@@ -213,13 +253,16 @@ export function findWarnings(setup: AtlasSetup): string[] {
       );
     }
 
-    for (const dataset of chain.datasets.filter((d) => d.selected)) {
-      const batchSize = dataset.batchSize ?? -1;
-      const batchSizeLimit = dataset.batchSizeLimit ?? -1;
+  }
+
+  for (const endpoint of setup.endpoints) {
+    for (const entry of resolvedEntries(setup, endpoint)) {
+      const batchSize = entry.batchSize ?? -1;
+      const batchSizeLimit = entry.batchSizeLimit ?? -1;
       if (batchSizeLimit > -1 && batchSize > -1 && batchSizeLimit < batchSize) {
         warnungen.push(
-          `Datensatz „${dataset.id}": batchSizeLimit (${batchSizeLimit}) ist kleiner ` +
-            `als batchSize (${batchSize}).`,
+          `Endpunkt „${endpoint.id}", Datensatz „${entry.dataset?.id}": batchSizeLimit ` +
+            `(${batchSizeLimit}) ist kleiner als batchSize (${batchSize}).`,
         );
       }
     }

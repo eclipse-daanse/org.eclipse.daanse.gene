@@ -15,6 +15,8 @@ export type { DataChain } from './DataChain';
 export type { DataSourceConfig } from './DataSourceConfig';
 export type { DatasetConfig } from './DatasetConfig';
 export type { ExportConfig } from './ExportConfig';
+export type { EndpointConfig } from './EndpointConfig';
+export type { EndpointEntry } from './EndpointEntry';
 
 // Implementations (including abstract classes, as they're extended by subclasses)
 export { AtlasSetupImpl } from './AtlasSetupImpl';
@@ -22,8 +24,11 @@ export { DataChainImpl } from './DataChainImpl';
 export { DataSourceConfigImpl } from './DataSourceConfigImpl';
 export { DatasetConfigImpl } from './DatasetConfigImpl';
 export { ExportConfigImpl } from './ExportConfigImpl';
+export { EndpointConfigImpl } from './EndpointConfigImpl';
+export { EndpointEntryImpl } from './EndpointEntryImpl';
 
 // Enums
+export { EndpointKind, getEndpointKind, getEndpointKindByLiteral } from './EndpointKind';
 export { InputKind, getInputKind, getInputKindByLiteral } from './InputKind';
 export { MappingKind, getMappingKind, getMappingKindByLiteral } from './MappingKind';
 export { ExportKind, getExportKind, getExportKindByLiteral } from './ExportKind';

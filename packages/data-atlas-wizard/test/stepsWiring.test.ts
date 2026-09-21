@@ -17,8 +17,9 @@ import { registerEcoreFromString, setupPackages } from '../src/emf/setup';
 import { atlasSource, initSetup, setup, version } from '../src/wizard/context';
 import ModelSourceStep from '../src/wizard/ModelSourceStep.vue';
 import ChainsStep from '../src/wizard/ChainsStep.vue';
+import EndpointsStep from '../src/wizard/EndpointsStep.vue';
 import SummaryStep from '../src/wizard/SummaryStep.vue';
-import { DataatlaswizardFactory, ExportKind, InputKind } from '../src/generated';
+import { DataatlaswizardFactory, EndpointKind, ExportKind, InputKind } from '../src/generated';
 
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
 let personPackage: EPackage;
@@ -54,11 +55,12 @@ describe('ChainsStep: Datensätze', () => {
   it('eine Eingabe landet im Modell', async () => {
     const wrapper = mount(ChainsStep);
     const felder = wrapper.findAll('tbody tr:first-child input[type="text"]');
-    // Reihenfolge der Spalten: id, Name, Pfad, Beschreibung
+    // Reihenfolge der Spalten: id, Name, Beschreibung — der Pfad haengt jetzt
+    // am Endpunkt, nicht am Datensatz
     await felder[0].setValue('personen');
     expect(setup.value!.chains[0].datasets[0].id).toBe('personen');
-    await felder[2].setValue('leute');
-    expect(setup.value!.chains[0].datasets[0].path).toBe('leute');
+    await felder[2].setValue('Alle Leute.');
+    expect(setup.value!.chains[0].datasets[0].description).toBe('Alle Leute.');
   });
 
   it('doppelte ids werden als Hinweis gemeldet', () => {
@@ -70,7 +72,6 @@ describe('ChainsStep: Datensätze', () => {
     zweiter.id = kette.datasets[0].id;
     zweiter.name = 'Zweiter';
     zweiter.description = 'Zweiter.';
-    zweiter.path = 'zweiter';
     kette.datasets.push(zweiter);
 
     const wrapper = mount(ChainsStep);
@@ -177,6 +178,72 @@ describe('ChainsStep: Wege und Quellen', () => {
   });
 });
 
+describe('EndpointsStep', () => {
+  it('zeigt den vorgeschlagenen REST-Endpunkt mit Eintrag je Datensatz', () => {
+    const wrapper = mount(EndpointsStep);
+    expect(wrapper.findAll('.endpunkt')).toHaveLength(1);
+    expect(wrapper.findAll('tbody tr')).toHaveLength(setup.value!.chains[0].datasets.length);
+  });
+
+  it('die Art bestimmt, welche Felder es gibt', async () => {
+    const wrapper = mount(EndpointsStep);
+    // REST: OpenAPI-Haken und Pagination
+    expect(wrapper.text()).toContain('OpenAPI');
+    expect(wrapper.text()).toContain('Offset-Parameter');
+
+    await wrapper.find('select.art').setValue(EndpointKind.OGC_FEATURES);
+    expect(setup.value!.endpoints[0].kind).toBe(EndpointKind.OGC_FEATURES);
+    // Diese Art kennt weder OpenAPI noch Angaben je Datensatz
+    expect(wrapper.text()).not.toContain('OpenAPI');
+    expect(wrapper.text()).toMatch(/kennt keine Angaben je Datensatz/);
+    expect(setup.value!.endpoints[0].entries).toEqual([]);
+  });
+
+  it('XMLA bietet die Mapping-Klasse zur Auswahl', async () => {
+    const wrapper = mount(EndpointsStep);
+    await wrapper.find('select.art').setValue(EndpointKind.XMLA);
+
+    const auswahl = wrapper.find('tbody select');
+    expect(auswahl.exists()).toBe(true);
+    await auswahl.setValue('Person');
+    expect(setup.value!.endpoints[0].entries[0].mapping?.getName()).toBe('Person');
+  });
+
+  it('der Pfad landet am Eintrag, nicht am Datensatz', async () => {
+    const wrapper = mount(EndpointsStep);
+    await wrapper.find('tbody input[type="text"]').setValue('leute');
+    expect(setup.value!.endpoints[0].entries[0].path).toBe('leute');
+  });
+
+  it('ein zweiter Endpunkt bekommt eine eigene id', async () => {
+    const wrapper = mount(EndpointsStep);
+    await wrapper.findAll('button').find((b) => b.text().includes('Endpunkt'))!.trigger('click');
+    expect(setup.value!.endpoints.map((e) => e.id)).toEqual(['person-rest', 'person-rest-2']);
+  });
+
+  it('die Wegauswahl schraenkt die Eintraege ein', async () => {
+    const s = setup.value!;
+    // Ein zweiter Weg mit eigenem Datensatz
+    const zweiter = DataatlaswizardFactory.eINSTANCE.createDataChain();
+    zweiter.id = 'zweit';
+    const dataset = DataatlaswizardFactory.eINSTANCE.createDatasetConfig();
+    dataset.targetClass = s.chains[0].datasets[0].targetClass;
+    dataset.id = 'zweitPerson';
+    dataset.name = 'Zweit';
+    dataset.description = 'Zweit.';
+    zweiter.datasets.push(dataset);
+    s.chains.push(zweiter);
+
+    const wrapper = mount(EndpointsStep);
+    const haken = wrapper.findAll('.wege input[type="checkbox"]');
+    expect(haken).toHaveLength(2);
+    // Den zweiten Weg abwählen
+    await haken[1].setValue(false);
+    expect(setup.value!.endpoints[0].chains.map((c) => c.id)).toEqual(['person']);
+    expect(setup.value!.endpoints[0].entries.every((e) => e.dataset.id !== 'zweitPerson')).toBe(true);
+  });
+});
+
 describe('SummaryStep', () => {
   it('zeigt die Prüfliste und bietet den Download an', () => {
     const wrapper = mount(SummaryStep);
@@ -197,7 +264,7 @@ describe('SummaryStep', () => {
   });
 
   it('ein fehlendes Pflichtfeld erscheint als Fehler, nicht als Absturz', async () => {
-    setup.value!.urlContext = '';
+    setup.value!.endpoints[0].urlContext = '';
     const wrapper = mount(SummaryStep);
     expect(wrapper.find('.fehlerbox').exists()).toBe(true);
     expect(wrapper.text()).toMatch(/Basis-Pfad/);

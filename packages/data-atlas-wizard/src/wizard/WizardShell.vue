@@ -32,16 +32,7 @@
 
       <ChainsStep v-else-if="currentStep.id === 'chains'" />
 
-      <section v-else-if="currentStep.id === 'service'" class="composed">
-        <h2>Endpunkt</h2>
-        <p class="lead">{{ currentStep.lead }}</p>
-        <UIModelComposer
-          v-if="uiModels && setupValue"
-          :key="`service-${version}`"
-          :ui-model="uiModels.service"
-          :model="setupValue"
-        />
-      </section>
+      <EndpointsStep v-else-if="currentStep.id === 'endpoints'" />
 
       <SummaryStep v-else-if="currentStep.id === 'summary'" />
 
@@ -84,6 +75,7 @@ import { UIModelComposer } from '@emfts/uimodel-composer';
 import { loadWizardUiModels, type WizardUiModels } from './uiModels';
 import ModelSourceStep from './ModelSourceStep.vue';
 import ChainsStep from './ChainsStep.vue';
+import EndpointsStep from './EndpointsStep.vue';
 import SummaryStep from './SummaryStep.vue';
 import { setup, version } from './context';
 import { InputKind } from '../generated';
@@ -105,9 +97,9 @@ const steps = [
     lead: 'Je Weg: eine Quelle, die Klassen daraus, die Formate.',
   },
   {
-    id: 'service',
-    title: 'Endpunkt',
-    lead: 'Basis-Pfad, OpenAPI und die Namen der Pagination-Parameter.',
+    id: 'endpoints',
+    title: 'Endpunkte',
+    lead: 'Je Endpunkt: Art, Basis-Pfad und welche Datenwege er veröffentlicht.',
   },
   {
     id: 'summary',
@@ -164,9 +156,13 @@ const blockReason = computed<string>(() => {
       });
       return unfertig ? `Datenweg „${unfertig.id}": die Datenquelle ist unvollständig.` : '';
     }
-    case 'service':
-      if (!s.urlContext?.trim()) return 'Bitte geben Sie den Basis-Pfad an.';
-      return s.serviceName?.trim() ? '' : 'Bitte geben Sie einen Namen für den Endpunkt an.';
+    case 'endpoints': {
+      if (s.endpoints.length === 0) return 'Bitte legen Sie einen Endpunkt an.';
+      const ohnePfad = s.endpoints.find((e) => !e.urlContext?.trim());
+      if (ohnePfad) return `Endpunkt „${ohnePfad.id}": der Basis-Pfad fehlt.`;
+      const ohneName = s.endpoints.find((e) => !e.name?.trim());
+      return ohneName ? `Endpunkt „${ohneName.id}": der Name fehlt.` : '';
+    }
     default:
       return '';
   }

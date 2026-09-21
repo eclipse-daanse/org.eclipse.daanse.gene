@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DataatlaswizardFactory,
   DataatlaswizardPackage,
+  EndpointKind,
   ExportKind,
   InputKind,
   MappingKind,
@@ -34,14 +35,19 @@ describe('Fassadenmodell', () => {
     expect(pkg.getNsPrefix()).toBe('dataatlaswizard');
   });
 
-  it('die fünf Klassen der Fassade', () => {
-    const namen = [...pkg.getEClassifiers()].map((c) => c.getName());
+  it('die Klassen der Fassade', () => {
+    const namen = [...pkg.getEClassifiers()]
+      .filter((c) => typeof (c as { isAbstract?: unknown }).isAbstract === 'function')
+      .map((c) => c.getName());
+    // Reihenfolge wie in der .ecore
     expect(namen).toEqual([
       'AtlasSetup',
       'DataChain',
       'DataSourceConfig',
       'DatasetConfig',
       'ExportConfig',
+      'EndpointConfig',
+      'EndpointEntry',
     ]);
   });
 
@@ -53,23 +59,22 @@ describe('Fassadenmodell', () => {
       'instanceDescription',
       'modelPackage',
       'chains',
-      'serviceId',
-      'serviceName',
-      'serviceDescription',
-      'urlContext',
-      'openApi',
-      'paginationOffsetParameterName',
-      'paginationSizeParameterName',
+      'endpoints',
     ]);
   });
 
   it('Pflichtfelder sind als lowerBound=1 markiert', () => {
     const setup = DataatlaswizardPackage.Literals.ATLAS_SETUP;
-    for (const name of ['instanceName', 'modelPackage', 'serviceId', 'urlContext']) {
+    for (const name of ['instanceName', 'modelPackage']) {
       expect(feature(setup, name).getLowerBound(), name).toBe(1);
     }
     // Beschreibung der Instanz bleibt optional
     expect(feature(setup, 'instanceDescription').getLowerBound()).toBe(0);
+
+    const endpoint = DataatlaswizardPackage.Literals.ENDPOINT_CONFIG;
+    for (const name of ['id', 'name', 'description', 'kind', 'urlContext']) {
+      expect(feature(endpoint, name).getLowerBound(), name).toBe(1);
+    }
   });
 
   it('die Wege hängen als Containment am Setup, ihre Listen am Weg', () => {
@@ -107,10 +112,17 @@ describe('Fassadenmodell', () => {
 
   it('Vorgabewerte stehen an einer frischen Instanz', () => {
     const setup = factory.createAtlasSetup();
-    expect(setup.openApi).toBe(false);
-    expect(setup.paginationOffsetParameterName).toBe('offset');
-    expect(setup.paginationSizeParameterName).toBe('limit');
     expect(setup.chains).toEqual([]);
+    expect(setup.endpoints).toEqual([]);
+
+    // Die Endpunkt-Vorgaben haengen jetzt am Endpunkt, wie im Zielmodell
+    const endpoint = factory.createEndpointConfig();
+    expect(endpoint.kind).toBe(EndpointKind.REST);
+    expect(endpoint.openApi).toBe(false);
+    expect(endpoint.paginationOffsetParameterName).toBe('offset');
+    expect(endpoint.paginationSizeParameterName).toBe('limit');
+    expect(endpoint.entries).toEqual([]);
+    expect(endpoint.chains).toEqual([]);
   });
 
   it('Vorgaben der Kind-Objekte', () => {
@@ -120,9 +132,13 @@ describe('Fassadenmodell', () => {
 
     const dataset = factory.createDatasetConfig();
     expect(dataset.selected).toBe(true);
+
+    // Pfad und Batch-Grenzen gehoeren an den Endpunkt-Eintrag, nicht an den
+    // Datensatz — das Zielmodell fuehrt sie an der DataServiceConfiguration
+    const entry = factory.createEndpointEntry();
     // -1 heisst "nicht gesetzt" — der Transformer schreibt es dann nicht
-    expect(dataset.batchSize).toBe(-1);
-    expect(dataset.batchSizeLimit).toBe(-1);
+    expect(entry.batchSize).toBe(-1);
+    expect(entry.batchSizeLimit).toBe(-1);
 
     const exp = factory.createExportConfig();
     expect(exp.selected).toBe(true);
@@ -135,9 +151,20 @@ describe('Fassadenmodell', () => {
     expect(quelle.mappingKind).toBe(MappingKind.DERIVED);
   });
 
-  it('die drei Enums decken die Fälle des Plans ab', () => {
+  it('die Enums decken die Fälle des Plans ab', () => {
     // ConfigMode ist entfallen: Verweise entstehen immer über den nsURI
     expect(Object.keys(InputKind)).toEqual(['FILE', 'DATABASE']);
+    // Die Dienstarten des Zielmodells
+    expect(Object.keys(EndpointKind)).toEqual([
+      'REST',
+      'GEOJSON',
+      'XMLA',
+      'GRAPHQL',
+      'QGIS',
+      'OGC_FEATURES',
+      'OGC_SENSORTHINGS',
+      'ODATA',
+    ]);
     expect(Object.keys(MappingKind)).toEqual(['DERIVED', 'IMPORTED']);
     expect(Object.keys(ExportKind)).toEqual(['JSON', 'XML', 'CSV', 'CSV_ZIP']);
   });

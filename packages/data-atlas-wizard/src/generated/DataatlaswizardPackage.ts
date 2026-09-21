@@ -37,13 +37,7 @@ export class DataatlaswizardPackage extends BasicEPackage {
     ATLAS_SETUP__INSTANCE_DESCRIPTION: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__MODEL_PACKAGE: null as unknown as EAttribute | EReference,
     ATLAS_SETUP__CHAINS: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__SERVICE_ID: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__SERVICE_NAME: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__SERVICE_DESCRIPTION: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__URL_CONTEXT: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__OPEN_API: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__PAGINATION_OFFSET_PARAMETER_NAME: null as unknown as EAttribute | EReference,
-    ATLAS_SETUP__PAGINATION_SIZE_PARAMETER_NAME: null as unknown as EAttribute | EReference,
+    ATLAS_SETUP__ENDPOINTS: null as unknown as EAttribute | EReference,
     DATA_CHAIN: null as unknown as EClass,
     DATA_CHAIN__ID: null as unknown as EAttribute | EReference,
     DATA_CHAIN__SOURCE: null as unknown as EAttribute | EReference,
@@ -65,9 +59,6 @@ export class DataatlaswizardPackage extends BasicEPackage {
     DATASET_CONFIG__ID: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__NAME: null as unknown as EAttribute | EReference,
     DATASET_CONFIG__DESCRIPTION: null as unknown as EAttribute | EReference,
-    DATASET_CONFIG__PATH: null as unknown as EAttribute | EReference,
-    DATASET_CONFIG__BATCH_SIZE: null as unknown as EAttribute | EReference,
-    DATASET_CONFIG__BATCH_SIZE_LIMIT: null as unknown as EAttribute | EReference,
     EXPORT_CONFIG: null as unknown as EClass,
     EXPORT_CONFIG__SELECTED: null as unknown as EAttribute | EReference,
     EXPORT_CONFIG__KIND: null as unknown as EAttribute | EReference,
@@ -76,6 +67,29 @@ export class DataatlaswizardPackage extends BasicEPackage {
     EXPORT_CONFIG__DESCRIPTION: null as unknown as EAttribute | EReference,
     EXPORT_CONFIG__SEPARATOR: null as unknown as EAttribute | EReference,
     EXPORT_CONFIG__INCLUDE_TYPE_HEADER: null as unknown as EAttribute | EReference,
+    ENDPOINT_CONFIG: null as unknown as EClass,
+    ENDPOINT_CONFIG__ID: null as unknown as EAttribute | EReference,
+    ENDPOINT_CONFIG__NAME: null as unknown as EAttribute | EReference,
+    ENDPOINT_CONFIG__DESCRIPTION: null as unknown as EAttribute | EReference,
+    ENDPOINT_CONFIG__KIND: null as unknown as EAttribute | EReference,
+    ENDPOINT_CONFIG__URL_CONTEXT: null as unknown as EAttribute | EReference,
+    ENDPOINT_CONFIG__CHAINS: null as unknown as EAttribute | EReference,
+    ENDPOINT_CONFIG__OPEN_API: null as unknown as EAttribute | EReference,
+    ENDPOINT_CONFIG__PAGINATION_OFFSET_PARAMETER_NAME: null as unknown as EAttribute | EReference,
+    ENDPOINT_CONFIG__PAGINATION_SIZE_PARAMETER_NAME: null as unknown as EAttribute | EReference,
+    ENDPOINT_CONFIG__ENTRIES: null as unknown as EAttribute | EReference,
+    ENDPOINT_ENTRY: null as unknown as EClass,
+    ENDPOINT_ENTRY__DATASET: null as unknown as EAttribute | EReference,
+    ENDPOINT_ENTRY__PATH: null as unknown as EAttribute | EReference,
+    ENDPOINT_ENTRY__BATCH_SIZE: null as unknown as EAttribute | EReference,
+    ENDPOINT_ENTRY__BATCH_SIZE_LIMIT: null as unknown as EAttribute | EReference,
+    ENDPOINT_ENTRY__LONGITUDE_FEATURE: null as unknown as EAttribute | EReference,
+    ENDPOINT_ENTRY__LATITUDE_FEATURE: null as unknown as EAttribute | EReference,
+    ENDPOINT_ENTRY__ELEVATION_FEATURE: null as unknown as EAttribute | EReference,
+    ENDPOINT_ENTRY__GEOMETRY_FEATURE: null as unknown as EAttribute | EReference,
+    ENDPOINT_ENTRY__ID_FEATURE: null as unknown as EAttribute | EReference,
+    ENDPOINT_ENTRY__MAPPING: null as unknown as EAttribute | EReference,
+    ENDPOINT_ENTRY__LAYER: null as unknown as EAttribute | EReference,
   };
 
   private constructor() {
@@ -132,61 +146,14 @@ export class DataatlaswizardPackage extends BasicEPackage {
     atlasSetupClass.getEStructuralFeatures().push(atlasSetup_chains);
     DataatlaswizardPackage.Literals.ATLAS_SETUP__CHAINS = atlasSetup_chains;
 
-    // Create serviceId feature
-    const atlasSetup_serviceId = new BasicEAttribute();
-    atlasSetup_serviceId.setName('serviceId');
-    atlasSetup_serviceId.setLowerBound(1);
-    atlasSetup_serviceId.setUpperBound(1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_serviceId);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__SERVICE_ID = atlasSetup_serviceId;
-
-    // Create serviceName feature
-    const atlasSetup_serviceName = new BasicEAttribute();
-    atlasSetup_serviceName.setName('serviceName');
-    atlasSetup_serviceName.setLowerBound(1);
-    atlasSetup_serviceName.setUpperBound(1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_serviceName);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__SERVICE_NAME = atlasSetup_serviceName;
-
-    // Create serviceDescription feature
-    const atlasSetup_serviceDescription = new BasicEAttribute();
-    atlasSetup_serviceDescription.setName('serviceDescription');
-    atlasSetup_serviceDescription.setLowerBound(1);
-    atlasSetup_serviceDescription.setUpperBound(1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_serviceDescription);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__SERVICE_DESCRIPTION = atlasSetup_serviceDescription;
-
-    // Create urlContext feature
-    const atlasSetup_urlContext = new BasicEAttribute();
-    atlasSetup_urlContext.setName('urlContext');
-    atlasSetup_urlContext.setLowerBound(1);
-    atlasSetup_urlContext.setUpperBound(1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_urlContext);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__URL_CONTEXT = atlasSetup_urlContext;
-
-    // Create openApi feature
-    const atlasSetup_openApi = new BasicEAttribute();
-    atlasSetup_openApi.setName('openApi');
-    atlasSetup_openApi.setLowerBound(1);
-    atlasSetup_openApi.setUpperBound(1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_openApi);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__OPEN_API = atlasSetup_openApi;
-
-    // Create paginationOffsetParameterName feature
-    const atlasSetup_paginationOffsetParameterName = new BasicEAttribute();
-    atlasSetup_paginationOffsetParameterName.setName('paginationOffsetParameterName');
-    atlasSetup_paginationOffsetParameterName.setLowerBound(1);
-    atlasSetup_paginationOffsetParameterName.setUpperBound(1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_paginationOffsetParameterName);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__PAGINATION_OFFSET_PARAMETER_NAME = atlasSetup_paginationOffsetParameterName;
-
-    // Create paginationSizeParameterName feature
-    const atlasSetup_paginationSizeParameterName = new BasicEAttribute();
-    atlasSetup_paginationSizeParameterName.setName('paginationSizeParameterName');
-    atlasSetup_paginationSizeParameterName.setLowerBound(1);
-    atlasSetup_paginationSizeParameterName.setUpperBound(1);
-    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_paginationSizeParameterName);
-    DataatlaswizardPackage.Literals.ATLAS_SETUP__PAGINATION_SIZE_PARAMETER_NAME = atlasSetup_paginationSizeParameterName;
+    // Create endpoints feature
+    const atlasSetup_endpoints = new BasicEReference();
+    atlasSetup_endpoints.setContainment(true);
+    atlasSetup_endpoints.setName('endpoints');
+    atlasSetup_endpoints.setLowerBound(0);
+    atlasSetup_endpoints.setUpperBound(-1);
+    atlasSetupClass.getEStructuralFeatures().push(atlasSetup_endpoints);
+    DataatlaswizardPackage.Literals.ATLAS_SETUP__ENDPOINTS = atlasSetup_endpoints;
 
     // Create DataChain class
     const dataChainClass = new BasicEClass();
@@ -364,30 +331,6 @@ export class DataatlaswizardPackage extends BasicEPackage {
     datasetConfigClass.getEStructuralFeatures().push(datasetConfig_description);
     DataatlaswizardPackage.Literals.DATASET_CONFIG__DESCRIPTION = datasetConfig_description;
 
-    // Create path feature
-    const datasetConfig_path = new BasicEAttribute();
-    datasetConfig_path.setName('path');
-    datasetConfig_path.setLowerBound(1);
-    datasetConfig_path.setUpperBound(1);
-    datasetConfigClass.getEStructuralFeatures().push(datasetConfig_path);
-    DataatlaswizardPackage.Literals.DATASET_CONFIG__PATH = datasetConfig_path;
-
-    // Create batchSize feature
-    const datasetConfig_batchSize = new BasicEAttribute();
-    datasetConfig_batchSize.setName('batchSize');
-    datasetConfig_batchSize.setLowerBound(0);
-    datasetConfig_batchSize.setUpperBound(1);
-    datasetConfigClass.getEStructuralFeatures().push(datasetConfig_batchSize);
-    DataatlaswizardPackage.Literals.DATASET_CONFIG__BATCH_SIZE = datasetConfig_batchSize;
-
-    // Create batchSizeLimit feature
-    const datasetConfig_batchSizeLimit = new BasicEAttribute();
-    datasetConfig_batchSizeLimit.setName('batchSizeLimit');
-    datasetConfig_batchSizeLimit.setLowerBound(0);
-    datasetConfig_batchSizeLimit.setUpperBound(1);
-    datasetConfigClass.getEStructuralFeatures().push(datasetConfig_batchSizeLimit);
-    DataatlaswizardPackage.Literals.DATASET_CONFIG__BATCH_SIZE_LIMIT = datasetConfig_batchSizeLimit;
-
     // Create ExportConfig class
     const exportConfigClass = new BasicEClass();
     exportConfigClass.setName('ExportConfig');
@@ -453,6 +396,197 @@ export class DataatlaswizardPackage extends BasicEPackage {
     exportConfigClass.getEStructuralFeatures().push(exportConfig_includeTypeHeader);
     DataatlaswizardPackage.Literals.EXPORT_CONFIG__INCLUDE_TYPE_HEADER = exportConfig_includeTypeHeader;
 
+    // Create EndpointConfig class
+    const endpointConfigClass = new BasicEClass();
+    endpointConfigClass.setName('EndpointConfig');
+    endpointConfigClass.setAbstract(false);
+    endpointConfigClass.setInterface(false);
+    this.getEClassifiers().push(endpointConfigClass);
+    endpointConfigClass.setEPackage(this);
+    DataatlaswizardPackage.Literals.ENDPOINT_CONFIG = endpointConfigClass;
+
+    // Create id feature
+    const endpointConfig_id = new BasicEAttribute();
+    endpointConfig_id.setName('id');
+    endpointConfig_id.setLowerBound(1);
+    endpointConfig_id.setUpperBound(1);
+    endpointConfigClass.getEStructuralFeatures().push(endpointConfig_id);
+    DataatlaswizardPackage.Literals.ENDPOINT_CONFIG__ID = endpointConfig_id;
+
+    // Create name feature
+    const endpointConfig_name = new BasicEAttribute();
+    endpointConfig_name.setName('name');
+    endpointConfig_name.setLowerBound(1);
+    endpointConfig_name.setUpperBound(1);
+    endpointConfigClass.getEStructuralFeatures().push(endpointConfig_name);
+    DataatlaswizardPackage.Literals.ENDPOINT_CONFIG__NAME = endpointConfig_name;
+
+    // Create description feature
+    const endpointConfig_description = new BasicEAttribute();
+    endpointConfig_description.setName('description');
+    endpointConfig_description.setLowerBound(1);
+    endpointConfig_description.setUpperBound(1);
+    endpointConfigClass.getEStructuralFeatures().push(endpointConfig_description);
+    DataatlaswizardPackage.Literals.ENDPOINT_CONFIG__DESCRIPTION = endpointConfig_description;
+
+    // Create kind feature
+    const endpointConfig_kind = new BasicEAttribute();
+    endpointConfig_kind.setName('kind');
+    endpointConfig_kind.setLowerBound(1);
+    endpointConfig_kind.setUpperBound(1);
+    endpointConfigClass.getEStructuralFeatures().push(endpointConfig_kind);
+    DataatlaswizardPackage.Literals.ENDPOINT_CONFIG__KIND = endpointConfig_kind;
+
+    // Create urlContext feature
+    const endpointConfig_urlContext = new BasicEAttribute();
+    endpointConfig_urlContext.setName('urlContext');
+    endpointConfig_urlContext.setLowerBound(1);
+    endpointConfig_urlContext.setUpperBound(1);
+    endpointConfigClass.getEStructuralFeatures().push(endpointConfig_urlContext);
+    DataatlaswizardPackage.Literals.ENDPOINT_CONFIG__URL_CONTEXT = endpointConfig_urlContext;
+
+    // Create chains feature
+    const endpointConfig_chains = new BasicEReference();
+    endpointConfig_chains.setContainment(false);
+    endpointConfig_chains.setName('chains');
+    endpointConfig_chains.setLowerBound(0);
+    endpointConfig_chains.setUpperBound(-1);
+    endpointConfigClass.getEStructuralFeatures().push(endpointConfig_chains);
+    DataatlaswizardPackage.Literals.ENDPOINT_CONFIG__CHAINS = endpointConfig_chains;
+
+    // Create openApi feature
+    const endpointConfig_openApi = new BasicEAttribute();
+    endpointConfig_openApi.setName('openApi');
+    endpointConfig_openApi.setLowerBound(0);
+    endpointConfig_openApi.setUpperBound(1);
+    endpointConfigClass.getEStructuralFeatures().push(endpointConfig_openApi);
+    DataatlaswizardPackage.Literals.ENDPOINT_CONFIG__OPEN_API = endpointConfig_openApi;
+
+    // Create paginationOffsetParameterName feature
+    const endpointConfig_paginationOffsetParameterName = new BasicEAttribute();
+    endpointConfig_paginationOffsetParameterName.setName('paginationOffsetParameterName');
+    endpointConfig_paginationOffsetParameterName.setLowerBound(0);
+    endpointConfig_paginationOffsetParameterName.setUpperBound(1);
+    endpointConfigClass.getEStructuralFeatures().push(endpointConfig_paginationOffsetParameterName);
+    DataatlaswizardPackage.Literals.ENDPOINT_CONFIG__PAGINATION_OFFSET_PARAMETER_NAME = endpointConfig_paginationOffsetParameterName;
+
+    // Create paginationSizeParameterName feature
+    const endpointConfig_paginationSizeParameterName = new BasicEAttribute();
+    endpointConfig_paginationSizeParameterName.setName('paginationSizeParameterName');
+    endpointConfig_paginationSizeParameterName.setLowerBound(0);
+    endpointConfig_paginationSizeParameterName.setUpperBound(1);
+    endpointConfigClass.getEStructuralFeatures().push(endpointConfig_paginationSizeParameterName);
+    DataatlaswizardPackage.Literals.ENDPOINT_CONFIG__PAGINATION_SIZE_PARAMETER_NAME = endpointConfig_paginationSizeParameterName;
+
+    // Create entries feature
+    const endpointConfig_entries = new BasicEReference();
+    endpointConfig_entries.setContainment(true);
+    endpointConfig_entries.setName('entries');
+    endpointConfig_entries.setLowerBound(0);
+    endpointConfig_entries.setUpperBound(-1);
+    endpointConfigClass.getEStructuralFeatures().push(endpointConfig_entries);
+    DataatlaswizardPackage.Literals.ENDPOINT_CONFIG__ENTRIES = endpointConfig_entries;
+
+    // Create EndpointEntry class
+    const endpointEntryClass = new BasicEClass();
+    endpointEntryClass.setName('EndpointEntry');
+    endpointEntryClass.setAbstract(false);
+    endpointEntryClass.setInterface(false);
+    this.getEClassifiers().push(endpointEntryClass);
+    endpointEntryClass.setEPackage(this);
+    DataatlaswizardPackage.Literals.ENDPOINT_ENTRY = endpointEntryClass;
+
+    // Create dataset feature
+    const endpointEntry_dataset = new BasicEReference();
+    endpointEntry_dataset.setContainment(false);
+    endpointEntry_dataset.setName('dataset');
+    endpointEntry_dataset.setLowerBound(1);
+    endpointEntry_dataset.setUpperBound(1);
+    endpointEntryClass.getEStructuralFeatures().push(endpointEntry_dataset);
+    DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__DATASET = endpointEntry_dataset;
+
+    // Create path feature
+    const endpointEntry_path = new BasicEAttribute();
+    endpointEntry_path.setName('path');
+    endpointEntry_path.setLowerBound(0);
+    endpointEntry_path.setUpperBound(1);
+    endpointEntryClass.getEStructuralFeatures().push(endpointEntry_path);
+    DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__PATH = endpointEntry_path;
+
+    // Create batchSize feature
+    const endpointEntry_batchSize = new BasicEAttribute();
+    endpointEntry_batchSize.setName('batchSize');
+    endpointEntry_batchSize.setLowerBound(0);
+    endpointEntry_batchSize.setUpperBound(1);
+    endpointEntryClass.getEStructuralFeatures().push(endpointEntry_batchSize);
+    DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__BATCH_SIZE = endpointEntry_batchSize;
+
+    // Create batchSizeLimit feature
+    const endpointEntry_batchSizeLimit = new BasicEAttribute();
+    endpointEntry_batchSizeLimit.setName('batchSizeLimit');
+    endpointEntry_batchSizeLimit.setLowerBound(0);
+    endpointEntry_batchSizeLimit.setUpperBound(1);
+    endpointEntryClass.getEStructuralFeatures().push(endpointEntry_batchSizeLimit);
+    DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__BATCH_SIZE_LIMIT = endpointEntry_batchSizeLimit;
+
+    // Create longitudeFeature feature
+    const endpointEntry_longitudeFeature = new BasicEAttribute();
+    endpointEntry_longitudeFeature.setName('longitudeFeature');
+    endpointEntry_longitudeFeature.setLowerBound(0);
+    endpointEntry_longitudeFeature.setUpperBound(1);
+    endpointEntryClass.getEStructuralFeatures().push(endpointEntry_longitudeFeature);
+    DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__LONGITUDE_FEATURE = endpointEntry_longitudeFeature;
+
+    // Create latitudeFeature feature
+    const endpointEntry_latitudeFeature = new BasicEAttribute();
+    endpointEntry_latitudeFeature.setName('latitudeFeature');
+    endpointEntry_latitudeFeature.setLowerBound(0);
+    endpointEntry_latitudeFeature.setUpperBound(1);
+    endpointEntryClass.getEStructuralFeatures().push(endpointEntry_latitudeFeature);
+    DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__LATITUDE_FEATURE = endpointEntry_latitudeFeature;
+
+    // Create elevationFeature feature
+    const endpointEntry_elevationFeature = new BasicEAttribute();
+    endpointEntry_elevationFeature.setName('elevationFeature');
+    endpointEntry_elevationFeature.setLowerBound(0);
+    endpointEntry_elevationFeature.setUpperBound(1);
+    endpointEntryClass.getEStructuralFeatures().push(endpointEntry_elevationFeature);
+    DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__ELEVATION_FEATURE = endpointEntry_elevationFeature;
+
+    // Create geometryFeature feature
+    const endpointEntry_geometryFeature = new BasicEAttribute();
+    endpointEntry_geometryFeature.setName('geometryFeature');
+    endpointEntry_geometryFeature.setLowerBound(0);
+    endpointEntry_geometryFeature.setUpperBound(1);
+    endpointEntryClass.getEStructuralFeatures().push(endpointEntry_geometryFeature);
+    DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__GEOMETRY_FEATURE = endpointEntry_geometryFeature;
+
+    // Create idFeature feature
+    const endpointEntry_idFeature = new BasicEAttribute();
+    endpointEntry_idFeature.setName('idFeature');
+    endpointEntry_idFeature.setLowerBound(0);
+    endpointEntry_idFeature.setUpperBound(1);
+    endpointEntryClass.getEStructuralFeatures().push(endpointEntry_idFeature);
+    DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__ID_FEATURE = endpointEntry_idFeature;
+
+    // Create mapping feature
+    const endpointEntry_mapping = new BasicEReference();
+    endpointEntry_mapping.setContainment(false);
+    endpointEntry_mapping.setName('mapping');
+    endpointEntry_mapping.setLowerBound(0);
+    endpointEntry_mapping.setUpperBound(1);
+    endpointEntryClass.getEStructuralFeatures().push(endpointEntry_mapping);
+    DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__MAPPING = endpointEntry_mapping;
+
+    // Create layer feature
+    const endpointEntry_layer = new BasicEReference();
+    endpointEntry_layer.setContainment(false);
+    endpointEntry_layer.setName('layer');
+    endpointEntry_layer.setLowerBound(0);
+    endpointEntry_layer.setUpperBound(1);
+    endpointEntryClass.getEStructuralFeatures().push(endpointEntry_layer);
+    DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__LAYER = endpointEntry_layer;
+
 
     // ============================================
     // Set ESuperTypes (must be done after all classes are created)
@@ -463,11 +597,17 @@ export class DataatlaswizardPackage extends BasicEPackage {
     // ============================================
     (DataatlaswizardPackage.Literals.ATLAS_SETUP__MODEL_PACKAGE as BasicEReference).setEType(getEcorePackage().getEClassifier('EPackage')!);
     (DataatlaswizardPackage.Literals.ATLAS_SETUP__CHAINS as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATA_CHAIN);
+    (DataatlaswizardPackage.Literals.ATLAS_SETUP__ENDPOINTS as BasicEReference).setEType(DataatlaswizardPackage.Literals.ENDPOINT_CONFIG);
     (DataatlaswizardPackage.Literals.DATA_CHAIN__SOURCE as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG);
     (DataatlaswizardPackage.Literals.DATA_CHAIN__SHARED_SOURCE as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG);
     (DataatlaswizardPackage.Literals.DATA_CHAIN__DATASETS as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATASET_CONFIG);
     (DataatlaswizardPackage.Literals.DATA_CHAIN__EXPORTS as BasicEReference).setEType(DataatlaswizardPackage.Literals.EXPORT_CONFIG);
     (DataatlaswizardPackage.Literals.DATASET_CONFIG__TARGET_CLASS as BasicEReference).setEType(getEcorePackage().getEClassifier('EClass')!);
+    (DataatlaswizardPackage.Literals.ENDPOINT_CONFIG__CHAINS as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATA_CHAIN);
+    (DataatlaswizardPackage.Literals.ENDPOINT_CONFIG__ENTRIES as BasicEReference).setEType(DataatlaswizardPackage.Literals.ENDPOINT_ENTRY);
+    (DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__DATASET as BasicEReference).setEType(DataatlaswizardPackage.Literals.DATASET_CONFIG);
+    (DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__MAPPING as BasicEReference).setEType(getEcorePackage().getEClassifier('EClass')!);
+    (DataatlaswizardPackage.Literals.ENDPOINT_ENTRY__LAYER as BasicEReference).setEType(getEcorePackage().getEClassifier('EClass')!);
 
     // ============================================
     // Register XML name mappings from ExtendedMetaData annotations

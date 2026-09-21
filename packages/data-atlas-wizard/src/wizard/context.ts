@@ -15,12 +15,15 @@ import type { EClass, EPackage } from '@emfts/core';
 import type { AtlasModelSource } from '../atlas/atlasSource';
 import {
   DataatlaswizardFactory,
+  EndpointKind,
   InputKind,
   MappingKind,
   type AtlasSetup,
   type DataChain,
   type DataSourceConfig,
   type DatasetConfig,
+  type EndpointConfig,
+  type EndpointEntry,
 } from '../generated';
 
 /**
@@ -137,9 +140,124 @@ export function buildDataset(eClass: EClass): DatasetConfig {
   dataset.targetClass = eClass;
   dataset.id = lowerCamel(name);
   dataset.name = titleCase(name);
-  dataset.path = dataset.id;
   dataset.description = documentationOf(eClass) ?? `Alle ${name}-Objekte.`;
   return dataset;
+}
+
+// ── Endpoints ──────────────────────────────────────────────────────────────
+
+/** Which of an endpoint's fields the target model actually knows. */
+export const ENDPOINT_KINDS: Array<{
+  kind: EndpointKind;
+  label: string;
+  /** Publishes datasets through configuration entries */
+  hasEntries: boolean;
+  hasPath: boolean;
+  hasPagination: boolean;
+  hasOpenApi: boolean;
+  hasGeometry: boolean;
+  /** Needs a class per dataset: XMLA its mapping, QGis its layer */
+  classFeature?: 'mapping' | 'layer';
+}> = [
+  { kind: EndpointKind.REST, label: 'REST', hasEntries: true, hasPath: true, hasPagination: true, hasOpenApi: true, hasGeometry: false },
+  { kind: EndpointKind.GEOJSON, label: 'GeoJSON', hasEntries: true, hasPath: true, hasPagination: true, hasOpenApi: false, hasGeometry: true },
+  { kind: EndpointKind.XMLA, label: 'XMLA', hasEntries: true, hasPath: false, hasPagination: false, hasOpenApi: false, hasGeometry: false, classFeature: 'mapping' },
+  { kind: EndpointKind.QGIS, label: 'QGis', hasEntries: true, hasPath: false, hasPagination: false, hasOpenApi: false, hasGeometry: false, classFeature: 'layer' },
+  { kind: EndpointKind.GRAPHQL, label: 'GraphQL', hasEntries: true, hasPath: false, hasPagination: false, hasOpenApi: false, hasGeometry: false },
+  { kind: EndpointKind.ODATA, label: 'OData', hasEntries: true, hasPath: false, hasPagination: false, hasOpenApi: false, hasGeometry: false },
+  { kind: EndpointKind.OGC_FEATURES, label: 'OGC Features', hasEntries: false, hasPath: false, hasPagination: false, hasOpenApi: false, hasGeometry: false },
+  { kind: EndpointKind.OGC_SENSORTHINGS, label: 'OGC SensorThings', hasEntries: false, hasPath: false, hasPagination: false, hasOpenApi: false, hasGeometry: false },
+];
+
+/** What the target model knows about this kind of endpoint. */
+export function endpointShape(kind: EndpointKind) {
+  return ENDPOINT_KINDS.find((k) => k.kind === kind) ?? ENDPOINT_KINDS[0];
+}
+
+/** The chains an endpoint publishes — an empty selection means all of them. */
+export function endpointChains(setupValue: AtlasSetup, endpoint: EndpointConfig): DataChain[] {
+  return endpoint.chains.length > 0 ? [...endpoint.chains] : [...setupValue.chains];
+}
+
+/** The datasets an endpoint publishes, in the order of its chains. */
+export function endpointDatasets(setupValue: AtlasSetup, endpoint: EndpointConfig): DatasetConfig[] {
+  return endpointChains(setupValue, endpoint).flatMap((c) => c.datasets.filter((d) => d.selected));
+}
+
+/** An entry per published dataset — created where one is missing, stale ones dropped. */
+export function syncEndpointEntries(setupValue: AtlasSetup, endpoint: EndpointConfig): void {
+  const shape = endpointShape(endpoint.kind);
+  if (!shape.hasEntries) {
+    endpoint.entries = [];
+    return;
+  }
+  const published = endpointDatasets(setupValue, endpoint);
+  const existing = new Map(endpoint.entries.map((e) => [e.dataset, e]));
+  endpoint.entries = published.map((dataset) => existing.get(dataset) ?? buildEntry(dataset));
+}
+
+/**
+ * The entries an endpoint would write — existing ones where they are, defaults
+ * for the rest.
+ *
+ * Reading does not repair: a data set added after the endpoint still gets
+ * published. `syncEndpointEntries` writes that back for editing; the
+ * transformer and the checks use this, so a stale facade still produces a
+ * correct file.
+ */
+export function resolvedEntries(
+  setupValue: AtlasSetup,
+  endpoint: EndpointConfig,
+): EndpointEntry[] {
+  if (!endpointShape(endpoint.kind).hasEntries) return [];
+  const existing = new Map(endpoint.entries.map((e) => [e.dataset, e]));
+  return endpointDatasets(setupValue, endpoint).map(
+    (dataset) => existing.get(dataset) ?? buildEntry(dataset),
+  );
+}
+
+/** A fresh entry for one dataset; the path follows its id. */
+export function buildEntry(dataset: DatasetConfig): EndpointEntry {
+  const entry = DataatlaswizardFactory.eINSTANCE.createEndpointEntry();
+  entry.dataset = dataset;
+  entry.path = dataset.id;
+  return entry;
+}
+
+/** An endpoint of one kind, named after the instance. */
+export function buildEndpoint(slug: string, instanceName: string, kind: EndpointKind): EndpointConfig {
+  const endpoint = DataatlaswizardFactory.eINSTANCE.createEndpointConfig();
+  const shape = endpointShape(kind);
+  const suffix = shape.label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  endpoint.kind = kind;
+  endpoint.id = `${slug}-${suffix}`;
+  endpoint.name = `${instanceName} ${shape.label}`;
+  endpoint.description = `${shape.label}-Endpunkt für ${instanceName}.`;
+  endpoint.urlContext = `/${slug}`;
+  return endpoint;
+}
+
+/** Takes an endpoint in and keeps its id unique. */
+export function addEndpoint(endpoint: EndpointConfig): EndpointConfig | undefined {
+  const s = setup.value;
+  if (!s) return undefined;
+  const taken = new Set(s.endpoints.map((e) => e.id));
+  if (taken.has(endpoint.id)) {
+    let i = 2;
+    while (taken.has(`${endpoint.id}-${i}`)) i++;
+    endpoint.id = `${endpoint.id}-${i}`;
+  }
+  syncEndpointEntries(s, endpoint);
+  s.endpoints.push(endpoint);
+  touch();
+  return endpoint;
+}
+
+export function removeEndpoint(endpoint: EndpointConfig): void {
+  const s = setup.value;
+  if (!s) return;
+  s.endpoints = s.endpoints.filter((e) => e !== endpoint);
+  touch();
 }
 
 /**
@@ -193,6 +311,7 @@ export function addChain(chain: DataChain): DataChain | undefined {
     chain.id = `${chain.id}-${i}`;
   }
   s.chains.push(chain);
+  for (const endpoint of s.endpoints) syncEndpointEntries(s, endpoint);
   touch();
   return chain;
 }
@@ -212,6 +331,11 @@ export function removeChain(chain: DataChain): void {
     erben[0].source = quelle;
     erben[0].sharedSource = undefined as never;
     for (const weiterer of erben.slice(1)) weiterer.sharedSource = quelle;
+  }
+  // An endpoint may have pointed at the chain that just went
+  for (const endpoint of s.endpoints) {
+    endpoint.chains = endpoint.chains.filter((c) => s.chains.includes(c));
+    syncEndpointEntries(s, endpoint);
   }
   touch();
 }
@@ -267,10 +391,10 @@ export function initSetup(pkg: EPackage): AtlasSetup {
   }
   s.chains.push(chain);
 
-  s.serviceId = `${slug}-rest`;
-  s.serviceName = `${instanceName} REST`;
-  s.serviceDescription = `REST-Endpunkt für ${instanceName}.`;
-  s.urlContext = `/${slug}`;
+  // One REST endpoint as a proposal; it publishes every chain
+  const endpoint = buildEndpoint(slug, instanceName, EndpointKind.REST);
+  syncEndpointEntries(s, endpoint);
+  s.endpoints.push(endpoint);
 
   modelPackages.value = [pkg];
   setup.value = s;

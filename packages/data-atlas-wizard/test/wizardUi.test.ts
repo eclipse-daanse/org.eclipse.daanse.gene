@@ -27,7 +27,7 @@ import { registerWizardWidgets } from '../src/widgets/register';
 import InputFieldWidget from '../src/widgets/InputFieldWidget.vue';
 
 const wizardUi = join(fileURLToPath(new URL('.', import.meta.url)), '..', 'src', 'assets', 'wizard-ui');
-const STEP_FILES = ['step-instance.xmi', 'step-service.xmi'];
+const STEP_FILES = ['step-instance.xmi'];
 
 beforeAll(async () => {
   await setupPackages();

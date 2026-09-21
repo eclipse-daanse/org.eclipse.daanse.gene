@@ -10,8 +10,7 @@
        DataAtlasConfiguration (configuration.ecore, nsURI
        https://eclipse.org/fennec/data/atlas/configuration/1.0.0).
 
-       Die Fassade vereinfacht bewusst: ein Service und
-       inputType = outputType. Siehe Plan
+       Die Fassade vereinfacht bewusst: inputType = outputType. Siehe Plan
        docs/plans/data-atlas-wizard.md, Abschnitt 1.
 
        Verweise auf Modellklassen entstehen immer über den nsURI. Relative
@@ -43,27 +42,13 @@
     <eStructuralFeatures xsi:type="ecore:EReference" name="chains" upperBound="-1"
         eType="#//DataChain" containment="true"/>
 
-    <!-- Identität des REST-Endpunkts (= RestDataService). Die Felder liegen
-         flach am Setup, weil die Fassade genau einen Service kennt. -->
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="serviceId" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="serviceName" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="serviceDescription" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="urlContext" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="openApi" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
-        defaultValueLiteral="false"/>
-    <!-- Pagination-Parameter: Der Transformer schreibt sie nur, wenn sie von
-         diesen Vorgaben abweichen. -->
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="paginationOffsetParameterName"
-        lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
-        defaultValueLiteral="offset"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="paginationSizeParameterName"
-        lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
-        defaultValueLiteral="limit"/>
+    <!--
+      Die Endpunkte. Das Zielmodell erlaubt mehrere DataServices
+      unterschiedlicher Art; jeder sagt über `chains`, welche Datenwege er
+      veröffentlicht, und über `entries`, was je Datensatz dafür gilt.
+    -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="endpoints" upperBound="-1"
+        eType="#//EndpointConfig" containment="true"/>
   </eClassifiers>
 
   <!--
@@ -118,8 +103,9 @@
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
   </eClassifiers>
 
-  <!-- Eine Klasse, die als Datensatz veröffentlicht wird (= DataSet +
-       RestDataServiceConfiguration). -->
+  <!-- Eine Klasse, die als Datensatz veröffentlicht wird (= DataSet). Pfad
+       und Batch-Grenzen gehören nicht hierher, sondern an den Endpunkt: das
+       Zielmodell führt sie an der DataServiceConfiguration, also je Dienst. -->
   <eClassifiers xsi:type="ecore:EClass" name="DatasetConfig">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="selected"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
@@ -135,16 +121,6 @@
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" lowerBound="1"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="path" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <!-- EInt statt EBigInteger: der Transformer schreibt den Dezimalstring.
-         -1 bedeutet „nicht gesetzt" und wird nicht geschrieben. -->
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="batchSize"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
-        defaultValueLiteral="-1"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="batchSizeLimit"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
-        defaultValueLiteral="-1"/>
   </eClassifiers>
 
   <!-- Ein Ausgabeformat (= DistributionExport bzw. CSVDistributionExport). -->
@@ -167,6 +143,101 @@
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="includeTypeHeader"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
         defaultValueLiteral="false"/>
+  </eClassifiers>
+
+  <!--
+    Ein Endpunkt (= DataService). Welche Felder gelten, hängt an `kind`; die
+    Aufteilung ist die des Zielmodells:
+
+      REST      openApi, Pagination      je Datensatz: path, batchSize*
+      GEOJSON   Pagination               je Datensatz: path, batchSize*, Feature-Namen
+      XMLA                               je Datensatz: mapping (EClass)
+      QGIS                               je Datensatz: layer (EClass)
+      GRAPHQL, ODATA                     je Datensatz: nichts weiter
+      OGC_FEATURES, OGC_SENSORTHINGS     keine Konfiguration je Datensatz
+  -->
+  <eClassifiers xsi:type="ecore:EClass" name="EndpointConfig">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="description" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind" lowerBound="1"
+        eType="#//EndpointKind" defaultValueLiteral="REST"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="urlContext" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+
+    <!-- Welche Datenwege dieser Endpunkt veröffentlicht. Leer heißt: alle. -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="chains" upperBound="-1"
+        eType="#//DataChain"/>
+
+    <!-- Nur REST. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="openApi"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"
+        defaultValueLiteral="false"/>
+    <!-- REST und GEOJSON. Der Transformer schreibt sie nur bei Abweichung. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="paginationOffsetParameterName"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+        defaultValueLiteral="offset"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="paginationSizeParameterName"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+        defaultValueLiteral="limit"/>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="entries" upperBound="-1"
+        eType="#//EndpointEntry" containment="true"/>
+  </eClassifiers>
+
+  <!--
+    Was ein Endpunkt zu einem Datensatz sagt (= DataServiceConfiguration).
+    Derselbe Datensatz kann in zwei Endpunkten unter verschiedenen Pfaden
+    stehen — deshalb hängt das hier und nicht am Datensatz.
+  -->
+  <eClassifiers xsi:type="ecore:EClass" name="EndpointEntry">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="dataset" lowerBound="1"
+        eType="#//DatasetConfig"/>
+
+    <!-- REST, GEOJSON: Pfad und Batch-Grenzen. EInt statt EBigInteger, -1
+         heißt „nicht gesetzt" und wird nicht geschrieben. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="path"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="batchSize"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        defaultValueLiteral="-1"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="batchSizeLimit"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EInt"
+        defaultValueLiteral="-1"/>
+
+    <!-- GEOJSON: welche Features die Geometrie tragen. -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="longitudeFeature"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="latitudeFeature"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="elevationFeature"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="geometryFeature"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="idFeature"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+
+    <!-- XMLA: die Mapping-Klasse. QGIS: die Layer-Klasse. Beide im Zielmodell
+         Pflicht, beide eine EClass aus dem Domänenmodell. -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="mapping"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="layer"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+  </eClassifiers>
+
+  <!-- Die Dienstarten des Zielmodells. -->
+  <eClassifiers xsi:type="ecore:EEnum" name="EndpointKind">
+    <eLiterals name="REST" value="0"/>
+    <eLiterals name="GEOJSON" value="1"/>
+    <eLiterals name="XMLA" value="2"/>
+    <eLiterals name="GRAPHQL" value="3"/>
+    <eLiterals name="QGIS" value="4"/>
+    <eLiterals name="OGC_FEATURES" value="5"/>
+    <eLiterals name="OGC_SENSORTHINGS" value="6"/>
+    <eLiterals name="ODATA" value="7"/>
   </eClassifiers>
 
   <eClassifiers xsi:type="ecore:EEnum" name="InputKind">

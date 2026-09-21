@@ -7,6 +7,7 @@
 
 import type { EObject, EPackage, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
 import type { DataChain } from './DataChain';
+import type { EndpointConfig } from './EndpointConfig';
 
 /**
  * AtlasSetup
@@ -17,12 +18,6 @@ export interface AtlasSetup extends EObject {
   instanceDescription?: string;
   modelPackage: EPackage;
   chains: DataChain[];
-  serviceId: string;
-  serviceName: string;
-  serviceDescription: string;
-  urlContext: string;
-  openApi: boolean;
-  paginationOffsetParameterName: string;
-  paginationSizeParameterName: string;
+  endpoints: EndpointConfig[];
 
 }

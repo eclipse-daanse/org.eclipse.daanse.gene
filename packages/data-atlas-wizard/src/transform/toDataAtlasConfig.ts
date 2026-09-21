@@ -12,17 +12,19 @@
 import type { EClass, EObject, EPackage } from '@emfts/core';
 import { getConfigurationPackage } from '../emf/setup';
 import {
+  EndpointKind,
   ExportKind,
   InputKind,
   MappingKind,
   type AtlasSetup,
   type DataSourceConfig,
   type DatasetConfig,
+  type EndpointConfig,
   type ExportConfig,
 } from '../generated';
 import { createDataAtlasResource } from './dataAtlasResource';
 import { assertValid, findWarnings } from './validate';
-import { effectiveSource } from '../wizard/context';
+import { effectiveSource, endpointChains, endpointShape, resolvedEntries } from '../wizard/context';
 
 /** Der Dateiname, unter dem der Data Atlas die Konfiguration erwartet. */
 export const DEFAULT_FILE_NAME = 'dataatlas.xmi';
@@ -245,49 +247,141 @@ export function buildDataAtlasXmi(setup: AtlasSetup): DataAtlasResult {
     builder.add(dataInput, 'supportedEClasses', dataset.targetClass);
   }
 
-  // ── Endpunkt ─────────────────────────────────────────────────────────────
-  const service = builder.create('RestDataService');
-  builder.set(service, 'id', setup.serviceId);
-  builder.set(service, 'name', setup.serviceName);
-  builder.set(service, 'description', setup.serviceDescription);
-  builder.set(service, 'urlContext', setup.urlContext);
-  builder.set(service, 'openAPI', setup.openApi);
-  builder.set(service, 'paginationOffsetParameterName', setup.paginationOffsetParameterName);
-  builder.set(service, 'paginationSizeParameterName', setup.paginationSizeParameterName);
-
-  if (gemeinsameQuelle) {
-    const dataInput = inputObjekte.get(gemeinsameQuelle);
-    if (dataInput) builder.set(service, 'dataInput', dataInput);
+  // ── Endpoints ────────────────────────────────────────────────────────────
+  for (const endpoint of setup.endpoints) {
+    buildService(builder, root, setup, endpoint, {
+      dataSetObjekte,
+      inputObjekte,
+      exportVon,
+    });
   }
-  if (gemeinsameFormate !== undefined && eintraege.length > 0) {
-    for (const exportConfig of eintraege[0].chain.exports.filter((e) => e.selected)) {
-      const exportObj = exportVon.get(exportConfig);
-      if (exportObj) builder.add(service, 'distributionExport', exportObj);
-    }
-  }
-
-  for (const { dataset, dataSet } of dataSetObjekte) {
-    const serviceConfig = builder.create('RestDataServiceConfiguration');
-    // Der Wert bedeutet fachlich nichts und wird deshalb abgeleitet.
-    builder.set(serviceConfig, 'id', `${dataset.id}-config`);
-    builder.set(serviceConfig, 'dataSet', dataSet);
-    // path ist lowerBound=1; ohne Wert griffe der Name des Datensatzes, und
-    // der ist Title Case — als URL-Segment nicht gewollt.
-    builder.set(serviceConfig, 'path', dataset.path);
-    // -1 heisst "nicht gesetzt" und ist auch im Zielmodell der Vorgabewert —
-    // dann bleibt das Attribut weg.
-    const batchSize = dataset.batchSize ?? -1;
-    const batchSizeLimit = dataset.batchSizeLimit ?? -1;
-    if (batchSize > -1) builder.set(serviceConfig, 'batchSize', batchSize);
-    if (batchSizeLimit > -1) builder.set(serviceConfig, 'batchSizeLimit', batchSizeLimit);
-    builder.add(service, 'configuration', serviceConfig);
-  }
-  builder.add(root, 'services', service);
 
   const resource = createDataAtlasResource(DEFAULT_FILE_NAME);
   resource.getContents().add(root);
 
   return { xmi: resource.saveToString(), fileName: DEFAULT_FILE_NAME, warnings };
+}
+
+/** The target class each endpoint kind maps to. */
+const SERVICE_CLASSES: Record<EndpointKind, { service: string; configuration?: string }> = {
+  [EndpointKind.REST]: { service: 'RestDataService', configuration: 'RestDataServiceConfiguration' },
+  [EndpointKind.GEOJSON]: {
+    service: 'GeoJsonDataService',
+    configuration: 'GeoJsonDataServiceConfiguration',
+  },
+  [EndpointKind.XMLA]: { service: 'XMLADataService', configuration: 'XMLADataServiceConfiguration' },
+  [EndpointKind.QGIS]: { service: 'QGisDataService', configuration: 'QGisDataServiceConfiguration' },
+  [EndpointKind.GRAPHQL]: {
+    service: 'GraphQLDataService',
+    configuration: 'GraphQLDataServiceConfiguration',
+  },
+  [EndpointKind.ODATA]: {
+    service: 'ODataDataService',
+    configuration: 'ODataDataServiceConfiguration',
+  },
+  // These two have no configuration reference at all — they publish what their
+  // data input holds.
+  [EndpointKind.OGC_FEATURES]: { service: 'OgcFeaturesDataService' },
+  [EndpointKind.OGC_SENSORTHINGS]: { service: 'OgcSensorThingsDataService' },
+};
+
+/**
+ * One endpoint → one DataService with its configurations.
+ *
+ * The trias moves to the service when the chains it publishes agree, and stays
+ * on the data set otherwise — the same override-else-default as before, only
+ * now asked per endpoint instead of globally.
+ */
+function buildService(
+  builder: ReturnType<typeof makeBuilder>,
+  root: EObject,
+  setup: AtlasSetup,
+  endpoint: EndpointConfig,
+  objekte: {
+    dataSetObjekte: { dataset: DatasetConfig; dataSet: EObject }[];
+    inputObjekte: Map<DataSourceConfig, EObject>;
+    exportVon: Map<ExportConfig, EObject>;
+  },
+): void {
+  const shape = endpointShape(endpoint.kind);
+  const classes = SERVICE_CLASSES[endpoint.kind];
+  const service = builder.create(classes.service);
+
+  builder.set(service, 'id', endpoint.id);
+  builder.set(service, 'name', endpoint.name);
+  builder.set(service, 'description', endpoint.description);
+  builder.set(service, 'urlContext', endpoint.urlContext);
+  if (shape.hasOpenApi) builder.set(service, 'openAPI', endpoint.openApi);
+  if (shape.hasPagination) {
+    builder.set(service, 'paginationOffsetParameterName', endpoint.paginationOffsetParameterName);
+    builder.set(service, 'paginationSizeParameterName', endpoint.paginationSizeParameterName);
+  }
+
+  // The chains this endpoint publishes decide its trias
+  const chains = endpointChains(setup, endpoint);
+  const sources = commonValue(chains.map((c) => effectiveSource(c)));
+  if (sources) {
+    const dataInput = objekte.inputObjekte.get(sources);
+    if (dataInput) builder.set(service, 'dataInput', dataInput);
+  }
+  const formats = commonValue(
+    chains.map((c) =>
+      c.exports
+        .filter((e) => e.selected)
+        .map((e) => e.id)
+        .sort()
+        .join(' '),
+    ),
+  );
+  if (formats !== undefined && chains.length > 0) {
+    for (const exportConfig of chains[0].exports.filter((e) => e.selected)) {
+      const exportObj = objekte.exportVon.get(exportConfig);
+      if (exportObj) builder.add(service, 'distributionExport', exportObj);
+    }
+  }
+
+  if (classes.configuration) {
+    for (const entry of resolvedEntries(setup, endpoint)) {
+      const dataSet = objekte.dataSetObjekte.find((d) => d.dataset === entry.dataset)?.dataSet;
+      if (!dataSet) continue;
+      const configuration = builder.create(classes.configuration);
+      // The value means nothing in itself, so it is derived.
+      builder.set(configuration, 'id', `${endpoint.id}-${entry.dataset.id}-config`);
+      builder.set(configuration, 'dataSet', dataSet);
+
+      if (shape.hasPath) {
+        // path is lowerBound=1; without a value the data set's name would
+        // apply, and that is Title Case — not what belongs in a URL.
+        builder.set(configuration, 'path', entry.path || entry.dataset.id);
+        // -1 means "not set" and is the target model's default too, so the
+        // attribute stays away.
+        const batchSize = entry.batchSize ?? -1;
+        const batchSizeLimit = entry.batchSizeLimit ?? -1;
+        if (batchSize > -1) builder.set(configuration, 'batchSize', batchSize);
+        if (batchSizeLimit > -1) builder.set(configuration, 'batchSizeLimit', batchSizeLimit);
+      }
+      if (shape.hasGeometry) {
+        for (const feature of [
+          'longitudeFeature',
+          'latitudeFeature',
+          'elevationFeature',
+          'geometryFeature',
+          'idFeature',
+        ] as const) {
+          const value = entry[feature];
+          if (value) builder.set(configuration, feature, value);
+        }
+      }
+      if (shape.classFeature) {
+        const value = shape.classFeature === 'mapping' ? entry.mapping : entry.layer;
+        if (value) builder.set(configuration, shape.classFeature, value);
+      }
+
+      builder.add(service, 'configuration', configuration);
+    }
+  }
+
+  builder.add(root, 'services', service);
 }
 
 /**

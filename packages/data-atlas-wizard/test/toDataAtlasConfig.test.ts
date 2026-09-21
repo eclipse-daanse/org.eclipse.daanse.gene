@@ -22,7 +22,10 @@ import { newResourceSet, registerEcoreFromString, setupPackages } from '../src/e
 import { buildDataAtlasXmi } from '../src/transform/toDataAtlasConfig';
 import {
   addChain,
+  addEndpoint,
   buildChain,
+  buildEndpoint,
+  syncEndpointEntries,
   buildDatabaseSource,
   buildFileSource,
   initSetup,
@@ -31,6 +34,7 @@ import {
 } from '../src/wizard/context';
 import {
   DataatlaswizardFactory,
+  EndpointKind,
   ExportKind,
   type AtlasSetup,
   type DataChain,
@@ -206,11 +210,13 @@ function beispielSetup(): AtlasSetup {
   kette.id = 'persons';
   kette.source!.id = 'persons-file';
   kette.source!.fileUri = '/opt/dataatlas/runtime/data/data/persons.xmi';
-  s.serviceId = 'persons-rest';
-  s.serviceName = 'Persons REST';
-  s.serviceDescription = 'REST endpoint publishing the example persons.';
-  s.urlContext = '/example';
-  s.openApi = false;
+
+  const endpunkt = s.endpoints[0];
+  endpunkt.id = 'persons-rest';
+  endpunkt.name = 'Persons REST';
+  endpunkt.description = 'REST endpoint publishing the example persons.';
+  endpunkt.urlContext = '/example';
+  endpunkt.openApi = false;
 
   // Die Vorlagen benutzen Plural-Namen; abgeleitet wird person/Person
   // (context.ts erklärt, warum nicht pluralisiert wird).
@@ -218,8 +224,10 @@ function beispielSetup(): AtlasSetup {
   dataset.id = 'persons';
   dataset.name = 'Persons';
   dataset.description = 'All persons of the example data set.';
-  dataset.path = 'persons';
   dataset.targetClass = person;
+  // Der Pfad haengt am Endpunkt-Eintrag, nicht am Datensatz
+  syncEndpointEntries(s, endpunkt);
+  endpunkt.entries[0].path = 'persons';
   return s;
 }
 
@@ -238,20 +246,29 @@ describe('Grundfall gegen example/dataatlas-atlas.xmi', () => {
     ]);
   });
 
-  it('die id der Service-Konfiguration ist abgeleitet und eindeutig', () => {
+  it('die id der Service-Konfiguration nennt Endpunkt und Datensatz', () => {
+    /*
+     * Zwei Datensaetze in zwei Endpunkten: der Wert bedeutet fachlich nichts,
+     * muss aber eindeutig sein. Mit <dataSetId>-config allein waere er es
+     * nicht mehr, sobald zwei Endpunkte denselben Datensatz veroeffentlichen.
+     */
     const s = beispielSetup();
-    // ein zweiter Datensatz: mit <serviceId>-config waeren beide gleich
     const zweiter = DataatlaswizardFactory.eINSTANCE.createDatasetConfig();
     zweiter.targetClass = person;
     zweiter.id = 'orte';
     zweiter.name = 'Orte';
     zweiter.description = 'Alle Orte.';
-    zweiter.path = 'orte';
     s.chains[0].datasets.push(zweiter);
+    addEndpoint(buildEndpoint('persons', 'Persons', EndpointKind.REST));
 
     const { xmi } = buildDataAtlasXmi(s);
     const ids = [...xmi.matchAll(/<configuration id="([^"]+)"/g)].map((m) => m[1]);
-    expect(ids).toEqual(['persons-config', 'orte-config']);
+    expect(ids).toEqual([
+      'persons-rest-persons-config',
+      'persons-rest-orte-config',
+      'persons-rest-2-persons-config',
+      'persons-rest-2-orte-config',
+    ]);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
@@ -271,12 +288,13 @@ describe('Pagination gegen fixtures/dataatlas-pagination.xmi', () => {
      * seine Konfigurationen.
      */
     const s = beispielSetup();
-    s.serviceDescription = 'REST endpoint with custom pagination parameter names.';
-    s.urlContext = '/paged';
-    s.paginationOffsetParameterName = 'start';
-    s.paginationSizeParameterName = 'count';
-    s.chains[0].datasets[0].batchSize = 2;
-    s.chains[0].datasets[0].batchSizeLimit = 2;
+    const endpunkt = s.endpoints[0];
+    endpunkt.description = 'REST endpoint with custom pagination parameter names.';
+    endpunkt.urlContext = '/paged';
+    endpunkt.paginationOffsetParameterName = 'start';
+    endpunkt.paginationSizeParameterName = 'count';
+    endpunkt.entries[0].batchSize = 2;
+    endpunkt.entries[0].batchSizeLimit = 2;
 
     const { erzeugt, vorlage } = vergleiche(s, 'dataatlas-pagination.xmi');
     expect(erzeugt.services).toEqual(vorlage.services);
@@ -350,7 +368,6 @@ describe('Mehrere Datenwege', () => {
     dataset.id = 'orte';
     dataset.name = 'Orte';
     dataset.description = 'Alle Orte.';
-    dataset.path = 'orte';
     zweiter.datasets.push(dataset);
     return { setup: s, zweiter };
   }
@@ -425,6 +442,7 @@ describe('Datenbank gegen example/dataatlas-postgres-atlas.xmi', () => {
    */
   function postgresSetup(): AtlasSetup {
     const s = beispielSetup();
+    s.endpoints[0].id = 'persons-pg-rest';
     s.instanceName = 'example-postgres-atlas';
     s.instanceDescription =
       'Example Data Atlas instance serving a PostgreSQL table as CSV, delivered by a Model Atlas.';
@@ -434,10 +452,9 @@ describe('Datenbank gegen example/dataatlas-postgres-atlas.xmi', () => {
     quelle.dataSourceName = 'Persons DB';
     quelle.dataSourceFilter = '(dataSourceName=personsDs)';
     s.chains[0].source = quelle;
-    s.serviceId = 'persons-pg-rest';
-    s.serviceName = 'Persons Postgres REST';
-    s.serviceDescription = 'REST endpoint publishing the database-backed persons.';
-    s.urlContext = '/pg';
+    s.endpoints[0].name = 'Persons Postgres REST';
+    s.endpoints[0].description = 'REST endpoint publishing the database-backed persons.';
+    s.endpoints[0].urlContext = '/pg';
     s.chains[0].datasets[0].description = 'All persons from the database, as CSV or JSON.';
     s.chains[0].exports.push(
       format(ExportKind.CSV, 'csv', 'CSV', 'Semicolon separated, no SQL-type row.'),

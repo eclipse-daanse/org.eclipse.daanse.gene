@@ -114,15 +114,19 @@ describe('Fixup der Codegen-Lücken (emf.ts#83)', () => {
     const setup = DataatlaswizardPackage.Literals.ATLAS_SETUP;
     const typ = (name: string) => setup.getEStructuralFeature(name)?.getEType()?.getName();
     expect(typ('instanceName')).toBe('EString');
-    expect(typ('openApi')).toBe('EBoolean');
+    expect(
+      DataatlaswizardPackage.Literals.ENDPOINT_CONFIG.getEStructuralFeature('openApi')
+        ?.getEType()
+        ?.getName(),
+    ).toBe('EBoolean');
     expect(
       DataatlaswizardPackage.Literals.DATA_SOURCE_CONFIG.getEStructuralFeature('kind')
         ?.getEType()
         ?.getName(),
     ).toBe('InputKind');
 
-    const dataset = DataatlaswizardPackage.Literals.DATASET_CONFIG;
-    expect(dataset.getEStructuralFeature('batchSize')?.getEType()?.getName()).toBe('EInt');
+    const entry = DataatlaswizardPackage.Literals.ENDPOINT_ENTRY;
+    expect(entry.getEStructuralFeature('batchSize')?.getEType()?.getName()).toBe('EInt');
     // Ecore-Datentypen müssen aus dem kanonischen Package kommen, sonst
     // scheitern die Identitätsvergleiche im Serializer
     expect(setup.getEStructuralFeature('instanceName')?.getEType()).toBe(
@@ -137,14 +141,21 @@ describe('Fixup der Codegen-Lücken (emf.ts#83)', () => {
     const raus: any = rs.createResource(URI.createURI('setup.xmi'));
     const setup = DataatlaswizardFactory.eINSTANCE.createAtlasSetup();
     setup.instanceName = 'demo';
-    setup.openApi = true;
     const dataset = DataatlaswizardFactory.eINSTANCE.createDatasetConfig();
     dataset.id = 'persons';
-    dataset.batchSize = 500;
     const chain = DataatlaswizardFactory.eINSTANCE.createDataChain();
     chain.id = 'persons';
     chain.datasets.push(dataset);
     setup.chains.push(chain);
+    // Wahrheitswert und Zahl haengen am Endpunkt bzw. an seinem Eintrag
+    const endpoint = DataatlaswizardFactory.eINSTANCE.createEndpointConfig();
+    endpoint.id = 'demo-rest';
+    endpoint.openApi = true;
+    const entry = DataatlaswizardFactory.eINSTANCE.createEndpointEntry();
+    entry.dataset = dataset;
+    entry.batchSize = 500;
+    endpoint.entries.push(entry);
+    setup.endpoints.push(endpoint);
     raus.getContents().add(setup);
     const xmi = raus.saveToString();
 
@@ -152,10 +163,10 @@ describe('Fixup der Codegen-Lücken (emf.ts#83)', () => {
     rein.loadFromString(xmi);
     const geladen = rein.getContents().get(0);
 
-    expect(geladen.openApi).toBe(true);
-    expect(typeof geladen.openApi).toBe('boolean');
-    expect(geladen.chains[0].datasets[0].batchSize).toBe(500);
-    expect(typeof geladen.chains[0].datasets[0].batchSize).toBe('number');
+    expect(geladen.endpoints[0].openApi).toBe(true);
+    expect(typeof geladen.endpoints[0].openApi).toBe('boolean');
+    expect(geladen.endpoints[0].entries[0].batchSize).toBe(500);
+    expect(typeof geladen.endpoints[0].entries[0].batchSize).toBe('number');
   });
 
   it('Enums kommen als EEnumLiteral zurück, nicht als Name', () => {

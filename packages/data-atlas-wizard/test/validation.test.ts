@@ -28,6 +28,7 @@ import {
 } from '../src/wizard/context';
 import {
   DataatlaswizardFactory,
+  EndpointKind,
   ExportKind,
   MappingKind,
   type AtlasSetup,
@@ -70,7 +71,6 @@ function neuerDatensatz(id: string, eClass: EClass) {
   dataset.id = id;
   dataset.name = id;
   dataset.description = `${id}.`;
-  dataset.path = id;
   return dataset;
 }
 
@@ -110,25 +110,50 @@ describe('harte Fehler', () => {
   });
 
   it('leere Pflichtfelder des Endpunkts', () => {
-    s.serviceId = '';
-    s.serviceName = '';
-    s.serviceDescription = '';
-    s.urlContext = '';
+    const endpunkt = s.endpoints[0];
+    endpunkt.id = '';
+    endpunkt.name = '';
+    endpunkt.description = '';
+    endpunkt.urlContext = '';
     const fehler = findErrors(s).join('\n');
-    expect(fehler).toMatch(/id des REST-Endpunkts/);
-    expect(fehler).toMatch(/Name des REST-Endpunkts/);
-    expect(fehler).toMatch(/Beschreibung des REST-Endpunkts/);
-    expect(fehler).toMatch(/Basis-Pfad/);
+    expect(fehler).toMatch(/Ein Endpunkt hat keine id/);
+    expect(fehler).toMatch(/Name fehlt/);
+    expect(fehler).toMatch(/Beschreibung fehlt/);
+    expect(fehler).toMatch(/Basis-Pfad fehlt/);
+  });
+
+  it('kein Endpunkt', () => {
+    s.endpoints = [];
+    expect(findErrors(s)).toContain('Kein Endpunkt angelegt.');
+  });
+
+  it('ein Pfad, den der Endpunkt nicht hat', () => {
+    // Der Pfad haengt am Eintrag des Endpunkts, nicht am Datensatz
+    s.endpoints[0].entries[0].path = '';
+    expect(findErrors(s).join('\n')).toMatch(/Pfad fehlt/);
+  });
+
+  it('XMLA verlangt eine mapping-Klasse je Datensatz', () => {
+    s.endpoints[0].kind = EndpointKind.XMLA;
+    expect(findErrors(s).join('\n')).toMatch(/mapping-Klasse fehlt/);
+  });
+
+  it('QGis verlangt eine layer-Klasse je Datensatz', () => {
+    s.endpoints[0].kind = EndpointKind.QGIS;
+    expect(findErrors(s).join('\n')).toMatch(/layer-Klasse fehlt/);
+  });
+
+  it('eine Art ohne Konfiguration je Datensatz verlangt nichts davon', () => {
+    s.endpoints[0].kind = EndpointKind.OGC_FEATURES;
+    expect(findErrors(s)).toEqual([]);
   });
 
   it('leere Pflichtfelder eines Datensatzes', () => {
     kette.datasets[0].name = '';
     kette.datasets[0].description = '';
-    kette.datasets[0].path = '';
     const fehler = findErrors(s).join('\n');
     expect(fehler).toMatch(/Name fehlt/);
     expect(fehler).toMatch(/Beschreibung fehlt/);
-    expect(fehler).toMatch(/Pfad fehlt/);
   });
 
   it('leere Pflichtfelder eines Formats', () => {
@@ -228,7 +253,7 @@ describe('harte Fehler', () => {
 
   it('buildDataAtlasXmi wirft mit allen Gründen', () => {
     s.instanceName = '';
-    s.urlContext = '';
+    s.endpoints[0].urlContext = '';
     try {
       buildDataAtlasXmi(s);
       expect.unreachable('hätte werfen müssen');
@@ -279,8 +304,9 @@ describe('Warnungen', () => {
   });
 
   it('batchSizeLimit kleiner als batchSize', () => {
-    kette.datasets[0].batchSize = 100;
-    kette.datasets[0].batchSizeLimit = 10;
+    // Beide haengen am Eintrag des Endpunkts
+    s.endpoints[0].entries[0].batchSize = 100;
+    s.endpoints[0].entries[0].batchSizeLimit = 10;
     expect(findWarnings(s).join('\n')).toMatch(/batchSizeLimit \(10\) ist kleiner/);
   });
 

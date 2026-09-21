@@ -5,6 +5,22 @@
 > Abschnitt 9 gegen den Compose-Setup und der nächste Schritt QVT-O
 > (Abschnitt 11).
 >
+> **Änderung 2026-09-21:** Die Fassade kennt jetzt **mehrere Endpunkte**, und
+> ihre **Art** ist wählbar — das Zielmodell erlaubt acht (Rest, GeoJson, XMLA,
+> GraphQL, QGis, OgcFeatures, OgcSensorThings, OData), also stellt der
+> Assistent sie dar. `AtlasSetup.endpoints*` (`EndpointConfig`) ersetzt die
+> flachen Service-Felder; je Endpunkt sagt `chains`, welche Wege er
+> veröffentlicht (leer = alle), und `entries` (`EndpointEntry`), was je
+> Datensatz gilt.
+>
+> Damit wandern `path`, `batchSize` und `batchSizeLimit` vom `DatasetConfig`
+> an den Endpunkt-Eintrag — dorthin, wo das Zielmodell sie führt
+> (`DataServiceConfiguration`): derselbe Datensatz kann in zwei Endpunkten
+> unter verschiedenen Pfaden stehen. Dazu kommen die Felder, die nur eine Art
+> kennt: GeoJSON die Feature-Namen der Geometrie, XMLA `mapping`, QGis
+> `layer`. Schritt 4 ist damit handgeschrieben (`EndpointsStep.vue`),
+> `step-service.xmi` ist entfallen.
+>
 > **Änderung 2026-09-18 (@emfts/core 0.3.0-next.1):** Vier der fünf gemeldeten
 > Abweichungen sind behoben, eine Annahme ist dadurch weggefallen:
 >
@@ -152,7 +168,7 @@ Die Fassade **vereinfacht** bewusst gegenüber `configuration.ecore`:
 
 | Zielmodell erlaubt | Fassade in Iteration 1 | Grund |
 |---|---|---|
-| n `DataService`s | **genau einen** `RestDataService` | Service-Felder liegen flach am Setup; ein zweiter Endpunkt ist ein zweiter Wizard-Durchlauf |
+| n `DataService`s | n — Liste `endpoints`, Art wählbar | das Zielmodell erlaubt sie, also stellt die Fassade sie dar (Änderung 2026-09-21) |
 | Trias (`dataInput`/`transformation`/`distributionExport`) auf Service- **und** DataSet-Ebene | am Service, solange alle Datenwege einig sind, sonst am DataSet | override-else-default rechnet der Transformer aus; einig ist der Normalfall und liest sich wie die Vorlagen (`tests/fixtures/dataatlas-servicedefault.xmi`) |
 | n `DataInput`s | n — **einer je Datenweg**, geteilte Quellen fallen zusammen | eine Transformation liest immer einen zweiten Eingang; die Kette ist die Einheit |
 | `transformation` | nicht abgebildet | Iteration 2a, Abschnitt 11 |
@@ -289,7 +305,7 @@ Auswahl sonst unvollständig aufgelöst würde.
 | 1 | **Modell** — Atlas-Tab (Verbindung/Suche/Cascade-Load) oder Upload-Tab | handgeschrieben, aus `eorm-wizard` kopiert (`ModelSourceStep.vue`, `AtlasSourceTab.vue`, `UploadSourceTab.vue`) | kein EPackage gewählt |
 | 2 | **Instanz** — `instanceName`, `instanceDescription` | UIModel `src/assets/wizard-ui/step-instance.xmi` | `instanceName` leer |
 | 3 | **Datenwege** — je Weg: id, Quelle (eigene Datei/Datenbank oder eine fremde mitbenutzen), Datensatz-Tabelle, Formate mit CSV-Optionen | handgeschrieben `ChainsStep.vue` | kein Weg; Weg ohne Quelle; kein Datensatz gewählt; doppelte `id`/`path`; `IMPORTED` ohne Mapping; relative `fileUri` |
-| 4 | **Endpunkt** — `serviceId`, `serviceName`, `serviceDescription`, `urlContext`, `openApi`, Pagination-Parameter | UIModel `step-service.xmi` | `urlContext` oder `serviceId`/`serviceName` leer |
+| 4 | **Endpunkte** — je Endpunkt Art, id/Name/Beschreibung, `urlContext`, die Felder seiner Art, die veröffentlichten Wege und die Angaben je Datensatz | handgeschrieben `EndpointsStep.vue` | kein Endpunkt; `urlContext` oder Name leer |
 | 5 | **Zusammenfassung** — Prüfliste, XMI-Vorschau, Download, Publish-Panel | handgeschrieben `SummaryStep.vue` | — |
 
 Die Formate stehen bewusst **im** Weg und nicht in einem eigenen Schritt: sie
@@ -522,11 +538,11 @@ packages/data-atlas-wizard/
 ├── src/generated/**                  emfts-codegen, eingecheckt
 ├── src/assets/configuration.ecore    Kopie (sync)
 ├── src/assets/eorm.ecore             Kopie (sync)
-├── src/assets/wizard-ui/step-{instance,service}.xmi
+├── src/assets/wizard-ui/step-instance.xmi
 ├── src/emf/{setup.ts,wizardPackageFixup.ts}
 ├── src/wizard/{WizardShell.vue,context.ts,uiModels.ts,
 │              ModelSourceStep.vue,AtlasSourceTab.vue,UploadSourceTab.vue,
-│              ChainsStep.vue,SummaryStep.vue}
+│              ChainsStep.vue,EndpointsStep.vue,SummaryStep.vue}
 ├── src/transform/toDataAtlasConfig.ts Wege → Zielmodell → saveToString()
 ├── src/transform/{validate.ts,requiredSchemas.ts}
 ├── src/transform/dataAtlasResource.ts XMISave/XMIResource-Unterklassen:

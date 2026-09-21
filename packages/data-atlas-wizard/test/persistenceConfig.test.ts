@@ -79,7 +79,6 @@ beforeEach(() => {
   kette.datasets[0].id = 'persons';
   kette.datasets[0].name = 'Persons';
   kette.datasets[0].description = 'All persons.';
-  kette.datasets[0].path = 'persons';
   // Die Datei-Quelle des Wegs durch eine Datenbank-Quelle mit importiertem
   // Mapping ersetzen
   const quelle = buildDatabaseSource('person', 'person');

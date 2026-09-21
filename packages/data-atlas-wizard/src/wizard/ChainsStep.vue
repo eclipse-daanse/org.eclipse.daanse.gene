@@ -135,10 +135,7 @@
               <th>Klasse</th>
               <th>id</th>
               <th>Name</th>
-              <th>Pfad</th>
               <th>Beschreibung</th>
-              <th class="tight">Batch</th>
-              <th class="tight">Grenze</th>
             </tr>
           </thead>
           <tbody>
@@ -157,23 +154,12 @@
               </td>
               <td><input type="text" :value="d.id" @input="setzeDatensatz(d, 'id', text($event))" /></td>
               <td><input type="text" :value="d.name" @input="setzeDatensatz(d, 'name', text($event))" /></td>
-              <td><input type="text" :value="d.path" @input="setzeDatensatz(d, 'path', text($event))" /></td>
               <td>
                 <input
                   type="text"
                   class="weit"
                   :value="d.description"
                   @input="setzeDatensatz(d, 'description', text($event))"
-                />
-              </td>
-              <td class="tight">
-                <input type="number" :value="d.batchSize" @input="setzeDatensatz(d, 'batchSize', zahl($event))" />
-              </td>
-              <td class="tight">
-                <input
-                  type="number"
-                  :value="d.batchSizeLimit"
-                  @input="setzeDatensatz(d, 'batchSizeLimit', zahl($event))"
                 />
               </td>
             </tr>
@@ -423,7 +409,7 @@ function hinweise(chain: DataChain): string[] {
   if (!quelle) meldungen.push('Keine Datenquelle.');
   const ausgewaehlt = chain.datasets.filter((d) => d.selected);
   if (ausgewaehlt.length === 0) meldungen.push('Kein Datensatz ausgewählt.');
-  for (const feld of ['id', 'path'] as const) {
+  for (const feld of ['id'] as const) {
     const werte = ausgewaehlt.map((d) => d[feld]);
     for (const doppelt of new Set(werte.filter((w, i) => w && werte.indexOf(w) !== i))) {
       meldungen.push(`„${doppelt}" ist als ${feld} mehrfach vergeben.`);

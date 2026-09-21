@@ -17,8 +17,5 @@ export interface DatasetConfig extends EObject {
   id: string;
   name: string;
   description: string;
-  path: string;
-  batchSize?: number;
-  batchSizeLimit?: number;
 
 }
