@@ -831,8 +831,12 @@ export function useFileSystem() {
   /**
    * Restore previously opened local directories from IndexedDB.
    * Requests permission for each stored handle — if denied, the source is skipped.
+   *
+   * With `only`, restoration is limited to the matching handle (by source id or
+   * folder name). Opening one recent workspace must not mount every folder that
+   * was ever opened.
    */
-  async function restoreLocalSources(): Promise<number> {
+  async function restoreLocalSources(only?: { id?: string; name?: string }): Promise<number> {
     if (!isFileSystemAccessSupported()) return 0
 
     const persisted = await loadPersistedHandles()
@@ -852,6 +856,8 @@ export function useFileSystem() {
 
     for (const { key, handle, name } of deduped) {
       try {
+        if (only && key !== only.id && name !== only.name) continue
+
         // Skip if already loaded
         if (sources.value.some(s => s.id === key || s.name === name)) continue
 

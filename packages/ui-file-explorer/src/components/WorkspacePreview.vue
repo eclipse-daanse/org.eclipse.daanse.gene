@@ -261,9 +261,12 @@ async function handleOpenRecentWorkspace(ws: { name: string; filePath: string; s
   let source = fileSystem.getSource(ws.sourceId)
 
   if (!source) {
-    // Try to restore persisted handles (user gesture from click)
-    await fileSystem.restoreLocalSources()
+    // Try to restore the persisted handle of this entry (user gesture from click).
+    // Restoring every handle would mount all folders instead of the chosen one.
+    await fileSystem.restoreLocalSources({ id: ws.sourceId, name: ws.sourceName })
+    // A handle stored under a new key still carries the folder name
     source = fileSystem.getSource(ws.sourceId)
+      ?? fileSystem.sources.value.find(s => s.name === ws.sourceName)
 
     if (!source) {
       // Ask user to re-pick the folder
