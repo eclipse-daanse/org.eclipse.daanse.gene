@@ -8,28 +8,71 @@
  * JdbcDataSource und MongoDataSource, obwohl beide im Modell stehen.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import {
+  BasicResourceSet,
+  EPackageRegistry,
+  URI,
+  XMIResource,
+  type EPackage,
+} from '@emfts/core'
 import { registerUsedModels } from '../services/atlasResolution'
 
 const NS = 'urn:issue155:cfg'
+
+const NS_OTHER = 'urn:issue155:other'
 
 const ECORE = `<?xml version="1.0" encoding="UTF-8"?>
 <ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
     name="cfg" nsURI="${NS}" nsPrefix="cfg">
-  <eClassifiers xsi:type="ecore:EClass" name="Config"/>
+  <eClassifiers xsi:type="ecore:EClass" name="Config">
+    <eStructuralFeatures xsi:type="ecore:EReference" name="parts" upperBound="-1"
+        eType="${NS_OTHER}#//Part" containment="true"/>
+  </eClassifiers>
 </ecore:EPackage>`
 
-/** A resource as the instance tree holds it: objects, and their packages. */
-function fakeResource(nsUris: string[]) {
-  const objectOf = (nsURI: string) => ({
-    eClass: () => ({ getEPackage: () => ({ getNsURI: () => nsURI }) }),
-    eContents: () => [],
-  })
-  return { getContents: () => nsUris.map(objectOf) }
+const ECORE_OTHER = `<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="other" nsURI="${NS_OTHER}" nsPrefix="other">
+  <eClassifiers xsi:type="ecore:EClass" name="Part"/>
+</ecore:EPackage>`
+
+/** Loads an .ecore the way the app does, into the global registry. */
+function registerPackage(ecore: string, name: string): EPackage {
+  const rs = new BasicResourceSet(EPackageRegistry.INSTANCE as never)
+  const resource = new XMIResource(URI.createURI(name))
+  resource.setResourceSet(rs)
+  resource.loadFromString(ecore)
+  const pkg = resource.getContents().get(0) as unknown as EPackage
+  EPackageRegistry.INSTANCE.set(pkg.getNsURI()!, pkg)
+  return pkg
 }
 
-/** The metadata listing and the content, as the Atlas answers them. */
+/**
+ * A real instance document, as the tree holds it after loading: a Config with
+ * a Part from a second model inside. `packagesOf` walks it through
+ * `eClass()`/`eContents()`, so an object graph built by hand would prove
+ * nothing about the real one.
+ */
+function instanceResource(): XMIResource {
+  const rs = new BasicResourceSet(EPackageRegistry.INSTANCE as never)
+  const resource = new XMIResource(URI.createURI('instances.xmi'))
+  resource.setResourceSet(rs)
+  resource.loadFromString(`<?xml version="1.0" encoding="UTF-8"?>
+<cfg:Config xmlns:cfg="${NS}" xmlns:other="${NS_OTHER}" xmlns:xmi="http://www.omg.org/XMI"
+    xmi:version="2.0">
+  <parts/>
+</cfg:Config>`)
+  return resource
+}
+
+/**
+ * The metadata listing and the content, as the Atlas answers them. Only the
+ * HTTP boundary is stood in for — everything above it is the real code.
+ */
 function atlasProvider() {
   return {
     scopeName: 'jena',
@@ -40,8 +83,10 @@ function atlasProvider() {
 <management:ObjectMetadataContainer xmlns:management="http://eclipse.org/fennec/model/atlas/management/1.0.0"
     xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0">
   <metadata objectId="${NS}" objectName="cfg"/>
+  <metadata objectId="${NS_OTHER}" objectName="other"/>
 </management:ObjectMetadataContainer>`,
-      getObjectContent: async () => ECORE,
+      getObjectContent: async (_scope: string, _registry: string, _stage: string, objectId: string) =>
+        objectId === NS ? ECORE : ECORE_OTHER,
     },
   }
 }
@@ -51,6 +96,8 @@ describe('registerUsedModels (#155)', () => {
   let known: Array<{ nsURI: string }>
 
   beforeEach(() => {
+    registerPackage(ECORE_OTHER, 'model/other.ecore')
+    registerPackage(ECORE, 'model/cfg.ecore')
     known = [{ nsURI: 'http://www.eclipse.org/emf/2002/Ecore' }]
     loadEcoreFile = vi.fn(async (_content: string, path: string) => {
       known.push({ nsURI: path })
@@ -66,41 +113,29 @@ describe('registerUsedModels (#155)', () => {
   })
 
   it('holt das Metamodell nach und trägt es als Modell ein', async () => {
-    const registered = await registerUsedModels(fakeResource([NS]), [atlasProvider()], deps())
-    expect(registered).toEqual([NS])
+    const registered = await registerUsedModels(instanceResource(), [atlasProvider()], deps())
+    expect(registered).toContain(NS)
     expect(loadEcoreFile).toHaveBeenCalledWith(ECORE, NS)
   })
 
+  it('auch das Modell eines Kindobjekts', async () => {
+    // Ein Dokument trägt Objekte aus mehreren Modellen; `parts` steht im
+    // zweiten. Ohne den Abstieg bliebe es ungenannt.
+    const registered = await registerUsedModels(instanceResource(), [atlasProvider()], deps())
+    expect(registered).toContain(NS_OTHER)
+    expect(loadEcoreFile).toHaveBeenCalledWith(ECORE_OTHER, NS_OTHER)
+  })
+
   it('was schon Modell ist, wird nicht noch einmal geladen', async () => {
-    known.push({ nsURI: NS })
-    const registered = await registerUsedModels(fakeResource([NS]), [atlasProvider()], deps())
+    known.push({ nsURI: NS }, { nsURI: NS_OTHER })
+    const registered = await registerUsedModels(instanceResource(), [atlasProvider()], deps())
     expect(registered).toEqual([])
     expect(loadEcoreFile).not.toHaveBeenCalled()
   })
 
   it('ohne Fundstelle passiert nichts', async () => {
-    const registered = await registerUsedModels(fakeResource([NS]), [], deps())
+    const registered = await registerUsedModels(instanceResource(), [], deps())
     expect(registered).toEqual([])
     expect(loadEcoreFile).not.toHaveBeenCalled()
-  })
-
-  it('auch die Packages der Kindobjekte zählen', async () => {
-    // Ein Dokument kann Objekte aus mehreren Modellen tragen
-    const resource = {
-      getContents: () => [
-        {
-          eClass: () => ({ getEPackage: () => ({ getNsURI: () => NS }) }),
-          eContents: () => [
-            {
-              eClass: () => ({ getEPackage: () => ({ getNsURI: () => 'urn:issue155:other' }) }),
-              eContents: () => [],
-            },
-          ],
-        },
-      ],
-    }
-    await registerUsedModels(resource, [atlasProvider()], deps())
-    // Beide wurden gesucht; geliefert hat der Stellvertreter nur das eine
-    expect(loadEcoreFile).toHaveBeenCalledTimes(1)
   })
 })
