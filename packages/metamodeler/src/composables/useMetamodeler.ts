@@ -2065,6 +2065,31 @@ export function useMetamodeler() {
   }
 
   /**
+   * The chain of tree nodes from a root down to this element.
+   *
+   * Needed to reveal an element the user did not click: a link in the
+   * properties panel points at a supertype or a feature somewhere else in the
+   * tree, and showing it means expanding everything above it (#156). Empty
+   * when the element is not in the tree — a supertype from another model, for
+   * one.
+   */
+  function findElementPath(element: unknown): MetaTreeNode[] {
+    const target = toRaw(element)
+    if (!target) return []
+
+    const walk = (nodes: MetaTreeNode[], trail: MetaTreeNode[]): MetaTreeNode[] => {
+      for (const node of nodes) {
+        const here = [...trail, node]
+        if (toRaw(node.data as unknown) === target) return here
+        const hit = walk((node.children ?? []) as MetaTreeNode[], here)
+        if (hit.length > 0) return hit
+      }
+      return []
+    }
+    return walk(treeNodes.value as MetaTreeNode[], [])
+  }
+
+  /**
    * Get available containment references for the selected element
    */
   function getAvailableContainmentRefs(): EReference[] {
@@ -2395,6 +2420,7 @@ export function useMetamodeler() {
 
     // Selection
     selectElement,
+    findElementPath,
 
     // State management
     markClean,
