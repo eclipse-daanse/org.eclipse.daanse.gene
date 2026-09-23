@@ -60,6 +60,30 @@ watch(() => metamodeler.rootPackage.value, (pkg) => {
 const selectedKey = ref<Record<string, boolean>>({})
 const expandedKeys = ref<Record<string, boolean>>({})
 
+/*
+ * Dem gewählten Element folgen, auch wenn die Wahl nicht aus diesem Baum kam.
+ *
+ * Ein Link im Properties-Panel — der Obertyp einer Klasse, ein Feature —
+ * wählt das Ziel über den Editor-Kontext aus. Ohne das hier bliebe der Baum
+ * stehen: Die Eigenschaften zeigten das Ziel, der Baum den alten Knoten
+ * (#156). Liegt das Ziel in einem anderen Modell, findet der Pfad nichts, und
+ * es bleibt beim bisherigen Stand.
+ */
+watch(
+  () => metamodeler.selectedElement.value,
+  (element: unknown) => {
+    if (!element) return
+    const path = metamodeler.findElementPath?.(element) ?? []
+    const ziel = path[path.length - 1]
+    if (!ziel) return
+    const zielKey = String(ziel.key)
+    if (selectedKey.value[zielKey]) return
+    for (const node of path.slice(0, -1)) expandedKeys.value[String(node.key)] = true
+    expandedKeys.value = { ...expandedKeys.value }
+    selectedKey.value = { [zielKey]: true }
+  }
+)
+
 // Context menu
 const contextMenu = ref<InstanceType<typeof ContextMenu> | null>(null)
 const selectedNode = ref<MetaTreeNode | null>(null)
