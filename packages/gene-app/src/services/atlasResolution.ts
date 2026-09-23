@@ -117,37 +117,38 @@ export async function prepareAtlasResolution(
  * URI converter puts them. The model browser keeps its own list, and the
  * editor asks *that* one which classes fit a reference — so a metamodel that
  * arrived only through the converter leaves the "Add child" menu empty for
- * every abstract type (#155). Whoever pulls a metamodel in has to say so.
+ * every abstract type (#155).
+ *
+ * Registered is the **package instance the objects already stand on**, never a
+ * freshly parsed copy: two instances of the same nsURI look alike but compare
+ * false, and every "is this class a subtype of that reference's type?" is an
+ * identity check.
  *
  * Returns the nsURIs newly registered.
  */
-export async function registerUsedModels(
+export function registerUsedModels(
   resource: unknown,
-  providers: unknown[],
   deps: {
     modelBrowserComposables?: {
-      loadEcoreFile: (content: string, path: string) => Promise<unknown>
+      registerLoadedPackage?: (ePackage: unknown, sourceFile: string) => unknown
       useSharedModelRegistry?: () => { allPackages: { value: Array<{ nsURI: string }> } }
     }
   },
-): Promise<string[]> {
-  const loadEcoreFile = deps.modelBrowserComposables?.loadEcoreFile
+): string[] {
+  const register = deps.modelBrowserComposables?.registerLoadedPackage
   const registry = deps.modelBrowserComposables?.useSharedModelRegistry?.()
-  if (!loadEcoreFile || !registry || providers.length === 0) return []
+  if (!register || !registry) return []
 
   const known = new Set(registry.allPackages.value.map((p) => p.nsURI))
-  const used = new Set<string>()
-  for (const nsURI of packagesOf(resource)) {
-    if (nsURI && !known.has(nsURI)) used.add(nsURI)
-  }
-  if (used.size === 0) return []
-
-  const { fetchSchemas } = await import('storage-model-atlas')
-  const found = await fetchSchemas([...used], providers as never)
   const registered: string[] = []
-  for (const [nsURI, ecore] of found) {
+  for (const ePackage of packagesOf(resource)) {
+    const nsURI = ePackage.getNsURI?.()
+    if (!nsURI || known.has(nsURI)) continue
     try {
-      await loadEcoreFile(ecore, nsURI)
+      // The source is the nsURI: it did not come from a file, and the model
+      // browser shows it under that name.
+      register(ePackage, nsURI)
+      known.add(nsURI)
       registered.push(nsURI)
     } catch (e) {
       console.warn('[AtlasResolution] Metamodell nicht als Modell registrierbar:', nsURI, e)
@@ -156,16 +157,17 @@ export async function registerUsedModels(
   return registered
 }
 
-/** The nsURIs of every package the objects of a resource stand on. */
-function packagesOf(resource: unknown): string[] {
+/** Every package the objects of a resource stand on — the instances themselves. */
+function packagesOf(resource: unknown): Array<{ getNsURI?: () => string | null }> {
   const contents = (resource as { getContents?: () => Iterable<unknown> })?.getContents?.()
   if (!contents) return []
-  const found = new Set<string>()
+  const found = new Map<string, { getNsURI?: () => string | null }>()
   const visit = (obj: any) => {
-    const nsURI = obj?.eClass?.()?.getEPackage?.()?.getNsURI?.()
-    if (nsURI) found.add(nsURI)
+    const ePackage = obj?.eClass?.()?.getEPackage?.()
+    const nsURI = ePackage?.getNsURI?.()
+    if (nsURI && !found.has(nsURI)) found.set(nsURI, ePackage)
     for (const child of obj?.eContents?.() ?? []) visit(child)
   }
   for (const root of contents) visit(root)
-  return [...found]
+  return [...found.values()]
 }

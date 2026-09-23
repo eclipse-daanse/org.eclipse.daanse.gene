@@ -6,6 +6,11 @@
  * welche Klassen zu einer Referenz passen — steht das Metamodell dort nicht,
  * bleibt "Add Child" bei jedem abstrakten Typ leer: keine Auswahl zwischen
  * JdbcDataSource und MongoDataSource, obwohl beide im Modell stehen.
+ *
+ * Eingetragen wird dabei **die Instanz, auf der die Objekte stehen**. Ein
+ * zweites Parsen desselben Ecore ergäbe ein gleich aussehendes, aber anderes
+ * EPackage — und jede Untertyp-Prüfung vergleicht über Identität, fände also
+ * wieder nichts.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
@@ -69,73 +74,63 @@ function instanceResource(): XMIResource {
   return resource
 }
 
-/**
- * The metadata listing and the content, as the Atlas answers them. Only the
- * HTTP boundary is stood in for — everything above it is the real code.
- */
-function atlasProvider() {
-  return {
-    scopeName: 'jena',
-    stage: 'release',
-    registryName: 'schemas',
-    client: {
-      listObjects: async () => `<?xml version="1.0" encoding="UTF-8"?>
-<management:ObjectMetadataContainer xmlns:management="http://eclipse.org/fennec/model/atlas/management/1.0.0"
-    xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0">
-  <metadata objectId="${NS}" objectName="cfg"/>
-  <metadata objectId="${NS_OTHER}" objectName="other"/>
-</management:ObjectMetadataContainer>`,
-      getObjectContent: async (_scope: string, _registry: string, _stage: string, objectId: string) =>
-        objectId === NS ? ECORE : ECORE_OTHER,
-    },
-  }
-}
-
 describe('registerUsedModels (#155)', () => {
-  let loadEcoreFile: ReturnType<typeof vi.fn>
+  let registerLoadedPackage: ReturnType<typeof vi.fn>
   let known: Array<{ nsURI: string }>
+  let cfgPackage: EPackage
+  let otherPackage: EPackage
 
   beforeEach(() => {
-    registerPackage(ECORE_OTHER, 'model/other.ecore')
-    registerPackage(ECORE, 'model/cfg.ecore')
+    otherPackage = registerPackage(ECORE_OTHER, 'model/other.ecore')
+    cfgPackage = registerPackage(ECORE, 'model/cfg.ecore')
     known = [{ nsURI: 'http://www.eclipse.org/emf/2002/Ecore' }]
-    loadEcoreFile = vi.fn(async (_content: string, path: string) => {
-      known.push({ nsURI: path })
-      return {}
-    })
+    registerLoadedPackage = vi.fn((pkg: unknown, sourceFile: string) => {
+      known.push({ nsURI: sourceFile })
+      return pkg
+    }) as unknown as ReturnType<typeof vi.fn>
   })
 
   const deps = () => ({
     modelBrowserComposables: {
-      loadEcoreFile,
+      registerLoadedPackage: registerLoadedPackage as (p: unknown, s: string) => unknown,
       useSharedModelRegistry: () => ({ allPackages: { value: known } }),
     },
   })
 
-  it('holt das Metamodell nach und trägt es als Modell ein', async () => {
-    const registered = await registerUsedModels(instanceResource(), [atlasProvider()], deps())
+  it('trägt das Metamodell der geladenen Objekte ein', () => {
+    const registered = registerUsedModels(instanceResource(), deps())
     expect(registered).toContain(NS)
-    expect(loadEcoreFile).toHaveBeenCalledWith(ECORE, NS)
   })
 
-  it('auch das Modell eines Kindobjekts', async () => {
+  it('und zwar dieselbe Instanz, auf der die Objekte stehen', () => {
+    /*
+     * Der Kern von #155: Ein zweites Parsen ergäbe ein anderes EPackage, und
+     * `getValidChildClasses` vergleicht Klassen über Identität — die Auswahl
+     * bliebe leer, obwohl das Modell in der Liste steht.
+     */
+    registerUsedModels(instanceResource(), deps())
+    const eingetragen = registerLoadedPackage.mock.calls.find((c) => c[1] === NS)?.[0]
+    expect(eingetragen).toBe(cfgPackage)
+  })
+
+  it('auch das Modell eines Kindobjekts', () => {
     // Ein Dokument trägt Objekte aus mehreren Modellen; `parts` steht im
     // zweiten. Ohne den Abstieg bliebe es ungenannt.
-    const registered = await registerUsedModels(instanceResource(), [atlasProvider()], deps())
+    const registered = registerUsedModels(instanceResource(), deps())
     expect(registered).toContain(NS_OTHER)
-    expect(loadEcoreFile).toHaveBeenCalledWith(ECORE_OTHER, NS_OTHER)
+    const eingetragen = registerLoadedPackage.mock.calls.find((c) => c[1] === NS_OTHER)?.[0]
+    expect(eingetragen).toBe(otherPackage)
   })
 
-  it('was schon Modell ist, wird nicht noch einmal geladen', async () => {
+  it('was schon Modell ist, wird nicht noch einmal eingetragen', () => {
     known.push({ nsURI: NS }, { nsURI: NS_OTHER })
-    const registered = await registerUsedModels(instanceResource(), [atlasProvider()], deps())
+    const registered = registerUsedModels(instanceResource(), deps())
     expect(registered).toEqual([])
-    expect(loadEcoreFile).not.toHaveBeenCalled()
+    expect(registerLoadedPackage).not.toHaveBeenCalled()
   })
 
-  it('ohne Fundstelle passiert nichts', async () => {
-    const registered = await registerUsedModels(instanceResource(), [], deps())
+  it('ohne den Haken des Model Browsers passiert nichts', () => {
+    const registered = registerUsedModels(instanceResource(), { modelBrowserComposables: {} })
     expect(registered).toEqual([])
-    expect(loadEcoreFile).not.toHaveBeenCalled()
   })
 })

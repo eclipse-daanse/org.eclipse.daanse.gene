@@ -867,7 +867,7 @@ async function loadInstancesFromEditorConfig(workspaceEntry: any) {
         try {
           const result = await instanceTreeComposables.value.loadInstancesFromXMI(content, location)
           reportMissingPackages((result as any)?.missingPackages, resolution.searched, fileEntry, location)
-          await registerMetamodelsAsModels(resolution.providers, location)
+          await registerMetamodelsAsModels(location)
           console.log('[App] Instances loaded from:', location)
         } catch (loadErr: any) {
           console.error('[App] XMI parsing error:', location, loadErr)
@@ -1355,8 +1355,7 @@ async function prepareMetamodelResolution(
  * geholtes Metamodell liesse das "Add Child"-Menue bei jedem abstrakten Typ
  * leer (#155).
  */
-async function registerMetamodelsAsModels(providers: unknown[], filePath: string): Promise<void> {
-  if (providers.length === 0) return
+async function registerMetamodelsAsModels(filePath: string): Promise<void> {
   try {
     const mb =
       (modelBrowserComposables.value as any) ?? tsm.getService<any>('ui.model-browser.composables')
@@ -1364,7 +1363,7 @@ async function registerMetamodelsAsModels(providers: unknown[], filePath: string
       (r: any) => String(r.getURI?.() ?? '') === filePath
     )
     if (!resource) return
-    const registered = await registerUsedModels(resource, providers, { modelBrowserComposables: mb })
+    const registered = registerUsedModels(resource, { modelBrowserComposables: mb })
     if (registered.length > 0) {
       console.log('[App] Metamodelle als Modelle registriert:', registered.join(', '))
       for (const nsURI of registered) {
@@ -1443,7 +1442,7 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
     console.log('[App] Instances loaded from:', entry.name, 'count:', result.loadedCount, 'errors:', result.errors.length)
     reportMissingPackages(result.missingPackages, resolution.searched, entry, entry.path)
     // Was der Loader geholt hat, gehoert auch in die Modell-Liste (#155)
-    await registerMetamodelsAsModels(resolution.providers, entry.path)
+    await registerMetamodelsAsModels(entry.path)
 
     // Check instance tree state after loading
     const tree = instanceTreeComposables.value.useSharedInstanceTree()
