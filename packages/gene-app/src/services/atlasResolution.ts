@@ -47,6 +47,8 @@ export interface AtlasResolutionSetup {
   searched: string[]
   /** Why nothing was installed, if nothing was */
   note?: string
+  /** The providers themselves, to fetch schemas again afterwards */
+  providers: unknown[]
 }
 
 /**
@@ -65,7 +67,7 @@ export async function prepareAtlasResolution(
 ): Promise<AtlasResolutionSetup> {
   const install = deps.instanceTreeComposables?.setPackageURIConverter
   if (!install) {
-    return { searched: [], note: 'Instanzbaum bietet keinen URIConverter-Haken' }
+    return { searched: [], providers: [], note: 'Instanzbaum bietet keinen URIConverter-Haken' }
   }
 
   const { ModelAtlasClient, providersForScopeChain, createAtlasURIConverter, describeProvider } =
@@ -99,10 +101,71 @@ export async function prepareAtlasResolution(
   if (providers.length === 0) {
     return {
       searched: [],
+      providers: [],
       note: 'keine Fundstelle — die Datei nennt keine Atlas-Herkunft, und es ist keine Resolver-Kette konfiguriert',
     }
   }
 
   install(createAtlasURIConverter(providers) as never)
-  return { searched: providers.map((p) => describeProvider(p)) }
+  return { searched: providers.map((p) => describeProvider(p)), providers }
+}
+
+/**
+ * Registers the metamodels a loaded document uses as models, too.
+ *
+ * The loader only needs them in the package registry, and that is where its
+ * URI converter puts them. The model browser keeps its own list, and the
+ * editor asks *that* one which classes fit a reference — so a metamodel that
+ * arrived only through the converter leaves the "Add child" menu empty for
+ * every abstract type (#155). Whoever pulls a metamodel in has to say so.
+ *
+ * Returns the nsURIs newly registered.
+ */
+export async function registerUsedModels(
+  resource: unknown,
+  providers: unknown[],
+  deps: {
+    modelBrowserComposables?: {
+      loadEcoreFile: (content: string, path: string) => Promise<unknown>
+      useSharedModelRegistry?: () => { allPackages: { value: Array<{ nsURI: string }> } }
+    }
+  },
+): Promise<string[]> {
+  const loadEcoreFile = deps.modelBrowserComposables?.loadEcoreFile
+  const registry = deps.modelBrowserComposables?.useSharedModelRegistry?.()
+  if (!loadEcoreFile || !registry || providers.length === 0) return []
+
+  const known = new Set(registry.allPackages.value.map((p) => p.nsURI))
+  const used = new Set<string>()
+  for (const nsURI of packagesOf(resource)) {
+    if (nsURI && !known.has(nsURI)) used.add(nsURI)
+  }
+  if (used.size === 0) return []
+
+  const { fetchSchemas } = await import('storage-model-atlas')
+  const found = await fetchSchemas([...used], providers as never)
+  const registered: string[] = []
+  for (const [nsURI, ecore] of found) {
+    try {
+      await loadEcoreFile(ecore, nsURI)
+      registered.push(nsURI)
+    } catch (e) {
+      console.warn('[AtlasResolution] Metamodell nicht als Modell registrierbar:', nsURI, e)
+    }
+  }
+  return registered
+}
+
+/** The nsURIs of every package the objects of a resource stand on. */
+function packagesOf(resource: unknown): string[] {
+  const contents = (resource as { getContents?: () => Iterable<unknown> })?.getContents?.()
+  if (!contents) return []
+  const found = new Set<string>()
+  const visit = (obj: any) => {
+    const nsURI = obj?.eClass?.()?.getEPackage?.()?.getNsURI?.()
+    if (nsURI) found.add(nsURI)
+    for (const child of obj?.eContents?.() ?? []) visit(child)
+  }
+  for (const root of contents) visit(root)
+  return [...found]
 }
