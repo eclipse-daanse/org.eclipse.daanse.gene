@@ -174,7 +174,7 @@ const instanceName = computed(() => {
 // Also depend on treeNodes to re-evaluate when triggerUpdate() fires (e.g. after assignXmiId)
 const xmiId = computed(() => {
   if (!selectedObject.value) return null
-  // eslint-disable-next-line no-unused-expressions
+   
   instanceTree?.treeNodes?.value
   return getXmiId(selectedObject.value)
 })
@@ -1063,8 +1063,15 @@ function handleCreate(eClass: EClass, feature: EStructuralFeature) {
 
 // Handle navigation to a referenced object
 function handleNavigate(obj: EObject) {
-  // Select the object in the instance tree (this will also expand parent nodes)
-  instanceTree.selectObject(obj)
+  /*
+   * Über den aktuellen Editor-Kontext, nicht fest über den Instanzbaum: Im
+   * Metamodeler liegt das Ziel im Metamodell-Baum, und ein selectObject() auf
+   * dem Instanzbaum blieb dort wirkungslos — der Link tat schlicht nichts
+   * (#156).
+   */
+  const select = ctx.value?.selectObject
+  if (select) select(obj)
+  else instanceTree.selectObject(obj)
 }
 
 // Handle search request from ReferenceField

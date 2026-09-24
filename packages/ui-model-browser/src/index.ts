@@ -95,6 +95,14 @@ export async function activate(context: ModuleContext): Promise<void> {
     useModelRegistry,
     useSharedModelRegistry,
     loadEcoreFile: registry.loadEcoreFile,
+    /*
+     * Ein bereits geladenes EPackage eintragen, ohne es neu zu parsen. Wer es
+     * aus einer anderen Quelle hat — der XMI-Loader holt Metamodelle ueber
+     * seinen URIConverter —, darf es nicht noch einmal einlesen: dann gaebe es
+     * zwei Instanzen desselben nsURI, und Vergleiche ueber Identitaet (welche
+     * Klasse passt zu dieser Referenz?) gingen ins Leere (#155).
+     */
+    registerLoadedPackage: registry.registerLoadedPackage,
     refreshIcons: registry.refreshIcons,
     getEcoreResourceSet: registry.getEcoreResourceSet,
     unregisterModelBySourceFile: registry.unregisterModelBySourceFile,

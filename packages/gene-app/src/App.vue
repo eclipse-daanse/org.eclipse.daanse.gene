@@ -21,7 +21,7 @@ const OCL_SOURCES = ['http://www.eclipse.org/fennec/m2x/ocl/1.0', 'http://www.ec
 function isOclSource(s: string | null | undefined): boolean { return !!s && OCL_SOURCES.includes(s) }
 import type { PerspectiveManager } from 'ui-perspectives'
 import { registerWorkspaceActions } from './services/WorkspaceActionService'
-import { prepareAtlasResolution } from './services/atlasResolution'
+import { prepareAtlasResolution, registerUsedModels } from './services/atlasResolution'
 import type { WorkspaceActionService, FileEntryLike } from './services/WorkspaceActionService'
 
 // EditorContext injection key (matches the one in editorContext.ts)
@@ -862,11 +862,12 @@ async function loadInstancesFromEditorConfig(workspaceEntry: any) {
         problemsService.clearIssuesForFile(location)
 
         // Where the loader may fetch missing metamodels from
-        const providers = await prepareMetamodelResolution(fileEntry, location)
+        const resolution = await prepareMetamodelResolution(fileEntry, location)
 
         try {
           const result = await instanceTreeComposables.value.loadInstancesFromXMI(content, location)
-          reportMissingPackages((result as any)?.missingPackages, providers, fileEntry, location)
+          reportMissingPackages((result as any)?.missingPackages, resolution.searched, fileEntry, location)
+          await registerMetamodelsAsModels(location)
           console.log('[App] Instances loaded from:', location)
         } catch (loadErr: any) {
           console.error('[App] XMI parsing error:', location, loadErr)
@@ -1324,7 +1325,10 @@ async function reloadFailedInstanceFiles(sourceId: string) {
  *
  * Returns the providers, for the message afterwards.
  */
-async function prepareMetamodelResolution(entry: any, filePath: string): Promise<string[]> {
+async function prepareMetamodelResolution(
+  entry: any,
+  filePath: string
+): Promise<{ searched: string[]; providers: unknown[] }> {
   try {
     const setup = await prepareAtlasResolution(entry, {
       editorConfig: getGlobalEditorConfig(),
@@ -1335,10 +1339,42 @@ async function prepareMetamodelResolution(entry: any, filePath: string): Promise
       '- Fundstellen:', setup.searched.join(' | ') || '(keine)',
       setup.note ? `- ${setup.note}` : ''
     )
-    return setup.searched
+    return { searched: setup.searched, providers: setup.providers }
   } catch (e) {
     console.warn('[App] Metamodell-Aufloesung liess sich nicht einhaengen:', e)
-    return []
+    return { searched: [], providers: [] }
+  }
+}
+
+/**
+ * Die Metamodelle der geladenen Instanz auch als Modelle fuehren.
+ *
+ * Der Loader braucht sie nur in der Package-Registry, und genau dorthin legt
+ * sie sein URIConverter. Der Model Browser fuehrt aber eine eigene Liste, und
+ * der Editor fragt *die*, welche Klassen zu einer Referenz passen — ein so
+ * geholtes Metamodell liesse das "Add Child"-Menue bei jedem abstrakten Typ
+ * leer (#155).
+ */
+async function registerMetamodelsAsModels(filePath: string): Promise<void> {
+  try {
+    const mb =
+      (modelBrowserComposables.value as any) ?? tsm.getService<any>('ui.model-browser.composables')
+    const resource = instanceTreeComposables.value?.getSharedResources?.().find(
+      (r: any) => String(r.getURI?.() ?? '') === filePath
+    )
+    if (!resource) return
+    const registered = registerUsedModels(resource, { modelBrowserComposables: mb })
+    if (registered.length > 0) {
+      console.log('[App] Metamodelle als Modelle registriert:', registered.join(', '))
+      for (const nsURI of registered) {
+        const info = mb?.useSharedModelRegistry?.()?.allPackages?.value?.find(
+          (p: any) => p.nsURI === nsURI
+        )
+        if (info?.ePackage) await problemsService.registerPackage(info.ePackage)
+      }
+    }
+  } catch (e) {
+    console.warn('[App] Metamodelle liessen sich nicht als Modelle registrieren:', e)
   }
 }
 
@@ -1389,7 +1425,7 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
   problemsService.clearIssuesForFile(entry.path)
 
   // Where the loader may fetch missing metamodels from
-  const providers = await prepareMetamodelResolution(entry, entry.path)
+  const resolution = await prepareMetamodelResolution(entry, entry.path)
 
   try {
     console.log('[App] Calling instance load, mode:', mode)
@@ -1404,7 +1440,9 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
       result = await itc.loadInstancesFromXMI(content, entry.path)
     }
     console.log('[App] Instances loaded from:', entry.name, 'count:', result.loadedCount, 'errors:', result.errors.length)
-    reportMissingPackages(result.missingPackages, providers, entry, entry.path)
+    reportMissingPackages(result.missingPackages, resolution.searched, entry, entry.path)
+    // Was der Loader geholt hat, gehoert auch in die Modell-Liste (#155)
+    await registerMetamodelsAsModels(entry.path)
 
     // Check instance tree state after loading
     const tree = instanceTreeComposables.value.useSharedInstanceTree()
