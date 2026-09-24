@@ -474,13 +474,26 @@ const classDropdownOpen = ref(false)
 
 /**
  * Opens the class list right away, so typing starts filtering without a click
- * first. Focus lands in the filter field (autoFilterFocus) - on the dropdown
- * itself the keys would go to PrimeVue's typeahead, which keeps only the last
- * character (#161).
+ * first. On the dropdown itself the keys would go to PrimeVue's typeahead,
+ * which keeps only the last character (#161).
  */
 async function openClassDropdown(): Promise<void> {
   await nextTick()
   classDropdown.value?.show?.()
+}
+
+/**
+ * Puts the caret into the filter field.
+ *
+ * `autoFilterFocus` does that on its own, but the dialog focuses its close
+ * button while opening and takes it back - hence once more here, after the
+ * overlay is up.
+ */
+function focusClassFilter(): void {
+  classDropdownOpen.value = true
+  requestAnimationFrame(() => {
+    classDropdown.value?.$refs?.filterInput?.$el?.focus?.()
+  })
 }
 
 /**
@@ -1423,7 +1436,7 @@ watch(ctxSelectedObject, (obj) => {
             autoFilterFocus
             :filterFields="['name', 'qualifiedName', 'packageInfo.name', 'packageInfo.nsURI']"
             class="w-full"
-            @show="classDropdownOpen = true"
+            @show="focusClassFilter"
             @hide="classDropdownOpen = false"
           >
             <template #option="{ option }">
