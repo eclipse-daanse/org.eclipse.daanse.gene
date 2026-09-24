@@ -44,9 +44,9 @@ describe('findElementPath (#156)', () => {
     const path = metamodeler.findElementPath(base)
 
     expect(path.length).toBeGreaterThan(1)
-    expect(path[path.length - 1].data).toBe(base)
+    expect(path[path.length - 1]?.data).toBe(base)
     // Alles davor ist der aufzuklappende Weg — beginnend beim Package
-    expect(path[0].type).toBe('package')
+    expect(path[0]?.type).toBe('package')
   })
 
   it('findet auch ein Feature tief im Baum', () => {
@@ -55,7 +55,7 @@ describe('findElementPath (#156)', () => {
     const title = [...article.getEStructuralFeatures()][0]
 
     const path = metamodeler.findElementPath(title)
-    expect(path[path.length - 1].data).toBe(title)
+    expect(path[path.length - 1]?.data).toBe(title)
     // Die Klasse liegt dazwischen, sie muss aufgeklappt werden
     expect(path.map((n) => n.data)).toContain(article)
   })

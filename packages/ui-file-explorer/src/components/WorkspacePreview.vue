@@ -10,7 +10,7 @@ import { ref, watch, computed, inject } from 'tsm:vue'
 import { Button } from 'tsm:primevue'
 import { Card } from 'tsm:primevue'
 import { Message } from 'tsm:primevue'
-import type { FileEntry } from '../types'
+import type { FileEntry, FileSource } from '../types'
 import { useSharedFileSystem } from '../composables/useFileSystem'
 import { useFileViewerRegistry } from 'ui-xmi-viewer'
 import { useRecentWorkspaces, removeRecentWorkspace, addRecentWorkspace } from '../composables/useRecentWorkspaces'
@@ -266,7 +266,7 @@ async function handleOpenRecentWorkspace(ws: { name: string; filePath: string; s
     await fileSystem.restoreLocalSources({ id: ws.sourceId, name: ws.sourceName })
     // A handle stored under a new key still carries the folder name
     source = fileSystem.getSource(ws.sourceId)
-      ?? fileSystem.sources.value.find(s => s.name === ws.sourceName)
+      ?? fileSystem.sources.value.find((s: FileSource) => s.name === ws.sourceName)
 
     if (!source) {
       // Ask user to re-pick the folder
