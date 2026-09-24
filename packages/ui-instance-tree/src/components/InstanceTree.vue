@@ -469,6 +469,45 @@ const isDragOver = ref(false)
 // New root instance dialog
 const showNewInstanceDialog = ref(false)
 const selectedClass = ref<any>(null)
+const classDropdown = ref<any>(null)
+const classDropdownOpen = ref(false)
+
+/**
+ * Opens the class list right away, so typing starts filtering without a click
+ * first. On the dropdown itself the keys would go to PrimeVue's typeahead,
+ * which keeps only the last character (#161).
+ */
+async function openClassDropdown(): Promise<void> {
+  await nextTick()
+  classDropdown.value?.show?.()
+}
+
+/**
+ * Puts the caret into the filter field.
+ *
+ * `autoFilterFocus` does that on its own, but the dialog focuses its close
+ * button while opening and takes it back - hence once more here, after the
+ * overlay is up.
+ */
+function focusClassFilter(): void {
+  classDropdownOpen.value = true
+  requestAnimationFrame(() => {
+    classDropdown.value?.$refs?.filterInput?.$el?.focus?.()
+  })
+}
+
+/**
+ * Enter creates once a class is chosen, so the dialog needs no mouse at all.
+ *
+ * Caught while capturing: the dropdown answers Enter by opening its list again,
+ * and by the time the event bubbled up here the list would count as open.
+ */
+function createOnEnter(event: KeyboardEvent): void {
+  if (classDropdownOpen.value || !selectedClass.value) return
+  event.preventDefault()
+  event.stopPropagation()
+  handleCreateRootInstance()
+}
 
 // Views editor dialog
 const showViewsEditor = ref(false)
@@ -1382,18 +1421,23 @@ watch(ctxSelectedObject, (obj) => {
       header="Create New Instance"
       :modal="true"
       :style="{ width: '400px' }"
+      @show="openClassDropdown"
     >
-      <div class="dialog-content">
+      <div class="dialog-content" @keydown.enter.capture="createOnEnter">
         <div class="field">
           <label>Select Class</label>
           <Dropdown
+            ref="classDropdown"
             v-model="selectedClass"
             :options="availableClasses"
             optionLabel="name"
             placeholder="Select a class"
             filter
+            autoFilterFocus
             :filterFields="['name', 'qualifiedName', 'packageInfo.name', 'packageInfo.nsURI']"
             class="w-full"
+            @show="focusClassFilter"
+            @hide="classDropdownOpen = false"
           >
             <template #option="{ option }">
               <div class="class-option">
