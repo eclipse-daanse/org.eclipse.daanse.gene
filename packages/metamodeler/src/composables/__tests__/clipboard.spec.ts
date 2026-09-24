@@ -215,18 +215,16 @@ describe('Zielreferenz beim Einfuegen (#148)', () => {
   })
 
   /*
-   * Haltbarkeitsdatum dieses Tests: Er haelt fest, warum der Auswahldialog im
-   * Metamodeler derzeit nicht auftaucht. `EAnnotation.contents` ist auf
-   * EObject typisiert und muesste damit jedes Element aufnehmen — in EMF geht
-   * genau das. `isSuperTypeOf` sieht EObject aber nicht als Obertyp einer
-   * EAnnotation (EModelElement hat keinen eingetragenen eSuperType), also
-   * bleibt `eAnnotations` die einzige passende Referenz. Faellt das in
-   * @emfts/core, wird der Fall mehrdeutig und der Dialog greift.
+   * An annotation pasted into an annotation now has two possible homes:
+   * `eAnnotations`, and `contents`, which EMF types on EObject so it takes any
+   * element. @emfts/core carried no `contents` feature until 0.3.0-next.2
+   * (emf.ts#102), which is why this used to be unambiguous. With both offered,
+   * the choice belongs to the user and the dialog steps in.
    */
-  it('in Ecore bleibt die Wahl derzeit eindeutig', () => {
+  it('offers both containments for an annotation, so the dialog decides', () => {
     const ziel = neueAnnotation('ziel')
     mm.copyToClipboard(neueAnnotation('quelle') as ENamedElement)
     const pruefung = mm.canPasteInto(ziel as ENamedElement)
-    expect(pruefung.refs.map(r => r.getName())).toEqual(['eAnnotations'])
+    expect(pruefung.refs.map(r => r.getName())).toEqual(['eAnnotations', 'contents'])
   })
 })
