@@ -76,7 +76,7 @@
                 :value="m.serviceGroup"
                 :class="{ invalid: m.selected && !groupOk(m) }"
                 :title="m.selected && !groupOk(m) ? 'Keine gültige mid: Kleinbuchstaben, Ziffern und Bindestriche, keine Leerzeichen' : ''"
-                @input="m.serviceGroup = str($event)"
+                @input="setGroup(m, $event)"
               />
             </td>
             <td>
@@ -169,7 +169,17 @@ function setUnitPath(m: Measurement, event: Event): void {
 
 /** The group is written as the service's mid, so it has to be a valid one. */
 function groupOk(m: Measurement): boolean {
+  void version.value;
   return isValidMid((m.serviceGroup ?? '').trim());
+}
+
+/**
+ * Measurements are EMF objects and not deep-reactive, so the marker in the row
+ * and the reason on the "Weiter" button only follow along after touch().
+ */
+function setGroup(m: Measurement, event: Event): void {
+  m.serviceGroup = str(event);
+  touch();
 }
 
 function str(event: Event): string {
