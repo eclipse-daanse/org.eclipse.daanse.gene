@@ -50,6 +50,17 @@ export function slug(value: string): string {
     .replace(/^-+|-+$/g, '') || 'mapping';
 }
 
+/**
+ * True when the value goes into a `mid` unchanged.
+ *
+ * A group is written as the service's mid, so anything `slug()` would rewrite -
+ * a space, an upper-case letter, a dot - would silently rename the service on
+ * save. The wizard asks for a value that survives as it is.
+ */
+export function isValidMid(value: string): boolean {
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value);
+}
+
 function escapeXml(value: string): string {
   return value
     .replace(/&/g, '&amp;')

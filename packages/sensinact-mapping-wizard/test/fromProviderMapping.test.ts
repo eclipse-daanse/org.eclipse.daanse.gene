@@ -281,7 +281,8 @@ describe('restoreSetupFromMappingXmi', () => {
     expect(selected).toHaveLength(1);
     expect(selected[0].label).toBe('BatteryLevel');
     expect(selected[0].unit).toBe('V');
-    expect(selected[0].serviceGroup).toBe('Battery');
+    // Die Gruppe ist die mid des Services, nicht sein Anzeigename
+    expect(selected[0].serviceGroup).toBe('battery');
 
     expect(profile?.fileName).toBe('battery-sensor-profile.xmi');
     expect(profile?.profileId).toBe('battery-sensor');
@@ -346,13 +347,16 @@ describe('restoreSetupFromMappingXmi', () => {
 
     const selected = setup.measurements.filter((m) => m.selected);
     expect(selected.map((m) => m.label)).toEqual(['ph', 'freeChlorine', 'redox', 'status', 'area']);
-    expect(selected.every((m) => m.serviceGroup === 'Water Quality')).toBe(true);
+    expect(selected.every((m) => m.serviceGroup === 'quality')).toBe(true);
     expect(selected[1].unit).toBe('mg/l');
     expect(warnings).toEqual([]);
 
     // und lässt sich wieder in ein gültiges Mapping überführen
     const again = buildProviderMappingXmi(setup);
     expect(again.mappingXmi).toContain('mid="waterpark-water-quality"');
+    // Die mid des Services bleibt, wie sie war — fruehr wurde sie aus dem
+    // Anzeigenamen neu gebildet und aus "quality" wurde "water-quality"
+    expect(again.mappingXmi).toContain('<services mid="quality">');
     expect(again.mappingXmi).toContain(
       'href="http://data-in-motion.biz/waterparc/domain#//WaterQuality"',
     );
