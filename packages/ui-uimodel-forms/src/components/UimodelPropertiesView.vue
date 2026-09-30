@@ -28,6 +28,7 @@ import {
 import { buildDefaultUiModel } from '../defaultUiModel'
 import { bumpModelVersion } from '../oclAdapter'
 import { findUiModel, getOverlayCases } from '../uiModelRegistry'
+import TableViewRenderer from './TableViewRenderer.vue'
 
 const props = defineProps<{
   eObject: EObject
@@ -45,7 +46,10 @@ provide(COMPOSER_REGISTRY_KEY, createComposerRegistry({
   TabView: TabViewComposer,
   SummaryView: SummaryViewComposer,
   TableView: TableViewComposer,
-  MasterDetail: MasterDetailComposer
+  MasterDetail: MasterDetailComposer,
+  // gene-Renderer, den TableViewComposer per Registry unter diesem Namen
+  // sucht — ohne ihn zeigt der Composer nur einen Platzhalter.
+  TableViewRenderer
 }))
 
 // Modell-Version aus dem Editor-Kontext → OCL-Cache invalidieren, damit
