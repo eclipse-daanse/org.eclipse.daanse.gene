@@ -128,6 +128,7 @@ import {
   version,
 } from './context';
 import type { EPackage } from '@emfts/core';
+import { isValidMid } from '../transform/toProviderMapping';
 import { FriendlyNameSource, NameSource, TimestampSource } from '../generated';
 import type { FeaturePath } from '../generated';
 import { discriminatorPathOf } from '../emf/featurePaths';
@@ -213,10 +214,15 @@ const blockReason = computed<string>(() => {
       if (s?.timestamp?.source === TimestampSource.DEVICE_TIME && !s.timestamp.path)
         return 'Bitte wählen Sie das Feld mit dem Messzeitpunkt.';
       return '';
-    case 'measurements':
-      return s?.measurements.some((m) => m.selected)
-        ? ''
-        : 'Bitte wählen Sie mindestens einen Messwert aus.';
+    case 'measurements': {
+      const selected = s?.measurements.filter((m) => m.selected) ?? [];
+      if (selected.length === 0) return 'Bitte wählen Sie mindestens einen Messwert aus.';
+      // The group becomes the service's mid, so it has to survive the write
+      const badGroup = selected.find((m) => !isValidMid((m.serviceGroup ?? '').trim()));
+      if (badGroup)
+        return `Die Gruppe „${badGroup.serviceGroup ?? ''}" taugt nicht als mid. Erlaubt sind Kleinbuchstaben, Ziffern und Bindestriche — keine Leerzeichen.`;
+      return '';
+    }
     default:
       return '';
   }

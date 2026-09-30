@@ -549,9 +549,11 @@ export function restoreSetupFromMappingXmi(
   // --- Messwerte ---
   for (const service of egetList(root, 'services')) {
     const serviceNameMapping = eget(service, 'name') as EObject | undefined;
+    // The group IS the mid - taking the display name here would rename the
+    // service on the way back, since the writer derives the mid from the group.
     const group =
-      (serviceNameMapping ? egetString(serviceNameMapping, 'name') : '') ||
       egetString(service, 'mid') ||
+      (serviceNameMapping ? egetString(serviceNameMapping, 'name') : '') ||
       'data';
     if (egetList(service, 'temporaryResources').length) {
       warnings.push(
