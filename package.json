@@ -43,7 +43,7 @@
     "@emfts/ocl.model": "^0.0.1-next.1",
     "@emfts/uimodel-composer": "^0.0.2-next.1",
     "@emfts/vue-registry": "^0.0.1-next.1",
-    "@faker-js/faker": "^9.9.0",
+    "@faker-js/faker": "^10.6.0",
     "@primevue/themes": "^4.3.3",
     "@vue-flow/background": "^1.3.2",
     "@vue-flow/controls": "^1.1.3",
