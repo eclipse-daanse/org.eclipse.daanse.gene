@@ -65,12 +65,45 @@ const objectsByStage = computed(() => {
 // Selected stage tab
 const selectedStage = ref<string | null>(null)
 
-// Auto-select first stage when registry changes
-watch(activeRegistry, (reg) => {
-  if (reg && reg.stages.length > 0) {
-    selectedStage.value = reg.stages[0].name || null
-  } else {
+/**
+ * Die Stage der Auswahl im Baum, falls sie eine hat.
+ *
+ * Ein Objekt- oder Schema-Knoten trägt sie in seinen Metadaten, ein
+ * Stage-Knoten im Namen. Wer im Baum ein Mapping in `release` ansieht, erwartet
+ * im Panel `release` — nicht die erste Stage der Registry.
+ */
+const stageDerAuswahl = computed<string | null>(() => {
+  const data = browser.selectedNodeData.value
+  return data?.metadata?.stage ?? data?.stageName ?? null
+})
+
+// Der Auswahl folgen; ohne erkennbare Stage bleibt die erste der Registry
+watch([activeRegistry, stageDerAuswahl], () => {
+  const reg = activeRegistry.value
+  if (!reg || reg.stages.length === 0) {
     selectedStage.value = null
+    return
+  }
+  const ausBaum = stageDerAuswahl.value
+  const bekannt = ausBaum !== null && reg.stages.some((s: Stage) => s.name === ausBaum)
+  selectedStage.value = bekannt ? ausBaum : (reg.stages[0].name ?? null)
+}, { immediate: true })
+
+/*
+ * Fetch what the shown stage holds. Previously the panel waited for someone to
+ * expand that stage in the tree — so it stayed empty depending on where the
+ * user had clicked before.
+ */
+const stageWirdGeladen = ref(false)
+watch([activeRegistry, selectedStage], async () => {
+  const reg = activeRegistry.value
+  const stage = selectedStage.value
+  if (!reg || !stage) return
+  stageWirdGeladen.value = true
+  try {
+    await browser.ensureStageLoaded(reg.connectionId, reg.registryName, stage)
+  } finally {
+    stageWirdGeladen.value = false
   }
 }, { immediate: true })
 
@@ -270,7 +303,8 @@ function statusSeverity(status: string | undefined): string {
 
         <div v-else-if="currentStageObjects.length === 0" class="transitions-empty">
           <i class="pi pi-inbox" style="font-size: 1.2rem; opacity: 0.3"></i>
-          <p>No objects loaded in stage "{{ selectedStage }}". Expand the stage in the tree first.</p>
+          <p v-if="stageWirdGeladen">Objekte der Stage „{{ selectedStage }}" werden geladen…</p>
+          <p v-else>Die Stage „{{ selectedStage }}" enthält keine Objekte.</p>
         </div>
 
         <DataTable

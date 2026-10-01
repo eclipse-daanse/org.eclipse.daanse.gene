@@ -76,9 +76,9 @@ async function handleRefreshAll() {
   }
 }
 
-// Tree state
-const selectedKey = ref<Record<string, boolean>>({})
-const expandedKeys = ref<Record<string, boolean>>({})
+// Tree state — shared, so it survives a view switch (the component is unmounted then)
+const selectedKey = browser.selectionKeys
+const expandedKeys = browser.expandedKeys
 
 // Context menu
 const contextMenu = ref()
