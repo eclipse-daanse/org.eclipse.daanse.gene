@@ -65,13 +65,28 @@ const objectsByStage = computed(() => {
 // Selected stage tab
 const selectedStage = ref<string | null>(null)
 
-// Auto-select first stage when registry changes
-watch(activeRegistry, (reg) => {
-  if (reg && reg.stages.length > 0) {
-    selectedStage.value = reg.stages[0].name || null
-  } else {
+/**
+ * Die Stage der Auswahl im Baum, falls sie eine hat.
+ *
+ * Ein Objekt- oder Schema-Knoten trägt sie in seinen Metadaten, ein
+ * Stage-Knoten im Namen. Wer im Baum ein Mapping in `release` ansieht, erwartet
+ * im Panel `release` — nicht die erste Stage der Registry.
+ */
+const stageDerAuswahl = computed<string | null>(() => {
+  const data = browser.selectedNodeData.value
+  return data?.metadata?.stage ?? data?.stageName ?? null
+})
+
+// Der Auswahl folgen; ohne erkennbare Stage bleibt die erste der Registry
+watch([activeRegistry, stageDerAuswahl], () => {
+  const reg = activeRegistry.value
+  if (!reg || reg.stages.length === 0) {
     selectedStage.value = null
+    return
   }
+  const ausBaum = stageDerAuswahl.value
+  const bekannt = ausBaum !== null && reg.stages.some((s: Stage) => s.name === ausBaum)
+  selectedStage.value = bekannt ? ausBaum : (reg.stages[0].name ?? null)
 }, { immediate: true })
 
 /*
@@ -80,7 +95,9 @@ watch(activeRegistry, (reg) => {
  * user had clicked before.
  */
 const stageWirdGeladen = ref(false)
-watch([activeRegistry, selectedStage], async ([reg, stage]: [ReturnType<typeof activeRegistry.valueOf> | null, string | null]) => {
+watch([activeRegistry, selectedStage], async () => {
+  const reg = activeRegistry.value
+  const stage = selectedStage.value
   if (!reg || !stage) return
   stageWirdGeladen.value = true
   try {
