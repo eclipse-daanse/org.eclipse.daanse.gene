@@ -74,6 +74,22 @@ watch(activeRegistry, (reg) => {
   }
 }, { immediate: true })
 
+/*
+ * Fetch what the shown stage holds. Previously the panel waited for someone to
+ * expand that stage in the tree — so it stayed empty depending on where the
+ * user had clicked before.
+ */
+const stageWirdGeladen = ref(false)
+watch([activeRegistry, selectedStage], async ([reg, stage]: [ReturnType<typeof activeRegistry.valueOf> | null, string | null]) => {
+  if (!reg || !stage) return
+  stageWirdGeladen.value = true
+  try {
+    await browser.ensureStageLoaded(reg.connectionId, reg.registryName, stage)
+  } finally {
+    stageWirdGeladen.value = false
+  }
+}, { immediate: true })
+
 // Objects for the selected stage
 const currentStageObjects = computed(() => {
   if (!selectedStage.value) return []
@@ -270,7 +286,8 @@ function statusSeverity(status: string | undefined): string {
 
         <div v-else-if="currentStageObjects.length === 0" class="transitions-empty">
           <i class="pi pi-inbox" style="font-size: 1.2rem; opacity: 0.3"></i>
-          <p>No objects loaded in stage "{{ selectedStage }}". Expand the stage in the tree first.</p>
+          <p v-if="stageWirdGeladen">Objekte der Stage „{{ selectedStage }}" werden geladen…</p>
+          <p v-else>Die Stage „{{ selectedStage }}" enthält keine Objekte.</p>
         </div>
 
         <DataTable
