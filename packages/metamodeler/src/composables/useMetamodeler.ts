@@ -91,6 +91,29 @@ let resourceSet: BasicResourceSet | null = null
 // Canonical package registry from TSM service (shared across all plugins)
 let _canonicalRegistry: any = null
 
+/**
+ * Moves a metamodel resource onto its logical URI - its nsURI - and records
+ * where it physically sits.
+ *
+ * A reference into a metamodel names the nsURI, so that is the name the
+ * resource carries; `XMLSave.getHref()` writes exactly that. The path stays in
+ * the URI map, which is how a document with an older path href still arrives
+ * here. The model browser does the same when it loads a model — kept separate
+ * on purpose, the two plugins do not depend on each other.
+ */
+function useLogicalURI(rs: any, resource: any, nsURI: string, sourceFile: string): void {
+  if (!nsURI) return
+  try {
+    const logical = URI.createURI(nsURI)
+    if (sourceFile) {
+      rs.getURIConverter?.()?.getURIMap?.()?.set(URI.createURI(sourceFile), logical)
+    }
+    resource.setURI?.(logical)
+  } catch (e) {
+    console.warn('[Metamodeler] Could not move the resource onto its nsURI:', e)
+  }
+}
+
 export function setCanonicalPackageRegistry(registry: any) {
   _canonicalRegistry = registry
 }
@@ -245,6 +268,8 @@ export function useMetamodeler() {
         console.error('[Metamodeler] Root element is not an EPackage')
         return null
       }
+
+      useLogicalURI(rs, res, ePackage.getNsURI() ?? '', sourceFile)
 
       const info: ImportedPackageInfo = {
         nsURI: ePackage.getNsURI() || '',
@@ -1045,6 +1070,8 @@ export function useMetamodeler() {
       // resolved via EPackageRegistry (separate identity) instead of the live
       // Resource tree. Re-bind them so the serializer writes #// fragments.
       rebindForeignReferences(ePackage)
+
+      useLogicalURI(rs, newResource, nsURI, sourceFile)
 
       // Set as the current resource for editing
       resource.value = newResource

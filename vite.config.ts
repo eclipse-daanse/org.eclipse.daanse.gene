@@ -215,6 +215,12 @@ export default defineConfig({
       // Direct module aliases (without manifest.json)
       { find: 'ui-problems-panel', replacement: fileURLToPath(new URL('./packages/ui-problems-panel/src/index.ts', import.meta.url)) },
       { find: 'ui-search', replacement: fileURLToPath(new URL('./packages/ui-search/src/index.ts', import.meta.url)) },
+      // Working against a local @emfts/core checkout: EMFTS_LOCAL=/path/to/emfts.
+      // A symlink in node_modules alone is not enough — the composer keeps
+      // resolving the npm copy, and two core instances break eClass identity.
+      ...(process.env.EMFTS_LOCAL
+        ? [{ find: /^@emfts\/core$/, replacement: path.resolve(process.env.EMFTS_LOCAL, 'dist/index.js') }]
+        : []),
     ],
     // Force a single instance of these packages. @emfts/uimodel-composer
     // depends on vue/@emfts/core/@emfts/vue-registry itself; without dedupe

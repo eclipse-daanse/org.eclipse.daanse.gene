@@ -22,6 +22,31 @@ export function setCanonicalPackageRegistry(registry: any) {
   _canonicalRegistry = registry
 }
 
+/**
+ * Moves a metamodel resource onto its logical URI - its nsURI - and records
+ * where it physically sits.
+ *
+ * A reference into a metamodel names the nsURI, so that is what the resource
+ * has to be called for `XMLSave.getHref()` to write it and for the loader to
+ * find it. The mapping keeps the physical location: saving the .ecore needs
+ * it, and a document that still carries a path href is normalized through it
+ * (`ResourceSet.getResource()` compares through the URI converter).
+ */
+function useLogicalURI(rs: any, resource: any, nsURI: string, sourceFile: string): void {
+  if (!nsURI) return
+  try {
+    const logical = URI.createURI(nsURI)
+    if (sourceFile) {
+      const map = rs.getURIConverter?.()?.getURIMap?.()
+      // physical -> logical, so an old path href ends up at this resource
+      map?.set(URI.createURI(sourceFile), logical)
+    }
+    resource.setURI?.(logical)
+  } catch (e) {
+    console.warn('[ModelRegistry] Could not move the resource onto its nsURI:', e)
+  }
+}
+
 function registerInGlobalRegistry(nsURI: string, pkg: any) {
   EPackageRegistry.INSTANCE.set(nsURI, pkg)
   if (_canonicalRegistry && _canonicalRegistry !== EPackageRegistry.INSTANCE) {
@@ -315,8 +340,24 @@ const loadingModelName = ref('')
 
 // Resource set for loading .ecore files
 let ecoreResourceSet: InstanceType<typeof EResourceSetImpl> | null = null
+let sharedResourceSet: any = null
+
+/**
+ * Hands over the resource set of the application.
+ *
+ * Metamodels belong in the same set as the instances: a reference from an
+ * instance into a metamodel is resolved against the resources of that set, and
+ * a metamodel kept under its nsURI is only found there. Without this the model
+ * browser would keep its own set and the instance loader would look into an
+ * empty one. Wired up in gene-app; on its own the browser falls back to a set
+ * of its own.
+ */
+export function setSharedResourceSet(rs: any): void {
+  sharedResourceSet = rs
+}
 
 function getEcoreResourceSet() {
+  if (sharedResourceSet) return sharedResourceSet
   if (!ecoreResourceSet) {
     ecoreResourceSet = new EResourceSetImpl()
   }
@@ -371,14 +412,14 @@ export function useModelRegistry() {
       console.log('[ModelRegistry] Loading .ecore file:', sourceFile)
 
       const rs = getEcoreResourceSet()
-      // Use the real source path as the resource URI so the resource is
-      // identifiable/shareable (e.g. the metamodeler can adopt this exact
-      // resource for editing instead of parsing a second, divergent copy).
-      // Fall back to a synthetic URI only when no path is available.
+      // Parse under the path first: hrefs inside the .ecore (a supertype in the
+      // file next door) are relative and only resolve against it. The resource
+      // moves to its logical URI once the nsURI is known - see below.
       const uri = URI.createURI(sourceFile || 'file://temp.ecore')
 
       const resource = new XMIResource(uri)
       resource.setResourceSet(rs)
+      rs.getResources().push(resource)
       resource.loadFromString(ecoreContent)
 
       const contents = resource.getContents()
@@ -395,6 +436,13 @@ export function useModelRegistry() {
       }
 
       console.log('[ModelRegistry] Loaded EPackage:', ePackage.getName(), ePackage.getNsURI())
+
+      // From here the metamodel is known by its nsURI, not by where it sits.
+      // That is what a reference to one of its classes carries, so this is the
+      // resource URI; the path goes into the URI map, which is how the loader
+      // finds the file again and how older documents with a path href still
+      // arrive here.
+      useLogicalURI(rs, resource, ePackage.getNsURI() ?? '', sourceFile)
 
       // Log classifiers
       const classifiers = ePackage.getEClassifiers ? ePackage.getEClassifiers() : []
