@@ -13,7 +13,7 @@ import modelCommandsEcore from '../model/model-commands.ecore?raw'
 export * from './types'
 
 // Re-export composables
-export { useModelRegistry, useSharedModelRegistry } from './composables/useModelRegistry'
+export { useModelRegistry, useSharedModelRegistry, setSharedResourceSet } from './composables/useModelRegistry'
 export { repairLegacyEcoreHrefs, needsLegacyHrefRepair } from './composables/repairEcore'
 
 // Re-export components
@@ -25,7 +25,7 @@ import { packagePathOf, classLabelWithPackage } from './components/classPickerSo
 
 // Import for service registration
 import * as components from './components'
-import { useModelRegistry, useSharedModelRegistry, setViewsService, setCanonicalPackageRegistry } from './composables/useModelRegistry'
+import { useModelRegistry, useSharedModelRegistry, setViewsService, setCanonicalPackageRegistry, setSharedResourceSet } from './composables/useModelRegistry'
 import { repairLegacyEcoreHrefs, needsLegacyHrefRepair } from './composables/repairEcore'
 import { setIconRegistry } from './types'
 
@@ -41,6 +41,23 @@ export async function activate(context: ModuleContext): Promise<void> {
   if (canonicalRegistry) {
     setCanonicalPackageRegistry(canonicalRegistry)
     context.log.info('Canonical package registry set')
+  }
+
+  /*
+   * Load metamodels into the resource set the instances live in. A reference
+   * from an instance into a metamodel is resolved against the resources of
+   * that set — with a set of our own the loader would look into an empty one.
+   * ui-instance-tree may activate later, hence the retry.
+   */
+  function trySetupResourceSet(): boolean {
+    const rs = context.services.get<any>('gene.resourceset')
+    if (!rs) return false
+    setSharedResourceSet(rs)
+    context.log.info('Shared resource set taken over')
+    return true
+  }
+  if (!trySetupResourceSet()) {
+    setTimeout(trySetupResourceSet, 500)
   }
 
   // Register components as service (legacy)
