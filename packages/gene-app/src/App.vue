@@ -1949,6 +1949,54 @@ function setupFileExplorerPerspective(layout: any) {
   })
 }
 
+/**
+ * Der Explorer gehoert in jede Ansicht — oben links.
+ *
+ * Er zeigt, was es gibt, unabhaengig davon, was offen ist; darunter steht der
+ * Baum der offenen Datei. Deshalb wird er hier gebaut und von allen Ansichten
+ * eingehaengt, statt nur in seiner eigenen zu leben.
+ */
+function registriereExplorerOben(layout: any, versuch = 0): void {
+  const FileExplorer = fileExplorerComponents.value?.FileExplorer
+  if (!FileExplorer) {
+    // Das Explorer-Plugin kann spaeter aktiviert werden als diese Ansicht
+    if (versuch < 10) setTimeout(() => registriereExplorerOben(layout, versuch + 1), 300)
+    return
+  }
+
+  const Wrapper = defineComponent({
+    setup() {
+      const isWorkspaceOpen = computed(() => !!currentWorkspaceEntry.value)
+      return () => h(FileExplorer, {
+        workspaceOpen: isWorkspaceOpen.value,
+        onFileSelect: handleFileSelect,
+        onModelAdd: handleModelAdd,
+        onInstanceAdd: handleInstanceAdd,
+        onMetamodelEdit: handleMetamodelEdit,
+        onCoclAdd: handleCoclAdd,
+        onTransformationLoad: handleTransformationLoad,
+        onDmnLoad: handleDmnLoad,
+        onAtlasPublish: handleAtlasPublish
+      })
+    }
+  })
+
+  layout.registerPanel({
+    id: 'file-explorer',
+    title: 'Explorer',
+    icon: 'pi pi-folder',
+    component: markRaw(Wrapper),
+    location: 'primary'
+  })
+  layout.registerActivity({
+    id: 'file-explorer',
+    icon: 'pi pi-folder',
+    label: 'Explorer',
+    tooltip: 'File Explorer',
+    panel: 'file-explorer'
+  })
+}
+
 function setupModelEditorPerspective(layout: any) {
   const ModelBrowser = modelBrowserComponents.value?.ModelBrowser
   const InstanceTree = instanceTreeComponents.value?.InstanceTree
@@ -1991,6 +2039,8 @@ function setupModelEditorPerspective(layout: any) {
 
   // All prerequisites met — now clear and set up the layout
   layout.clearAll()
+  // Oben links der Navigator, darunter der Baum der offenen Datei
+  registriereExplorerOben(layout)
   console.log('[App] Using Instance Editor context:', context.mode)
 
   // Create instance-editor-specific handler that uses the context
@@ -2050,13 +2100,17 @@ function setupModelEditorPerspective(layout: any) {
     }
   })
 
-  // Register instance tree panel (left/primary sidebar)
+  /*
+   * Der Baum gehoert zur offenen Datei, nicht zur Anwendung: Er steht in der
+   * unteren Haelfte links, waehrend oben der Navigator bleibt — Explorer oder
+   * Model Atlas. Beide gleichzeitig sichtbar.
+   */
   layout.registerPanel({
     id: 'instance-tree',
     title: 'Instances',
     icon: 'pi pi-sitemap',
     component: markRaw(InstanceTreeWrapper),
-    location: 'primary'
+    location: 'primary-bottom'
   })
 
   // Register activity for instance tree
@@ -2294,6 +2348,8 @@ function setupMetamodelerPerspective(layout: any) {
 
   // All prerequisites met — now clear and set up the layout
   layout.clearAll()
+  // Oben links der Navigator, darunter der Baum der offenen Datei
+  registriereExplorerOben(layout)
 
   // Wire the styled save-confirm dialog for validation errors
   registerMetamodelerSaveConfirm()
@@ -2348,13 +2404,13 @@ function setupMetamodelerPerspective(layout: any) {
     }
   })
 
-  // Register MetamodelerTree panel (left/primary sidebar)
+  // Der Baum zur offenen .ecore — untere Haelfte links, oben bleibt der Navigator
   layout.registerPanel({
     id: 'metamodeler-tree',
     title: 'Metamodel',
     icon: 'pi pi-sitemap',
     component: markRaw(MetamodelerTree),
-    location: 'primary'
+    location: 'primary-bottom'
   })
 
   // Register activity for metamodeler tree
