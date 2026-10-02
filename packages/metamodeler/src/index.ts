@@ -13,13 +13,32 @@ import metamodelCommandsEcore from '../model/metamodel-commands.ecore?raw'
 export * from './types'
 
 // Re-export composables
-export { useMetamodeler, useSharedMetamodeler } from './composables/useMetamodeler'
+export { useMetamodeler, useSharedMetamodeler, setActiveMetamodeler, clearActiveMetamodeler } from './composables/useMetamodeler'
+// Ein Metamodell je Editor-Tab (mehrere .ecore gleichzeitig offen)
+export {
+  tabIdFuer,
+  metamodelerFuerTab,
+  tabIstGeladen,
+  tabNachVorn,
+  tabGeschlossen,
+  tabIstGeaendert,
+  offeneTabIds
+} from './composables/tabDokumente'
 
 // Re-export components
 export * from './components'
 
 // Import for service registration
 import { MetamodelerPerspective, MetamodelerTree, MetamodelerEditor } from './components'
+import {
+  tabIdFuer,
+  metamodelerFuerTab,
+  tabIstGeladen,
+  tabNachVorn,
+  tabGeschlossen,
+  tabIstGeaendert,
+  offeneTabIds
+} from './composables/tabDokumente'
 import { useMetamodeler, useSharedMetamodeler, setMetamodelerIconRegistry, refreshMetamodelerIcons, setMetamodelerProblemsService, setMetamodelerConfirmSaveHandler, setCanonicalPackageRegistry, setMetamodelerModelRegistry } from './composables/useMetamodeler'
 
 // Type imports
@@ -83,7 +102,15 @@ export async function activate(context: ModuleContext): Promise<void> {
   context.services.register('ui.metamodeler.composables', {
     useMetamodeler,
     useSharedMetamodeler,
-    setMetamodelerConfirmSaveHandler
+    setMetamodelerConfirmSaveHandler,
+    // Ein Metamodell je Editor-Tab
+    tabIdFuer,
+    metamodelerFuerTab,
+    tabIstGeladen,
+    tabNachVorn,
+    tabGeschlossen,
+    tabIstGeaendert,
+    offeneTabIds
   })
 
   // Register the metamodel editor context factory. Context-aware components
