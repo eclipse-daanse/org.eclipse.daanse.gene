@@ -31,9 +31,22 @@ describe('Zweigeteilte linke Seite', () => {
     expect(layout.primaryBottomPanels.value.map((p: { id: string }) => p.id)).toEqual(['metamodell-baum'])
   })
 
-  it('zeigt unten das erste Panel, auch ohne ausdrueckliche Wahl', () => {
+  it('zeigt unten nichts, solange keine Datei es verlangt', () => {
+    // Anmelden heisst nicht anzeigen: Die Zone gehoert der offenen Datei, und
+    // ohne eine stand hier sonst der Instanzbaum, obwohl nichts geladen war
     layout.registerPanel(panel('instanz-baum', 'primary-bottom'))
+    expect(layout.activePrimaryBottomPanel.value).toBeNull()
+
+    layout.selectPanel('instanz-baum', 'primary-bottom')
     expect(layout.activePrimaryBottomPanel.value?.id).toBe('instanz-baum')
+  })
+
+  it('raeumt die untere Haelfte wieder, wenn die Datei geht', () => {
+    layout.registerPanel(panel('instanz-baum', 'primary-bottom'))
+    layout.selectPanel('instanz-baum', 'primary-bottom')
+
+    layout.selectPanel(null, 'primary-bottom')
+    expect(layout.activePrimaryBottomPanel.value).toBeNull()
   })
 
   it('waehlt unten um, ohne oben etwas zu veraendern', () => {
@@ -61,6 +74,6 @@ describe('Zweigeteilte linke Seite', () => {
   it('kommt ohne untere Ansicht aus', () => {
     layout.registerPanel(panel('explorer', 'primary'))
     expect(layout.primaryBottomPanels.value).toEqual([])
-    expect(layout.activePrimaryBottomPanel.value).toBeUndefined()
+    expect(layout.activePrimaryBottomPanel.value).toBeNull()
   })
 })

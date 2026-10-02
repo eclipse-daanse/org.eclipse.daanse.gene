@@ -214,6 +214,17 @@ Mitte stellen wollte, wird ein Tab. Ihre Registrierung bleibt bestehen, weil sie
 weiterhin beschreibt, welches Panel die Ansicht einer Dateiart ist — gezeigt
 wird sie in der Leiste nicht mehr.
 
+**Anmelden heißt nicht anzeigen.** Die untere Hälfte links und die rechte Seite
+gehören der offenen Datei. Ein Panel dort zu registrieren zeigt es nicht: Die
+Zone bleibt leer, bis ein Tab sie beansprucht, und wird wieder leer, wenn er
+geht. Vorher fiel `activePrimaryBottomPanel` auf das erste Panel zurück und
+`registerPanel` wählte rechts automatisch aus — deshalb standen in der
+Explorer-Perspektive ein Instanzbaum und ein Model Browser, obwohl nichts offen
+war.
+
+**Ein Workspace zu öffnen wechselt keine Ansicht.** Der Explorer bleibt stehen;
+was aus dem Workspace geöffnet wird, erscheint als Tab.
+
 **6 erledigt, soweit es ohne Eingriff in die Plugins geht.** cocl, Transformation
 und DMN öffnen einen Tab statt die Perspektive zu wechseln; eorm und SensiNact
 landen über denselben Weg als Tab, weil ihr Öffner nichts mehr abräumt. Was

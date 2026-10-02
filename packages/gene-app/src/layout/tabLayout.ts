@@ -16,9 +16,9 @@
  */
 import type { EditorArt } from 'gene-contracts'
 
-/** The little this needs from the frame. */
+/** The little this needs from the frame. `null` clears a zone. */
 export interface LayoutFrame {
-  selectPanel(panelId: string, area: 'primary' | 'primary-bottom' | 'secondary' | 'panel'): void
+  selectPanel(panelId: string | null, area: 'primary' | 'primary-bottom' | 'secondary' | 'panel'): void
   setSecondarySidebarVisible?(visible: boolean): void
 }
 
@@ -27,8 +27,14 @@ export interface TabLayoutService {
   bindTab(tabId: string, editorId: string): void
   /** Forgets a closed tab. */
   releaseTab(tabId: string): void
-  /** The tab came forward: select the panels its view declared. */
-  activateTab(tabId: string): void
+  /**
+   * The tab came forward: select the panels its view declared - and clear the
+   * zones it did not, so nothing of the previous tab is left standing.
+   *
+   * Without a tab, or with one no view claimed (the workspace preview), every
+   * zone that belongs to a file is cleared.
+   */
+  activateTab(tabId: string | null | undefined): void
   /** Which view carries this tab, if any. */
   editorIdOf(tabId: string): string | undefined
 }
@@ -55,22 +61,20 @@ export function createTabLayout({ frame, editorArtById }: TabLayoutOptions): Tab
       return editorIdByTab.get(tabId)
     },
 
-    activateTab(tabId: string): void {
-      const editorId = editorIdByTab.get(tabId)
-      if (editorId === undefined) return
+    activateTab(tabId: string | null | undefined): void {
+      const editorId = tabId === null || tabId === undefined ? undefined : editorIdByTab.get(tabId)
+      const panels = editorId === undefined ? undefined : editorArtById(editorId)?.panels
 
-      const panels = editorArtById(editorId)?.panels
-      if (!panels) return
+      // Null rather than "leave it": what the previous tab showed is not this
+      // tab's, and a stale tree is worse than an empty zone
+      frame.selectPanel(panels?.tree ?? null, 'primary-bottom')
 
-      if (panels.tree) frame.selectPanel(panels.tree, 'primary-bottom')
+      const secondary = panels?.secondary?.[0] ?? null
+      frame.selectPanel(secondary, 'secondary')
+      if (!secondary) frame.setSecondarySidebarVisible?.(false)
+      else frame.setSecondarySidebarVisible?.(true)
 
-      const [secondary] = panels.secondary ?? []
-      if (secondary) {
-        frame.selectPanel(secondary, 'secondary')
-        frame.setSecondarySidebarVisible?.(true)
-      }
-
-      const [bottom] = panels.bottom ?? []
+      const bottom = panels?.bottom?.[0]
       if (bottom) frame.selectPanel(bottom, 'panel')
     }
   }
