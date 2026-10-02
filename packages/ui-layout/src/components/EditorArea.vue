@@ -9,7 +9,6 @@
 import { computed } from 'tsm:vue'
 import { useLayoutState } from '../composables/useLayoutState'
 import { usePanelDragDrop } from '../composables/usePanelDragDrop'
-import EditorTabs from './EditorTabs.vue'
 
 const layout = useLayoutState()
 const dragDrop = usePanelDragDrop()
@@ -48,9 +47,6 @@ function onDrop(event: DragEvent) {
     @dragleave="onDragLeave"
     @drop="onDrop"
   >
-    <!-- Tab bar -->
-    <EditorTabs />
-
     <!-- Editor content -->
     <div class="editor-content">
       <component

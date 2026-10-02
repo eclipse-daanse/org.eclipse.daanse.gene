@@ -22,6 +22,7 @@ import ActivityBar from './ActivityBar.vue'
 import MenuBar from './MenuBar.vue'
 import PrimarySidebar from './PrimarySidebar.vue'
 import EditorArea from './EditorArea.vue'
+import EditorTabs from './EditorTabs.vue'
 import SecondarySidebar from './SecondarySidebar.vue'
 import PanelArea from './PanelArea.vue'
 import StatusBar from './StatusBar.vue'
@@ -235,10 +236,8 @@ onUnmounted(() => {
         <!-- Activity Bar -->
         <ActivityBar @perspective-change="handlePerspectiveChange" />
 
-        <!-- Content area (Menu Toolbar + Panels) -->
-        <div class="content-with-menu">
-          <MenuBar @show-settings="showWorkspaceSettings = true" />
-          <div class="content-panels">
+        <!-- Panels. Tab-Leiste und Menue leben in der Mitte, nicht darueber -->
+        <div class="content-panels">
 
         <!-- Primary Sidebar with resize handle -->
         <div class="primary-sidebar-container" :style="primarySidebarStyle">
@@ -250,8 +249,17 @@ onUnmounted(() => {
           ></div>
         </div>
 
-        <!-- Center area: Editor + Panel -->
+        <!-- Center area: Tabs + Menue + Editor + Panel -->
         <div class="center-area">
+          <!--
+            Die Tab-Leiste steht oben in der Mitte, auf gleicher Hoehe wie der
+            Kopf des Baumes und rechts von ihm. Darunter das Menue: Es gehoert
+            der offenen Datei, nicht der Anwendung, und steht deshalb unter
+            ihrem Tab statt ueber allem.
+          -->
+          <EditorTabs />
+          <MenuBar @show-settings="showWorkspaceSettings = true" />
+
           <!-- Editor Area -->
           <div class="editor-container">
             <EditorArea>
@@ -282,8 +290,7 @@ onUnmounted(() => {
           <SecondarySidebar />
         </div>
 
-          </div><!-- /content-panels -->
-        </div><!-- /content-with-menu -->
+        </div><!-- /content-panels -->
       </div>
     </div>
 
@@ -365,13 +372,6 @@ onUnmounted(() => {
 
 .horizontal-layout {
   display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
-.content-with-menu {
-  display: flex;
-  flex-direction: column;
   flex: 1;
   overflow: hidden;
 }
