@@ -34,6 +34,13 @@ export {
   getEditorContextService
 } from './context/editorContext'
 
+/*
+ * Die Sammelstelle der Dateiansichten. Als Komponente exportiert, damit der
+ * Loader sie findet und laufen laesst — sie sammelt, was sich unter
+ * `gene.editor.art` anmeldet.
+ */
+export { EditorArtCollector } from './context/editorArtCollector'
+
 export { createInstanceContext } from './context/instanceContext'
 // Eine Instanzdatei je Editor-Tab
 export {

@@ -30,6 +30,7 @@
       "storage-git": ["./packages/storage/git/src/index.ts"],
       "tsm-devtools": ["./packages/tsm-devtools/src/index.ts"],
       "core-extension": ["./packages/core-extension/src/index.ts"],
+      "gene-contracts": ["./packages/gene-contracts/src/index.ts"],
       "gene-app": ["./packages/app/src/index.ts"],
       "core": ["./.tsm/types/core/index.d.ts"]
     }

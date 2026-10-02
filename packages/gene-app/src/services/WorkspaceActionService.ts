@@ -79,3 +79,14 @@ export function useWorkspaceActions(): WorkspaceActionService {
   if (_instance) return _instance
   throw new Error('[WorkspaceActionService] Not available — must be registered by App.vue first')
 }
+
+/**
+ * The service if it is there, null while it is not.
+ *
+ * For callers that exist before App.vue has run: a file view declares itself at
+ * module start and is asked to open something much later, so it has no reason
+ * to fail now over something that is only needed then.
+ */
+export function getWorkspaceActions(): WorkspaceActionService | null {
+  return _instance
+}

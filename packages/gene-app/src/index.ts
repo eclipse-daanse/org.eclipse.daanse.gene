@@ -18,6 +18,13 @@ import { useSharedEditorConfig } from '@/services/useEditorConfig'
 export type { EditorConfigService } from '@/services/useEditorConfig'
 import appCommandsEcore from '../model/app-commands.ecore?raw'
 
+/*
+ * Die Dateiansichten. Als Komponenten exportiert — der Loader liest die
+ * `@component()`-Erklaerung aus dem Namensraum des Moduls und meldet sie unter
+ * `gene.editor.art` an. Deshalb steht hier nichts weiter als der Export.
+ */
+export * from './editors'
+
 // Vue app instance
 let app: App | null = null
 

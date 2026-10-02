@@ -1,0 +1,14 @@
+{
+  "name": "gene-contracts",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "description": "Service contracts shared by gene modules - names and types, no behaviour",
+  "dependencies": {
+    "@eclipse-daanse/tsm": "^0.1.0-next.1"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  }
+}
