@@ -36,6 +36,15 @@ export interface WorkspaceActionService {
   loadDmnFile(entry: FileEntryLike, content: string): Promise<void>
   publishToAtlas(entry: FileEntryLike, content: string): void
 
+  /**
+   * Merkt, mit welcher Ansicht eine Datei geoeffnet wird.
+   *
+   * Am Metamodell (nsURI), wenn eines erkennbar ist — die Wahl gilt dann fuer
+   * alle Dateien dieses Modells. Sonst am Pfad dieser einen Datei. Landet in
+   * der .wsp und ueberlebt damit die Sitzung.
+   */
+  merkeEditorWahl?(zuordnung: { pattern?: string; nsURI?: string; editorId: string }): void
+
   // --- Navigation ---
   selectObject(obj: any): void
   selectFile(file: any): void
