@@ -56,7 +56,17 @@ onUnmounted(() => document.removeEventListener('mousedown', handleOutsideClick))
 function loadMenu() {
   const menuRegistry = tsm?.getService('gene.menu.registry')
   const pm = tsm?.getService('ui.registry.perspectives')
-  let perspId = pm?.state?.currentPerspectiveId || ''
+
+  /*
+   * Das Menue gehoert der offenen Datei, nicht dem Navigator links.
+   *
+   * Es war an die Perspektive gebunden; seit eine Datei keine mehr wechselt,
+   * blieb im Metamodell-Editor das Menue des Explorers stehen. Die Ansicht des
+   * vorderen Tabs sagt, welche Perspektive sie abloest — und unter dem Namen
+   * ist ihr Menue angemeldet. Liegt kein Tab vorn, bleibt es beim Navigator.
+   */
+  const ausTab = tsm?.getService('gene.tab.layout')?.frontArt?.()?.replacesPerspective
+  let perspId = ausTab || pm?.state?.currentPerspectiveId || ''
 
   // View-Perspektiven (view-*) nutzen dasselbe Menü wie model-editor
   if (perspId.startsWith('view-')) perspId = 'model-editor'
@@ -126,6 +136,12 @@ onMounted(() => {
       loadMenu()
       setTimeout(() => loadMenu(), 300)
     })
+  }
+
+  // Und beim Tab-Wechsel, denn daran haengt das Menue jetzt
+  const layoutState = tsm?.getService('ui.layout.state')?.useLayoutState?.()
+  if (layoutState?.state) {
+    watch(() => layoutState.state.activeEditorTabId, () => loadMenu())
   }
 
   loadMenu()

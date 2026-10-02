@@ -1378,6 +1378,8 @@ function holeTabLayout(layout: any): TabLayoutService {
       editorArtById: (editorId) =>
         tsm.getService<any>('gene.editor.context')?.alleEditorArten?.().find((a: any) => a.id === editorId)
     })
+    // Angemeldet, weil die Menueleiste wissen muss, welche Ansicht vorn liegt
+    tsm.registerService('gene.tab.layout', tabLayout)
   }
   return tabLayout
 }
