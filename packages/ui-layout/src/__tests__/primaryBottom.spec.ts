@@ -27,8 +27,8 @@ describe('Zweigeteilte linke Seite', () => {
     layout.registerPanel(panel('explorer', 'primary'))
     layout.registerPanel(panel('metamodell-baum', 'primary-bottom'))
 
-    expect(layout.primaryPanels.value.map(p => p.id)).toEqual(['explorer'])
-    expect(layout.primaryBottomPanels.value.map(p => p.id)).toEqual(['metamodell-baum'])
+    expect(layout.primaryPanels.value.map((p: { id: string }) => p.id)).toEqual(['explorer'])
+    expect(layout.primaryBottomPanels.value.map((p: { id: string }) => p.id)).toEqual(['metamodell-baum'])
   })
 
   it('zeigt unten das erste Panel, auch ohne ausdrueckliche Wahl', () => {
