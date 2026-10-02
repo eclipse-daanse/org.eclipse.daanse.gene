@@ -29,6 +29,39 @@ const width = computed(() => layout.state.dimensions.primarySidebarWidth)
 const activePanel = computed(() => layout.activePrimaryPanel.value)
 const panels = computed(() => layout.primaryPanels.value)
 
+/*
+ * Die untere Haelfte: die Ansicht zur offenen Datei, meist ihr Baum. Sie liegt
+ * unter dem Navigator, nicht als weiterer Reiter daneben — beide sollen
+ * gleichzeitig sichtbar sein.
+ */
+const untenPanel = computed(() => layout.activePrimaryBottomPanel?.value ?? null)
+const untenHoehe = computed(() => layout.state.dimensions.primaryBottomHeight)
+
+let ziehtTrenner = false
+let startY = 0
+let startHoehe = 0
+
+function trennerGedrueckt(event: MouseEvent): void {
+  ziehtTrenner = true
+  startY = event.clientY
+  startHoehe = untenHoehe.value
+  window.addEventListener('mousemove', trennerBewegt)
+  window.addEventListener('mouseup', trennerLosgelassen)
+  event.preventDefault()
+}
+
+function trennerBewegt(event: MouseEvent): void {
+  if (!ziehtTrenner) return
+  // Nach oben ziehen vergroessert die untere Haelfte
+  layout.setPrimaryBottomHeight?.(startHoehe + (startY - event.clientY))
+}
+
+function trennerLosgelassen(): void {
+  ziehtTrenner = false
+  window.removeEventListener('mousemove', trennerBewegt)
+  window.removeEventListener('mouseup', trennerLosgelassen)
+}
+
 // Show minimized bar when sidebar is hidden but has panels
 const showMinimized = computed(() => !visible.value && panels.value.length > 0)
 
@@ -177,6 +210,20 @@ function onDrop(event: DragEvent) {
       </div>
     </div>
 
+    <!-- Untere Haelfte: die Ansicht zur offenen Datei -->
+    <template v-if="untenPanel">
+      <div class="sidebar-splitter" title="Hoehe ziehen" @mousedown="trennerGedrueckt"></div>
+      <div class="sidebar-bottom" :style="{ height: `${untenHoehe}px` }">
+        <div class="sidebar-header bottom-header">
+          <i v-if="untenPanel.icon" :class="untenPanel.icon"></i>
+          <span class="sidebar-title">{{ untenPanel.title }}</span>
+        </div>
+        <div class="sidebar-content">
+          <component :is="untenPanel.component" :key="untenPanel.id" />
+        </div>
+      </div>
+    </template>
+
     <!-- Drop indicator -->
     <div v-if="isDropTarget" class="drop-indicator">
       <i class="pi pi-arrow-down"></i>
@@ -201,6 +248,31 @@ function onDrop(event: DragEvent) {
 </template>
 
 <style scoped>
+.sidebar-splitter {
+  height: 5px;
+  flex: 0 0 5px;
+  cursor: row-resize;
+  background: var(--surface-border, #e0e0e0);
+}
+.sidebar-splitter:hover {
+  background: var(--primary-color, #10b981);
+}
+.sidebar-bottom {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid var(--surface-border, #e0e0e0);
+}
+.sidebar-bottom .sidebar-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.bottom-header {
+  gap: 0.4rem;
+}
+
 /* Minimized sidebar */
 .primary-sidebar-minimized {
   display: flex;
@@ -421,6 +493,8 @@ function onDrop(event: DragEvent) {
 
 .sidebar-content {
   flex: 1;
+  /* Ohne das drueckt ein langer Baum die untere Haelfte aus der Leiste */
+  min-height: 0;
   overflow: auto;
   background: var(--surface-card);
 }

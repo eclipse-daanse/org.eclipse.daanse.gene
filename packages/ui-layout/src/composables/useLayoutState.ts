@@ -76,6 +76,7 @@ function createInitialState(): LayoutState {
     activeActivityId: null,
     panels: [],
     activePrimaryPanelId: null,
+    activePrimaryBottomPanelId: null,
     activeSecondaryPanelId: null,
     panelPositionOverrides: new Map(),
     editorTabs: [],
@@ -220,6 +221,24 @@ export function useLayoutState() {
       .sort((a, b) => getEffectivePanelOrder(a, state.panelPositionOverrides) - getEffectivePanelOrder(b, state.panelPositionOverrides))
   )
 
+  /*
+   * Die untere Haelfte links. Oben steht der Navigator, unten die Ansicht zur
+   * offenen Datei — beide gleichzeitig sichtbar, deshalb eine eigene Zone und
+   * nicht nur ein weiterer Reiter oben.
+   */
+  const primaryBottomPanels = computed(() =>
+    state.panels
+      .filter(p => getEffectivePanelLocation(p, state.panelPositionOverrides) === 'primary-bottom')
+      .sort((a, b) => getEffectivePanelOrder(a, state.panelPositionOverrides) - getEffectivePanelOrder(b, state.panelPositionOverrides))
+  )
+
+  const activePrimaryBottomPanel = computed(() =>
+    state.panels.find(p =>
+      p.id === state.activePrimaryBottomPanelId &&
+      getEffectivePanelLocation(p, state.panelPositionOverrides) === 'primary-bottom'
+    ) ?? primaryBottomPanels.value[0]
+  )
+
   const secondaryPanels = computed(() =>
     state.panels
       .filter(p => getEffectivePanelLocation(p, state.panelPositionOverrides) === 'secondary')
@@ -311,9 +330,17 @@ export function useLayoutState() {
   function selectPanel(panelId: string, location: PanelLocation) {
     if (location === 'primary') {
       state.activePrimaryPanelId = panelId
+    } else if (location === 'primary-bottom') {
+      state.activePrimaryBottomPanelId = panelId
     } else if (location === 'secondary') {
       state.activeSecondaryPanelId = panelId
     }
+  }
+
+  /** Hoehe der unteren Haelfte links, in Grenzen gehalten. */
+  function setPrimaryBottomHeight(hoehe: number) {
+    const min = state.dimensions.primaryBottomMinHeight
+    state.dimensions.primaryBottomHeight = Math.max(min, hoehe)
   }
 
   // Editor tab management
@@ -1021,6 +1048,8 @@ export function useLayoutState() {
     activeEditorTab,
     activePanelTab,
     primaryPanels,
+    primaryBottomPanels,
+    activePrimaryBottomPanel,
     secondaryPanels,
     bottomPanels,
 
@@ -1077,6 +1106,7 @@ export function useLayoutState() {
     clearActivities,
     clearEditorTabs,
     onEditorClosed,
+    setPrimaryBottomHeight,
     clearPanelTabs,
     clearAll,
 
