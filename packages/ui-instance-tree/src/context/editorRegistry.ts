@@ -50,13 +50,13 @@ const arten = ref<EditorArt[]>([])
 let zuordnungen: EditorZuordnung[] = []
 
 export function registerEditorArt(art: EditorArt): void {
-  const ohneAlte = arten.value.filter((a) => a.id !== art.id)
+  const ohneAlte = arten.value.filter((a: EditorArt) => a.id !== art.id)
   arten.value = [...ohneAlte, art]
 }
 
 export function unregisterEditorArt(id: string): boolean {
   const vorher = arten.value.length
-  arten.value = arten.value.filter((a) => a.id !== id)
+  arten.value = arten.value.filter((a: EditorArt) => a.id !== id)
   return arten.value.length < vorher
 }
 
@@ -108,7 +108,7 @@ export function wurzelNsUri(inhalt: string): string | null {
 function passtMuster(pattern: string, pfad: string): boolean {
   // Nur '*' und '?' — mehr braucht ein Pfadmuster hier nicht
   const regex = new RegExp(
-    '^' + pattern.split('*').map((t) => t.split('?').map(maskieren).join('.')).join('.*') + '$'
+    '^' + pattern.split('*').map((t: string) => t.split('?').map(maskieren).join('.')).join('.*') + '$'
   )
   return regex.test(pfad)
 }
@@ -127,19 +127,19 @@ export function kandidatenFuer(pfad: string, inhalt?: string): EditorArt[] {
   const endung = endungVon(pfad)
   const nsURI = inhalt ? wurzelNsUri(inhalt) : null
 
-  const passend = arten.value.filter((art) => {
+  const passend = arten.value.filter((art: EditorArt) => {
     const ueberNsUri = !!nsURI && !!art.nsURIs?.includes(nsURI)
-    const ueberEndung = art.extensions.some((e) => e.toLowerCase() === endung)
+    const ueberEndung = art.extensions.some((e: string) => e.toLowerCase() === endung)
     return ueberNsUri || ueberEndung
   })
 
-  return passend.sort((a, b) => rang(b, endung, nsURI) - rang(a, endung, nsURI))
+  return passend.sort((a: EditorArt, b: EditorArt) => rang(b, endung, nsURI) - rang(a, endung, nsURI))
 }
 
 function rang(art: EditorArt, endung: string, nsURI: string | null): number {
   // Ein Treffer auf das Metamodell wiegt schwerer als einer auf die Endung
   const nsTreffer = nsURI && art.nsURIs?.includes(nsURI) ? 1000 : 0
-  const endungsTreffer = art.extensions.some((e) => e.toLowerCase() === endung) ? 100 : 0
+  const endungsTreffer = art.extensions.some((e: string) => e.toLowerCase() === endung) ? 100 : 0
   return nsTreffer + endungsTreffer + (art.priority ?? 0)
 }
 
@@ -152,11 +152,11 @@ function rang(art: EditorArt, endung: string, nsURI: string | null): number {
 export function editorFuer(pfad: string, inhalt?: string): EditorArt | null {
   const nsURI = inhalt ? wurzelNsUri(inhalt) : null
 
-  const ueberPfad = zuordnungen.find((z) => z.pattern && passtMuster(z.pattern, pfad))
-  const ueberNsUri = nsURI ? zuordnungen.find((z) => !z.pattern && z.nsURI === nsURI) : undefined
+  const ueberPfad = zuordnungen.find((z: EditorZuordnung) => z.pattern && passtMuster(z.pattern, pfad))
+  const ueberNsUri = nsURI ? zuordnungen.find((z: EditorZuordnung) => !z.pattern && z.nsURI === nsURI) : undefined
   const regel = ueberPfad ?? ueberNsUri
   if (regel) {
-    const gewuenscht = arten.value.find((a) => a.id === regel.editorId)
+    const gewuenscht = arten.value.find((a: EditorArt) => a.id === regel.editorId)
     if (gewuenscht) return gewuenscht
   }
 
