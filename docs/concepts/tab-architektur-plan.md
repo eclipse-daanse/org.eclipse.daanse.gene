@@ -193,6 +193,34 @@ Davor steht, als Schritt 0:
 Jeder Schritt ist für sich lauffähig. Nach 1–3 verschwindet das Abreißen des
 Layouts, nach 4–5 stimmt der Schnitt, nach 6 ist das Bild vollständig.
 
+## Stand
+
+**1–3 erledigt.** Es gibt eine Arbeitsfläche, einmal gebaut. Die Panels gehören
+der Anwendung; welches zu sehen ist, entscheidet der vordere Tab. Der
+Tab-Layout-Dienst (`gene-app/src/layout/tabLayout.ts`) hält fest, welche Ansicht
+einen Tab trägt, und wählt beim Wechsel die Panels, die sie unter
+`EditorArt.panels` angemeldet hat — er baut nichts auf und räumt nichts ab.
+Beim Öffnen einer Datei wird keine Perspektive mehr gewechselt.
+
+**4 teilweise.** Aus den rund 520 Zeilen der beiden Perspektiv-Aufbauten sind
+190 geworden, weil beide dasselbe taten. Was blieb, steht noch in `App.vue`
+statt in einem Modul je Dateityp; der Model Browser ist jetzt einer statt zwei,
+weil der Kontext des vorderen Tabs sagt, welches Modell darin steht.
+
+**5 anders gelöst als geplant.** Die Perspektiven werden nicht entfernt, sondern
+entmachtet: `setupPerspectiveLayout` räumt die Fläche nicht mehr ab, sondern
+ergänzt sie. Eine Perspektive wählt den Navigator oben links; was sie in die
+Mitte stellen wollte, wird ein Tab. Ihre Registrierung bleibt bestehen, weil sie
+weiterhin beschreibt, welches Panel die Ansicht einer Dateiart ist — gezeigt
+wird sie in der Leiste nicht mehr.
+
+**6 erledigt, soweit es ohne Eingriff in die Plugins geht.** cocl, Transformation
+und DMN öffnen einen Tab statt die Perspektive zu wechseln; eorm und SensiNact
+landen über denselben Weg als Tab, weil ihr Öffner nichts mehr abräumt. Was
+diese Tabs zeigen, kommt noch aus einem Dienst je Dateiart — zwei Tabs derselben
+Art tragen also denselben Inhalt. Eigener Zustand je Tab ist Sache des jeweiligen
+Plugins und bleibt offen.
+
 ## Offen
 
 **Entschieden:** Ein Tab bringt sein **eigenes Layout** mit; die Eigenschaften

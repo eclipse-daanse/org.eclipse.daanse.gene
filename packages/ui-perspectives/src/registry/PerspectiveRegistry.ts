@@ -240,8 +240,17 @@ export class PerspectiveManagerImpl implements PerspectiveManager {
       return
     }
 
-    // Clear existing layout
-    this.layoutState.clearAll()
+    /*
+     * Die Flaeche wird nicht mehr abgeraeumt.
+     *
+     * Ein `clearAll()` hier hiess: Jeder Perspektivwechsel riss alles weg, was
+     * eine andere Stelle aufgebaut hatte — der Explorer verschwand, offene Tabs
+     * ebenso, und was die Perspektive nicht selbst kannte, kam nicht wieder.
+     * Eine Perspektive ergaenzt jetzt, statt zu ersetzen: Ihre Panels werden
+     * registriert, ihr Navigator ausgewaehlt, und was sonst offen ist, bleibt
+     * offen. Doppeltes Registrieren kostet nichts, weil Panels und Tabs bei
+     * gleicher Id ersetzt werden.
+     */
 
     // Get panels for this perspective
     const availablePanels = this.panelRegistry.getForPerspective(perspective.id)
