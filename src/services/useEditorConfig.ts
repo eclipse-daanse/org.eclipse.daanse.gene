@@ -39,6 +39,7 @@ interface PanelPositionData {
   location: 'primary' | 'secondary' | 'editor' | 'bottom'
   order: number
 }
+import { fixupEditorConfigPackage } from './editorConfigFixup'
 import { loadFromEditorConfig as loadIconsFromConfig, getSharedViews, iconProviderRegistry, CustomIconProvider, CUSTOM_ICONS_PROVIDER_ID, type CustomIconEntry } from 'ui-instance-tree'
 
 // Default workspace filename
@@ -56,6 +57,13 @@ export function useEditorConfig() {
   if (nsURI) {
     EPackageRegistry.INSTANCE.set(nsURI, FennecuiPackage.eINSTANCE)
   }
+
+  /*
+   * Was der Codegen derzeit schuldig bleibt: `editorBindings` am EditorConfig
+   * (emf.ts.codegen#47). Ohne das Feature verwirft der Loader die Zuordnungen
+   * aus der .wsp stillschweigend.
+   */
+  fixupEditorConfigPackage(FennecuiPackage.eINSTANCE as any)
 
   // State
   const resource = shallowRef<Resource | null>(null)
@@ -136,6 +144,41 @@ export function useEditorConfig() {
       return sources.toArray()
     }
     return sources || []
+  })
+
+  /**
+   * Welche Ansicht welche Datei oeffnet — die Zuordnungen aus der .wsp.
+   *
+   * Steht dort nichts, entscheidet die Registry selbst: Metamodell der Wurzel,
+   * sonst Endung. Ein Eintrag hier ist die Entscheidung des Nutzers und geht
+   * dem vor.
+   */
+  const editorBindings = computed(() => {
+    if (!editorConfig.value) return [] as Array<{ pattern?: string; nsURI?: string; editorId: string }>
+
+    const config = toRaw(editorConfig.value) as any
+    let bindings = config.editorBindings
+    if (bindings === undefined && typeof config.eGet === 'function') {
+      const feature = config.eClass().getEStructuralFeature('editorBindings')
+      if (feature) bindings = config.eGet(feature)
+    }
+    const liste = bindings?.toArray?.() ?? bindings ?? []
+
+    const lesen = (eintrag: any, name: string): string | undefined => {
+      const direkt = eintrag?.[name]
+      if (direkt !== undefined) return direkt || undefined
+      const feature = eintrag?.eClass?.()?.getEStructuralFeature?.(name)
+      const wert = feature ? eintrag.eGet(feature) : undefined
+      return wert ? String(wert) : undefined
+    }
+
+    return liste
+      .map((eintrag: any) => ({
+        pattern: lesen(eintrag, 'pattern'),
+        nsURI: lesen(eintrag, 'nsURI'),
+        editorId: lesen(eintrag, 'editorId') ?? ''
+      }))
+      .filter((z: { editorId: string }) => !!z.editorId)
   })
 
   // Computed: Instance sources - supports both EditorConfigImpl and DynamicEObject
@@ -898,6 +941,64 @@ export function useEditorConfig() {
    * @param name Optional display name (defaults to filename)
    * @param options Additional options
    */
+  /**
+   * Haelt fest, mit welcher Ansicht eine Datei geoeffnet wird.
+   *
+   * Am Metamodell, wenn eines erkennbar war — die Wahl gilt dann fuer alle
+   * Dateien dieses Modells. Sonst am Pfad dieser einen. Ein vorhandener
+   * Eintrag fuer denselben Schluessel wird ersetzt, nicht verdoppelt.
+   */
+  function merkeEditorWahl(zuordnung: { pattern?: string; nsURI?: string; editorId: string }): boolean {
+    if (!editorConfig.value || !zuordnung.editorId) return false
+    if (!zuordnung.pattern && !zuordnung.nsURI) return false
+
+    const rawConfig = toRaw(editorConfig.value) as any
+    const feature = rawConfig.eClass?.()?.getEStructuralFeature?.('editorBindings')
+    const liste = feature ? rawConfig.eGet(feature) : rawConfig.editorBindings
+    if (!liste) return false
+
+    const lesen = (eintrag: any, name: string) => {
+      const direkt = eintrag?.[name]
+      if (direkt !== undefined) return direkt
+      const f = eintrag?.eClass?.()?.getEStructuralFeature?.(name)
+      return f ? eintrag.eGet(f) : undefined
+    }
+    const schreiben = (eintrag: any, name: string, wert: any) => {
+      const f = eintrag?.eClass?.()?.getEStructuralFeature?.(name)
+      if (f) eintrag.eSet(f, wert)
+      else eintrag[name] = wert
+    }
+
+    const vorhanden = (liste.toArray?.() ?? liste ?? []).find(
+      (e: any) =>
+        (zuordnung.pattern && lesen(e, 'pattern') === zuordnung.pattern) ||
+        (zuordnung.nsURI && !lesen(e, 'pattern') && lesen(e, 'nsURI') === zuordnung.nsURI)
+    )
+    if (vorhanden) {
+      if (lesen(vorhanden, 'editorId') === zuordnung.editorId) return false
+      schreiben(vorhanden, 'editorId', zuordnung.editorId)
+      dirty.value = true
+      return true
+    }
+
+    const bindingKlasse = feature?.getEType?.()
+    const neu = bindingKlasse
+      ? (toRaw(editorConfig.value) as any).eClass().getEPackage().getEFactoryInstance().create(bindingKlasse)
+      : null
+    if (!neu) return false
+
+    if (zuordnung.pattern) schreiben(neu, 'pattern', zuordnung.pattern)
+    if (zuordnung.nsURI) schreiben(neu, 'nsURI', zuordnung.nsURI)
+    schreiben(neu, 'editorId', zuordnung.editorId)
+
+    if (typeof liste.add === 'function') liste.add(neu)
+    else if (typeof liste.push === 'function') liste.push(neu)
+    else return false
+
+    dirty.value = true
+    return true
+  }
+
   function addModelSource(
     location: string,
     name?: string,
@@ -1749,6 +1850,7 @@ export function useEditorConfig() {
     customIconLibraries,
     iconMappings,
     modelSources,
+    editorBindings,
     instanceSources,
     layoutConfig,
     treeViews,
@@ -1780,6 +1882,7 @@ export function useEditorConfig() {
     removeCustomIcon,
     loadCustomIconsIntoRegistry,
     // Model source methods
+    merkeEditorWahl,
     addModelSource,
     removeModelSource,
     findModelSourceByLocation,

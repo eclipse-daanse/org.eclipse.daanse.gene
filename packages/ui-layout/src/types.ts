@@ -25,7 +25,13 @@ export interface Activity {
  * - 'editor': Center/editor area
  * - 'bottom': Bottom panel area
  */
-export type PanelLocation = 'primary' | 'secondary' | 'editor' | 'bottom'
+/**
+ * Wo ein Panel sitzt.
+ *
+ * Die linke Seite ist zweigeteilt: oben der Navigator (Explorer, Model Atlas),
+ * unten die Ansicht zur offenen Datei — ihr Baum. Deshalb 'primary-bottom'.
+ */
+export type PanelLocation = 'primary' | 'primary-bottom' | 'secondary' | 'editor' | 'bottom'
 
 /**
  * Sidebar/Panel content definition
@@ -89,6 +95,9 @@ export interface LayoutDimensions {
   primarySidebarWidth: number
   primarySidebarMinWidth: number
   primarySidebarMaxWidth: number
+  /** Hoehe der unteren Haelfte links, in Pixeln */
+  primaryBottomHeight: number
+  primaryBottomMinHeight: number
   secondarySidebarWidth: number
   secondarySidebarMinWidth: number
   secondarySidebarMaxWidth: number
@@ -128,6 +137,8 @@ export interface LayoutState {
   // Panels
   panels: Panel[]
   activePrimaryPanelId: string | null
+  /** Aktives Panel der unteren Haelfte links (Baum der offenen Datei) */
+  activePrimaryBottomPanelId: string | null
   activeSecondaryPanelId: string | null
 
   // Panel position overrides (allows moving panels to different locations)
@@ -160,6 +171,8 @@ export const DEFAULT_DIMENSIONS: LayoutDimensions = {
   primarySidebarWidth: 260,
   primarySidebarMinWidth: 170,
   primarySidebarMaxWidth: 500,
+  primaryBottomHeight: 320,
+  primaryBottomMinHeight: 80,
   secondarySidebarWidth: 300,
   secondarySidebarMinWidth: 170,
   secondarySidebarMaxWidth: 500,

@@ -68,13 +68,30 @@ const allPerspectives = ref<Array<{
   { id: 'model-editor', icon: 'pi pi-box', label: 'Model Editor', tooltip: 'Model Editor (Ctrl+2)', requiresWorkspace: true }
 ])
 
+/*
+ * Perspektiven, die eine Datei bearbeiten, gehoeren nicht mehr hierher: Was
+ * offen ist, steht in den Tabs, und der vordere bestimmt die Ansicht. Links
+ * bleiben die Navigatoren — Explorer, Model Atlas. Die Ansichten sagen selbst,
+ * welche Perspektive sie abloesen.
+ */
+const abgeloest = ref<string[]>([])
+setInterval(() => {
+  const ctxSvc = tsm?.getService?.('gene.editor.context')
+  const ids = ctxSvc?.abgeloestePerspektiven?.() ?? []
+  if (ids.join(',') !== abgeloest.value.join(',')) abgeloest.value = ids
+}, 1000)
+
 // Filtered perspectives based on workspace state
 const corePerspectives = computed(() => {
-  return allPerspectives.value.filter(p => (!p.requiresWorkspace || hasWorkspace.value) && !(p as any).isView)
+  return allPerspectives.value.filter(
+    p => (!p.requiresWorkspace || hasWorkspace.value) && !(p as any).isView && !abgeloest.value.includes(p.id)
+  )
 })
 
 const viewPerspectives = computed(() => {
-  return allPerspectives.value.filter(p => (!p.requiresWorkspace || hasWorkspace.value) && (p as any).isView)
+  return allPerspectives.value.filter(
+    p => (!p.requiresWorkspace || hasWorkspace.value) && (p as any).isView && !abgeloest.value.includes(p.id)
+  )
 })
 
 // Poll for perspective service and state
@@ -219,6 +236,7 @@ async function handlePerspectiveClick(perspectiveId: string) {
         class="activity-item"
         :class="{ active: currentPerspective === persp.id }"
         :title="persp.tooltip"
+        :data-perspective="persp.id"
         @click="handlePerspectiveClick(persp.id)"
       >
         <img v-if="getIconDataUrl(persp.icon)" :src="getIconDataUrl(persp.icon)" class="activity-icon activity-icon--img" alt="" />
@@ -235,6 +253,7 @@ async function handlePerspectiveClick(perspectiveId: string) {
         class="activity-item"
         :class="{ active: currentPerspective === persp.id }"
         :title="persp.tooltip"
+        :data-perspective="persp.id"
         @click="handlePerspectiveClick(persp.id)"
       >
         <img v-if="getIconDataUrl(persp.icon)" :src="getIconDataUrl(persp.icon)" class="activity-icon activity-icon--img" alt="" />

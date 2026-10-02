@@ -76,6 +76,7 @@ function createInitialState(): LayoutState {
     activeActivityId: null,
     panels: [],
     activePrimaryPanelId: null,
+    activePrimaryBottomPanelId: null,
     activeSecondaryPanelId: null,
     panelPositionOverrides: new Map(),
     editorTabs: [],
@@ -220,6 +221,24 @@ export function useLayoutState() {
       .sort((a, b) => getEffectivePanelOrder(a, state.panelPositionOverrides) - getEffectivePanelOrder(b, state.panelPositionOverrides))
   )
 
+  /*
+   * Die untere Haelfte links. Oben steht der Navigator, unten die Ansicht zur
+   * offenen Datei — beide gleichzeitig sichtbar, deshalb eine eigene Zone und
+   * nicht nur ein weiterer Reiter oben.
+   */
+  const primaryBottomPanels = computed(() =>
+    state.panels
+      .filter(p => getEffectivePanelLocation(p, state.panelPositionOverrides) === 'primary-bottom')
+      .sort((a, b) => getEffectivePanelOrder(a, state.panelPositionOverrides) - getEffectivePanelOrder(b, state.panelPositionOverrides))
+  )
+
+  const activePrimaryBottomPanel = computed(() =>
+    state.panels.find(p =>
+      p.id === state.activePrimaryBottomPanelId &&
+      getEffectivePanelLocation(p, state.panelPositionOverrides) === 'primary-bottom'
+    ) ?? primaryBottomPanels.value[0]
+  )
+
   const secondaryPanels = computed(() =>
     state.panels
       .filter(p => getEffectivePanelLocation(p, state.panelPositionOverrides) === 'secondary')
@@ -311,9 +330,17 @@ export function useLayoutState() {
   function selectPanel(panelId: string, location: PanelLocation) {
     if (location === 'primary') {
       state.activePrimaryPanelId = panelId
+    } else if (location === 'primary-bottom') {
+      state.activePrimaryBottomPanelId = panelId
     } else if (location === 'secondary') {
       state.activeSecondaryPanelId = panelId
     }
+  }
+
+  /** Hoehe der unteren Haelfte links, in Grenzen gehalten. */
+  function setPrimaryBottomHeight(hoehe: number) {
+    const min = state.dimensions.primaryBottomMinHeight
+    state.dimensions.primaryBottomHeight = Math.max(min, hoehe)
   }
 
   // Editor tab management
@@ -335,6 +362,20 @@ export function useLayoutState() {
     state.activeEditorTabId = tab.id
   }
 
+  /*
+   * Wer wissen will, wann ein Tab wirklich geschlossen wird.
+   *
+   * Nicht ueber den Zustand beobachten: clearEditorTabs() raeumt die Leiste
+   * auch beim Perspektivwechsel, und ein Dokument, das dort haengt, waere dann
+   * faelschlich weggeraeumt. Dieses Ereignis kommt nur beim echten Schliessen.
+   */
+  const beimSchliessen = new Set<(tabId: string) => void>()
+
+  function onEditorClosed(handler: (tabId: string) => void): () => void {
+    beimSchliessen.add(handler)
+    return () => beimSchliessen.delete(handler)
+  }
+
   function closeEditor(tabId: string) {
     const index = state.editorTabs.findIndex(t => t.id === tabId)
     if (index >= 0) {
@@ -348,6 +389,8 @@ export function useLayoutState() {
         const newIndex = Math.min(index, state.editorTabs.length - 1)
         state.activeEditorTabId = state.editorTabs[newIndex]?.id ?? null
       }
+
+      for (const handler of beimSchliessen) handler(tabId)
     }
   }
 
@@ -1005,6 +1048,8 @@ export function useLayoutState() {
     activeEditorTab,
     activePanelTab,
     primaryPanels,
+    primaryBottomPanels,
+    activePrimaryBottomPanel,
     secondaryPanels,
     bottomPanels,
 
@@ -1060,6 +1105,8 @@ export function useLayoutState() {
     clearPanels,
     clearActivities,
     clearEditorTabs,
+    onEditorClosed,
+    setPrimaryBottomHeight,
     clearPanelTabs,
     clearAll,
 

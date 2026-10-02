@@ -113,6 +113,36 @@ function isDmnFile(entry: FileEntry): boolean {
 }
 
 // Context menu items - dynamic based on clicked node type
+/** Die Ansichten, die diese Datei oeffnen koennen — aus der Registry. */
+function kandidatenFuer(datei: FileEntry): any[] {
+  const ctxSvc = tsm?.getService?.('gene.editor.context')
+  if (!ctxSvc?.kandidatenFuer) return []
+  // Ohne Inhalt entscheidet die Endung; mit Inhalt zaehlt das Metamodell
+  return ctxSvc.kandidatenFuer(datei.path, inhaltDerAuswahl.value ?? undefined) ?? []
+}
+
+/**
+ * Oeffnet die Datei mit der gewaehlten Ansicht und merkt sich die Wahl.
+ *
+ * Gemerkt wird am Metamodell, nicht am Pfad: Wer ein eorm-Mapping lieber als
+ * Instanzbaum sieht, meint damit alle Mappings dieses Modells, nicht nur diese
+ * eine Datei. Ohne erkennbares Metamodell bleibt es bei dieser Datei.
+ */
+async function oeffneMit(art: any, datei: FileEntry): Promise<void> {
+  const inhalt = inhaltDerAuswahl.value ?? (await fileSystem.readTextFile(datei))
+  if (!inhalt) return
+
+  const ctxSvc = tsm?.getService?.('gene.editor.context')
+  const nsURI = ctxSvc?.wurzelNsUri?.(inhalt) ?? null
+  getActions()?.merkeEditorWahl?.({
+    nsURI: nsURI ?? undefined,
+    pattern: nsURI ? undefined : datei.path,
+    editorId: art.id
+  })
+
+  await art.oeffnen?.(datei, inhalt)
+}
+
 const contextMenuItems = computed(() => {
   const items: any[] = []
 
@@ -122,6 +152,21 @@ const contextMenuItems = computed(() => {
   // For .xmi files (not .wsp), show "Add Instances to Workspace"
   if (contextMenuNode.value?.type === 'file' || contextMenuNode.value?.type === 'workspace') {
     const entry = contextMenuNode.value.data as FileEntry
+
+    const ansichten = kandidatenFuer(entry)
+    if (ansichten.length > 0) {
+      items.push({
+        label: 'Öffnen mit',
+        icon: 'pi pi-external-link',
+        items: ansichten.map((art: any) => ({
+          label: art.name,
+          icon: art.icon || 'pi pi-file',
+          command: () => oeffneMit(art, entry)
+        }))
+      })
+      items.push({ separator: true })
+    }
+
     if (isEcoreFile(entry)) {
       items.push({
         label: 'Edit Metamodel',
@@ -337,9 +382,28 @@ async function handleNodeDoubleClick(node: FileTreeNode) {
   }
 }
 
+/*
+ * Der Anfang der angeklickten Datei, fuer „Oeffnen mit".
+ *
+ * Welche Ansichten infrage kommen, haengt am Metamodell der Wurzel — das steht
+ * im Inhalt. Das Menue wird synchron gebaut, also wird vorher gelesen; es
+ * aktualisiert sich, sobald der Inhalt da ist.
+ */
+const inhaltDerAuswahl = ref<string | null>(null)
+
 // Handle context menu for all node types
 function handleContextMenu(event: MouseEvent, node: FileTreeNode) {
   contextMenuNode.value = node
+  inhaltDerAuswahl.value = null
+  if (node.type === 'file' || node.type === 'workspace') {
+    const datei = node.data as FileEntry
+    fileSystem
+      .readTextFile(datei)
+      .then((inhalt) => {
+        if (contextMenuNode.value === node) inhaltDerAuswahl.value = inhalt ?? null
+      })
+      .catch(() => { /* ohne Inhalt entscheidet die Endung */ })
+  }
 
   if (node.type === 'source') {
     contextMenuSource.value = node.data as FileSource
