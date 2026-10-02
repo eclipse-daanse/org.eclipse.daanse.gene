@@ -232,6 +232,134 @@ diese Tabs zeigen, kommt noch aus einem Dienst je Dateiart — zwei Tabs derselb
 Art tragen also denselben Inhalt. Eigener Zustand je Tab ist Sache des jeweiligen
 Plugins und bleibt offen.
 
+## Entscheidung: Der Tab ist eine Fläche (Weg B)
+
+**Stand 2026-10-02, nach dem Vorführen des UDP_MIT_ORM-Workspace.**
+
+### Der Befund
+
+Nach dem Umschalten von `behavioral.ecore` zurück auf `instances.xmi` stand
+unten links die Überschrift INSTANCES — mit dem Inhalt des Metamodell-Baums.
+Die Panel-Auswahl stimmte, der Kontext nicht.
+
+Das ist kein Fehler an einer Stelle, sondern der Entwurf: Es gibt *einen*
+Instanzbaum, *einen* Metamodell-Baum, *einen* Model Browser und *einen*
+globalen `currentMode`. Die Panels fragen beim Rendern „wer liegt vorn?" und
+holen sich daraus ihren Kontext. Der Tab besitzt nichts — er schaltet einen
+gemeinsamen Zustand um. Bleibt eine Umschaltung aus oder kommt sie zu spät,
+zeigt das Panel des einen Tabs den Inhalt des anderen. Dasselbe Muster an vier
+Stellen:
+
+| geteilt und umgeschaltet | wo |
+|---|---|
+| `currentMode`, `getCurrentContext()`, `activeTabByMode`, `activateTabContext` | `ui-instance-tree/context/editorContext.ts` |
+| gemeinsames Dokument, `setSharedResource`, `useSharedInstanceTree` | `ui-instance-tree/composables/useInstanceTree.ts` |
+| vorderes Dokument je Modus, `instanzTabNachVorn`, `zustand()` | `ui-instance-tree/composables/tabDokumente.ts`, `metamodeler/composables/tabDokumente.ts` |
+| Panel-Auswahl je Tab, `tabLayout.activateTab` | `gene-app/layout/tabLayout.ts` |
+
+Alle Reparaturen der letzten Runden setzten an den Umschaltpunkten an. Das war
+falsch; der Entwurf ist zu ändern.
+
+### Das Ziel
+
+**Ein Tab ist eine Fläche mit eigener Aufteilung und eigenem Kontext.** Baum,
+Eigenschaften und Model Browser leben *in* ihm. Er erzeugt seinen
+`EditorContext` einmal und reicht ihn mit `provide` an seine Kinder; die
+nehmen ihn mit `inject`. Es gibt nichts Gemeinsames mehr, das man umschalten
+könnte — und darum auch nichts, was wandern kann.
+
+Was der Anwendung gehört und außerhalb der Tabs bleibt:
+
+- die Aktivitätsleiste und der Navigator links (Explorer-Baum, Atlas-Baum),
+  über die volle Höhe
+- die Tab-Leiste
+- Probleme und Jobs unten, Statusleiste
+- die Menüzeile als Ort; was darin steht, liefert der vordere Tab
+
+Was in den Tab wandert und dort bleibt:
+
+```
+┌─────────────────────────────────────────────────────┐
+│ WORKSPACE │ INSTANCES.XMI × │ BEHAVIORAL.ECORE      │  Tab-Leiste (Rahmen)
+├─────────────────────────────────────────────────────┤
+│ [Menü des vorderen Tabs]                            │  Menüzeile (Rahmen)
+├───────────┬─────────────────────────┬───────────────┤
+│ Baum      │ Eigenschaften           │ Model Browser │  Fläche des Tabs
+│ der Datei │ des gewählten Objekts   │ dieses Tabs   │  — provide/inject
+│           │                         │               │
+└───────────┴─────────────────────────┴───────────────┘
+```
+
+Die Zone links unten (`primary-bottom`) und die rechte Seite (`secondary`)
+werden von Dateiansichten nicht mehr genutzt.
+
+### Schnitt
+
+**`ui-layout` — `EditorTabLayout.vue`.** Eine Komponente mit drei Bereichen
+(`left`, `center`, `right`) als Slots, Splitter dazwischen, Bereiche einzeln
+zuklappbar. Größen werden **je Ansicht** gemerkt (alle Instanz-Tabs teilen eine
+Aufteilung), nicht je Tab. Kennt weder Dateien noch Kontexte.
+
+**`ui-instance-tree` — `InstanceEditorTab.vue`.** Nimmt eine Tab-Id, holt sein
+Dokument aus `tabDokumente`, baut daraus *einmal* seinen `EditorContext`,
+`provide`t ihn, und füllt die drei Bereiche mit `InstanceTree`, `PropertiesPanel`,
+`ModelBrowser`. Diese drei nehmen den Kontext ausschließlich per `inject` —
+der Rückgriff auf `getCurrentContext()` entfällt.
+
+**`metamodeler` — `MetamodelEditorTab.vue`.** Dasselbe für `.ecore`, mit
+`MetamodelerTree` links.
+
+**`gene-app`.** `oeffneInstanzTab` und `oeffneMetamodellTab` öffnen nur noch
+einen Tab mit der jeweiligen Tab-Komponente und der Tab-Id als Prop. Kein
+`registerTabContext`, kein `activateTabContext`, kein `selectPanel`. Die
+`EditorArt` nennt statt `panels` ihre Tab-Komponente (`component`, das Feld
+gibt es bereits).
+
+**Was entfällt.** `tabLayout.ts` samt Dienst `gene.tab.layout`;
+`EditorArt.panels`; die Registrierung von `instance-tree`, `metamodeler-tree`,
+`model-browser` als Panels; `currentMode`, `setEditorMode`, `getCurrentContext`,
+`activeTabByMode`, `registerTabContext`, `activateTabContext`,
+`releaseTabContext`.
+
+**Was bleibt und einen „vorderen Tab" braucht — aber als Befehl, nicht als
+Panel.** Suche (Strg+Umschalt+F), Speichern, Validieren, „Problem anklicken →
+Objekt zeigen", Veröffentlichen in den Atlas. Sie richten sich an die Datei,
+die gerade vorn liegt. Dafür gibt es einen kleinen Dienst `gene.editor.front`:
+*welcher Tab liegt vorn, welche Art, welches Dokument*. Panels fragen ihn nicht;
+nur Befehle und die Menüzeile.
+
+### Etappen
+
+1. **Die Tab-Fläche.** `EditorTabLayout.vue`; `InstanceEditorTab.vue` und
+   `MetamodelEditorTab.vue`; `InstanceTree`, `PropertiesPanel`, `ModelBrowser`
+   nehmen den Kontext per `inject`; die Öffner in `App.vue` auf die
+   Tab-Komponenten umgestellt; die drei globalen Panels nicht mehr registriert.
+   *Danach kann nichts mehr wandern.* Der globale Modus existiert noch, wird
+   aber von keinem Panel mehr gelesen.
+
+2. **Die Umschaltung abbauen.** `currentMode` und alles, was daran hängt,
+   entfernen; `gene.editor.front` für die Befehle; `tabLayout.ts` und
+   `EditorArt.panels` weg. Menüzeile fragt `gene.editor.front`.
+
+3. **Das vordere Dokument abbauen.** `loadInstancesFromXMI`,
+   `loadResourceStandalone`, `setSharedResource` und die übrigen Modulfunktionen
+   bekommen das Dokument als Parameter statt über `zustand()` das vordere zu
+   nehmen. Dann gibt es auch in `tabDokumente` nichts Umgeschaltetes mehr.
+
+4. **Die übrigen Ansichten.** cocl, Transformation, DMN, eorm, SensiNact
+   bekommen je eine Tab-Komponente mit eigenem Zustand — heute teilen sie
+   einen Dienst je Dateiart.
+
+Nach 1 ist der gemeldete Fehler weg und kann nicht wiederkommen. 2 und 3 räumen
+auf, was 1 überflüssig macht. 4 ist der Rest aus dem alten Schritt 6.
+
+### Was dabei an Verhalten wegfällt
+
+- Die Zone links unten ist für Dateiansichten nicht mehr da. Der Navigator
+  links läuft über die volle Höhe.
+- Der Model Browser rechts außen gibt es nicht mehr; er ist rechts *im Tab*.
+- Größen der drei Bereiche werden je Ansicht gemerkt, nicht in der `.wsp`.
+
 ## Offen
 
 **Entschieden:** Ein Tab bringt sein **eigenes Layout** mit; die Eigenschaften
