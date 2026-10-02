@@ -1077,6 +1077,52 @@ function waehleNavigator(layout: any, perspectiveId: string): void {
 }
 
 /**
+ * Eine Datei in der Ansicht oeffnen, die bisher eine Perspektive war.
+ *
+ * cocl, Transformation und DMN hatten je eine Perspektive und keinen Tab: Die
+ * Datei zu oeffnen hiess, die ganze Flaeche umzuschalten — und seit die
+ * Ansichten nicht mehr in der Leiste stehen, wechselte sie auf etwas, das dort
+ * gar nicht mehr auftauchte. Jetzt ist es ein Tab wie jeder andere.
+ *
+ * Den Inhalt stellt weiterhin das Panel, das die Perspektive in die Mitte
+ * stellen wollte. Was es anzeigt, kommt noch aus einem Dienst je Dateiart, also
+ * traegt ein zweiter Tab derselben Art denselben Inhalt — eigener Zustand je
+ * Tab ist Sache des jeweiligen Plugins und bleibt offen.
+ *
+ * @returns true, wenn ein Tab entstanden ist.
+ */
+function oeffnePerspektivTab(
+  perspectiveId: string,
+  editorId: string,
+  tabId: string,
+  titel: string
+): boolean {
+  const layoutSvc = layoutStateService.value
+  if (!layoutSvc) return false
+  const layout = layoutSvc.useLayoutState()
+
+  const perspektive = perspectiveManager.value?.registry?.get?.(perspectiveId)
+  const mitteId = perspektive?.defaultLayout?.center?.[0]
+  const panelRegistry = tsm.getService('ui.registry.panels') as any
+  const panel = panelRegistry?.getForPerspective?.(perspectiveId)?.find((p: any) => p.id === mitteId)
+  if (!panel) {
+    console.warn(`[App] Ansicht '${perspectiveId}' hat kein Panel fuer die Mitte`)
+    return false
+  }
+
+  verdrahteTabSchliessen(layout)
+  holeTabLayout(layout).bindTab(tabId, editorId)
+
+  layout.openEditor({
+    id: tabId,
+    title: titel,
+    icon: panel.icon,
+    component: markRaw(panel.component)
+  })
+  return true
+}
+
+/**
  * Was eine Perspektive in die Mitte stellen wollte, wird ein Tab.
  *
  * Der Atlas zeigt, warum: Seine Transitions, der Schema-Explorer und die
@@ -1882,11 +1928,7 @@ async function handleCoclAdd(entry: any, content: string) {
       filePath: entry.path,
       fileEntry: entry
     })
-    console.log('[App] C-OCL data stored, switching to cocl-editor perspective')
-
-    if (perspectiveManager.value) {
-      perspectiveManager.value.switchTo('cocl-editor')
-    }
+    oeffnePerspektivTab('cocl-editor', 'cocl', `cocl:${entry.path}`, entry.name || 'Constraints')
   } catch (e: any) {
     console.error('[App] Error loading C-OCL file:', e)
 
@@ -1915,12 +1957,7 @@ async function handleTransformationLoad(entry: any, content: string) {
   try {
     const data = JSON.parse(content)
     tsm.registerService('gene.transformation.data', data)
-    console.log('[App] Transformation data stored, switching to transformation perspective')
-
-    // Switch to transformation perspective
-    if (perspectiveManager.value) {
-      perspectiveManager.value.switchTo('transformation')
-    }
+    oeffnePerspektivTab('transformation', 'transformation', `transformation:${entry.path}`, entry.name || 'Transformation')
   } catch (e: any) {
     console.error('[App] Failed to parse .qvtr file:', e)
   }
@@ -1937,11 +1974,7 @@ async function handleDmnLoad(entry: any, content: string) {
       fileEntry: entry,
       sourceId: entry.sourceId
     })
-    console.log('[App] DMN data stored, switching to dmn-editor perspective')
-
-    if (perspectiveManager.value) {
-      perspectiveManager.value.switchTo('dmn-editor')
-    }
+    oeffnePerspektivTab('dmn-editor', 'dmn', `dmn:${entry.path}`, entry.name || 'DMN')
   } catch (e: any) {
     console.error('[App] Failed to load DMN file:', e)
   }
