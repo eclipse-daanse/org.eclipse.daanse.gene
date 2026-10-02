@@ -891,10 +891,26 @@ async function loadInstancesFromEditorConfig(workspaceEntry: any) {
         // Where the loader may fetch missing metamodels from
         const resolution = await prepareMetamodelResolution(fileEntry, location)
 
+        /*
+         * Auch eine Datei, die der Workspace selbst mitbringt, ist eine offene
+         * Datei und gehoert in einen Tab.
+         *
+         * Vorher landete sie nur im gemeinsamen Baum, und die Perspektive zeigte
+         * ihn — seit die untere Haelfte links dem vorderen Tab gehoert, zeigte
+         * sie niemand mehr. Dieselbe Reihenfolge wie beim Oeffnen aus dem
+         * Explorer: Dokument anlegen, nach vorn holen, laden, Tab oeffnen.
+         */
+        const tabId: string | null = itc?.instanzTabIdFuer?.(location) ?? null
+        if (tabId) {
+          itc.instanzTabDokument?.(tabId)
+          itc.instanzTabNachVorn?.(tabId)
+        }
+
         try {
           const result = await instanceTreeComposables.value.loadInstancesFromXMI(content, location)
           reportMissingPackages((result as any)?.missingPackages, resolution.searched, fileEntry, location)
           await registerMetamodelsAsModels(location)
+          if (tabId) oeffneInstanzTab(tabId, location.split('/').pop() || location)
           console.log('[App] Instances loaded from:', location)
         } catch (loadErr: any) {
           console.error('[App] XMI parsing error:', location, loadErr)
