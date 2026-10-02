@@ -56,39 +56,54 @@ onMounted(() => {
   })
 })
 
-// All perspective definitions from registry
+/*
+ * Die Perspektiven, wie die Registry sie fuehrt.
+ *
+ * Leer, bis sie geantwortet hat — keine vorlaeufige Liste mehr. Die beiden
+ * Eintraege, die hier als Vorgabe standen, blitzten beim Start auf und
+ * verschwanden wieder, sobald die wirklichen bekannt waren.
+ */
 const allPerspectives = ref<Array<{
   id: string
   icon: string
   label: string
   tooltip: string
   requiresWorkspace: boolean
-}>>([
-  { id: 'explorer', icon: 'pi pi-folder', label: 'Explorer', tooltip: 'File Explorer (Ctrl+1)', requiresWorkspace: false },
-  { id: 'model-editor', icon: 'pi pi-box', label: 'Model Editor', tooltip: 'Model Editor (Ctrl+2)', requiresWorkspace: true }
-])
+}>>([])
 
 /*
  * Perspektiven, die eine Datei bearbeiten, gehoeren nicht mehr hierher: Was
  * offen ist, steht in den Tabs, und der vordere bestimmt die Ansicht. Links
  * bleiben die Navigatoren — Explorer, Model Atlas. Die Ansichten sagen selbst,
  * welche Perspektive sie abloesen.
+ *
+ * Zugehoert statt nachgesehen: Der Dienst kommt aus ui-instance-tree und kann
+ * spaeter da sein als diese Leiste. Einmal in der Sekunde nachzusehen hiess,
+ * dass bis zu einer Sekunde lang Icons standen, die gleich wieder verschwanden.
  */
-const abgeloest = ref<string[]>([])
-setInterval(() => {
-  const ctxSvc = tsm?.getService?.('gene.editor.context')
-  const ids = ctxSvc?.abgeloestePerspektiven?.() ?? []
-  if (ids.join(',') !== abgeloest.value.join(',')) abgeloest.value = ids
-}, 1000)
+const editorKontext = shallowRef<any>(null)
+tsm?.whenService?.('gene.editor.context', (dienst: any) => { editorKontext.value = dienst })
 
-// Filtered perspectives based on workspace state
+const abgeloest = computed<string[]>(() => editorKontext.value?.abgeloestePerspektiven?.() ?? [])
+
+/*
+ * Erst zeigen, wenn feststeht, was zu zeigen ist.
+ *
+ * Ohne den Kontext-Dienst ist nicht bekannt, welche Perspektive von einer
+ * Ansicht abgeloest ist — und eine, die gleich wieder verschwindet, soll gar
+ * nicht erst erscheinen.
+ */
+const bereit = computed(() => editorKontext.value !== null)
+
 const corePerspectives = computed(() => {
+  if (!bereit.value) return []
   return allPerspectives.value.filter(
     p => (!p.requiresWorkspace || hasWorkspace.value) && !(p as any).isView && !abgeloest.value.includes(p.id)
   )
 })
 
 const viewPerspectives = computed(() => {
+  if (!bereit.value) return []
   return allPerspectives.value.filter(
     p => (!p.requiresWorkspace || hasWorkspace.value) && (p as any).isView && !abgeloest.value.includes(p.id)
   )
