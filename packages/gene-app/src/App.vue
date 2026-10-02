@@ -1195,6 +1195,65 @@ async function handleModelAdd(entry: any, content: string) {
 }
 
 // Handle opening .ecore file in Metamodeler
+/**
+ * Oeffnet ein Metamodell als eigenen Tab.
+ *
+ * Der Inhalt des Tabs ist das Eigenschaften-Panel wie bisher — neu ist, dass
+ * der Tab beim Aufbau seine Instanz nach vorn meldet. Weil der Editor-Bereich
+ * immer nur den vorderen Tab rendert, genuegt das: Baum (ueber die Fassade),
+ * Eigenschaften und Modelle (ueber getCurrentContext) folgen ihm.
+ */
+let schliessenVerdrahtet = false
+
+/**
+ * Gibt Instanz und Kontext frei, wenn ein Dateitab wirklich geschlossen wird.
+ *
+ * Bewusst am Ereignis und nicht am Zustand: ein Perspektivwechsel raeumt die
+ * Leiste ebenfalls (clearAll), die Dateien bleiben dabei aber offen.
+ */
+function verdrahteTabSchliessen(layout: any): void {
+  if (schliessenVerdrahtet || !layout.onEditorClosed) return
+  schliessenVerdrahtet = true
+  const contextService = tsm.getService<any>('gene.editor.context')
+  layout.onEditorClosed((tabId: string) => {
+    metamodelerComposables.value?.tabGeschlossen?.(tabId)
+    contextService?.releaseTabContext?.(tabId)
+  })
+}
+
+function oeffneMetamodellTab(tabId: string, titel: string, metamodeler: any): void {
+  const layoutSvc = layoutStateService.value
+  if (!layoutSvc) return
+  const layout = layoutSvc.useLayoutState()
+  verdrahteTabSchliessen(layout)
+  const contextService = tsm.getService<any>('gene.editor.context')
+  const PropertiesPanel = propertiesPanelComponents.value?.PropertiesPanel
+
+  const kontext = contextService?.createMetamodelContext?.(metamodeler)
+  if (kontext && contextService?.registerTabContext) {
+    contextService.registerTabContext(tabId, kontext)
+  }
+
+  layout.openEditor({
+    id: tabId,
+    title: titel,
+    icon: 'pi pi-sitemap',
+    component: markRaw(defineComponent({
+      setup() {
+        // Gerendert wird nur der vordere Tab — also ist das hier der Wechsel
+        metamodelerComposables.value?.tabNachVorn?.(tabId)
+        contextService?.activateTabContext?.(tabId)
+        return () => PropertiesPanel
+          ? h(PropertiesPanel, {
+              context: contextService?.getCurrentContext?.() ?? kontext,
+              onShowProblems: handleShowProblems
+            })
+          : h('div', 'Eigenschaften nicht verfuegbar')
+      }
+    }))
+  })
+}
+
 async function handleMetamodelEdit(entry: any, content: string) {
   console.log('[App] Opening metamodel in editor:', entry.name)
 
@@ -1226,7 +1285,15 @@ async function handleMetamodelEdit(entry: any, content: string) {
     return
   }
 
-  const metamodeler = metamodelerComposables.value.useSharedMetamodeler()
+  /*
+   * Jede Datei bekommt ihren eigenen Tab mit eigener Metamodeler-Instanz.
+   * Der Tab, der vorn liegt, bestimmt, was Baum, Eigenschaften und Modelle
+   * zeigen — er traegt die Ansicht.
+   */
+  const mmc = metamodelerComposables.value
+  const tabId: string = mmc.tabIdFuer?.(entry.path) ?? `metamodel:${entry.path}`
+  const metamodeler = mmc.metamodelerFuerTab?.(tabId) ?? mmc.useSharedMetamodeler()
+
   let packageInfo: { name: string; nsURI: string } | null = null
   let loadError: any = null
   try {
@@ -1238,6 +1305,7 @@ async function handleMetamodelEdit(entry: any, content: string) {
 
   if (packageInfo) {
     console.log('[App] Metamodel loaded:', packageInfo.name, packageInfo.nsURI)
+    oeffneMetamodellTab(tabId, entry.name || packageInfo.name, metamodeler)
     if (perspectiveManager.value) {
       perspectiveManager.value.switchTo('metamodeler')
     } else {
@@ -2148,8 +2216,10 @@ function setupMetamodelerPerspective(layout: any) {
   // Create wrapper for model browser with metamodel context
   const ModelBrowserWrapper = defineComponent({
     setup() {
+      // Zur Renderzeit aufloesen: der vordere Tab bestimmt, welches Metamodell
+      // hier steht — ein fest eingefangener Kontext bliebe beim ersten stehen
       return () => h(ModelBrowser, {
-        context: context,
+        context: contextService?.getCurrentContext?.() ?? context,
         onCreateInstance: handleMetamodelCreateInstance
       })
     }
@@ -2198,20 +2268,35 @@ function setupMetamodelerPerspective(layout: any) {
   const PropertiesPanelWrapper = defineComponent({
     setup() {
       return () => h(PropertiesPanel, {
-        context: contextService?.getMetamodelContext?.() ?? context,
+        context: contextService?.getCurrentContext?.() ?? contextService?.getMetamodelContext?.() ?? context,
         onShowProblems: handleShowProblems
       })
     }
   })
 
-  // Open PropertiesPanel in center (editor area)
-  layout.openEditor({
-    id: 'properties',
-    title: 'Properties',
-    icon: 'pi pi-sliders-h',
-    component: markRaw(PropertiesPanelWrapper),
-    closable: false
-  })
+  /*
+   * Die Tabs sind die geoeffneten .ecore — jeder traegt seine Ansicht.
+   * Ein Perspektivwechsel raeumt die Leiste (clearAll), also werden die offenen
+   * Dateien hier wieder eingehaengt. Ist keine offen, bleibt ein Tab mit den
+   * Eigenschaften der gemeinsamen Instanz stehen, damit der Bereich nicht leer
+   * wirkt.
+   */
+  const offeneDateien: string[] = metamodelerService?.offeneTabIds?.() ?? []
+  if (offeneDateien.length === 0) {
+    layout.openEditor({
+      id: 'properties',
+      title: 'Properties',
+      icon: 'pi pi-sliders-h',
+      component: markRaw(PropertiesPanelWrapper),
+      closable: false
+    })
+  } else {
+    for (const tabId of offeneDateien) {
+      const instanz = metamodelerService?.metamodelerFuerTab?.(tabId)
+      const titel = (instanz?.filePath?.value ?? tabId).split('/').pop() || tabId
+      oeffneMetamodellTab(tabId, titel, instanz)
+    }
+  }
 
   // Register Ecore/OCL Problems panel in the bottom area (validation issues on save)
   const ProblemsPanelWrapper = defineComponent({

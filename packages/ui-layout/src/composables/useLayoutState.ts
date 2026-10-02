@@ -335,6 +335,20 @@ export function useLayoutState() {
     state.activeEditorTabId = tab.id
   }
 
+  /*
+   * Wer wissen will, wann ein Tab wirklich geschlossen wird.
+   *
+   * Nicht ueber den Zustand beobachten: clearEditorTabs() raeumt die Leiste
+   * auch beim Perspektivwechsel, und ein Dokument, das dort haengt, waere dann
+   * faelschlich weggeraeumt. Dieses Ereignis kommt nur beim echten Schliessen.
+   */
+  const beimSchliessen = new Set<(tabId: string) => void>()
+
+  function onEditorClosed(handler: (tabId: string) => void): () => void {
+    beimSchliessen.add(handler)
+    return () => beimSchliessen.delete(handler)
+  }
+
   function closeEditor(tabId: string) {
     const index = state.editorTabs.findIndex(t => t.id === tabId)
     if (index >= 0) {
@@ -348,6 +362,8 @@ export function useLayoutState() {
         const newIndex = Math.min(index, state.editorTabs.length - 1)
         state.activeEditorTabId = state.editorTabs[newIndex]?.id ?? null
       }
+
+      for (const handler of beimSchliessen) handler(tabId)
     }
   }
 
@@ -1060,6 +1076,7 @@ export function useLayoutState() {
     clearPanels,
     clearActivities,
     clearEditorTabs,
+    onEditorClosed,
     clearPanelTabs,
     clearAll,
 
