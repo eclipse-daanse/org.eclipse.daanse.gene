@@ -25,6 +25,7 @@ import {
   registerEditorArt,
   unregisterEditorArt,
   alleEditorArten,
+  abgeloestePerspektiven,
   setEditorZuordnungen,
   kandidatenFuer,
   editorFuer,
@@ -185,6 +186,7 @@ export interface EditorContextService {
   registerEditorArt: (art: EditorArt) => void
   unregisterEditorArt: (id: string) => boolean
   alleEditorArten: () => EditorArt[]
+  abgeloestePerspektiven: () => string[]
   setEditorZuordnungen: (zuordnungen: EditorZuordnung[]) => void
   kandidatenFuer: (pfad: string, inhalt?: string) => EditorArt[]
   editorFuer: (pfad: string, inhalt?: string) => EditorArt | null
@@ -207,6 +209,7 @@ export function getEditorContextService(): EditorContextService {
     registerEditorArt,
     unregisterEditorArt,
     alleEditorArten,
+    abgeloestePerspektiven,
     setEditorZuordnungen,
     kandidatenFuer,
     editorFuer,

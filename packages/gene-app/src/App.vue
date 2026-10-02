@@ -261,6 +261,7 @@ function registriereEditorArten(): boolean {
     icon: 'pi pi-sitemap',
     extensions: ['.ecore'],
     priority: 10,
+    ersetztPerspektive: 'metamodeler',
     oeffnen: (datei: any, inhalt: string) => handleMetamodelEdit(datei, inhalt)
   })
 
@@ -270,6 +271,7 @@ function registriereEditorArten(): boolean {
     icon: 'pi pi-database',
     extensions: ['.xmi'],
     priority: 10,
+    ersetztPerspektive: 'model-editor',
     oeffnen: (datei: any, inhalt: string) => handleInstanceAdd(datei, inhalt)
   })
 
@@ -1306,6 +1308,8 @@ function oeffneInstanzTab(tabId: string, titel: string): void {
       setup() {
         itc.instanzTabNachVorn?.(tabId)
         contextService?.activateTabContext?.(tabId)
+        // Unten links der Baum zu dieser Datei
+        layout.selectPanel?.('instance-tree', 'primary-bottom')
         return () => PropertiesPanel
           ? h(PropertiesPanel, {
               context: contextService?.getCurrentContext?.() ?? kontext,
@@ -1339,6 +1343,8 @@ function oeffneMetamodellTab(tabId: string, titel: string, metamodeler: any): vo
         // Gerendert wird nur der vordere Tab — also ist das hier der Wechsel
         metamodelerComposables.value?.tabNachVorn?.(tabId)
         contextService?.activateTabContext?.(tabId)
+        // Unten links der Baum zu dieser Datei
+        layout.selectPanel?.('metamodeler-tree', 'primary-bottom')
         return () => PropertiesPanel
           ? h(PropertiesPanel, {
               context: contextService?.getCurrentContext?.() ?? kontext,
@@ -1997,6 +2003,48 @@ function registriereExplorerOben(layout: any, versuch = 0): void {
   })
 }
 
+/**
+ * Beide Baeume unten links anmelden — der Instanzbaum und der Metamodell-Baum.
+ *
+ * Welcher zu sehen ist, entscheidet der Tab, der vorn liegt, nicht die
+ * Ansicht. Nur so laesst sich zwischen einer .ecore und einer .xmi wechseln,
+ * ohne das Layout neu aufzubauen.
+ */
+function registriereBaeumeUnten(layout: any): void {
+  const InstanceTree = instanceTreeComponents.value?.InstanceTree
+  const MetamodelerTree = metamodelerComponents.value?.MetamodelerTree
+  const contextService = tsm.getService<any>('gene.editor.context')
+
+  if (InstanceTree) {
+    const Wrapper = defineComponent({
+      setup() {
+        // Zur Renderzeit aufloesen: der vordere Tab bringt seinen Kontext mit
+        return () => h(InstanceTree, {
+          context: contextService?.getCurrentContext?.() ?? contextService?.getInstanceContext?.(),
+          onObjectSelect: handleObjectSelect
+        })
+      }
+    })
+    layout.registerPanel({
+      id: 'instance-tree',
+      title: 'Instances',
+      icon: 'pi pi-sitemap',
+      component: markRaw(Wrapper),
+      location: 'primary-bottom'
+    })
+  }
+
+  if (MetamodelerTree) {
+    layout.registerPanel({
+      id: 'metamodeler-tree',
+      title: 'Metamodel',
+      icon: 'pi pi-sitemap',
+      component: markRaw(MetamodelerTree),
+      location: 'primary-bottom'
+    })
+  }
+}
+
 function setupModelEditorPerspective(layout: any) {
   const ModelBrowser = modelBrowserComponents.value?.ModelBrowser
   const InstanceTree = instanceTreeComponents.value?.InstanceTree
@@ -2041,6 +2089,7 @@ function setupModelEditorPerspective(layout: any) {
   layout.clearAll()
   // Oben links der Navigator, darunter der Baum der offenen Datei
   registriereExplorerOben(layout)
+  registriereBaeumeUnten(layout)
   console.log('[App] Using Instance Editor context:', context.mode)
 
   // Create instance-editor-specific handler that uses the context
@@ -2069,16 +2118,6 @@ function setupModelEditorPerspective(layout: any) {
     }
   }
 
-  // Create wrapper for instance tree with event handlers and context
-  const InstanceTreeWrapper = defineComponent({
-    setup() {
-      return () => h(InstanceTree, {
-        context: context,
-        onObjectSelect: handleObjectSelect
-      })
-    }
-  })
-
   // Create wrapper for model browser with event handlers and context
   const ModelBrowserWrapper = defineComponent({
     setup() {
@@ -2098,19 +2137,6 @@ function setupModelEditorPerspective(layout: any) {
         onShowProblems: handleShowProblems
       })
     }
-  })
-
-  /*
-   * Der Baum gehoert zur offenen Datei, nicht zur Anwendung: Er steht in der
-   * unteren Haelfte links, waehrend oben der Navigator bleibt — Explorer oder
-   * Model Atlas. Beide gleichzeitig sichtbar.
-   */
-  layout.registerPanel({
-    id: 'instance-tree',
-    title: 'Instances',
-    icon: 'pi pi-sitemap',
-    component: markRaw(InstanceTreeWrapper),
-    location: 'primary-bottom'
   })
 
   // Register activity for instance tree
@@ -2147,6 +2173,13 @@ function setupModelEditorPerspective(layout: any) {
    * ein fester Eigenschaften-Tab da.
    */
   const offeneInstanzen: string[] = (instanceTreeComposables.value as any)?.offeneInstanzTabIds?.() ?? []
+  // Auch die Metamodelle, die offen sind: Die Tabs gehoeren zur Anwendung,
+  // nicht zur Ansicht — sonst verschwinden sie beim Wechsel der Dateiart
+  for (const tabId of metamodelerComposables.value?.offeneTabIds?.() ?? []) {
+    const instanz = metamodelerComposables.value?.metamodelerFuerTab?.(tabId)
+    const titel = (instanz?.filePath?.value ?? tabId).split('/').pop() || tabId
+    oeffneMetamodellTab(tabId, titel, instanz)
+  }
   if (offeneInstanzen.length === 0) {
     layout.openEditor({
       id: 'properties',
@@ -2350,6 +2383,7 @@ function setupMetamodelerPerspective(layout: any) {
   layout.clearAll()
   // Oben links der Navigator, darunter der Baum der offenen Datei
   registriereExplorerOben(layout)
+  registriereBaeumeUnten(layout)
 
   // Wire the styled save-confirm dialog for validation errors
   registerMetamodelerSaveConfirm()
@@ -2404,15 +2438,6 @@ function setupMetamodelerPerspective(layout: any) {
     }
   })
 
-  // Der Baum zur offenen .ecore — untere Haelfte links, oben bleibt der Navigator
-  layout.registerPanel({
-    id: 'metamodeler-tree',
-    title: 'Metamodel',
-    icon: 'pi pi-sitemap',
-    component: markRaw(MetamodelerTree),
-    location: 'primary-bottom'
-  })
-
   // Register activity for metamodeler tree
   layout.registerActivity({
     id: 'metamodeler-tree',
@@ -2461,6 +2486,10 @@ function setupMetamodelerPerspective(layout: any) {
    * wirkt.
    */
   const offeneDateien: string[] = metamodelerService?.offeneTabIds?.() ?? []
+  // Und die offenen Instanzen, aus demselben Grund
+  for (const tabId of (instanceTreeComposables.value as any)?.offeneInstanzTabIds?.() ?? []) {
+    oeffneInstanzTab(tabId, tabId.replace(/^instance:/, '').split('/').pop() || tabId)
+  }
   if (offeneDateien.length === 0) {
     layout.openEditor({
       id: 'properties',

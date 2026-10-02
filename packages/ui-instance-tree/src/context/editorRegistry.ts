@@ -34,6 +34,14 @@ export interface EditorArt {
   component?: Component
   /** Öffnet die Datei in dieser Ansicht. */
   oeffnen?: (datei: { name: string; path: string }, inhalt: string) => void | Promise<void>
+  /**
+   * Die Perspektive, die diese Ansicht ablöst.
+   *
+   * Sie gehört damit nicht mehr in die Aktivitätsleiste: Links stehen die
+   * Navigatoren — Explorer, Model Atlas —, und was eine Datei bearbeitet,
+   * ergibt sich aus dem Tab, der vorn liegt.
+   */
+  ersetztPerspektive?: string
 }
 
 /** Eine Zuordnung, wie sie im Workspace steht. */
@@ -62,6 +70,13 @@ export function unregisterEditorArt(id: string): boolean {
 
 export function alleEditorArten(): EditorArt[] {
   return arten.value
+}
+
+/** Perspektiven, die von einer Ansicht abgeloest sind — sie gehoeren nicht in die Leiste. */
+export function abgeloestePerspektiven(): string[] {
+  return arten.value
+    .map((a: EditorArt) => a.ersetztPerspektive)
+    .filter((id: string | undefined): id is string => !!id)
 }
 
 /** Die Zuordnungen aus dem Workspace; ersetzt die bisherigen. */
