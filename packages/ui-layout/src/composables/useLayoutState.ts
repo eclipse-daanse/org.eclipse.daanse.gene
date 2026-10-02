@@ -232,11 +232,18 @@ export function useLayoutState() {
       .sort((a, b) => getEffectivePanelOrder(a, state.panelPositionOverrides) - getEffectivePanelOrder(b, state.panelPositionOverrides))
   )
 
+  /*
+   * Genau das Gewaehlte, sonst nichts.
+   *
+   * Kein Rueckfall auf das erste Panel: Diese Zone gehoert der offenen Datei,
+   * und solange keine offen ist, soll sie leer bleiben. Mit dem Rueckfall stand
+   * der Instanzbaum auch dann da, wenn gar nichts geladen war.
+   */
   const activePrimaryBottomPanel = computed(() =>
     state.panels.find(p =>
       p.id === state.activePrimaryBottomPanelId &&
       getEffectivePanelLocation(p, state.panelPositionOverrides) === 'primary-bottom'
-    ) ?? primaryBottomPanels.value[0]
+    ) ?? null
   )
 
   const secondaryPanels = computed(() =>
@@ -305,11 +312,14 @@ export function useLayoutState() {
       state.panels.push(rawPanel)
     }
 
-    // Auto-select first panel in each location
+    /*
+     * Der Navigator oben links braucht immer einen — er gehoert der Perspektive
+     * und ist nie leer. Die rechte Seite dagegen gehoert dem offenen Tab:
+     * Anmelden heisst dort nicht anzeigen, sonst steht der Model Browser schon
+     * da, bevor irgendetwas offen ist.
+     */
     if (panel.location === 'primary' && !state.activePrimaryPanelId) {
       state.activePrimaryPanelId = panel.id
-    } else if (panel.location === 'secondary' && !state.activeSecondaryPanelId) {
-      state.activeSecondaryPanelId = panel.id
     }
   }
 
@@ -327,7 +337,8 @@ export function useLayoutState() {
     }
   }
 
-  function selectPanel(panelId: string, location: PanelLocation) {
+  /** `null` waehlt ab — die Zone bleibt leer, bis jemand sie wieder beansprucht. */
+  function selectPanel(panelId: string | null, location: PanelLocation) {
     if (location === 'primary') {
       state.activePrimaryPanelId = panelId
     } else if (location === 'primary-bottom') {

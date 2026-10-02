@@ -21,7 +21,7 @@ const VIEWS: Record<string, EditorArt> = {
   plain: { id: 'plain', name: 'Ohne Panels', extensions: ['.txt'] }
 }
 
-let selected: Array<[string, string]>
+let selected: Array<[string, string | null]>
 let secondaryShown: boolean[]
 let frame: LayoutFrame
 let tabs: TabLayoutService
@@ -60,17 +60,39 @@ describe('A tab coming forward', () => {
     expect(selected).toContainEqual(['panel', 'ocl-problems'])
   })
 
-  it('leaves everything alone when its view declared nothing', () => {
-    tabs.bindTab('t', 'plain')
-    tabs.activateTab('t')
+  it('clears the zones its view did not claim', () => {
+    tabs.bindTab('mit-baum', 'instance')
+    tabs.bindTab('ohne', 'plain')
 
-    expect(selected).toEqual([])
+    tabs.activateTab('mit-baum')
+    selected = []
+    secondaryShown = []
+
+    tabs.activateTab('ohne')
+    // Nothing of the previous tab is left standing
+    expect(selected).toContainEqual(['primary-bottom', null])
+    expect(selected).toContainEqual(['secondary', null])
+    expect(secondaryShown).toEqual([false])
   })
 
-  it('leaves everything alone for a tab nobody claimed', () => {
-    tabs.activateTab('fremder-tab')
+  it('clears everything for a tab nobody claimed', () => {
+    tabs.bindTab('mit-baum', 'instance')
+    tabs.activateTab('mit-baum')
+    selected = []
 
-    expect(selected).toEqual([])
+    tabs.activateTab('fremder-tab')
+    expect(selected).toContainEqual(['primary-bottom', null])
+    expect(selected).toContainEqual(['secondary', null])
+  })
+
+  it('clears everything when no tab is in front', () => {
+    tabs.bindTab('mit-baum', 'instance')
+    tabs.activateTab('mit-baum')
+    selected = []
+
+    tabs.activateTab(null)
+    expect(selected).toContainEqual(['primary-bottom', null])
+    expect(selected).toContainEqual(['secondary', null])
   })
 })
 
@@ -81,6 +103,6 @@ describe('A closed tab', () => {
 
     expect(tabs.editorIdOf('t')).toBeUndefined()
     tabs.activateTab('t')
-    expect(selected).toEqual([])
+    expect(selected).toContainEqual(['primary-bottom', null])
   })
 })

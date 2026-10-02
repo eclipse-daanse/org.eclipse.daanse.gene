@@ -611,12 +611,12 @@ async function handleOpenWorkspace(entry: any, content: string) {
       // The Instance Tree is for USER model instances, not workspace metadata
       perspective.value.openWorkspace(resource, entry.path)
 
-      // Update PerspectiveManager state WITHOUT triggering setupPerspectiveLayout
-      // (App.vue manages the layout via setupModelEditorPerspective with context wrappers)
-      if (perspectiveManager.value) {
-        perspectiveManager.value.setWorkspace(resource, entry.path)
-        perspectiveManager.value.setCurrentPerspectiveId('model-editor')
-      }
+      /*
+       * Nur der Workspace, keine Perspektive: Ein geoeffneter Workspace ist
+       * nichts, was die Ansicht wechselt — der Explorer bleibt stehen, und was
+       * daraus geoeffnet wird, erscheint als Tab.
+       */
+      perspectiveManager.value?.setWorkspace(resource, entry.path)
 
       // Clear the instance tree - it should start empty for user instances
       if (instanceTreeComposables.value?.setSharedResource) {
@@ -626,11 +626,7 @@ async function handleOpenWorkspace(entry: any, content: string) {
       console.warn('loadXMI not available in perspective service')
       perspective.value.openWorkspace(null, entry.path)
 
-      // Update PerspectiveManager state WITHOUT triggering setupPerspectiveLayout
-      if (perspectiveManager.value) {
-        perspectiveManager.value.setWorkspace(null, entry.path)
-        perspectiveManager.value.setCurrentPerspectiveId('model-editor')
-      }
+      perspectiveManager.value?.setWorkspace(null, entry.path)
     }
 
     // Store workspace content and entry for later use (saving)
@@ -1372,14 +1368,15 @@ let schliessenVerdrahtet = false
 let tabLayout: TabLayoutService | null = null
 function holeTabLayout(layout: any): TabLayoutService {
   if (!tabLayout) {
-    const contextService = tsm.getService<any>('gene.editor.context')
     tabLayout = createTabLayout({
       frame: {
         selectPanel: (panelId, bereich) => layout.selectPanel?.(panelId, bereich),
         setSecondarySidebarVisible: (sichtbar) => layout.setSecondarySidebarVisible?.(sichtbar)
       },
+      // Bei jedem Nachschlagen neu geholt: Der Kontext-Dienst kommt aus
+      // ui-instance-tree und kann spaeter da sein als diese Flaeche
       editorArtById: (editorId) =>
-        contextService?.alleEditorArten?.().find((a: any) => a.id === editorId)
+        tsm.getService<any>('gene.editor.context')?.alleEditorArten?.().find((a: any) => a.id === editorId)
     })
   }
   return tabLayout
@@ -1429,8 +1426,6 @@ function oeffneInstanzTab(tabId: string, titel: string): void {
       setup() {
         itc.instanzTabNachVorn?.(tabId)
         contextService?.activateTabContext?.(tabId)
-        // Was zu dieser Ansicht gehoert, kommt mit nach vorn
-        tabs.activateTab(tabId)
         return () => PropertiesPanel
           ? h(PropertiesPanel, {
               context: contextService?.getCurrentContext?.() ?? kontext,
@@ -1466,8 +1461,6 @@ function oeffneMetamodellTab(tabId: string, titel: string, metamodeler: any): vo
         // Gerendert wird nur der vordere Tab — also ist das hier der Wechsel
         metamodelerComposables.value?.tabNachVorn?.(tabId)
         contextService?.activateTabContext?.(tabId)
-        // Was zu dieser Ansicht gehoert, kommt mit nach vorn
-        tabs.activateTab(tabId)
         return () => PropertiesPanel
           ? h(PropertiesPanel, {
               context: contextService?.getCurrentContext?.() ?? kontext,
@@ -2152,6 +2145,28 @@ function baueArbeitsflaeche(layout: any): void {
   beobachteProbleme(layout)
 
   layout.setPrimarySidebarVisible(true)
+  folgeDemVorderenTab(layout)
+}
+
+let tabWechselBeobachtet = false
+
+/**
+ * Was zur offenen Datei gehoert, folgt dem vorderen Tab.
+ *
+ * Eine Stelle, nicht acht: Vorher waehlte jeder Tab im eigenen `setup()` sein
+ * Panel, und wer keines waehlte — die Workspace-Vorschau — liess das des
+ * vorigen stehen. So steht links unten der Baum der Datei, die wirklich vorn
+ * liegt, und sonst nichts.
+ */
+function folgeDemVorderenTab(layout: any): void {
+  if (tabWechselBeobachtet) return
+  tabWechselBeobachtet = true
+
+  watch(
+    () => layout.state.activeEditorTabId,
+    (tabId: string | null) => holeTabLayout(layout).activateTab(tabId),
+    { immediate: true }
+  )
 }
 
 /**

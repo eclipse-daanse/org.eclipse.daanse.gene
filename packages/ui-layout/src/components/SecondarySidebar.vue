@@ -29,7 +29,11 @@ const activePanel = computed(() => layout.activeSecondaryPanel.value)
 const panels = computed(() => layout.secondaryPanels.value)
 
 // Show minimized bar when sidebar is hidden but has panels
-const showMinimized = computed(() => !visible.value && panels.value.length > 0)
+/*
+ * Der eingeklappte Balken zeigt sich erst, wenn ein Panel gewaehlt ist — nicht
+ * schon, weil eines angemeldet wurde. Die rechte Seite gehoert dem offenen Tab.
+ */
+const showMinimized = computed(() => !visible.value && !!activePanel.value)
 
 // Show empty drop zone when no panels at all
 const showEmptyDropZone = computed(() => panels.value.length === 0)
