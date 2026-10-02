@@ -39,6 +39,7 @@ interface PanelPositionData {
   location: 'primary' | 'secondary' | 'editor' | 'bottom'
   order: number
 }
+import { fixupEditorConfigPackage } from './editorConfigFixup'
 import { loadFromEditorConfig as loadIconsFromConfig, getSharedViews, iconProviderRegistry, CustomIconProvider, CUSTOM_ICONS_PROVIDER_ID, type CustomIconEntry } from 'ui-instance-tree'
 
 // Default workspace filename
@@ -56,6 +57,13 @@ export function useEditorConfig() {
   if (nsURI) {
     EPackageRegistry.INSTANCE.set(nsURI, FennecuiPackage.eINSTANCE)
   }
+
+  /*
+   * Was der Codegen derzeit schuldig bleibt: `editorBindings` am EditorConfig
+   * (emf.ts.codegen#47). Ohne das Feature verwirft der Loader die Zuordnungen
+   * aus der .wsp stillschweigend.
+   */
+  fixupEditorConfigPackage(FennecuiPackage.eINSTANCE as any)
 
   // State
   const resource = shallowRef<Resource | null>(null)
@@ -136,6 +144,41 @@ export function useEditorConfig() {
       return sources.toArray()
     }
     return sources || []
+  })
+
+  /**
+   * Welche Ansicht welche Datei oeffnet — die Zuordnungen aus der .wsp.
+   *
+   * Steht dort nichts, entscheidet die Registry selbst: Metamodell der Wurzel,
+   * sonst Endung. Ein Eintrag hier ist die Entscheidung des Nutzers und geht
+   * dem vor.
+   */
+  const editorBindings = computed(() => {
+    if (!editorConfig.value) return [] as Array<{ pattern?: string; nsURI?: string; editorId: string }>
+
+    const config = toRaw(editorConfig.value) as any
+    let bindings = config.editorBindings
+    if (bindings === undefined && typeof config.eGet === 'function') {
+      const feature = config.eClass().getEStructuralFeature('editorBindings')
+      if (feature) bindings = config.eGet(feature)
+    }
+    const liste = bindings?.toArray?.() ?? bindings ?? []
+
+    const lesen = (eintrag: any, name: string): string | undefined => {
+      const direkt = eintrag?.[name]
+      if (direkt !== undefined) return direkt || undefined
+      const feature = eintrag?.eClass?.()?.getEStructuralFeature?.(name)
+      const wert = feature ? eintrag.eGet(feature) : undefined
+      return wert ? String(wert) : undefined
+    }
+
+    return liste
+      .map((eintrag: any) => ({
+        pattern: lesen(eintrag, 'pattern'),
+        nsURI: lesen(eintrag, 'nsURI'),
+        editorId: lesen(eintrag, 'editorId') ?? ''
+      }))
+      .filter((z: { editorId: string }) => !!z.editorId)
   })
 
   // Computed: Instance sources - supports both EditorConfigImpl and DynamicEObject
@@ -1749,6 +1792,7 @@ export function useEditorConfig() {
     customIconLibraries,
     iconMappings,
     modelSources,
+    editorBindings,
     instanceSources,
     layoutConfig,
     treeViews,

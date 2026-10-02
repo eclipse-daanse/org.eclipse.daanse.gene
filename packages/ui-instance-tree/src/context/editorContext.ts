@@ -21,6 +21,17 @@ const currentMode = ref<EditorMode>('instance')
 // reads it so that consumer computeds re-resolve once a lazily-loaded plugin (e.g. the
 // metamodeler) registers its factory AFTER the consumer first evaluated — otherwise the
 // consumer would cache the null it saw before the factory existed and never recover.
+import {
+  registerEditorArt,
+  unregisterEditorArt,
+  alleEditorArten,
+  setEditorZuordnungen,
+  kandidatenFuer,
+  editorFuer,
+  type EditorArt,
+  type EditorZuordnung
+} from './editorRegistry'
+
 const factoryEpoch = ref(0)
 
 // Context factories - registered at runtime
@@ -170,6 +181,12 @@ export interface EditorContextService {
   registerInstanceContextFactory: (factory: () => EditorContext) => void
   registerMetamodelContextFactory: (factory: () => EditorContext) => void
   registerTabContext: (tabId: string, context: EditorContext) => void
+  registerEditorArt: (art: EditorArt) => void
+  unregisterEditorArt: (id: string) => boolean
+  alleEditorArten: () => EditorArt[]
+  setEditorZuordnungen: (zuordnungen: EditorZuordnung[]) => void
+  kandidatenFuer: (pfad: string, inhalt?: string) => EditorArt[]
+  editorFuer: (pfad: string, inhalt?: string) => EditorArt | null
   activateTabContext: (tabId: string) => void
   releaseTabContext: (tabId: string) => void
 }
@@ -185,6 +202,12 @@ export function getEditorContextService(): EditorContextService {
     getMetamodelContext,
     setEditorMode,
     registerTabContext,
+    registerEditorArt,
+    unregisterEditorArt,
+    alleEditorArten,
+    setEditorZuordnungen,
+    kandidatenFuer,
+    editorFuer,
     activateTabContext,
     releaseTabContext,
     registerInstanceContextFactory,

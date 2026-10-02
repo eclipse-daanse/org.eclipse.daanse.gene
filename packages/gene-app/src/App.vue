@@ -561,6 +561,14 @@ async function handleOpenWorkspace(entry: any, content: string) {
         // Register workspace actions and event mappings from EditorConfig
         registerWorkspaceActionsFromConfig(editorConfig)
 
+        /*
+         * Welche Ansicht welche Datei oeffnet, steht im Workspace. Die Registry
+         * entscheidet sonst selbst — ein Eintrag hier ist die Entscheidung des
+         * Nutzers und geht vor.
+         */
+        const ctxSvc = tsm.getService<any>('gene.editor.context')
+        ctxSvc?.setEditorZuordnungen?.(editorConfig.editorBindings?.value ?? [])
+
         // Notify plugins that workspace has been loaded
         window.dispatchEvent(new CustomEvent('gene:workspace-loaded'))
       } catch (e) {
