@@ -275,11 +275,83 @@ function registriereEditorArten(): boolean {
     oeffnen: (datei: any, inhalt: string) => handleInstanceAdd(datei, inhalt)
   })
 
+  /*
+   * Die uebrigen Werkzeuge sind ebenfalls Ansichten auf eine Datei und gehoeren
+   * damit nicht in die Leiste. Links bleiben die drei Perspektiven: Explorer,
+   * Atlas, Einstellungen.
+   *
+   * Das eorm-Mapping zeigt, worum es geht: Dieselbe Datei laesst sich als
+   * eorm-Ansicht oeffnen oder als gewoehnlicher Instanzbaum — „Oeffnen mit"
+   * stellt beide zur Wahl.
+   */
+  ctxSvc.registerEditorArt({
+    id: 'eorm',
+    name: 'eorm-Mapping',
+    icon: 'pi pi-table',
+    extensions: [],
+    nsURIs: ['https://eclipse.org/fennec/persistence/eorm/1.0.0'],
+    ersetztPerspektive: 'eorm-mapping',
+    oeffnen: () => tsm.getService<any>('ui.eorm-wizard.open')?.()
+  })
+
+  ctxSvc.registerEditorArt({
+    id: 'sensinact-mapping',
+    name: 'SensiNact-Mapping',
+    icon: 'pi pi-share-alt',
+    extensions: [],
+    nsURIs: ['https://fennec.eclipse.org/event.atlas/mapping/1.0'],
+    ersetztPerspektive: 'sensinact-mapping',
+    oeffnen: () => tsm.getService<any>('ui.sensinact-wizard.open')?.()
+  })
+
+  ctxSvc.registerEditorArt({
+    id: 'transformation',
+    name: 'Transformation',
+    icon: 'pi pi-arrows-h',
+    extensions: ['.qvtr', '.qvto'],
+    ersetztPerspektive: 'transformation',
+    oeffnen: (datei: any, inhalt: string) => handleTransformationLoad(datei, inhalt)
+  })
+
+  ctxSvc.registerEditorArt({
+    id: 'cocl',
+    name: 'Constraints',
+    icon: 'pi pi-check-square',
+    extensions: ['.c-ocl', '.cocl'],
+    ersetztPerspektive: 'cocl-editor',
+    oeffnen: (datei: any, inhalt: string) => handleCoclAdd(datei, inhalt)
+  })
+
+  ctxSvc.registerEditorArt({
+    id: 'datagen',
+    name: 'Daten erzeugen',
+    icon: 'pi pi-bolt',
+    extensions: ['.datagen'],
+    ersetztPerspektive: 'data-generator'
+  })
+
+  ctxSvc.registerEditorArt({
+    id: 'dmn',
+    name: 'DMN-Entscheidungstabelle',
+    icon: 'pi pi-table',
+    extensions: ['.dmn'],
+    ersetztPerspektive: 'dmn-editor',
+    oeffnen: (datei: any, inhalt: string) => handleDmnLoad(datei, inhalt)
+  })
+
   return true
 }
-if (!registriereEditorArten()) {
-  setTimeout(registriereEditorArten, 500)
+/*
+ * Der Kontext-Dienst kommt aus ui-instance-tree und kann spaeter bereitstehen
+ * als diese Datei laeuft. Ein einzelner zweiter Versuch reichte nicht
+ * verlaesslich — deshalb wird gewartet, bis er da ist.
+ */
+function versucheEditorArten(versuch = 0): void {
+  if (registriereEditorArten()) return
+  if (versuch < 20) setTimeout(() => versucheEditorArten(versuch + 1), 300)
+  else console.warn('[App] Editor-Arten konnten nicht angemeldet werden')
 }
+versucheEditorArten()
 
 // Command Palette
 const commandPaletteRef = ref<any>(null)
