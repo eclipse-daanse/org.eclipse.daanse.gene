@@ -33,8 +33,12 @@ function getModelRegistry(): any {
 /**
  * Create an EditorContext for Instance Editor mode
  */
-export function createInstanceContext(): EditorContext {
-  const instanceTree = useSharedInstanceTree()
+/**
+ * @param baum Der Baum, auf den sich der Kontext bezieht. Ein Editor-Tab gibt
+ *   seinen eigenen mit; ohne Angabe ist es der vordere (die Fassade).
+ */
+export function createInstanceContext(baum?: ReturnType<typeof useSharedInstanceTree>): EditorContext {
+  const instanceTree = baum ?? useSharedInstanceTree()
 
   // Adapt model registry packages to PackageInfo
   const allPackages = computed<PackageInfo[]>(() => {
