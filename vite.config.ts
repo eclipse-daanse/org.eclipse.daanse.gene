@@ -215,6 +215,9 @@ export default defineConfig({
       // Direct module aliases (without manifest.json)
       { find: 'ui-problems-panel', replacement: fileURLToPath(new URL('./packages/ui-problems-panel/src/index.ts', import.meta.url)) },
       { find: 'ui-search', replacement: fileURLToPath(new URL('./packages/ui-search/src/index.ts', import.meta.url)) },
+      // Service contracts: names and types only, shared by every module without
+      // any of them depending on another
+      { find: 'gene-contracts', replacement: fileURLToPath(new URL('./packages/gene-contracts/src/index.ts', import.meta.url)) },
     ],
     // Force a single instance of these packages. @emfts/uimodel-composer
     // depends on vue/@emfts/core/@emfts/vue-registry itself; without dedupe

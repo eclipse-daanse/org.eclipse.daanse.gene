@@ -175,6 +175,21 @@ Davor steht, als Schritt 0:
    `@component({ service: [EDITOR_ART] })`, Sammelstelle mit `@injectAll`. Die
    Warteschleifen entfallen, bevor der Layout-Umbau sie vermehrt.
 
+   **Erledigt.** Der Vertrag steht in `packages/gene-contracts` — außerhalb
+   jedes Moduls, damit ihn jedes importieren kann, ohne eines der anderen zu
+   kennen. `EDITOR_ART` ist ein `serviceId<EditorArt>`, die acht Ansichten
+   liegen als Komponenten in `packages/gene-app/src/editors/`, und
+   `EditorArtCollector` in ui-instance-tree sammelt sie mit `@injectAll`. Die
+   Öffner der Wizards sind dynamische Referenzen (`@bind`/`@unbind`): Das
+   Plugin darf später kommen und wieder gehen, ohne dass die Ansicht neu
+   gebaut wird. `App.vue` meldet nichts mehr an, `whenService` auf den
+   Kontext-Dienst ist dort weg.
+
+   Offen bleibt daran: die übrigen Dienstnamen (`gene.editor.context`,
+   `gene.resourceset` und die anderen rund zwanzig Strings) haben noch keinen
+   Vertrag, und die Ansichten liegen noch in gene-app statt in ihren Plugins —
+   das ist Schritt 6, und dann ist es ein Verschieben der Datei.
+
 Jeder Schritt ist für sich lauffähig. Nach 1–3 verschwindet das Abreißen des
 Layouts, nach 4–5 stimmt der Schnitt, nach 6 ist das Bild vollständig.
 

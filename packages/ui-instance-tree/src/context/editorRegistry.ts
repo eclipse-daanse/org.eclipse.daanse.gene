@@ -12,37 +12,16 @@
  *
  * Wer eine andere Ansicht will, nimmt „Öffnen mit"; die Wahl lässt sich als
  * Regel in den Workspace schreiben.
+ *
+ * Die Ansichten selbst kommen aus dem Dienstregister: jede meldet sich unter
+ * `gene.editor.art` an, {@link EditorArtCollector} sammelt sie ein. Was hier
+ * direkt angemeldet wird, gilt daneben weiter — für Tests und für alles, was
+ * noch keine Komponente ist.
  */
-import { ref, type Component } from 'tsm:vue'
+import { shallowRef, computed } from 'tsm:vue'
+import type { EditorArt } from 'gene-contracts'
 
-export interface EditorArt {
-  /** Kurzname, z. B. 'metamodel', 'instance', 'eorm' */
-  id: string
-  /** Was im Menü „Öffnen mit" steht */
-  name: string
-  icon?: string
-  /** Endungen, mit Punkt: ['.ecore'] */
-  extensions: string[]
-  /**
-   * Metamodelle, für die diese Ansicht gedacht ist. Trifft eines zu, geht sie
-   * einer Ansicht vor, die nur die Endung kennt.
-   */
-  nsURIs?: string[]
-  /** Unter gleich genauen Kandidaten entscheidet die höhere Zahl. Vorgabe 0. */
-  priority?: number
-  /** Die Ansicht selbst — der Inhalt des Tabs. */
-  component?: Component
-  /** Öffnet die Datei in dieser Ansicht. */
-  oeffnen?: (datei: { name: string; path: string }, inhalt: string) => void | Promise<void>
-  /**
-   * Die Perspektive, die diese Ansicht ablöst.
-   *
-   * Sie gehört damit nicht mehr in die Aktivitätsleiste: Links stehen die
-   * Navigatoren — Explorer, Model Atlas —, und was eine Datei bearbeitet,
-   * ergibt sich aus dem Tab, der vorn liegt.
-   */
-  ersetztPerspektive?: string
-}
+export type { EditorArt, OpenableFile } from 'gene-contracts'
 
 /** Eine Zuordnung, wie sie im Workspace steht. */
 export interface EditorZuordnung {
@@ -54,18 +33,43 @@ export interface EditorZuordnung {
   editorId: string
 }
 
-const arten = ref<EditorArt[]>([])
-let zuordnungen: EditorZuordnung[] = []
+/** Was die Sammelstelle im Dienstregister gefunden hat. */
+const ausDiensten = shallowRef<EditorArt[]>([])
+
+/** Was jemand von Hand angemeldet hat. Geht einem Dienst gleicher Id vor. */
+const angemeldet = shallowRef<EditorArt[]>([])
+
+const arten = computed<EditorArt[]>(() => {
+  const nachId = new Map<string, EditorArt>()
+  for (const art of ausDiensten.value) nachId.set(art.id, art)
+  for (const art of angemeldet.value) nachId.set(art.id, art)
+  return [...nachId.values()]
+})
+
+/**
+ * Was die Sammelstelle gefunden hat — sie ruft das, nichts sonst.
+ *
+ * Eine eigene Liste neben den von Hand angemeldeten: Der Sammler kennt nur das
+ * Register und würde eine Anmeldung sonst beim nächsten Dienstereignis löschen.
+ */
+export function setEditorArtenAusDiensten(gefunden: EditorArt[]): void {
+  ausDiensten.value = [...gefunden]
+}
+
+/** Was die Sammelstelle zuletzt eingetragen hat. */
+export function editorArtenAusDiensten(): EditorArt[] {
+  return ausDiensten.value
+}
 
 export function registerEditorArt(art: EditorArt): void {
-  const ohneAlte = arten.value.filter((a: EditorArt) => a.id !== art.id)
-  arten.value = [...ohneAlte, art]
+  const ohneAlte = angemeldet.value.filter((a: EditorArt) => a.id !== art.id)
+  angemeldet.value = [...ohneAlte, art]
 }
 
 export function unregisterEditorArt(id: string): boolean {
-  const vorher = arten.value.length
-  arten.value = arten.value.filter((a: EditorArt) => a.id !== id)
-  return arten.value.length < vorher
+  const vorher = angemeldet.value.length
+  angemeldet.value = angemeldet.value.filter((a: EditorArt) => a.id !== id)
+  return angemeldet.value.length < vorher
 }
 
 export function alleEditorArten(): EditorArt[] {
@@ -75,9 +79,11 @@ export function alleEditorArten(): EditorArt[] {
 /** Perspektiven, die von einer Ansicht abgeloest sind — sie gehoeren nicht in die Leiste. */
 export function abgeloestePerspektiven(): string[] {
   return arten.value
-    .map((a: EditorArt) => a.ersetztPerspektive)
+    .map((a: EditorArt) => a.replacesPerspective)
     .filter((id: string | undefined): id is string => !!id)
 }
+
+let zuordnungen: EditorZuordnung[] = []
 
 /** Die Zuordnungen aus dem Workspace; ersetzt die bisherigen. */
 export function setEditorZuordnungen(neue: EditorZuordnung[]): void {

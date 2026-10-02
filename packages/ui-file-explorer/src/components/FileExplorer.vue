@@ -140,7 +140,7 @@ async function oeffneMit(art: any, datei: FileEntry): Promise<void> {
     editorId: art.id
   })
 
-  await art.oeffnen?.(datei, inhalt)
+  await art.open?.(datei, inhalt)
 }
 
 const contextMenuItems = computed(() => {

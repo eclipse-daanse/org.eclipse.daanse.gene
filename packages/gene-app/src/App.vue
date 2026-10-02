@@ -242,109 +242,13 @@ const workspaceActionsService: WorkspaceActionService = {
 registerWorkspaceActions(workspaceActionsService, tsm)
 
 /*
- * Welche Ansichten es gibt und was sie oeffnen koennen.
+ * Die Dateiansichten stehen nicht mehr hier.
  *
- * Eine Datei hat nicht eine Ansicht: ein eorm-Mapping laesst sich als
- * eorm-Ansicht oeffnen oder als gewoehnlicher Instanzbaum. Die Registry fuehrt
- * die Kandidaten, „Oeffnen mit" im Explorer zeigt sie.
- *
- * Die Anmeldung wartet auf den Kontext-Dienst — ui-instance-tree bringt ihn
- * mit und kann spaeter aktiviert werden als gene-app.
+ * Jede ist eine Komponente in `./editors` und meldet sich unter
+ * `gene.editor.art` an; die Sammelstelle in ui-instance-tree nimmt sie. Damit
+ * entfaellt auch das Warten auf den Kontext-Dienst: Eine Anmeldung, die auf
+ * einen noch fehlenden Dienst traf, fiel bisher still aus.
  */
-function registriereEditorArten(ctxSvc: any): void {
-  if (!ctxSvc?.registerEditorArt) return
-
-  ctxSvc.registerEditorArt({
-    id: 'metamodel',
-    name: 'Metamodell-Editor',
-    icon: 'pi pi-sitemap',
-    extensions: ['.ecore'],
-    priority: 10,
-    ersetztPerspektive: 'metamodeler',
-    oeffnen: (datei: any, inhalt: string) => handleMetamodelEdit(datei, inhalt)
-  })
-
-  ctxSvc.registerEditorArt({
-    id: 'instance',
-    name: 'Instanz-Editor',
-    icon: 'pi pi-database',
-    extensions: ['.xmi'],
-    priority: 10,
-    ersetztPerspektive: 'model-editor',
-    oeffnen: (datei: any, inhalt: string) => handleInstanceAdd(datei, inhalt)
-  })
-
-  /*
-   * Die uebrigen Werkzeuge sind ebenfalls Ansichten auf eine Datei und gehoeren
-   * damit nicht in die Leiste. Links bleiben die drei Perspektiven: Explorer,
-   * Atlas, Einstellungen.
-   *
-   * Das eorm-Mapping zeigt, worum es geht: Dieselbe Datei laesst sich als
-   * eorm-Ansicht oeffnen oder als gewoehnlicher Instanzbaum — „Oeffnen mit"
-   * stellt beide zur Wahl.
-   */
-  ctxSvc.registerEditorArt({
-    id: 'eorm',
-    name: 'eorm-Mapping',
-    icon: 'pi pi-table',
-    extensions: [],
-    nsURIs: ['https://eclipse.org/fennec/persistence/eorm/1.0.0'],
-    ersetztPerspektive: 'eorm-mapping',
-    oeffnen: () => tsm.getService<any>('ui.eorm-wizard.open')?.()
-  })
-
-  ctxSvc.registerEditorArt({
-    id: 'sensinact-mapping',
-    name: 'SensiNact-Mapping',
-    icon: 'pi pi-share-alt',
-    extensions: [],
-    nsURIs: ['https://fennec.eclipse.org/event.atlas/mapping/1.0'],
-    ersetztPerspektive: 'sensinact-mapping',
-    oeffnen: () => tsm.getService<any>('ui.sensinact-wizard.open')?.()
-  })
-
-  ctxSvc.registerEditorArt({
-    id: 'transformation',
-    name: 'Transformation',
-    icon: 'pi pi-arrows-h',
-    extensions: ['.qvtr', '.qvto'],
-    ersetztPerspektive: 'transformation',
-    oeffnen: (datei: any, inhalt: string) => handleTransformationLoad(datei, inhalt)
-  })
-
-  ctxSvc.registerEditorArt({
-    id: 'cocl',
-    name: 'Constraints',
-    icon: 'pi pi-check-square',
-    extensions: ['.c-ocl', '.cocl'],
-    ersetztPerspektive: 'cocl-editor',
-    oeffnen: (datei: any, inhalt: string) => handleCoclAdd(datei, inhalt)
-  })
-
-  ctxSvc.registerEditorArt({
-    id: 'datagen',
-    name: 'Daten erzeugen',
-    icon: 'pi pi-bolt',
-    extensions: ['.datagen'],
-    ersetztPerspektive: 'data-generator'
-  })
-
-  ctxSvc.registerEditorArt({
-    id: 'dmn',
-    name: 'DMN-Entscheidungstabelle',
-    icon: 'pi pi-table',
-    extensions: ['.dmn'],
-    ersetztPerspektive: 'dmn-editor',
-    oeffnen: (datei: any, inhalt: string) => handleDmnLoad(datei, inhalt)
-  })
-}
-/*
- * Der Kontext-Dienst kommt aus ui-instance-tree und kann spaeter bereitstehen
- * als diese Datei laeuft. Die Registry meldet Zugaenge, also wird zugehoert —
- * vorher wurde wiederholt nachgesehen, und blieb der Dienst in dieser Zeit
- * aus, fiel die Anmeldung still aus.
- */
-tsm.whenService<any>('gene.editor.context', registriereEditorArten)
 
 // Command Palette
 const commandPaletteRef = ref<any>(null)

@@ -25,6 +25,10 @@
     {
       "id": "app.instance",
       "description": "Vue application instance"
+    },
+    {
+      "id": "gene.editor.art",
+      "description": "Dateiansichten: Metamodell, Instanz, eorm, SensiNact, Transformation, Constraints, Datengenerator, DMN"
     }
   ],
   "requiresService": [
