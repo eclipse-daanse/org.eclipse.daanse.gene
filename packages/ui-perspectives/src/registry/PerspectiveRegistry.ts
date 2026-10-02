@@ -91,6 +91,18 @@ export class PerspectiveManagerImpl implements PerspectiveManager {
       register(perspective: PerspectiveDefinition): void {
         console.log(`[PerspectiveRegistry] Registering perspective: ${perspective.id}`)
         self.perspectives.set(perspective.id, perspective)
+
+        /*
+         * Die erste, die ohne Workspace laufen kann, wird die aktuelle.
+         *
+         * Vorher blieb `currentPerspectiveId` null, bis jemand wechselte: Wer
+         * die Anwendung nur oeffnete, hatte gar keine — und alles, was daran
+         * haengt (das Menue, die Markierung in der Leiste), hing an nichts.
+         * Das Gegenstueck zu `unregister`, das genauso nachrueckt.
+         */
+        if (self._state.currentPerspectiveId === null && !perspective.requiresWorkspace) {
+          self._state.currentPerspectiveId = perspective.id
+        }
       },
       unregister(id: string): void {
         console.log(`[PerspectiveRegistry] Unregistering perspective: ${id}`)

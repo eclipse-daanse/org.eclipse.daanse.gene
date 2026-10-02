@@ -143,16 +143,27 @@ onMounted(() => {
       hasWorkspace.value = !!persp?.state?.openWorkspace
     }
 
-    // Update current perspective from perspective manager (preferred) or legacy service
+    /*
+     * Markiert wird nur, was hier auch steht.
+     *
+     * Eine abgeloeste Perspektive — model-editor, metamodeler — ist aus der
+     * Leiste verschwunden, kann aber anderswo noch als aktuelle gesetzt werden.
+     * Wurde sie uebernommen, passte sie zu keinem Knopf, und es war gar nichts
+     * blau. Dann bleibt lieber der letzte, der hier wirklich steht.
+     */
+    const inDerLeiste = (id: string): boolean =>
+      corePerspectives.value.some(p => p.id === id) || viewPerspectives.value.some(p => p.id === id)
+
     if (perspectiveManager.value) {
       const currentId = perspectiveManager.value.state.currentPerspectiveId
-      if (currentId && currentId !== currentPerspective.value) {
+      if (currentId && currentId !== currentPerspective.value && inDerLeiste(currentId)) {
         currentPerspective.value = currentId
       }
     } else if (perspectiveService.value) {
       const persp = perspectiveService.value.useSharedPerspective()
-      if (persp?.state?.currentPerspective !== currentPerspective.value) {
-        currentPerspective.value = persp.state.currentPerspective
+      const id = persp?.state?.currentPerspective
+      if (id && id !== currentPerspective.value && inDerLeiste(id)) {
+        currentPerspective.value = id
       }
     }
   }, 100)

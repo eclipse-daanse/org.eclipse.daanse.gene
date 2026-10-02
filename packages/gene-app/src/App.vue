@@ -2647,8 +2647,8 @@ onMounted(() => {
 
       baueArbeitsflaeche(layout)
       zeigeWorkspaceVorschau(layout)
-      perspectiveManager.value?.setCurrentPerspectiveId?.('explorer')
       waehleNavigator(layout, 'explorer')
+
 
       // Register status bar items
       layout.registerStatusBarItem({
