@@ -251,9 +251,8 @@ registerWorkspaceActions(workspaceActionsService, tsm)
  * Die Anmeldung wartet auf den Kontext-Dienst — ui-instance-tree bringt ihn
  * mit und kann spaeter aktiviert werden als gene-app.
  */
-function registriereEditorArten(): boolean {
-  const ctxSvc = tsm.getService<any>('gene.editor.context')
-  if (!ctxSvc?.registerEditorArt) return false
+function registriereEditorArten(ctxSvc: any): void {
+  if (!ctxSvc?.registerEditorArt) return
 
   ctxSvc.registerEditorArt({
     id: 'metamodel',
@@ -338,20 +337,14 @@ function registriereEditorArten(): boolean {
     ersetztPerspektive: 'dmn-editor',
     oeffnen: (datei: any, inhalt: string) => handleDmnLoad(datei, inhalt)
   })
-
-  return true
 }
 /*
  * Der Kontext-Dienst kommt aus ui-instance-tree und kann spaeter bereitstehen
- * als diese Datei laeuft. Ein einzelner zweiter Versuch reichte nicht
- * verlaesslich — deshalb wird gewartet, bis er da ist.
+ * als diese Datei laeuft. Die Registry meldet Zugaenge, also wird zugehoert —
+ * vorher wurde wiederholt nachgesehen, und blieb der Dienst in dieser Zeit
+ * aus, fiel die Anmeldung still aus.
  */
-function versucheEditorArten(versuch = 0): void {
-  if (registriereEditorArten()) return
-  if (versuch < 20) setTimeout(() => versucheEditorArten(versuch + 1), 300)
-  else console.warn('[App] Editor-Arten konnten nicht angemeldet werden')
-}
-versucheEditorArten()
+tsm.whenService<any>('gene.editor.context', registriereEditorArten)
 
 // Command Palette
 const commandPaletteRef = ref<any>(null)
@@ -2034,11 +2027,14 @@ function setupFileExplorerPerspective(layout: any) {
  * Baum der offenen Datei. Deshalb wird er hier gebaut und von allen Ansichten
  * eingehaengt, statt nur in seiner eigenen zu leben.
  */
-function registriereExplorerOben(layout: any, versuch = 0): void {
+function registriereExplorerOben(layout: any): void {
   const FileExplorer = fileExplorerComponents.value?.FileExplorer
   if (!FileExplorer) {
-    // Das Explorer-Plugin kann spaeter aktiviert werden als diese Ansicht
-    if (versuch < 10) setTimeout(() => registriereExplorerOben(layout, versuch + 1), 300)
+    // Die Komponenten kommen aus einem Modul, das spaeter aktiviert sein kann
+    tsm.whenService<any>('ui.file-explorer.components', (fec: any) => {
+      fileExplorerComponents.value = fec
+      registriereExplorerOben(layout)
+    })
     return
   }
 

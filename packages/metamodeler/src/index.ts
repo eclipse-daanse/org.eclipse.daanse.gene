@@ -48,6 +48,32 @@ import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-per
  * TSM lifecycle: activate
  * Registers metamodeler services and perspective
  */
+/**
+ * Ruft `fn`, sobald der Dienst da ist — und sofort, wenn er es schon ist.
+ *
+ * Module werden in Abhaengigkeitsreihenfolge geladen, optionale Dienste koennen
+ * aber spaeter kommen. Die Registry meldet Zugaenge selbst (ObservableServiceRegistry),
+ * also wird zugehoert statt in Abstaenden nachgesehen: Ein Dienst, der sich Zeit
+ * laesst, ging bei festen Fristen verloren.
+ */
+function sobaldDienstDa<T>(context: ModuleContext, serviceId: string, fn: (service: T) => void): void {
+  const vorhanden = context.services.get<T>(serviceId)
+  if (vorhanden !== undefined) {
+    fn(vorhanden)
+    return
+  }
+  const listener = {
+    onServiceEvent: (event: { type: string; serviceId: string }) => {
+      if (event.type !== 'registered' || event.serviceId !== serviceId) return
+      const dienst = context.services.get<T>(serviceId)
+      if (dienst === undefined) return
+      context.services.removeListener(listener)
+      fn(dienst)
+    }
+  }
+  context.services.addListener(listener)
+}
+
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Metamodeler plugin...')
 
@@ -79,13 +105,7 @@ export async function activate(context: ModuleContext): Promise<void> {
     }
     return false
   }
-  if (!trySetupIconRegistry()) {
-    setTimeout(() => {
-      if (!trySetupIconRegistry()) {
-        setTimeout(() => trySetupIconRegistry(), 2000)
-      }
-    }, 500)
-  }
+  sobaldDienstDa<any>(context, 'gene.icons.classRegistry', () => trySetupIconRegistry())
 
   // Provide a lazy accessor to the Problems panel so the metamodeler can publish
   // pre-save validation issues. Resolved on demand (ui-problems-panel may load later).

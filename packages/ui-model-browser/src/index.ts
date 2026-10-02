@@ -33,6 +33,32 @@ import { setIconRegistry } from './types'
  * TSM lifecycle: activate
  * Registers model browser services and panels
  */
+/**
+ * Ruft `fn`, sobald der Dienst da ist — und sofort, wenn er es schon ist.
+ *
+ * Module werden in Abhaengigkeitsreihenfolge geladen, optionale Dienste koennen
+ * aber spaeter kommen. Die Registry meldet Zugaenge selbst (ObservableServiceRegistry),
+ * also wird zugehoert statt in Abstaenden nachgesehen: Ein Dienst, der sich Zeit
+ * laesst, ging bei festen Fristen verloren.
+ */
+function sobaldDienstDa<T>(context: ModuleContext, serviceId: string, fn: (service: T) => void): void {
+  const vorhanden = context.services.get<T>(serviceId)
+  if (vorhanden !== undefined) {
+    fn(vorhanden)
+    return
+  }
+  const listener = {
+    onServiceEvent: (event: { type: string; serviceId: string }) => {
+      if (event.type !== 'registered' || event.serviceId !== serviceId) return
+      const dienst = context.services.get<T>(serviceId)
+      if (dienst === undefined) return
+      context.services.removeListener(listener)
+      fn(dienst)
+    }
+  }
+  context.services.addListener(listener)
+}
+
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Model Browser module...')
 
@@ -66,13 +92,7 @@ export async function activate(context: ModuleContext): Promise<void> {
     }
     return false
   }
-  if (!trySetupIconRegistry()) {
-    setTimeout(() => {
-      if (!trySetupIconRegistry()) {
-        setTimeout(() => trySetupIconRegistry(), 2000)
-      }
-    }, 500)
-  }
+  sobaldDienstDa<any>(context, 'gene.icons.classRegistry', () => trySetupIconRegistry())
 
   // Inject views service from ui-instance-tree (breaks circular dependency)
   // ui-instance-tree may load after model-browser, so retry if not available yet

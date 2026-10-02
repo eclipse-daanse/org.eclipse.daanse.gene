@@ -14,6 +14,9 @@ import {
   type PluginRepository,
   type DiscoveredModule,
   type ServiceRegistry,
+  type ObservableServiceRegistry,
+  type ServiceRegistryEvent,
+  type ServiceRegistryListener,
   type ModuleLogger
 } from '@eclipse-daanse/tsm'
 
@@ -232,6 +235,45 @@ export class TsmPluginSystem {
    */
   getService<T>(serviceId: string): T | undefined {
     return this.services.get<T>(serviceId)
+  }
+
+  /**
+   * Ruft `fn`, sobald der Dienst da ist — und sofort, wenn er es schon ist.
+   *
+   * Ein Modul kann spaeter aktiviert werden als sein Nutzer. Bisher half nur
+   * wiederholtes Nachsehen; blieb der Dienst in dieser Zeit aus, fiel die
+   * Anmeldung still aus. Die Registry meldet Zugaenge selbst, also wird
+   * zugehoert statt gewartet.
+   *
+   * @returns Funktion zum Abbestellen.
+   */
+  whenService<T>(serviceId: string, fn: (service: T) => void): () => void {
+    const vorhanden = this.services.get<T>(serviceId)
+    if (vorhanden !== undefined) {
+      fn(vorhanden)
+      return () => {}
+    }
+
+    const registry = this.services as Partial<ObservableServiceRegistry>
+    if (typeof registry.addListener !== 'function') {
+      // Ohne Ereignisse bleibt nur der Verzicht — besser als eine stille Schleife
+      this.logger.warn('[TSM] Registry meldet keine Zugaenge; warte nicht auf', serviceId)
+      return () => {}
+    }
+
+    const listener: ServiceRegistryListener = {
+      onServiceEvent: (event: ServiceRegistryEvent) => {
+        if (event.type !== 'registered' || event.serviceId !== serviceId) return
+        const dienst = this.services.get<T>(serviceId)
+        if (dienst === undefined) return
+        abbestellen()
+        fn(dienst)
+      }
+    }
+    const abbestellen = () => registry.removeListener?.(listener)
+
+    registry.addListener(listener)
+    return abbestellen
   }
 
   /**
