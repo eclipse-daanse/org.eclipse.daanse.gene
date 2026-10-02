@@ -1217,7 +1217,49 @@ function verdrahteTabSchliessen(layout: any): void {
   const contextService = tsm.getService<any>('gene.editor.context')
   layout.onEditorClosed((tabId: string) => {
     metamodelerComposables.value?.tabGeschlossen?.(tabId)
+    ;(instanceTreeComposables.value as any)?.instanzTabGeschlossen?.(tabId)
     contextService?.releaseTabContext?.(tabId)
+  })
+}
+
+/**
+ * Oeffnet eine Instanzdatei als eigenen Tab.
+ *
+ * Wie beim Metamodell: Der Tab meldet beim Aufbau sein Dokument und seinen
+ * Kontext an — Baum, Eigenschaften und Modell-Browser folgen ihm, weil immer
+ * nur der vordere Tab gerendert wird.
+ */
+function oeffneInstanzTab(tabId: string, titel: string): void {
+  const layoutSvc = layoutStateService.value
+  const itc: any = instanceTreeComposables.value
+  if (!layoutSvc || !itc?.instanzTabDokument) return
+  const layout = layoutSvc.useLayoutState()
+  verdrahteTabSchliessen(layout)
+  const contextService = tsm.getService<any>('gene.editor.context')
+  const PropertiesPanel = propertiesPanelComponents.value?.PropertiesPanel
+
+  const dokument = itc.instanzTabDokument(tabId)
+  const kontext = itc.createInstanceContext?.(dokument.instance)
+  if (kontext && contextService?.registerTabContext) {
+    contextService.registerTabContext(tabId, kontext)
+  }
+
+  layout.openEditor({
+    id: tabId,
+    title: titel,
+    icon: 'pi pi-file-edit',
+    component: markRaw(defineComponent({
+      setup() {
+        itc.instanzTabNachVorn?.(tabId)
+        contextService?.activateTabContext?.(tabId)
+        return () => PropertiesPanel
+          ? h(PropertiesPanel, {
+              context: contextService?.getCurrentContext?.() ?? kontext,
+              onShowProblems: handleShowProblems
+            })
+          : h('div', 'Eigenschaften nicht verfuegbar')
+      }
+    }))
   })
 }
 
@@ -1495,6 +1537,20 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
   // Where the loader may fetch missing metamodels from
   const resolution = await prepareMetamodelResolution(entry, entry.path)
 
+  /*
+   * Jede Datei bekommt ihren eigenen Tab mit eigenem Baum. Ab hier liegt er
+   * vorn, also laedt alles Folgende dorthin — die Funktionen des
+   * Instanz-Moduls arbeiten auf dem vorderen Dokument. Beim Zusammenfuehren
+   * (MERGE) bleibt der Tab, der gerade offen ist.
+   */
+  const instanzTabId: string | null = mode === 'MERGE'
+    ? null
+    : (itc.instanzTabIdFuer?.(entry.path) ?? null)
+  if (instanzTabId) {
+    itc.instanzTabDokument?.(instanzTabId)
+    itc.instanzTabNachVorn?.(instanzTabId)
+  }
+
   try {
     console.log('[App] Calling instance load, mode:', mode)
     let result: any
@@ -1508,6 +1564,7 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
       result = await itc.loadInstancesFromXMI(content, entry.path)
     }
     console.log('[App] Instances loaded from:', entry.name, 'count:', result.loadedCount, 'errors:', result.errors.length)
+    if (instanzTabId) oeffneInstanzTab(instanzTabId, entry.name || entry.path)
     reportMissingPackages(result.missingPackages, resolution.searched, entry, entry.path)
     // Was der Loader geholt hat, gehoert auch in die Modell-Liste (#155)
     await registerMetamodelsAsModels(entry.path)
@@ -1975,14 +2032,26 @@ function setupModelEditorPerspective(layout: any) {
     panel: 'model-browser'
   })
 
-  // Open properties in center (editor area)
-  layout.openEditor({
-    id: 'properties',
-    title: 'Properties',
-    icon: 'pi pi-sliders-h',
-    component: markRaw(PropertiesPanelWrapper),
-    closable: false
-  })
+  /*
+   * Die Tabs sind die geoeffneten Instanzdateien — jede traegt ihre Ansicht.
+   * Ein Perspektivwechsel raeumt die Leiste (clearAll), die Dateien bleiben
+   * offen und werden hier wieder eingehaengt. Ist keine offen, steht wie bisher
+   * ein fester Eigenschaften-Tab da.
+   */
+  const offeneInstanzen: string[] = (instanceTreeComposables.value as any)?.offeneInstanzTabIds?.() ?? []
+  if (offeneInstanzen.length === 0) {
+    layout.openEditor({
+      id: 'properties',
+      title: 'Properties',
+      icon: 'pi pi-sliders-h',
+      component: markRaw(PropertiesPanelWrapper),
+      closable: false
+    })
+  } else {
+    for (const tabId of offeneInstanzen) {
+      oeffneInstanzTab(tabId, tabId.replace(/^instance:/, '').split('/').pop() || tabId)
+    }
+  }
 
   // Create wrapper for OCL panel with event handlers
   const ProblemsPanelWrapper = defineComponent({

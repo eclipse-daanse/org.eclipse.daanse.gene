@@ -35,6 +35,15 @@ export {
 } from './context/editorContext'
 
 export { createInstanceContext } from './context/instanceContext'
+// Eine Instanzdatei je Editor-Tab
+export {
+  instanzTabIdFuer,
+  instanzTabDokument,
+  instanzTabIstGeladen,
+  instanzTabNachVorn,
+  instanzTabGeschlossen,
+  offeneInstanzTabIds
+} from './composables/tabDokumente'
 export { createMetamodelContext } from './context/metamodelContext'
 
 // Re-export composables
@@ -46,6 +55,8 @@ export {
   getInstanceLoadingState,
   loadInstancesFromXMI,
   setPackageURIConverter,
+  setActiveInstanceDocument,
+  clearActiveInstanceDocument,
   getObjectSourcePath,
   setObjectSourcePath,
   setCanonicalPackageRegistry,
@@ -158,6 +169,14 @@ import { getIconRegistryService } from './services/iconRegistry'
 
 // Import context functions for service registration
 import { createInstanceContext, setTsmContext } from './context/instanceContext'
+import {
+  instanzTabIdFuer,
+  instanzTabDokument,
+  instanzTabIstGeladen,
+  instanzTabNachVorn,
+  instanzTabGeschlossen,
+  offeneInstanzTabIds
+} from './composables/tabDokumente'
 import { createMetamodelContext } from './context/metamodelContext'
 
 // Import icon provider system
@@ -303,6 +322,14 @@ export async function activate(context: ModuleContext): Promise<void> {
     loadResourceStandalone,
     setInstanceFileReader,
     setPackageURIConverter,
+    // Eine Instanzdatei je Editor-Tab
+    instanzTabIdFuer,
+    instanzTabDokument,
+    instanzTabIstGeladen,
+    instanzTabNachVorn,
+    instanzTabGeschlossen,
+    offeneInstanzTabIds,
+    createInstanceContext,
     getObjectSourcePath,
     setObjectSourcePath,
     // XMI ID functions
