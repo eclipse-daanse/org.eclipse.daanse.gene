@@ -224,6 +224,14 @@ const workspaceActionsService: WorkspaceActionService = {
     }
   },
   createInstance: (classInfo) => handleCreateInstance(classInfo),
+  merkeEditorWahl: (zuordnung) => {
+    const editorConfig = getGlobalEditorConfig()
+    if (!editorConfig?.merkeEditorWahl?.(zuordnung)) return
+    // Die Registry arbeitet sofort damit, gespeichert wird mit dem Workspace
+    tsm.getService<any>('gene.editor.context')?.setEditorZuordnungen?.(
+      editorConfig.editorBindings?.value ?? []
+    )
+  },
   get isWorkspaceOpen() {
     if (!_isWorkspaceOpen) {
       _isWorkspaceOpen = computed(() => !!currentWorkspaceEntry.value)
@@ -232,6 +240,44 @@ const workspaceActionsService: WorkspaceActionService = {
   }
 }
 registerWorkspaceActions(workspaceActionsService, tsm)
+
+/*
+ * Welche Ansichten es gibt und was sie oeffnen koennen.
+ *
+ * Eine Datei hat nicht eine Ansicht: ein eorm-Mapping laesst sich als
+ * eorm-Ansicht oeffnen oder als gewoehnlicher Instanzbaum. Die Registry fuehrt
+ * die Kandidaten, „Oeffnen mit" im Explorer zeigt sie.
+ *
+ * Die Anmeldung wartet auf den Kontext-Dienst — ui-instance-tree bringt ihn
+ * mit und kann spaeter aktiviert werden als gene-app.
+ */
+function registriereEditorArten(): boolean {
+  const ctxSvc = tsm.getService<any>('gene.editor.context')
+  if (!ctxSvc?.registerEditorArt) return false
+
+  ctxSvc.registerEditorArt({
+    id: 'metamodel',
+    name: 'Metamodell-Editor',
+    icon: 'pi pi-sitemap',
+    extensions: ['.ecore'],
+    priority: 10,
+    oeffnen: (datei: any, inhalt: string) => handleMetamodelEdit(datei, inhalt)
+  })
+
+  ctxSvc.registerEditorArt({
+    id: 'instance',
+    name: 'Instanz-Editor',
+    icon: 'pi pi-database',
+    extensions: ['.xmi'],
+    priority: 10,
+    oeffnen: (datei: any, inhalt: string) => handleInstanceAdd(datei, inhalt)
+  })
+
+  return true
+}
+if (!registriereEditorArten()) {
+  setTimeout(registriereEditorArten, 500)
+}
 
 // Command Palette
 const commandPaletteRef = ref<any>(null)

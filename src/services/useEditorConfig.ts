@@ -941,6 +941,64 @@ export function useEditorConfig() {
    * @param name Optional display name (defaults to filename)
    * @param options Additional options
    */
+  /**
+   * Haelt fest, mit welcher Ansicht eine Datei geoeffnet wird.
+   *
+   * Am Metamodell, wenn eines erkennbar war — die Wahl gilt dann fuer alle
+   * Dateien dieses Modells. Sonst am Pfad dieser einen. Ein vorhandener
+   * Eintrag fuer denselben Schluessel wird ersetzt, nicht verdoppelt.
+   */
+  function merkeEditorWahl(zuordnung: { pattern?: string; nsURI?: string; editorId: string }): boolean {
+    if (!editorConfig.value || !zuordnung.editorId) return false
+    if (!zuordnung.pattern && !zuordnung.nsURI) return false
+
+    const rawConfig = toRaw(editorConfig.value) as any
+    const feature = rawConfig.eClass?.()?.getEStructuralFeature?.('editorBindings')
+    const liste = feature ? rawConfig.eGet(feature) : rawConfig.editorBindings
+    if (!liste) return false
+
+    const lesen = (eintrag: any, name: string) => {
+      const direkt = eintrag?.[name]
+      if (direkt !== undefined) return direkt
+      const f = eintrag?.eClass?.()?.getEStructuralFeature?.(name)
+      return f ? eintrag.eGet(f) : undefined
+    }
+    const schreiben = (eintrag: any, name: string, wert: any) => {
+      const f = eintrag?.eClass?.()?.getEStructuralFeature?.(name)
+      if (f) eintrag.eSet(f, wert)
+      else eintrag[name] = wert
+    }
+
+    const vorhanden = (liste.toArray?.() ?? liste ?? []).find(
+      (e: any) =>
+        (zuordnung.pattern && lesen(e, 'pattern') === zuordnung.pattern) ||
+        (zuordnung.nsURI && !lesen(e, 'pattern') && lesen(e, 'nsURI') === zuordnung.nsURI)
+    )
+    if (vorhanden) {
+      if (lesen(vorhanden, 'editorId') === zuordnung.editorId) return false
+      schreiben(vorhanden, 'editorId', zuordnung.editorId)
+      dirty.value = true
+      return true
+    }
+
+    const bindingKlasse = feature?.getEType?.()
+    const neu = bindingKlasse
+      ? (toRaw(editorConfig.value) as any).eClass().getEPackage().getEFactoryInstance().create(bindingKlasse)
+      : null
+    if (!neu) return false
+
+    if (zuordnung.pattern) schreiben(neu, 'pattern', zuordnung.pattern)
+    if (zuordnung.nsURI) schreiben(neu, 'nsURI', zuordnung.nsURI)
+    schreiben(neu, 'editorId', zuordnung.editorId)
+
+    if (typeof liste.add === 'function') liste.add(neu)
+    else if (typeof liste.push === 'function') liste.push(neu)
+    else return false
+
+    dirty.value = true
+    return true
+  }
+
   function addModelSource(
     location: string,
     name?: string,
@@ -1824,6 +1882,7 @@ export function useEditorConfig() {
     removeCustomIcon,
     loadCustomIconsIntoRegistry,
     // Model source methods
+    merkeEditorWahl,
     addModelSource,
     removeModelSource,
     findModelSourceByLocation,

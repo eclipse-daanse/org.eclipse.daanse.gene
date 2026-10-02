@@ -28,6 +28,7 @@ import {
   setEditorZuordnungen,
   kandidatenFuer,
   editorFuer,
+  wurzelNsUri,
   type EditorArt,
   type EditorZuordnung
 } from './editorRegistry'
@@ -187,6 +188,7 @@ export interface EditorContextService {
   setEditorZuordnungen: (zuordnungen: EditorZuordnung[]) => void
   kandidatenFuer: (pfad: string, inhalt?: string) => EditorArt[]
   editorFuer: (pfad: string, inhalt?: string) => EditorArt | null
+  wurzelNsUri: (inhalt: string) => string | null
   activateTabContext: (tabId: string) => void
   releaseTabContext: (tabId: string) => void
 }
@@ -208,6 +210,7 @@ export function getEditorContextService(): EditorContextService {
     setEditorZuordnungen,
     kandidatenFuer,
     editorFuer,
+    wurzelNsUri,
     activateTabContext,
     releaseTabContext,
     registerInstanceContextFactory,
