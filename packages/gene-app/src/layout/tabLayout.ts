@@ -37,6 +37,14 @@ export interface TabLayoutService {
   activateTab(tabId: string | null | undefined): void
   /** Which view carries this tab, if any. */
   editorIdOf(tabId: string): string | undefined
+  /**
+   * The view carrying the tab in front, if any.
+   *
+   * For everything that used to follow the perspective and has to follow the
+   * open file instead - the menu bar above all. A view names the perspective it
+   * supersedes, and that name is still the key its menu is filed under.
+   */
+  frontArt(): EditorArt | undefined
 }
 
 export interface TabLayoutOptions {
@@ -47,6 +55,7 @@ export interface TabLayoutOptions {
 
 export function createTabLayout({ frame, editorArtById }: TabLayoutOptions): TabLayoutService {
   const editorIdByTab = new Map<string, string>()
+  let frontTabId: string | null = null
 
   return {
     bindTab(tabId: string, editorId: string): void {
@@ -55,13 +64,20 @@ export function createTabLayout({ frame, editorArtById }: TabLayoutOptions): Tab
 
     releaseTab(tabId: string): void {
       editorIdByTab.delete(tabId)
+      if (frontTabId === tabId) frontTabId = null
     },
 
     editorIdOf(tabId: string): string | undefined {
       return editorIdByTab.get(tabId)
     },
 
+    frontArt(): EditorArt | undefined {
+      const editorId = frontTabId === null ? undefined : editorIdByTab.get(frontTabId)
+      return editorId === undefined ? undefined : editorArtById(editorId)
+    },
+
     activateTab(tabId: string | null | undefined): void {
+      frontTabId = tabId ?? null
       const editorId = tabId === null || tabId === undefined ? undefined : editorIdByTab.get(tabId)
       const panels = editorId === undefined ? undefined : editorArtById(editorId)?.panels
 

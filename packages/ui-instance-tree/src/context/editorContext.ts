@@ -21,6 +21,7 @@ const currentMode = ref<EditorMode>('instance')
 // reads it so that consumer computeds re-resolve once a lazily-loaded plugin (e.g. the
 // metamodeler) registers its factory AFTER the consumer first evaluated — otherwise the
 // consumer would cache the null it saw before the factory existed and never recover.
+import { createMetamodelContext } from './metamodelContext'
 import {
   registerEditorArt,
   unregisterEditorArt,
@@ -96,11 +97,20 @@ export function registerTabContext(tabId: string, context: EditorContext): void 
   factoryEpoch.value++
 }
 
-/** Brings a tab's context to the front — the panels follow it. */
+/**
+ * Brings a tab's context to the front — the panels follow it.
+ *
+ * Including the mode. It used to be set when the perspective changed, and with
+ * the perspective gone nothing set it any more: a metamodel tab was answered
+ * with the instance context, so the properties panel asked for a selection in
+ * an instance tree that was not there. The tab in front decides the mode, which
+ * is where that decision belonged all along.
+ */
 export function activateTabContext(tabId: string): void {
   const context = tabContexts.get(tabId)
   if (!context) return
   activeTabByMode[context.mode] = tabId
+  currentMode.value = context.mode
   factoryEpoch.value++
 }
 
@@ -183,6 +193,14 @@ export interface EditorContextService {
   registerInstanceContextFactory: (factory: () => EditorContext) => void
   registerMetamodelContextFactory: (factory: () => EditorContext) => void
   registerTabContext: (tabId: string, context: EditorContext) => void
+  /**
+   * Builds the context of one metamodel tab.
+   *
+   * It was missing from the service, so `oeffneMetamodellTab` got `undefined`
+   * and registered no context at all. Nothing showed, because the mode still
+   * came from the perspective and answered with the shared context by accident.
+   */
+  createMetamodelContext: (metamodeler: unknown) => EditorContext
   registerEditorArt: (art: EditorArt) => void
   unregisterEditorArt: (id: string) => boolean
   alleEditorArten: () => EditorArt[]
@@ -206,6 +224,7 @@ export function getEditorContextService(): EditorContextService {
     getMetamodelContext,
     setEditorMode,
     registerTabContext,
+    createMetamodelContext,
     registerEditorArt,
     unregisterEditorArt,
     alleEditorArten,
