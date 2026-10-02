@@ -19,14 +19,16 @@ import type { Component } from 'vue'
  * Named, not owned: the panels are registered once with the frame, and a view
  * only says which of them are its own. That is what lets a tab change the left
  * tree without the layout being torn down and built again.
+ *
+ * The bottom area is deliberately not here. Problems and jobs are the
+ * application's, not one file's: they show themselves when there is something
+ * to show, and are a keystroke away otherwise.
  */
 export interface EditorArtPanels {
   /** Bottom left: the tree of this file */
   tree?: string
   /** Right */
   secondary?: string[]
-  /** Bottom */
-  bottom?: string[]
 }
 
 /** The little a view needs to know about the file it is handed. */

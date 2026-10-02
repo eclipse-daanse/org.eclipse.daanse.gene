@@ -13,7 +13,7 @@ import AppComponent from './App.vue'
 import appRouter from '@/router'
 
 // PrimeVue config (from TSM shared library)
-import { PrimeVue, Aura, Tooltip } from 'tsm:primevue'
+import { PrimeVue, Aura, Tooltip, Button } from 'tsm:primevue'
 import { useSharedEditorConfig } from '@/services/useEditorConfig'
 export type { EditorConfigService } from '@/services/useEditorConfig'
 import appCommandsEcore from '../model/app-commands.ecore?raw'
@@ -53,6 +53,19 @@ export async function activate(context: ModuleContext): Promise<void> {
       }
     }
   })
+
+  /*
+   * Das CSS des Buttons anstossen.
+   *
+   * PrimeVue laedt das Stylesheet einer Komponente beim ersten Mount. Bei allen
+   * anderen geschieht das auch — Eingabefeld, Auswahl, Baum, Dialog stehen in
+   * der Liste der geladenen Stile, der Button nicht. Ohne sein CSS ist er ein
+   * nacktes `<button>`: `display: block` statt `inline-flex`, also kleben Icon
+   * und Beschriftung aneinander, und die Farben des Themes fehlen.
+   *
+   * Ein zweiter Aufruf kostet nichts, PrimeVue laedt jedes Stylesheet einmal.
+   */
+  ;(Button as { extends?: { style?: { loadStyle?: () => void } } })?.extends?.style?.loadStyle?.()
 
   app.directive('tooltip', Tooltip)
   app.use(appRouter)

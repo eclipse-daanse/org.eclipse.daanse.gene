@@ -14,7 +14,7 @@ export class MetamodelView implements EditorArt {
   readonly priority = 10
   readonly replacesPerspective = 'metamodeler'
 
-  readonly panels: EditorArtPanels = { tree: 'metamodeler-tree', secondary: ['model-browser'], bottom: ['ocl-problems'] }
+  readonly panels: EditorArtPanels = { tree: 'metamodeler-tree', secondary: ['model-browser'] }
 
   open(file: OpenableFile, content: string): Promise<void> | void {
     return getWorkspaceActions()?.openMetamodelInEditor(file, content)

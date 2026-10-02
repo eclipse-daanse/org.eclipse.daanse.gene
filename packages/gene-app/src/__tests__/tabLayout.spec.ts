@@ -10,7 +10,7 @@ const VIEWS: Record<string, EditorArt> = {
     id: 'instance',
     name: 'Instanz-Editor',
     extensions: ['.xmi'],
-    panels: { tree: 'instance-tree', secondary: ['model-browser'], bottom: ['ocl-problems'] }
+    panels: { tree: 'instance-tree', secondary: ['model-browser'] }
   },
   metamodel: {
     id: 'metamodel',
@@ -57,7 +57,6 @@ describe('A tab coming forward', () => {
 
     expect(selected).toContainEqual(['secondary', 'model-browser'])
     expect(secondaryShown).toEqual([true])
-    expect(selected).toContainEqual(['panel', 'ocl-problems'])
   })
 
   it('clears the zones its view did not claim', () => {
