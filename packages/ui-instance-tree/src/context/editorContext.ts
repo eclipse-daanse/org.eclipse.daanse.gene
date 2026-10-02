@@ -64,6 +64,57 @@ export function registerMetamodelContextFactory(factory: () => EditorContext): v
 let cachedInstanceContext: EditorContext | null = null
 let cachedMetamodelContext: EditorContext | null = null
 
+/*
+ * Contexts that belong to an editor tab — one tab, one open file.
+ *
+ * The tab bars are per view: the metamodeler shows the .ecore files being
+ * edited, the model editor the instances. So the active tab is kept per mode,
+ * and whoever asks for the current context gets the one of the tab in front.
+ * As long as nobody registers a tab, everything stays as it was: one context
+ * per mode.
+ */
+const tabContexts = new Map<string, EditorContext>()
+const activeTabByMode: Record<EditorMode, string | null> = { instance: null, metamodel: null }
+
+/** Ties a context to a tab. Called when a file is opened in its own tab. */
+export function registerTabContext(tabId: string, context: EditorContext): void {
+  tabContexts.set(tabId, context)
+  activeTabByMode[context.mode] = tabId
+  factoryEpoch.value++
+}
+
+/** Brings a tab's context to the front — the panels follow it. */
+export function activateTabContext(tabId: string): void {
+  const context = tabContexts.get(tabId)
+  if (!context) return
+  activeTabByMode[context.mode] = tabId
+  factoryEpoch.value++
+}
+
+/**
+ * Lets go of a tab's context when the tab closes. The mode falls back to
+ * another open tab, or to the context of the mode itself.
+ */
+export function releaseTabContext(tabId: string): void {
+  const context = tabContexts.get(tabId)
+  if (!context) return
+  tabContexts.delete(tabId)
+  if (activeTabByMode[context.mode] === tabId) {
+    let nachfolger: string | null = null
+    for (const [id, ctx] of tabContexts) {
+      if (ctx.mode === context.mode) nachfolger = id
+    }
+    activeTabByMode[context.mode] = nachfolger
+  }
+  factoryEpoch.value++
+}
+
+/** The context of the tab in front, for the given mode. */
+function tabContextFor(mode: EditorMode): EditorContext | null {
+  const tabId = activeTabByMode[mode]
+  return tabId ? tabContexts.get(tabId) ?? null : null
+}
+
 /**
  * Get the current context based on mode (non-reactive, for one-time access)
  */
@@ -72,6 +123,9 @@ export function getCurrentContext(): EditorContext | null {
   // when a context factory registers later (see factoryEpoch above).
   void factoryEpoch.value
   const mode = currentMode.value
+
+  const ausTab = tabContextFor(mode)
+  if (ausTab) return ausTab
 
   if (mode === 'instance') {
     if (!cachedInstanceContext && instanceContextFactory) {
@@ -115,6 +169,9 @@ export interface EditorContextService {
   setEditorMode: (mode: EditorMode) => void
   registerInstanceContextFactory: (factory: () => EditorContext) => void
   registerMetamodelContextFactory: (factory: () => EditorContext) => void
+  registerTabContext: (tabId: string, context: EditorContext) => void
+  activateTabContext: (tabId: string) => void
+  releaseTabContext: (tabId: string) => void
 }
 
 /**
@@ -127,6 +184,9 @@ export function getEditorContextService(): EditorContextService {
     getInstanceContext,
     getMetamodelContext,
     setEditorMode,
+    registerTabContext,
+    activateTabContext,
+    releaseTabContext,
     registerInstanceContextFactory,
     registerMetamodelContextFactory
   }

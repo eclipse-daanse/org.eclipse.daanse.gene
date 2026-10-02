@@ -2452,10 +2452,56 @@ function getOrCreateSharedState(): SharedState {
   return _sharedState
 }
 
+type MetamodelerInstanz = ReturnType<typeof useMetamodeler>
+
+/**
+ * Die Instanz, die gerade vorn liegt.
+ *
+ * Jeder Editor-Tab bringt seine eigene mit, damit mehrere .ecore gleichzeitig
+ * offen sein koennen. Baum und Eigenschaften liegen aber im Seitenbereich und
+ * werden beim Tab-Wechsel nicht neu aufgebaut — sie halten deshalb die Fassade
+ * unten, die bei jedem Zugriff durchreicht.
+ */
+const aktiveInstanz = shallowRef<MetamodelerInstanz | null>(null)
+
+/** Meldet die Instanz des Tabs, der nach vorn kommt. */
+export function setActiveMetamodeler(instanz: MetamodelerInstanz): void {
+  aktiveInstanz.value = instanz
+}
+
+/** Gibt die Instanz frei, wenn ihr Tab schliesst. */
+export function clearActiveMetamodeler(instanz: MetamodelerInstanz): void {
+  if (aktiveInstanz.value === instanz) aktiveInstanz.value = null
+}
+
+/** Die Instanz hinter der Fassade: der vordere Tab, sonst die gemeinsame. */
+function zielInstanz(): MetamodelerInstanz {
+  return aktiveInstanz.value ?? getOrCreateSharedState().instance
+}
+
+let fassade: MetamodelerInstanz | null = null
+
 /**
  * Get the shared metamodeler instance
+ *
+ * Liefert eine Fassade auf die vordere Instanz. Sie liest dafuer `aktiveInstanz`
+ * bei jedem Zugriff, also laeuft die Reaktivitaet mit: wer `rootPackage.value`
+ * in einem computed liest, rechnet beim Tab-Wechsel neu. Wer ein Feld einmal
+ * herausnimmt und festhaelt, haelt dagegen die Instanz von damals — die
+ * Komponenten greifen deshalb durchgaengig ueber die Fassade zu.
  */
-export function useSharedMetamodeler(): ReturnType<typeof useMetamodeler> {
-  const state = getOrCreateSharedState()
-  return state.instance
+export function useSharedMetamodeler(): MetamodelerInstanz {
+  if (!fassade) {
+    fassade = new Proxy({} as MetamodelerInstanz, {
+      get: (_ziel, feld) => Reflect.get(zielInstanz() as object, feld),
+      has: (_ziel, feld) => Reflect.has(zielInstanz() as object, feld),
+      ownKeys: () => Reflect.ownKeys(zielInstanz() as object),
+      getOwnPropertyDescriptor: (_ziel, feld) => {
+        const beschreibung = Reflect.getOwnPropertyDescriptor(zielInstanz() as object, feld)
+        // Ein Proxy darf nur konfigurierbare Felder melden, die sein Ziel nicht hat
+        return beschreibung ? { ...beschreibung, configurable: true } : undefined
+      }
+    })
+  }
+  return fassade
 }
