@@ -21,6 +21,7 @@ const OCL_SOURCES = ['http://www.eclipse.org/fennec/m2x/ocl/1.0', 'http://www.ec
 function isOclSource(s: string | null | undefined): boolean { return !!s && OCL_SOURCES.includes(s) }
 import type { PerspectiveManager } from 'ui-perspectives'
 import { registerWorkspaceActions } from './services/WorkspaceActionService'
+import { createTabLayout, type TabLayoutService } from './layout/tabLayout'
 import { prepareAtlasResolution, registerUsedModels } from './services/atlasResolution'
 import type { WorkspaceActionService, FileEntryLike } from './services/WorkspaceActionService'
 
@@ -307,7 +308,8 @@ async function resolveRepairPrompt(doRepair: boolean) {
     if (info) {
       // Repaired only in memory — mark dirty so the user can persist the clean form.
       try { metamodeler.dirty.value = true } catch { /* no-op */ }
-      perspectiveManager.value?.switchTo('metamodeler')
+      // Ein Tab statt eines Perspektivwechsels — die Datei ist offen, nicht die Ansicht
+      oeffneMetamodellTab(`metamodel:${pending.entry.path}`, pending.entry.name || 'Metamodell', metamodeler)
     } else {
       showMetamodelLoadError(pending.entry, 'Reparatur hat das Laden nicht ermöglicht.')
     }
@@ -635,10 +637,14 @@ async function handleOpenWorkspace(entry: any, content: string) {
     workspaceContent.value = content
     currentWorkspaceEntry.value = entry
 
-    // Force perspective setup
+    /*
+     * Kein Aufbau mehr beim Oeffnen: Die Flaeche steht seit dem Start. Was der
+     * Workspace mitbringt, sind Groessen und Sichtbarkeiten — die werden
+     * angewandt, mehr nicht.
+     */
     if (layoutStateService.value) {
       const layout = layoutStateService.value.useLayoutState()
-      setupModelEditorPerspective(layout)
+      baueArbeitsflaeche(layout)
 
       // Apply layout from EditorConfig (after perspective is set up)
       const editorConfigInstance = getGlobalEditorConfig()
@@ -1044,20 +1050,95 @@ function handlePerspectiveChange(perspectiveId: string) {
     }
   }
 
-  // Core perspectives have custom wrapper components with context/event bindings
-  // These MUST use their App.vue setup functions, not PerspectiveManager.switchTo()
-  if (perspectiveId === 'explorer') {
-    setupFileExplorerPerspective(layout)
-  } else if (perspectiveId === 'model-editor') {
-    setupModelEditorPerspective(layout)
-  } else if (perspectiveId === 'metamodeler') {
-    setupMetamodelerPerspective(layout)
-  } else if (perspectiveManager.value && perspectiveManager.value.registry.get(perspectiveId)) {
-    // Plugin perspectives → delegate to PerspectiveManager.switchTo()
-    perspectiveManager.value.switchTo(perspectiveId)
-  } else {
-    console.warn(`[App] Perspective '${perspectiveId}' not found in registry`)
+  /*
+   * Eine Perspektive waehlt nur noch den Navigator oben links. Sie baut nichts
+   * auf: Die Flaeche steht, und was in ihr zu sehen ist, bestimmt der Tab.
+   */
+  waehleNavigator(layout, perspectiveId)
+}
+
+/**
+ * Welcher Navigator oben links steht — mehr entscheidet eine Perspektive nicht.
+ *
+ * Welches Panel das ist, sagt die Perspektive selbst: das erste, das sie links
+ * haben wollte. Der Explorer ist die Ausnahme, weil er der Anwendung gehoert
+ * und nicht aus der Registry kommt.
+ */
+function waehleNavigator(layout: any, perspectiveId: string): void {
+  const navigatorId = perspectiveId === 'explorer'
+    ? 'file-explorer'
+    : navigatorPanelId(perspectiveId)
+  if (!navigatorId) return
+
+  holePanelNachOben(layout, perspectiveId, navigatorId)
+  oeffnePerspektivMitte(layout, perspectiveId)
+  layout.selectPanel(navigatorId, 'primary')
+  layout.setPrimarySidebarVisible(true)
+}
+
+/**
+ * Was eine Perspektive in die Mitte stellen wollte, wird ein Tab.
+ *
+ * Der Atlas zeigt, warum: Seine Transitions, der Schema-Explorer und die
+ * Details sind drei Ansichten nebeneinander — als Perspektive waren sie an
+ * einen Aufbau gebunden, der alles andere mitriss. Als Tabs stehen sie neben
+ * dem, was sonst offen ist.
+ *
+ * Ein schon offener Tab wird nicht nach vorn geholt: Wer die Perspektive
+ * wechselt, will den Navigator, nicht zwingend einen anderen Tab.
+ */
+function oeffnePerspektivMitte(layout: any, perspectiveId: string): void {
+  const perspektive = perspectiveManager.value?.registry?.get?.(perspectiveId)
+  const mitte: string[] = perspektive?.defaultLayout?.center ?? []
+  if (mitte.length === 0) return
+
+  const panelRegistry = tsm.getService('ui.registry.panels') as any
+  const verfuegbar = panelRegistry?.getForPerspective?.(perspectiveId) ?? []
+  const offen = new Set((layout.state.editorTabs ?? []).map((t: any) => t.id))
+  const zuvorAktiv = layout.state.activeEditorTabId
+
+  for (const panelId of mitte) {
+    if (offen.has(panelId)) continue
+    const panel = verfuegbar.find((p: any) => p.id === panelId)
+    if (!panel) continue
+    layout.openEditor({
+      id: panel.id,
+      title: panel.title,
+      icon: panel.icon,
+      component: markRaw(panel.component),
+      closable: panel.closable ?? true
+    })
   }
+
+  // openEditor holt den neuen Tab nach vorn — das war hier nicht gewollt
+  if (zuvorAktiv) layout.selectEditor?.(zuvorAktiv)
+}
+
+/** Das Panel, das eine Perspektive links stehen haben wollte. */
+function navigatorPanelId(perspectiveId: string): string | undefined {
+  const perspektive = perspectiveManager.value?.registry?.get?.(perspectiveId)
+  return perspektive?.defaultLayout?.left?.[0]
+}
+
+/**
+ * Das Navigator-Panel eines Plugins in die Flaeche holen.
+ *
+ * Bisher tat das `switchTo`, und zwar mit `clearAll()` davor — damit war die
+ * uebrige Flaeche weg. Hier wird nur ergaenzt; `registerPanel` ersetzt bei
+ * gleicher Id, ein zweiter Aufruf kostet also nichts.
+ */
+function holePanelNachOben(layout: any, perspectiveId: string, panelId: string): void {
+  if (layout.state.panels?.some((p: any) => p.id === panelId)) return
+  const panelRegistry = tsm.getService('ui.registry.panels') as any
+  const panel = panelRegistry?.getForPerspective?.(perspectiveId)?.find((p: any) => p.id === panelId)
+  if (!panel) return
+  layout.registerPanel({
+    id: panel.id,
+    title: panel.title,
+    icon: panel.icon,
+    component: markRaw(panel.component),
+    location: 'primary'
+  })
 }
 
 // Handle object selection in instance tree
@@ -1236,6 +1317,28 @@ let schliessenVerdrahtet = false
  * Bewusst am Ereignis und nicht am Zustand: ein Perspektivwechsel raeumt die
  * Leiste ebenfalls (clearAll), die Dateien bleiben dabei aber offen.
  */
+/*
+ * Welche Panels zum vorderen Tab gehoeren.
+ *
+ * Der Dienst kennt weder die Ansichten noch das Layout — beides wird ihm
+ * gereicht. Hier wird es zusammengesteckt, weil hier beides zur Hand ist.
+ */
+let tabLayout: TabLayoutService | null = null
+function holeTabLayout(layout: any): TabLayoutService {
+  if (!tabLayout) {
+    const contextService = tsm.getService<any>('gene.editor.context')
+    tabLayout = createTabLayout({
+      frame: {
+        selectPanel: (panelId, bereich) => layout.selectPanel?.(panelId, bereich),
+        setSecondarySidebarVisible: (sichtbar) => layout.setSecondarySidebarVisible?.(sichtbar)
+      },
+      editorArtById: (editorId) =>
+        contextService?.alleEditorArten?.().find((a: any) => a.id === editorId)
+    })
+  }
+  return tabLayout
+}
+
 function verdrahteTabSchliessen(layout: any): void {
   if (schliessenVerdrahtet || !layout.onEditorClosed) return
   schliessenVerdrahtet = true
@@ -1244,6 +1347,7 @@ function verdrahteTabSchliessen(layout: any): void {
     metamodelerComposables.value?.tabGeschlossen?.(tabId)
     ;(instanceTreeComposables.value as any)?.instanzTabGeschlossen?.(tabId)
     contextService?.releaseTabContext?.(tabId)
+    holeTabLayout(layout).releaseTab(tabId)
   })
 }
 
@@ -1268,6 +1372,8 @@ function oeffneInstanzTab(tabId: string, titel: string): void {
   if (kontext && contextService?.registerTabContext) {
     contextService.registerTabContext(tabId, kontext)
   }
+  const tabs = holeTabLayout(layout)
+  tabs.bindTab(tabId, 'instance')
 
   layout.openEditor({
     id: tabId,
@@ -1277,8 +1383,8 @@ function oeffneInstanzTab(tabId: string, titel: string): void {
       setup() {
         itc.instanzTabNachVorn?.(tabId)
         contextService?.activateTabContext?.(tabId)
-        // Unten links der Baum zu dieser Datei
-        layout.selectPanel?.('instance-tree', 'primary-bottom')
+        // Was zu dieser Ansicht gehoert, kommt mit nach vorn
+        tabs.activateTab(tabId)
         return () => PropertiesPanel
           ? h(PropertiesPanel, {
               context: contextService?.getCurrentContext?.() ?? kontext,
@@ -1302,6 +1408,8 @@ function oeffneMetamodellTab(tabId: string, titel: string, metamodeler: any): vo
   if (kontext && contextService?.registerTabContext) {
     contextService.registerTabContext(tabId, kontext)
   }
+  const tabs = holeTabLayout(layout)
+  tabs.bindTab(tabId, 'metamodel')
 
   layout.openEditor({
     id: tabId,
@@ -1312,8 +1420,8 @@ function oeffneMetamodellTab(tabId: string, titel: string, metamodeler: any): vo
         // Gerendert wird nur der vordere Tab — also ist das hier der Wechsel
         metamodelerComposables.value?.tabNachVorn?.(tabId)
         contextService?.activateTabContext?.(tabId)
-        // Unten links der Baum zu dieser Datei
-        layout.selectPanel?.('metamodeler-tree', 'primary-bottom')
+        // Was zu dieser Ansicht gehoert, kommt mit nach vorn
+        tabs.activateTab(tabId)
         return () => PropertiesPanel
           ? h(PropertiesPanel, {
               context: contextService?.getCurrentContext?.() ?? kontext,
@@ -1377,11 +1485,6 @@ async function handleMetamodelEdit(entry: any, content: string) {
   if (packageInfo) {
     console.log('[App] Metamodel loaded:', packageInfo.name, packageInfo.nsURI)
     oeffneMetamodellTab(tabId, entry.name || packageInfo.name, metamodeler)
-    if (perspectiveManager.value) {
-      perspectiveManager.value.switchTo('metamodeler')
-    } else {
-      console.warn('[App] PerspectiveManager not available')
-    }
     return
   }
 
@@ -1844,82 +1947,38 @@ async function handleDmnLoad(entry: any, content: string) {
   }
 }
 
-// Setup perspectives
-function setupFileExplorerPerspective(layout: any) {
-  // Clear existing panels
-  layout.clearAll()
-
-  const FileExplorer = fileExplorerComponents.value?.FileExplorer
+/**
+ * Die Workspace-Vorschau in der Mitte — solange keine Datei offen ist.
+ *
+ * Kein eigener Aufbau mehr: Die Flaeche steht schon, hier kommt nur der Tab
+ * dazu. Er ist nicht schliessbar und weicht, sobald eine Datei geoeffnet wird.
+ */
+function zeigeWorkspaceVorschau(layout: any): void {
   const WorkspacePreview = fileExplorerComponents.value?.WorkspacePreview
-
-  if (!FileExplorer || !WorkspacePreview) {
-    console.warn('File explorer components not loaded')
+  if (!WorkspacePreview) {
+    tsm.whenService<any>('ui.file-explorer.components', (fec: any) => {
+      fileExplorerComponents.value = fec
+      zeigeWorkspaceVorschau(layout)
+    })
     return
   }
 
-  // Create wrapper for file explorer with event handlers
-  const FileExplorerWrapper = defineComponent({
+  const Wrapper = defineComponent({
     setup() {
-      // Track workspace open state reactively
-      const isWorkspaceOpen = computed(() => {
-        const isOpen = !!currentWorkspaceEntry.value
-        console.log('[FileExplorerWrapper] workspaceOpen:', isOpen, 'entry:', currentWorkspaceEntry.value?.name)
-        return isOpen
-      })
-
-      return () => h(FileExplorer, {
-        workspaceOpen: isWorkspaceOpen.value,
-        onFileSelect: handleFileSelect,
-        onModelAdd: handleModelAdd,
-        onInstanceAdd: handleInstanceAdd,
-        onMetamodelEdit: handleMetamodelEdit,
-        onCoclAdd: handleCoclAdd,
-        onTransformationLoad: handleTransformationLoad,
-        onDmnLoad: handleDmnLoad,
-        onAtlasPublish: handleAtlasPublish
-      })
-    }
-  })
-
-  // Create wrapper for workspace preview with event handlers
-  // Use watchEffect to make the wrapper reactive to selectedFile changes
-  const WorkspacePreviewWrapper = defineComponent({
-    setup() {
-      // Create a local reactive copy that tracks the outer selectedFile
-      const localSelectedFile = computed(() => selectedFile.value)
-
+      const aktuelleDatei = computed(() => selectedFile.value)
       return () => h(WorkspacePreview, {
-        selectedFile: localSelectedFile.value,
+        selectedFile: aktuelleDatei.value,
         onOpenWorkspace: handleOpenWorkspace,
         onCoclAdd: handleCoclAdd
       })
     }
   })
 
-  // Register file explorer panel
-  layout.registerPanel({
-    id: 'file-explorer',
-    title: 'Explorer',
-    icon: 'pi pi-folder',
-    component: markRaw(FileExplorerWrapper),
-    location: 'primary'
-  })
-
-  // Register activity for file explorer
-  layout.registerActivity({
-    id: 'file-explorer',
-    icon: 'pi pi-folder',
-    label: 'Explorer',
-    tooltip: 'File Explorer',
-    panel: 'file-explorer'
-  })
-
-  // Register workspace preview as editor content
   layout.openEditor({
     id: 'workspace-preview',
     title: 'Workspace',
     icon: 'pi pi-box',
-    component: markRaw(WorkspacePreviewWrapper),
+    component: markRaw(Wrapper),
     props: {}
   })
 }
@@ -1987,6 +2046,24 @@ function registriereBaeumeUnten(layout: any): void {
   const MetamodelerTree = metamodelerComponents.value?.MetamodelerTree
   const contextService = tsm.getService<any>('gene.editor.context')
 
+  /*
+   * Beide Baeume kommen aus Modulen, die spaeter aktiviert sein koennen. Statt
+   * spaeter noch einmal alles aufzubauen, wird je Baum nachgetragen, sobald er
+   * da ist — `registerPanel` ersetzt bei gleicher Id.
+   */
+  if (!InstanceTree) {
+    tsm.whenService<any>('ui.instance-tree.components', (itc: any) => {
+      instanceTreeComponents.value = itc
+      registriereBaeumeUnten(layout)
+    })
+  }
+  if (!MetamodelerTree) {
+    tsm.whenService<any>('ui.metamodeler.components', (mmc: any) => {
+      metamodelerComponents.value = mmc
+      registriereBaeumeUnten(layout)
+    })
+  }
+
   if (InstanceTree) {
     const Wrapper = defineComponent({
       setup() {
@@ -2017,119 +2094,80 @@ function registriereBaeumeUnten(layout: any): void {
   }
 }
 
-function setupModelEditorPerspective(layout: any) {
-  const ModelBrowser = modelBrowserComponents.value?.ModelBrowser
-  const InstanceTree = instanceTreeComponents.value?.InstanceTree
-  const PropertiesPanel = propertiesPanelComponents.value?.PropertiesPanel
-
-  console.log('setupModelEditorPerspective - Components:', {
-    ModelBrowser: !!ModelBrowser,
-    InstanceTree: !!InstanceTree,
-    PropertiesPanel: !!PropertiesPanel
-  })
-
-  if (!ModelBrowser || !InstanceTree || !PropertiesPanel) {
-    console.warn('Model editor components not loaded - missing:', {
-      ModelBrowser: !ModelBrowser,
-      InstanceTree: !InstanceTree,
-      PropertiesPanel: !PropertiesPanel
-    })
-    // Retry after a short delay (don't clearAll yet — leave current layout intact)
-    setTimeout(() => {
-      console.log('Retrying setupModelEditorPerspective...')
-      if (layoutStateService.value) {
-        setupModelEditorPerspective(layoutStateService.value.useLayoutState())
-      }
-    }, 500)
-    return
-  }
-
-  // Use the pre-created instance context
-  const context = instanceEditorContext.value
-  if (!context) {
-    console.warn('[App] Instance Editor context not yet created - retrying...')
-    // Don't clearAll yet — leave current layout intact until ready
-    setTimeout(() => {
-      if (layoutStateService.value) {
-        setupModelEditorPerspective(layoutStateService.value.useLayoutState())
-      }
-    }, 100)
-    return
-  }
-
-  // All prerequisites met — now clear and set up the layout
-  layout.clearAll()
-  // Oben links der Navigator, darunter der Baum der offenen Datei
+/*
+ * Die Arbeitsflaeche — einmal gebaut, nicht je Perspektive.
+ *
+ * Vorher gab es zwei Aufbauten, die beide mit `clearAll()` begannen und
+ * dasselbe noch einmal registrierten: Explorer oben, Baeume unten, Model
+ * Browser rechts, Probleme unten. Daraus folgte genau das beobachtete Bild —
+ * das Layout riss ab, der Explorer verschwand, und eine Perspektive war aktiv,
+ * die in der Leiste gar nicht mehr stand.
+ *
+ * Jetzt gehoeren die Panels der Anwendung, nicht einer Ansicht. Welches davon
+ * zu sehen ist, entscheidet der Tab, der vorn liegt (siehe `tabLayout`).
+ *
+ * Mehrfaches Rufen ist unschaedlich: `registerPanel` ersetzt bei gleicher Id,
+ * und so kommt ein Panel nach, dessen Modul spaeter aktiviert wurde.
+ */
+function baueArbeitsflaeche(layout: any): void {
   registriereExplorerOben(layout)
   registriereBaeumeUnten(layout)
-  console.log('[App] Using Instance Editor context:', context.mode)
+  registriereModellBrowser(layout)
+  registriereProblemePanel(layout)
+  registriereSuchKnopf(layout)
+  verdrahteTabSchliessen(layout)
+  beobachteProbleme(layout)
 
-  // Create instance-editor-specific handler that uses the context
-  const handleInstanceCreateInstance = (classInfo: any) => {
-    console.log('[InstanceEditor] Creating instance of class:', classInfo.name)
+  layout.setPrimarySidebarVisible(true)
+}
 
-    if (!classInfo.eClass) {
-      console.error('[InstanceEditor] No eClass in classInfo')
-      return
-    }
-
-    const eClass = classInfo.eClass
-
-    // Create instance using factory
-    const factory = eClass.getEPackage().getEFactoryInstance()
-    const newObj = factory.create(eClass)
-
-    console.log('[InstanceEditor] Created instance:', newObj)
-
-    // Add to instance editor context's tree
-    if (context?.addRootObject) {
-      context.addRootObject(newObj)
-      console.log('[InstanceEditor] Added to instance context')
-    } else {
-      console.warn('[InstanceEditor] No context.addRootObject available')
-    }
+/**
+ * Der Model Browser rechts — fuer Instanzen wie fuer Metamodelle.
+ *
+ * Ein Panel, nicht zwei: Welches Modell darin steht, sagt der Kontext des
+ * vorderen Tabs. Ein fest eingefangener Kontext bliebe beim ersten stehen.
+ */
+function registriereModellBrowser(layout: any): void {
+  const ModelBrowser = modelBrowserComponents.value?.ModelBrowser
+  if (!ModelBrowser) {
+    tsm.whenService<any>('ui.model-browser.components', (mbc: any) => {
+      modelBrowserComponents.value = mbc
+      registriereModellBrowser(layout)
+    })
+    return
   }
 
-  // Create wrapper for model browser with event handlers and context
-  const ModelBrowserWrapper = defineComponent({
+  const contextService = tsm.getService<any>('gene.editor.context')
+
+  /** Legt ein Objekt im Baum des vorderen Tabs an. */
+  const erzeugeInstanz = (classInfo: any): void => {
+    const eClass = classInfo?.eClass
+    if (!eClass) {
+      console.error('[App] Kein eClass in classInfo')
+      return
+    }
+    const neu = eClass.getEPackage().getEFactoryInstance().create(eClass)
+    const kontext = contextService?.getCurrentContext?.()
+    if (kontext?.addRootObject) kontext.addRootObject(neu)
+    else console.warn('[App] Kein Kontext mit addRootObject')
+  }
+
+  const Wrapper = defineComponent({
     setup() {
       return () => h(ModelBrowser, {
-        context: context,
-        onCreateInstance: handleInstanceCreateInstance
+        context: contextService?.getCurrentContext?.(),
+        onCreateInstance: erzeugeInstanz
       })
     }
   })
 
-  // Create wrapper for properties panel with context
-  const PropertiesPanelWrapper = defineComponent({
-    setup() {
-      return () => h(PropertiesPanel, {
-        context: context,
-        onSearch: handleReferenceSearch,
-        onShowProblems: handleShowProblems
-      })
-    }
-  })
-
-  // Register activity for instance tree
-  layout.registerActivity({
-    id: 'instance-tree',
-    icon: 'pi pi-sitemap',
-    label: 'Instances',
-    tooltip: 'Instance Tree',
-    panel: 'instance-tree'
-  })
-
-  // Register model browser panel (right/secondary sidebar)
   layout.registerPanel({
     id: 'model-browser',
     title: 'Models',
     icon: 'pi pi-box',
-    component: markRaw(ModelBrowserWrapper),
+    component: markRaw(Wrapper),
     location: 'secondary'
   })
-
-  // Register activity for model browser
   layout.registerActivity({
     id: 'model-browser',
     icon: 'pi pi-box',
@@ -2138,111 +2176,105 @@ function setupModelEditorPerspective(layout: any) {
     panel: 'model-browser'
   })
 
-  /*
-   * Die Tabs sind die geoeffneten Instanzdateien — jede traegt ihre Ansicht.
-   * Ein Perspektivwechsel raeumt die Leiste (clearAll), die Dateien bleiben
-   * offen und werden hier wieder eingehaengt. Ist keine offen, steht wie bisher
-   * ein fester Eigenschaften-Tab da.
-   */
-  const offeneInstanzen: string[] = (instanceTreeComposables.value as any)?.offeneInstanzTabIds?.() ?? []
-  // Auch die Metamodelle, die offen sind: Die Tabs gehoeren zur Anwendung,
-  // nicht zur Ansicht — sonst verschwinden sie beim Wechsel der Dateiart
-  for (const tabId of metamodelerComposables.value?.offeneTabIds?.() ?? []) {
-    const instanz = metamodelerComposables.value?.metamodelerFuerTab?.(tabId)
-    const titel = (instanz?.filePath?.value ?? tabId).split('/').pop() || tabId
-    oeffneMetamodellTab(tabId, titel, instanz)
-  }
-  if (offeneInstanzen.length === 0) {
-    layout.openEditor({
-      id: 'properties',
-      title: 'Properties',
-      icon: 'pi pi-sliders-h',
-      component: markRaw(PropertiesPanelWrapper),
-      closable: false
-    })
-  } else {
-    for (const tabId of offeneInstanzen) {
-      oeffneInstanzTab(tabId, tabId.replace(/^instance:/, '').split('/').pop() || tabId)
-    }
-  }
+  // Der Metamodeler fragt vor dem Speichern nach, wenn die Pruefung meckert
+  registerMetamodelerSaveConfirm()
+}
 
-  // Create wrapper for OCL panel with event handlers
-  const ProblemsPanelWrapper = defineComponent({
+/** Die Probleme unten — und was die Plugins sonst dorthin stellen. */
+function registriereProblemePanel(layout: any): void {
+  const Wrapper = defineComponent({
     setup() {
       return () => h(ProblemsPanel, {
-        onSelectObject: (obj: any) => {
-          // Select object in instance tree when clicked in OCL panel
-          if (instanceTreeComposables.value) {
-            const tree = instanceTreeComposables.value.useSharedInstanceTree()
-            if (tree?.selectObject) {
-              tree.selectObject(obj)
-            }
-          }
-        }
+        onSelectObject: (obj: any) => waehleObjektImBaum(obj)
       })
     }
   })
 
-  // Register OCL Problems panel in bottom panel area
   layout.registerPanelTab({
     id: 'ocl-problems',
     title: 'Problems',
     icon: 'pi pi-exclamation-triangle',
-    component: markRaw(ProblemsPanelWrapper)
+    component: markRaw(Wrapper)
   })
 
-  // Register additional bottom panels from PanelRegistry (e.g. Jobs panel from ui-actions)
+  /*
+   * Die unteren Panels der Plugins. Sie sind je Perspektive angemeldet, waehrend
+   * es die Perspektiven nicht mehr gibt — also wird genommen, was fuer eine der
+   * beiden Bearbeitungsperspektiven gemeldet war.
+   */
   const panelRegistry = tsm.getService('ui.registry.panels') as any
-  if (panelRegistry) {
-    const bottomPanels = panelRegistry.getForLocation?.('model-editor', 'bottom') || []
-    for (const panel of bottomPanels) {
-      if (panel.id === 'ocl-problems') continue // already registered above
-      const existingTabs = layout.state.panelTabs || []
-      if (!existingTabs.some((t: any) => t.id === panel.id)) {
-        layout.registerPanelTab({
-          id: panel.id,
-          title: panel.title,
-          icon: panel.icon,
-          component: markRaw(panel.component)
-        })
-      }
+  if (!panelRegistry) return
+  for (const perspektive of ['model-editor', 'metamodeler']) {
+    for (const panel of panelRegistry.getForLocation?.(perspektive, 'bottom') ?? []) {
+      if (panel.id === 'ocl-problems') continue
+      const vorhanden = layout.state.panelTabs || []
+      if (vorhanden.some((t: any) => t.id === panel.id)) continue
+      layout.registerPanelTab({
+        id: panel.id,
+        title: panel.title,
+        icon: panel.icon,
+        component: markRaw(panel.component)
+      })
     }
   }
+}
 
-  // Watch problems count and update badge
+/**
+ * Ein Problem anklicken heisst: das Objekt im Baum zeigen.
+ *
+ * Welcher Baum das ist, haengt am vorderen Tab — beide werden gefragt, der
+ * zustaendige antwortet.
+ */
+function waehleObjektImBaum(obj: any): void {
+  try {
+    metamodelerComposables.value?.useSharedMetamodeler?.().selectElement?.(obj)
+  } catch { /* kein Metamodell vorn */ }
+  try {
+    instanceTreeComposables.value?.useSharedInstanceTree?.()?.selectObject?.(obj)
+  } catch { /* keine Instanz vorn */ }
+}
+
+let problemeBeobachtet = false
+
+/** Die Problemzahl am Reiter, und der Bereich geht auf, wenn etwas dazukommt. */
+function beobachteProbleme(layout: any): void {
+  if (problemeBeobachtet) return
+  problemeBeobachtet = true
+
   watchEffect(() => {
-    const count = problemsService.stats.value.totalCount
-    layout.updateBadge('ocl-problems', count > 0 ? count : undefined)
+    const anzahl = problemsService.stats.value.totalCount
+    layout.updateBadge('ocl-problems', anzahl > 0 ? anzahl : undefined)
   })
 
-  // Auto-open panel area when new problems appear (count increases)
   watch(
     () => problemsService.stats.value.totalCount,
-    (newCount, oldCount) => {
-      if (newCount > (oldCount ?? 0)) {
+    (neu: number, alt: number | undefined) => {
+      if (neu > (alt ?? 0)) {
         layout.setPanelAreaVisible(true)
         layout.selectPanel('ocl-problems', 'panel')
       }
     }
   )
 
-  // Show both sidebars and select panels
-  layout.setPrimarySidebarVisible(true)
-  layout.setSecondarySidebarVisible(true)
-  layout.selectPanel('instance-tree', 'primary')
-  layout.selectPanel('model-browser', 'secondary')
+  if (problemsService.hasErrors.value) layout.setPanelAreaVisible(true)
+}
 
-  // Show panel area if there are validation errors
-  if (problemsService.hasErrors.value) {
-    layout.setPanelAreaVisible(true)
-  }
+/** Die Suche oeffnen, sofern ueberhaupt Instanzen geladen sind. */
+function openSearchDialogIfPossible(): void {
+  const resource = instanceTreeComposables.value?.getSharedResource?.()
+  if (resource) showSearchDialog.value = true
+}
 
-  // Register search status bar item
+let suchKnopfGesetzt = false
+
+/** Die Suche in der Statusleiste. */
+function registriereSuchKnopf(layout: any): void {
+  if (suchKnopfGesetzt) return
+  suchKnopfGesetzt = true
+
   const SearchButton = defineComponent({
     setup() {
-      return () => h('span', {
-        style: { display: 'flex', alignItems: 'center', gap: '4px' }
-      }, [
+      return () => h('span', { style: { display: 'flex', alignItems: 'center', gap: '4px' } }, [
         h('i', { class: 'pi pi-search' }),
         ' Search'
       ])
@@ -2255,293 +2287,8 @@ function setupModelEditorPerspective(layout: any) {
     alignment: 'right',
     priority: 50,
     tooltip: 'Search instances (Ctrl+Shift+F)',
-    onClick: () => {
-      if (instanceTreeComposables.value?.getSharedResource) {
-        const resource = instanceTreeComposables.value.getSharedResource()
-        if (resource) {
-          showSearchDialog.value = true
-        }
-      }
-    }
+    onClick: () => openSearchDialogIfPossible()
   })
-
-  console.log('Model editor perspective setup complete', {
-    panels: layout.state.panels.map((p: any) => ({ id: p.id, location: p.location })),
-    primaryPanels: layout.primaryPanels.value.length,
-    secondaryPanels: layout.secondaryPanels.value.length,
-    editorTabs: layout.state.editorTabs.length,
-    visibility: { ...layout.state.visibility },
-    activePrimary: layout.state.activePrimaryPanelId,
-    activeSecondary: layout.state.activeSecondaryPanelId,
-    overrides: Array.from(layout.state.panelPositionOverrides?.entries?.() || [])
-  })
-
-  // Trigger OCL validation if instances are loaded
-  if (instanceTreeComposables.value?.getSharedResource) {
-    const resource = instanceTreeComposables.value.getSharedResource()
-    if (resource && resource.getContents?.()?.length > 0) {
-      console.log('[App] Triggering OCL validation on perspective switch, objects:', resource.getContents().length)
-      problemsService.attachTo(resource, { validateImmediately: true }).then(attached => {
-        if (attached && problemsService.hasErrors.value) {
-          console.log('[App] Validation errors found, showing Problems panel')
-          if (layoutStateService.value) {
-            layoutStateService.value.useLayoutState().setPanelAreaVisible(true)
-          }
-        }
-      })
-    }
-  }
-}
-
-// Setup metamodeler perspective - uses MetamodelerTree instead of InstanceTree
-function setupMetamodelerPerspective(layout: any) {
-  // Try cached ref first, then fetch directly from TSM
-  if (!metamodelerComponents.value) {
-    const mc = tsm.getService<any>('ui.metamodeler.components')
-    if (mc) {
-      metamodelerComponents.value = mc
-      console.log('[App] Metamodeler components loaded (on-demand)')
-    }
-  }
-  if (!metamodelerComposables.value) {
-    const mmc = tsm.getService<any>('ui.metamodeler.composables')
-    if (mmc) {
-      metamodelerComposables.value = mmc
-      console.log('[App] Metamodeler composables loaded (on-demand)')
-    }
-  }
-
-  // Get MetamodelerTree from plugin, PropertiesPanel for editing
-  const MetamodelerTree = metamodelerComponents.value?.MetamodelerTree
-  const ModelBrowser = modelBrowserComponents.value?.ModelBrowser
-  const PropertiesPanel = propertiesPanelComponents.value?.PropertiesPanel
-
-  // Get metamodeler and context services
-  const metamodelerService = metamodelerComposables.value
-  const contextService = editorContextService.value
-
-  console.log('setupMetamodelerPerspective - Components:', {
-    MetamodelerTree: !!MetamodelerTree,
-    ModelBrowser: !!ModelBrowser,
-    PropertiesPanel: !!PropertiesPanel
-  })
-
-  if (!MetamodelerTree || !ModelBrowser || !PropertiesPanel) {
-    console.warn('Metamodeler components not loaded - missing:', {
-      MetamodelerTree: !MetamodelerTree,
-      ModelBrowser: !ModelBrowser,
-      PropertiesPanel: !PropertiesPanel
-    })
-    // Retry after a short delay (don't clearAll — leave current layout intact)
-    const retryCount = (setupMetamodelerPerspective as any).retryCount || 0
-    if (retryCount < 10) {
-      ;(setupMetamodelerPerspective as any).retryCount = retryCount + 1
-      setTimeout(() => {
-        console.log('Retrying setupMetamodelerPerspective... attempt', retryCount + 1)
-        if (layoutStateService.value) {
-          setupMetamodelerPerspective(layoutStateService.value.useLayoutState())
-        }
-      }, 500)
-    } else {
-      console.error('Failed to load Metamodeler components after 10 retries')
-    }
-    return
-  }
-
-  // Reset retry count on success
-  ;(setupMetamodelerPerspective as any).retryCount = 0
-
-  // All prerequisites met — now clear and set up the layout
-  layout.clearAll()
-  // Oben links der Navigator, darunter der Baum der offenen Datei
-  registriereExplorerOben(layout)
-  registriereBaeumeUnten(layout)
-
-  // Wire the styled save-confirm dialog for validation errors
-  registerMetamodelerSaveConfirm()
-
-  // Get the metamodel context for ModelBrowser. The metamodeler plugin registers
-  // the factory, so prefer the shared context via getMetamodelContext() — this way
-  // ModelBrowser and the Properties panel operate on the exact same instance.
-  let context = contextService?.getMetamodelContext?.() ?? metamodelEditorContext.value
-  if (!context && metamodelerService && contextService?.createMetamodelContext) {
-    // Fallback only (factory not yet registered): build once.
-    const metamodeler = metamodelerService.useSharedMetamodeler()
-    context = contextService.createMetamodelContext(metamodeler)
-    console.log('[App] Created Metamodel Editor context on-demand (fallback)')
-  }
-  metamodelEditorContext.value = context
-
-  // Create metamodeler-specific handler that uses the context
-  const handleMetamodelCreateInstance = (classInfo: any) => {
-    console.log('[Metamodeler] Creating instance of class:', classInfo.name)
-
-    if (!classInfo.eClass) {
-      console.error('[Metamodeler] No eClass in classInfo')
-      return
-    }
-
-    const eClass = classInfo.eClass
-
-    // Create instance using factory
-    const factory = eClass.getEPackage().getEFactoryInstance()
-    const newObj = factory.create(eClass)
-
-    console.log('[Metamodeler] Created instance:', newObj)
-
-    // Add to metamodel context's tree
-    if (context?.addRootObject) {
-      context.addRootObject(newObj)
-      console.log('[Metamodeler] Added to metamodel context')
-    } else {
-      console.warn('[Metamodeler] No context.addRootObject available')
-    }
-  }
-
-  // Create wrapper for model browser with metamodel context
-  const ModelBrowserWrapper = defineComponent({
-    setup() {
-      // Zur Renderzeit aufloesen: der vordere Tab bestimmt, welches Metamodell
-      // hier steht — ein fest eingefangener Kontext bliebe beim ersten stehen
-      return () => h(ModelBrowser, {
-        context: contextService?.getCurrentContext?.() ?? context,
-        onCreateInstance: handleMetamodelCreateInstance
-      })
-    }
-  })
-
-  // Register activity for metamodeler tree
-  layout.registerActivity({
-    id: 'metamodeler-tree',
-    icon: 'pi pi-sitemap',
-    label: 'Metamodel',
-    tooltip: 'Metamodel Tree',
-    panel: 'metamodeler-tree'
-  })
-
-  // Register model browser panel (right/secondary sidebar) - shows Ecore types
-  layout.registerPanel({
-    id: 'model-browser',
-    title: 'Ecore Types',
-    icon: 'pi pi-box',
-    component: markRaw(ModelBrowserWrapper),
-    location: 'secondary'
-  })
-
-  // Register activity for model browser
-  layout.registerActivity({
-    id: 'model-browser',
-    icon: 'pi pi-box',
-    label: 'Ecore Types',
-    tooltip: 'Available Ecore Types',
-    panel: 'model-browser'
-  })
-
-  // Create wrapper for properties panel with metamodel context.
-  // Resolve the context at render time from the registered factory so we always
-  // hand over the live metamodel context (correct rootPackage ref + version),
-  // not a snapshot captured before the metamodeler finished loading.
-  const PropertiesPanelWrapper = defineComponent({
-    setup() {
-      return () => h(PropertiesPanel, {
-        context: contextService?.getCurrentContext?.() ?? contextService?.getMetamodelContext?.() ?? context,
-        onShowProblems: handleShowProblems
-      })
-    }
-  })
-
-  /*
-   * Die Tabs sind die geoeffneten .ecore — jeder traegt seine Ansicht.
-   * Ein Perspektivwechsel raeumt die Leiste (clearAll), also werden die offenen
-   * Dateien hier wieder eingehaengt. Ist keine offen, bleibt ein Tab mit den
-   * Eigenschaften der gemeinsamen Instanz stehen, damit der Bereich nicht leer
-   * wirkt.
-   */
-  const offeneDateien: string[] = metamodelerService?.offeneTabIds?.() ?? []
-  // Und die offenen Instanzen, aus demselben Grund
-  for (const tabId of (instanceTreeComposables.value as any)?.offeneInstanzTabIds?.() ?? []) {
-    oeffneInstanzTab(tabId, tabId.replace(/^instance:/, '').split('/').pop() || tabId)
-  }
-  if (offeneDateien.length === 0) {
-    layout.openEditor({
-      id: 'properties',
-      title: 'Properties',
-      icon: 'pi pi-sliders-h',
-      component: markRaw(PropertiesPanelWrapper),
-      closable: false
-    })
-  } else {
-    for (const tabId of offeneDateien) {
-      const instanz = metamodelerService?.metamodelerFuerTab?.(tabId)
-      const titel = (instanz?.filePath?.value ?? tabId).split('/').pop() || tabId
-      oeffneMetamodellTab(tabId, titel, instanz)
-    }
-  }
-
-  // Register Ecore/OCL Problems panel in the bottom area (validation issues on save)
-  const ProblemsPanelWrapper = defineComponent({
-    setup() {
-      return () => h(ProblemsPanel, {
-        onSelectObject: (obj: any) => {
-          // Navigate to the offending element in the metamodel tree if possible
-          try { metamodelerService?.useSharedMetamodeler?.().selectElement?.(obj) } catch { /* no-op */ }
-        }
-      })
-    }
-  })
-
-  layout.registerPanelTab({
-    id: 'ocl-problems',
-    title: 'Problems',
-    icon: 'pi pi-exclamation-triangle',
-    component: markRaw(ProblemsPanelWrapper)
-  })
-
-  // Register additional bottom panels registered for this perspective (e.g. Jobs)
-  const mmPanelRegistry = tsm.getService('ui.registry.panels') as any
-  if (mmPanelRegistry) {
-    const bottomPanels = mmPanelRegistry.getForLocation?.('metamodeler', 'bottom') || []
-    for (const panel of bottomPanels) {
-      if (panel.id === 'ocl-problems') continue // already registered above
-      const existingTabs = layout.state.panelTabs || []
-      if (!existingTabs.some((t: any) => t.id === panel.id)) {
-        layout.registerPanelTab({
-          id: panel.id,
-          title: panel.title,
-          icon: panel.icon,
-          component: markRaw(panel.component)
-        })
-      }
-    }
-  }
-
-  // Keep the Problems badge in sync with the validation issue count
-  watchEffect(() => {
-    const count = problemsService.stats.value.totalCount
-    layout.updateBadge('ocl-problems', count > 0 ? count : undefined)
-  })
-
-  // Auto-open the bottom panel when new problems appear (e.g. validation before save)
-  watch(
-    () => problemsService.stats.value.totalCount,
-    (newCount, oldCount) => {
-      if (newCount > (oldCount ?? 0)) {
-        layout.setPanelAreaVisible(true)
-        layout.selectPanel('ocl-problems', 'panel')
-      }
-    }
-  )
-
-  // Show both sidebars
-  layout.setPrimarySidebarVisible(true)
-  layout.setSecondarySidebarVisible(true)
-  layout.selectPanel('metamodeler-tree', 'primary')
-  layout.selectPanel('model-browser', 'secondary')
-
-  // Show panel area if there are already validation errors
-  layout.setPanelAreaVisible(problemsService.hasErrors.value)
-
-  console.log('Metamodeler perspective setup complete')
 }
 
 // Watch perspective changes
@@ -2554,19 +2301,7 @@ watch(currentPerspective, (perspectiveId, oldPerspectiveId) => {
   }
   const layout = layoutStateService.value.useLayoutState()
 
-  // Core perspectives need their App.vue setup functions (wrapper components with context)
-  if (perspectiveId === 'explorer') {
-    setupFileExplorerPerspective(layout)
-  } else if (perspectiveId === 'model-editor') {
-    setupModelEditorPerspective(layout)
-  } else if (perspectiveId === 'metamodeler') {
-    setupMetamodelerPerspective(layout)
-  } else if (perspectiveId?.startsWith('view-')) {
-    // View perspectives use the same layout as model-editor
-    setupModelEditorPerspective(layout)
-  } else if (perspectiveManager.value && perspectiveManager.value.registry.get(perspectiveId)) {
-    perspectiveManager.value.switchTo(perspectiveId)
-  }
+  waehleNavigator(layout, perspectiveId)
 }, { immediate: false })
 
 // Poll for services and update refs
@@ -2647,15 +2382,6 @@ onMounted(() => {
   })
 
   // Helper to open search dialog if resource is available
-  function openSearchDialogIfPossible() {
-    if (instanceTreeComposables.value?.getSharedResource) {
-      const resource = instanceTreeComposables.value.getSharedResource()
-      if (resource) {
-        showSearchDialog.value = true
-      }
-    }
-  }
-
   const interval = setInterval(() => {
     // Check for layout components
     if (!GeneLayout.value) {
@@ -2818,21 +2544,20 @@ onMounted(() => {
       }
     }
 
-    // Initial perspective setup
-    if (!initialSetupDone && layoutStateService.value && fileExplorerComponents.value) {
+    /*
+     * Die Flaeche einmal aufbauen und den Explorer davorstellen.
+     *
+     * Nicht ueber `switchTo('explorer')`: Der Perspektivwechsel raeumt die
+     * Flaeche vorher ab, und genau das soll nicht mehr geschehen.
+     */
+    if (!initialSetupDone && layoutStateService.value) {
       initialSetupDone = true
       const layout = layoutStateService.value.useLayoutState()
 
-      // Start with file explorer perspective
-      if (perspectiveManager.value && perspectiveManager.value.registry.get('explorer')) {
-        perspectiveManager.value.switchTo('explorer')
-      } else {
-        // Fallback: set up manually if registry not yet populated
-        if (perspectiveManager.value) {
-          ;(perspectiveManager.value.state as any).currentPerspectiveId = 'explorer'
-        }
-        setupFileExplorerPerspective(layout)
-      }
+      baueArbeitsflaeche(layout)
+      zeigeWorkspaceVorschau(layout)
+      perspectiveManager.value?.setCurrentPerspectiveId?.('explorer')
+      waehleNavigator(layout, 'explorer')
 
       // Register status bar items
       layout.registerStatusBarItem({

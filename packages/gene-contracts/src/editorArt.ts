@@ -13,6 +13,22 @@
 import { serviceId } from '@eclipse-daanse/tsm'
 import type { Component } from 'vue'
 
+/**
+ * The panels that belong to a view - visible while its tab is in front.
+ *
+ * Named, not owned: the panels are registered once with the frame, and a view
+ * only says which of them are its own. That is what lets a tab change the left
+ * tree without the layout being torn down and built again.
+ */
+export interface EditorArtPanels {
+  /** Bottom left: the tree of this file */
+  tree?: string
+  /** Right */
+  secondary?: string[]
+  /** Bottom */
+  bottom?: string[]
+}
+
 /** The little a view needs to know about the file it is handed. */
 export interface OpenableFile {
   name: string
@@ -38,6 +54,8 @@ export interface EditorArt {
   component?: Component
   /** Opens the file in this view. */
   open?: (file: OpenableFile, content: string) => void | Promise<void>
+  /** What belongs to this view - see {@link EditorArtPanels}. */
+  panels?: EditorArtPanels
   /**
    * The perspective this view supersedes.
    *
