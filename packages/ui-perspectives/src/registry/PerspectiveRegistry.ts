@@ -255,11 +255,23 @@ export class PerspectiveManagerImpl implements PerspectiveManager {
     // Get panels for this perspective
     const availablePanels = this.panelRegistry.getForPerspective(perspective.id)
 
+    /*
+     * Ein Panel, das schon steht, bleibt wo es ist.
+     *
+     * Ergaenzen heisst nicht verschieben: Der Instanzbaum lebt in der unteren
+     * Haelfte links, und eine Perspektive, die ihn in ihrem `defaultLayout.left`
+     * fuehrt, holte ihn nach oben — danach war unten nichts mehr und oben
+     * stand er zweimal. Was die Flaeche schon traegt, gehoert ihr.
+     */
+    const stehtSchon = (panelId: string): boolean =>
+      (this.layoutState?.state?.panels ?? []).some((p: { id: string }) => p.id === panelId)
+
     const { defaultLayout, defaultVisibility } = perspective
 
     // Register left panels
     if (defaultLayout.left) {
       for (const panelId of defaultLayout.left) {
+        if (stehtSchon(panelId)) continue
         const panel = availablePanels.find(p => p.id === panelId)
         if (panel) {
           this.layoutState.registerPanel({
@@ -277,6 +289,7 @@ export class PerspectiveManagerImpl implements PerspectiveManager {
     // Register right panels
     if (defaultLayout.right) {
       for (const panelId of defaultLayout.right) {
+        if (stehtSchon(panelId)) continue
         const panel = availablePanels.find(p => p.id === panelId)
         if (panel) {
           this.layoutState.registerPanel({

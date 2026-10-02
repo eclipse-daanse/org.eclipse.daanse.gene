@@ -18,7 +18,7 @@ import type { EditorArt } from 'gene-contracts'
 
 /** The little this needs from the frame. `null` clears a zone. */
 export interface LayoutFrame {
-  selectPanel(panelId: string | null, area: 'primary' | 'primary-bottom' | 'secondary' | 'panel'): void
+  selectPanel(panelId: string | null, area: 'primary' | 'primary-bottom' | 'secondary'): void
   setSecondarySidebarVisible?(visible: boolean): void
 }
 
@@ -90,8 +90,6 @@ export function createTabLayout({ frame, editorArtById }: TabLayoutOptions): Tab
       if (!secondary) frame.setSecondarySidebarVisible?.(false)
       else frame.setSecondarySidebarVisible?.(true)
 
-      const bottom = panels?.bottom?.[0]
-      if (bottom) frame.selectPanel(bottom, 'panel')
     }
   }
 }

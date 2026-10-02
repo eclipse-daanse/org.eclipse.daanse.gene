@@ -1061,6 +1061,19 @@ function handlePerspectiveChange(perspectiveId: string) {
  * und nicht aus der Registry kommt.
  */
 function waehleNavigator(layout: any, perspectiveId: string): void {
+  /*
+   * Eine abgeloeste Perspektive ist keine mehr.
+   *
+   * `model-editor` fuehrt in ihrem Layout den Instanzbaum links und die
+   * Eigenschaften in der Mitte. Wird sie noch irgendwo aktiviert — ein
+   * Workspace, der sich oeffnet, ein Plugin, das umschaltet —, dann wanderte
+   * der Baum nach oben links und ein Properties-Tab trat neben die Datei. Die
+   * Ansicht, die sie abloest, sagt selbst, dass es diese Perspektive nicht
+   * mehr gibt; also wird sie hier auch nicht mehr aufgebaut.
+   */
+  const abgeloest: string[] = tsm.getService<any>('gene.editor.context')?.abgeloestePerspektiven?.() ?? []
+  if (abgeloest.includes(perspectiveId)) return
+
   const navigatorId = perspectiveId === 'explorer'
     ? 'file-explorer'
     : navigatorPanelId(perspectiveId)
@@ -1068,6 +1081,10 @@ function waehleNavigator(layout: any, perspectiveId: string): void {
 
   holePanelNachOben(layout, perspectiveId, navigatorId)
   oeffnePerspektivMitte(layout, perspectiveId)
+
+  // Nur was wirklich oben links liegt — sonst zeigt die Auswahl ins Leere
+  const obenLinks = (layout.state.panels ?? []).find((p: any) => p.id === navigatorId)
+  if (obenLinks?.location !== 'primary') return
   layout.selectPanel(navigatorId, 'primary')
   layout.setPrimarySidebarVisible(true)
 }
@@ -2296,17 +2313,25 @@ function beobachteProbleme(layout: any): void {
     layout.updateBadge('ocl-problems', anzahl > 0 ? anzahl : undefined)
   })
 
+  /*
+   * Die Probleme zeigen sich, wenn es welche gibt, und gehen wieder, wenn
+   * keine mehr da sind. Weg sind sie damit nicht, nur zu: Strg+J holt den
+   * unteren Bereich jederzeit zurueck.
+   *
+   * Nur solange der Problem-Reiter selbst vorn liegt — wer die Jobs ansieht,
+   * soll sie nicht verlieren, weil anderswo ein Fehler verschwindet.
+   */
   watch(
-    () => problemsService.stats.value.totalCount,
-    (neu: number, alt: number | undefined) => {
-      if (neu > (alt ?? 0)) {
-        layout.setPanelAreaVisible(true)
-        layout.selectPanel('ocl-problems', 'panel')
+    () => problemsService.hasErrors.value,
+    (fehler: boolean) => {
+      if (fehler) {
+        layout.selectPanelTab('ocl-problems')
+        return
       }
-    }
+      if (layout.state.activePanelTabId === 'ocl-problems') layout.setPanelAreaVisible(false)
+    },
+    { immediate: true }
   )
-
-  if (problemsService.hasErrors.value) layout.setPanelAreaVisible(true)
 }
 
 /** Die Suche oeffnen, sofern ueberhaupt Instanzen geladen sind. */
