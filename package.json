@@ -34,7 +34,7 @@
   "dependencies": {
     "@eclipse-daanse/org.eclipse.daanse.feel.langium": "^0.0.1-next.1",
     "@eclipse-daanse/org.eclipse.daanse.feel.lsp.worker": "^0.0.1-next.2",
-    "@eclipse-daanse/tsm": "^0.0.1-next.2",
+    "@eclipse-daanse/tsm": "^0.1.0-next.1",
     "@emfts/codec.jsonschema": "^0.0.1-next.1",
     "@emfts/core": "^0.3.0-next.2",
     "@emfts/ocl.engine": "^0.0.1-next.1",
