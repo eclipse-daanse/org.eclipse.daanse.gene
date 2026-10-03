@@ -22,6 +22,7 @@ import type { ModelTreeNode, ClassInfo, ModelPackageInfo, ReferenceInfo, Constra
 
 // EditorContext interface (simplified for this component's needs)
 interface EditorContext {
+  addRootObject?: (obj: any) => void
   mode: 'instance' | 'metamodel'
   modelTreeNodes: { value: any[] }
   unregisterPackage?: (nsURI: string) => boolean
@@ -48,11 +49,14 @@ const tsm = inject<any>('tsm')
 const eventBus = tsm?.getService('gene.eventbus')
 eventBus?.on?.('show-add-model-dialog', () => handleAddModel())
 
-// Get context: prop > global current context > null
+/*
+ * The context comes from the tab: as a prop, or provided by the tab component
+ * around this browser. Never from a global "current" context - that is what
+ * let the browser of one tab create into the document of another.
+ */
+const injectedContext = inject<EditorContext | null>(Symbol.for('gene:editorContext') as any, null)
 function getActiveContext(): EditorContext | null {
-  if (props.context) return props.context
-  const editorMode = tsm?.getService('gene.editor.context')
-  return editorMode?.getCurrentContext?.() ?? null
+  return props.context ?? injectedContext ?? null
 }
 
 // WorkspaceActionService for direct App-level actions
@@ -156,7 +160,17 @@ function handleCreateInstance(classInfo: ClassInfo) {
     return
   }
   console.log('Creating instance of:', classInfo.name)
-  // Use service if available, otherwise emit for backward compatibility
+
+  // Into this tab's document when there is one - the context knows where
+  const context = getActiveContext()
+  if (context?.addRootObject && classInfo.eClass) {
+    const eClass: any = classInfo.eClass
+    const created = eClass.getEPackage().getEFactoryInstance().create(eClass)
+    context.addRootObject(created)
+    return
+  }
+
+  // Without a tab: the application decides, or whoever listens
   const actions = getActions()
   if (actions) {
     actions.createInstance(classInfo)

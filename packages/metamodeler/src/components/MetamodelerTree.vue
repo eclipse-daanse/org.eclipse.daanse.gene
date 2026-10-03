@@ -18,7 +18,7 @@ import type { EPackage, EClass, ENamedElement, EClassifier, EDataType, EEnum, ER
 import { getEcorePackage } from '@emfts/core'
 import { Select } from 'tsm:primevue'
 import { Textarea } from 'tsm:primevue'
-import { useSharedMetamodeler } from '../composables/useMetamodeler'
+import { useSharedMetamodeler, type useMetamodeler } from '../composables/useMetamodeler'
 import { EPackageToJsonSchemaConverter } from '@emfts/codec.jsonschema'
 import type { MetaTreeNode, ConstraintSeverity, ConstraintRole } from '../types'
 import { DEFAULT_CONSTRAINT_SEVERITY, DEFAULT_CONSTRAINT_ROLE } from '../types'
@@ -41,7 +41,13 @@ function getIconDataUrl(iconClass: string | undefined): string | undefined {
   return provider?.getDataUrl?.(id)
 }
 
-const metamodeler = useSharedMetamodeler()
+/*
+ * The instance to show. A tab hands its own in; without one the shared facade
+ * answers with whatever lies in front - which is exactly what made one tab's
+ * tree show up in another, so every tab should pass its own.
+ */
+const props = defineProps<{ metamodeler?: ReturnType<typeof useMetamodeler> }>()
+const metamodeler = props.metamodeler ?? useSharedMetamodeler()
 
 // Titel in TitleBar reaktiv aktualisieren
 watch(() => metamodeler.filePath.value, (fp) => {

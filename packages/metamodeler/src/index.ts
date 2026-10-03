@@ -29,7 +29,7 @@ export {
 export * from './components'
 
 // Import for service registration
-import { MetamodelerPerspective, MetamodelerTree, MetamodelerEditor } from './components'
+import { MetamodelerPerspective, MetamodelerTree, MetamodelerEditor, MetamodelEditorTab } from './components'
 import {
   tabIdFuer,
   metamodelerFuerTab,
@@ -115,7 +115,9 @@ export async function activate(context: ModuleContext): Promise<void> {
   context.services.register('ui.metamodeler.components', {
     MetamodelerPerspective,
     MetamodelerTree,
-    MetamodelerEditor
+    MetamodelerEditor,
+    // One .ecore as a tab with its own context - see the tab architecture plan
+    MetamodelEditorTab
   })
 
   // Register composables as service

@@ -18,9 +18,8 @@ import { Menu } from 'tsm:primevue'
 import { Dialog } from 'tsm:primevue'
 import { Dropdown } from 'tsm:primevue'
 import { InputText } from 'tsm:primevue'
-import type { EditorContext } from '../context/editorContext'
+import { EDITOR_CONTEXT_KEY, type EditorContext } from '../context/editorContext'
 import { createInstanceContext } from '../context/instanceContext'
-import { useSharedInstanceTree } from '../composables/useInstanceTree'
 import { useSharedViews, getTypeUri, getElementUri } from '../composables/useViews'
 import type { InstanceTreeNode } from '../types'
 import type { EObject, EClass, EReference } from '@emfts/core'
@@ -40,12 +39,16 @@ const emit = defineEmits<{
 // TSM for service access
 const tsm = inject<any>('tsm')
 
-// Use provided context, or global context (mode-aware), or create default
+/*
+ * The context comes from the tab: as a prop, or provided by the tab component
+ * that renders this tree. Never from a global "current" context - that is what
+ * let one tab's tree show up in another. Without a tab (the tree used on its
+ * own) a context over the shared document is built as a last resort.
+ */
 const ctx = props.context
-  || tsm?.getService('gene.editor.context')?.getCurrentContext?.()
-  || createInstanceContext()
+  ?? inject(EDITOR_CONTEXT_KEY, null)
+  ?? createInstanceContext()
 const eventBus = tsm?.getService('gene.eventbus') as any
-const sharedTree = useSharedInstanceTree()
 
 // Listen for events from sidebar header actions and central menu
 eventBus?.on?.('show-new-instance-dialog', () => { showNewInstanceDialog.value = true })

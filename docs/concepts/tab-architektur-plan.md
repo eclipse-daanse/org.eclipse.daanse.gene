@@ -353,6 +353,22 @@ nur Befehle und die Menüzeile.
 Nach 1 ist der gemeldete Fehler weg und kann nicht wiederkommen. 2 und 3 räumen
 auf, was 1 überflüssig macht. 4 ist der Rest aus dem alten Schritt 6.
 
+### Stand
+
+**Etappe 1 erledigt (2026-10-03).** `EditorTabLayout` in ui-layout,
+`InstanceEditorTab` in ui-instance-tree, `MetamodelEditorTab` im Metamodeler.
+`InstanceTree`, `PropertiesPanel` und `ModelBrowser` nehmen den Kontext nur noch
+als Prop oder per `inject` — kein Rückgriff auf einen globalen „aktuellen"
+Kontext mehr. Die Öffner in `App.vue` legen nur noch den Tab an; `instance-tree`,
+`metamodeler-tree` und `model-browser` werden nicht mehr als Panels registriert.
+`tabLayout` und `EditorArt.panels` sind weg, an ihrer Stelle steht
+`gene.editor.front` für Befehle und Menüzeile.
+
+Geprüft im Browser: Ecore- und XMI-Tab nebeneinander, viermal hin und her —
+links steht jedes Mal der Baum des Tabs, rechts sein Browser, die Auswahl zeigt
+seine Eigenschaften. Der globale `currentMode` stand dabei durchgehend auf
+`instance` und hat nichts mehr bewirkt; genau das war das Ziel.
+
 ### Was dabei an Verhalten wegfällt
 
 - Die Zone links unten ist für Dateiansichten nicht mehr da. Der Navigator

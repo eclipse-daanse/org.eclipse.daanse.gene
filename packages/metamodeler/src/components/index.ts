@@ -5,5 +5,6 @@
  */
 
 export { default as MetamodelerTree } from './MetamodelerTree.vue'
+export { default as MetamodelEditorTab } from './MetamodelEditorTab.vue'
 export { default as MetamodelerEditor } from './MetamodelerEditor.vue'
 export { default as MetamodelerPerspective } from './MetamodelerPerspective.vue'

@@ -129,6 +129,8 @@ export function createInstanceContext(baum?: ReturnType<typeof useSharedInstance
     // Root object management
     addRootObject: (obj: EObject) => instanceTree.addRootObject(obj),
 
+    getAllObjectsOfType: (eClass: EClass) => instanceTree.getAllObjectsOfType(eClass),
+
     // Dirty state — true if any managed resource has unsaved changes
     dirty: computed(() => {
       const _ = instanceTree.dirtyVersion.value

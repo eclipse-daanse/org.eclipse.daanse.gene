@@ -65,7 +65,7 @@ function loadMenu() {
    * vorderen Tabs sagt, welche Perspektive sie abloest — und unter dem Namen
    * ist ihr Menue angemeldet. Liegt kein Tab vorn, bleibt es beim Navigator.
    */
-  const ausTab = tsm?.getService('gene.tab.layout')?.frontArt?.()?.replacesPerspective
+  const ausTab = tsm?.getService('gene.editor.front')?.frontArt?.()?.replacesPerspective
   let perspId = ausTab || pm?.state?.currentPerspectiveId || ''
 
   // View-Perspektiven (view-*) nutzen dasselbe Menü wie model-editor
