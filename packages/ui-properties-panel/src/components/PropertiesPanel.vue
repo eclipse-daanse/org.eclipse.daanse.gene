@@ -63,6 +63,11 @@ interface EditorContext {
   selectedObject: { value: EObject | null }
   rootPackage?: { value: import('@emfts/core').EPackage | null }
   createChild?: (parent: EObject, ref: EReference, eClass: EClass) => EObject | null
+  createChildInSelected?: (eClass: EClass, ref: EReference) => EObject | null
+  selectObject?: (obj: EObject | null) => void
+  getAllObjectsOfType?: (eClass: EClass) => EObject[]
+  activeResource?: { value: Resource | null }
+  version?: { value: number }
   triggerUpdate?: () => void
   markDirty?: () => void
 }
@@ -75,12 +80,13 @@ const props = defineProps<{
 // TSM for service access
 const tsm = inject<any>('tsm')
 
-// Resolved context: prop > global current context (mode-aware)
-const ctx = computed(() => {
-  if (props.context) return props.context
-  const editorMode = tsm?.getService('gene.editor.context')
-  return editorMode?.getCurrentContext?.() ?? null
-})
+/*
+ * The context comes from the tab: as a prop, or provided by the tab component
+ * around this panel. Never from a global "current" context - that is what let
+ * one tab's selection show up in another's properties.
+ */
+const injectedContext = inject<EditorContext | null>(Symbol.for('gene:editorContext') as any, null)
+const ctx = computed<EditorContext | null>(() => props.context ?? injectedContext ?? null)
 
 // WorkspaceActionService for direct App-level actions
 function getActions() {
@@ -89,11 +95,9 @@ function getActions() {
 
 // Instance tree and builder via TSM services (avoids static cross-module imports)
 const instanceTreeComposables = tsm?.getService('ui.instance-tree.composables')
-const instanceTree = instanceTreeComposables?.useSharedInstanceTree()
 const getXmiId = instanceTreeComposables?.getXmiId
 const setXmiId = instanceTreeComposables?.setXmiId
 const generateXmiId = instanceTreeComposables?.generateXmiId
-const getSharedResource = instanceTreeComposables?.getSharedResource
 
 const instanceComponents = tsm?.getService('ui.instance.components')
 const PropertyField = instanceComponents?.PropertyField
@@ -121,10 +125,7 @@ onMounted(async () => {
 
 // Get selected object from context or fallback to instance tree
 const selectedObject = computed(() => {
-  if (ctx.value?.selectedObject) {
-    return ctx.value.selectedObject.value
-  }
-  return instanceTree.selectedObject.value
+  return ctx.value?.selectedObject?.value ?? null
 })
 
 // Get root package from context (for metamodel mode - user's classes).
@@ -174,8 +175,8 @@ const instanceName = computed(() => {
 // Also depend on treeNodes to re-evaluate when triggerUpdate() fires (e.g. after assignXmiId)
 const xmiId = computed(() => {
   if (!selectedObject.value) return null
-   
-  instanceTree?.treeNodes?.value
+  // Re-read after a model change (assignXmiId bumps the version)
+  void ctx.value?.version?.value
   return getXmiId(selectedObject.value)
 })
 
@@ -214,7 +215,7 @@ function startEditXmiId() {
 function saveXmiId() {
   if (selectedObject.value && editXmiIdValue.value.trim()) {
     setXmiId(selectedObject.value, editXmiIdValue.value.trim())
-    instanceTree.triggerUpdate()
+    ctx.value?.triggerUpdate?.()
   }
   editingXmiId.value = false
 }
@@ -228,7 +229,7 @@ function cancelEditXmiId() {
 function handleGenerateXmiId() {
   if (selectedObject.value) {
     generateXmiId(selectedObject.value)
-    instanceTree.triggerUpdate()
+    ctx.value?.triggerUpdate?.()
   }
 }
 
@@ -690,7 +691,7 @@ function setFeatureValue(feature: EStructuralFeature, value: any) {
     if (value !== null && value !== undefined && value !== '') {
       setXmiId?.(selectedObject.value, String(value))
     }
-    instanceTree?.triggerUpdate()
+    ctx.value?.triggerUpdate?.()
   }
   // Notify context that data changed (for dirty tracking)
   if (ctx.value?.markDirty) {
@@ -898,8 +899,8 @@ function getAvailableObjects(feature: EStructuralFeature): EObject[] {
     return collectEcoreMetaObjects(refType, selectedObject.value)
   }
 
-  // Get all objects of the reference type from the instance tree
-  return instanceTree.getAllObjectsOfType(refType)
+  // All objects of the reference type in this tab's document
+  return ctx.value?.getAllObjectsOfType?.(refType) ?? []
 }
 
 // Returns true if refType belongs to the Ecore meta-metamodel (nsURI = http://www.eclipse.org/emf/2002/Ecore)
@@ -1053,12 +1054,9 @@ function handleCreate(eClass: EClass, feature: EStructuralFeature) {
     return
   }
 
-  // Instance mode: use instanceTree.createChild which handles:
-  // - Creating the instance
-  // - Adding to containment
-  // - Triggering UI update
-  // - Expanding parent and selecting new object
-  const newObj = instanceTree.createChild(eClass, feature as EReference)
+  // Instance mode: the context creates under the selected object, adds it to
+  // the containment, updates the tree, expands the parent and selects the child
+  ctx.value?.createChildInSelected?.(eClass, feature as EReference)
 }
 
 // Handle navigation to a referenced object
@@ -1069,9 +1067,7 @@ function handleNavigate(obj: EObject) {
    * dem Instanzbaum blieb dort wirkungslos — der Link tat schlicht nichts
    * (#156).
    */
-  const select = ctx.value?.selectObject
-  if (select) select(obj)
-  else instanceTree.selectObject(obj)
+  ctx.value?.selectObject?.(obj)
 }
 
 // Handle search request from ReferenceField
@@ -1100,7 +1096,7 @@ function handleSearch(feature: EReference, callback: (obj: EObject) => void) {
   // In metamodel mode, use rootPackage's resource; in instance mode, use shared instance resource
   const resource = ctx.value?.mode === 'metamodel'
     ? (rootPackage.value?.eResource?.() ?? null)
-    : (getSharedResource?.() ?? null)
+    : (ctx.value?.activeResource?.value ?? null)
   if (!resource) return
   actions.openSearchDialog({ feature, resource, callback })
 }

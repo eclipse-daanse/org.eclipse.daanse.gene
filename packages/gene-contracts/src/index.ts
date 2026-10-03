@@ -6,4 +6,4 @@
  * this without importing any of the others - which is the whole point of having
  * it outside all of them.
  */
-export { EDITOR_ART, type EditorArt, type EditorArtPanels, type OpenableFile } from './editorArt'
+export { EDITOR_ART, type EditorArt, type OpenableFile } from './editorArt'

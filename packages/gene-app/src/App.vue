@@ -21,7 +21,7 @@ const OCL_SOURCES = ['http://www.eclipse.org/fennec/m2x/ocl/1.0', 'http://www.ec
 function isOclSource(s: string | null | undefined): boolean { return !!s && OCL_SOURCES.includes(s) }
 import type { PerspectiveManager } from 'ui-perspectives'
 import { registerWorkspaceActions } from './services/WorkspaceActionService'
-import { createTabLayout, type TabLayoutService } from './layout/tabLayout'
+import { createEditorFront, type EditorFrontService } from './layout/editorFront'
 import { prepareAtlasResolution, registerUsedModels } from './services/atlasResolution'
 import type { WorkspaceActionService, FileEntryLike } from './services/WorkspaceActionService'
 
@@ -303,13 +303,14 @@ async function resolveRepairPrompt(doRepair: boolean) {
     // instead of reusing the old (foreign) package instances — otherwise the
     // re-serialized model would still emit absolute nsURI hrefs.
     try { mb.unregisterModelBySourceFile?.(pending.entry.path) } catch { /* no-op */ }
-    const metamodeler = mm.useSharedMetamodeler()
+    // Into the tab's own instance - the tab component shows exactly that one
+    const tabId: string = mm.tabIdFuer?.(pending.entry.path) ?? `metamodel:${pending.entry.path}`
+    const metamodeler = mm.metamodelerFuerTab?.(tabId) ?? mm.useSharedMetamodeler()
     const info = await metamodeler.loadFromEcoreString(repaired, pending.entry.path, pending.fileHandle)
     if (info) {
       // Repaired only in memory — mark dirty so the user can persist the clean form.
       try { metamodeler.dirty.value = true } catch { /* no-op */ }
-      // Ein Tab statt eines Perspektivwechsels — die Datei ist offen, nicht die Ansicht
-      oeffneMetamodellTab(`metamodel:${pending.entry.path}`, pending.entry.name || 'Metamodell', metamodeler)
+      oeffneMetamodellTab(tabId, pending.entry.name || 'Metamodell')
     } else {
       showMetamodelLoadError(pending.entry, 'Reparatur hat das Laden nicht ermöglicht.')
     }
@@ -1140,7 +1141,7 @@ function oeffnePerspektivTab(
   }
 
   verdrahteTabSchliessen(layout)
-  holeTabLayout(layout).bindTab(tabId, editorId)
+  holeEditorFront().bindTab(tabId, editorId)
 
   layout.openEditor({
     id: tabId,
@@ -1393,28 +1394,20 @@ let schliessenVerdrahtet = false
  * Leiste ebenfalls (clearAll), die Dateien bleiben dabei aber offen.
  */
 /*
- * Welche Panels zum vorderen Tab gehoeren.
- *
- * Der Dienst kennt weder die Ansichten noch das Layout — beides wird ihm
- * gereicht. Hier wird es zusammengesteckt, weil hier beides zur Hand ist.
+ * Which tab is in front, and which view carries it - for commands and the
+ * menu bar, never for panels. Resolved per call: the context service comes
+ * from ui-instance-tree and may arrive after this surface.
  */
-let tabLayout: TabLayoutService | null = null
-function holeTabLayout(layout: any): TabLayoutService {
-  if (!tabLayout) {
-    tabLayout = createTabLayout({
-      frame: {
-        selectPanel: (panelId, bereich) => layout.selectPanel?.(panelId, bereich),
-        setSecondarySidebarVisible: (sichtbar) => layout.setSecondarySidebarVisible?.(sichtbar)
-      },
-      // Bei jedem Nachschlagen neu geholt: Der Kontext-Dienst kommt aus
-      // ui-instance-tree und kann spaeter da sein als diese Flaeche
+let editorFront: EditorFrontService | null = null
+function holeEditorFront(): EditorFrontService {
+  if (!editorFront) {
+    editorFront = createEditorFront({
       editorArtById: (editorId) =>
         tsm.getService<any>('gene.editor.context')?.alleEditorArten?.().find((a: any) => a.id === editorId)
     })
-    // Angemeldet, weil die Menueleiste wissen muss, welche Ansicht vorn liegt
-    tsm.registerService('gene.tab.layout', tabLayout)
+    tsm.registerService('gene.editor.front', editorFront)
   }
-  return tabLayout
+  return editorFront
 }
 
 function verdrahteTabSchliessen(layout: any): void {
@@ -1425,85 +1418,59 @@ function verdrahteTabSchliessen(layout: any): void {
     metamodelerComposables.value?.tabGeschlossen?.(tabId)
     ;(instanceTreeComposables.value as any)?.instanzTabGeschlossen?.(tabId)
     contextService?.releaseTabContext?.(tabId)
-    holeTabLayout(layout).releaseTab(tabId)
+    holeEditorFront().releaseTab(tabId)
   })
 }
 
 /**
- * Oeffnet eine Instanzdatei als eigenen Tab.
+ * Opens an instance file as its own tab.
  *
- * Wie beim Metamodell: Der Tab meldet beim Aufbau sein Dokument und seinen
- * Kontext an — Baum, Eigenschaften und Modell-Browser folgen ihm, weil immer
- * nur der vordere Tab gerendert wird.
+ * The tab is a surface with its own context: `InstanceEditorTab` builds it
+ * from the tab's document and hands it to tree, properties and browser inside.
+ * The opener only names the tab and which view carries it - nothing of the
+ * file is registered with the frame.
  */
 function oeffneInstanzTab(tabId: string, titel: string): void {
-  const layoutSvc = layoutStateService.value
-  const itc: any = instanceTreeComposables.value
-  if (!layoutSvc || !itc?.instanzTabDokument) return
-  const layout = layoutSvc.useLayoutState()
-  verdrahteTabSchliessen(layout)
-  const contextService = tsm.getService<any>('gene.editor.context')
-  const PropertiesPanel = propertiesPanelComponents.value?.PropertiesPanel
-
-  const dokument = itc.instanzTabDokument(tabId)
-  const kontext = itc.createInstanceContext?.(dokument.instance)
-  if (kontext && contextService?.registerTabContext) {
-    contextService.registerTabContext(tabId, kontext)
+  const layout = layoutStateService.value?.useLayoutState()
+  const InstanceEditorTab = tsm.getService<any>('ui.instance-tree.components')?.InstanceEditorTab
+  if (!layout || !InstanceEditorTab) {
+    console.warn('[App] Instanz-Tab nicht verfuegbar', { layout: !!layout, InstanceEditorTab: !!InstanceEditorTab })
+    return
   }
-  const tabs = holeTabLayout(layout)
-  tabs.bindTab(tabId, 'instance')
+  verdrahteTabSchliessen(layout)
+  holeEditorFront().bindTab(tabId, 'instance')
 
   layout.openEditor({
     id: tabId,
     title: titel,
     icon: 'pi pi-file-edit',
-    component: markRaw(defineComponent({
-      setup() {
-        itc.instanzTabNachVorn?.(tabId)
-        contextService?.activateTabContext?.(tabId)
-        return () => PropertiesPanel
-          ? h(PropertiesPanel, {
-              context: contextService?.getCurrentContext?.() ?? kontext,
-              onShowProblems: handleShowProblems
-            })
-          : h('div', 'Eigenschaften nicht verfuegbar')
-      }
-    }))
+    component: markRaw(InstanceEditorTab),
+    props: { tabId }
   })
 }
 
-function oeffneMetamodellTab(tabId: string, titel: string, metamodeler: any): void {
-  const layoutSvc = layoutStateService.value
-  if (!layoutSvc) return
-  const layout = layoutSvc.useLayoutState()
-  verdrahteTabSchliessen(layout)
-  const contextService = tsm.getService<any>('gene.editor.context')
-  const PropertiesPanel = propertiesPanelComponents.value?.PropertiesPanel
-
-  const kontext = contextService?.createMetamodelContext?.(metamodeler)
-  if (kontext && contextService?.registerTabContext) {
-    contextService.registerTabContext(tabId, kontext)
+/**
+ * Opens a metamodel as its own tab - see `oeffneInstanzTab`.
+ *
+ * The instance to show is the tab's own (`metamodelerFuerTab(tabId)`); the
+ * tab component resolves it from the id, so nothing is passed along.
+ */
+function oeffneMetamodellTab(tabId: string, titel: string): void {
+  const layout = layoutStateService.value?.useLayoutState()
+  const MetamodelEditorTab = tsm.getService<any>('ui.metamodeler.components')?.MetamodelEditorTab
+  if (!layout || !MetamodelEditorTab) {
+    console.warn('[App] Metamodell-Tab nicht verfuegbar', { layout: !!layout, MetamodelEditorTab: !!MetamodelEditorTab })
+    return
   }
-  const tabs = holeTabLayout(layout)
-  tabs.bindTab(tabId, 'metamodel')
+  verdrahteTabSchliessen(layout)
+  holeEditorFront().bindTab(tabId, 'metamodel')
 
   layout.openEditor({
     id: tabId,
     title: titel,
     icon: 'pi pi-sitemap',
-    component: markRaw(defineComponent({
-      setup() {
-        // Gerendert wird nur der vordere Tab — also ist das hier der Wechsel
-        metamodelerComposables.value?.tabNachVorn?.(tabId)
-        contextService?.activateTabContext?.(tabId)
-        return () => PropertiesPanel
-          ? h(PropertiesPanel, {
-              context: contextService?.getCurrentContext?.() ?? kontext,
-              onShowProblems: handleShowProblems
-            })
-          : h('div', 'Eigenschaften nicht verfuegbar')
-      }
-    }))
+    component: markRaw(MetamodelEditorTab),
+    props: { tabId }
   })
 }
 
@@ -1558,7 +1525,7 @@ async function handleMetamodelEdit(entry: any, content: string) {
 
   if (packageInfo) {
     console.log('[App] Metamodel loaded:', packageInfo.name, packageInfo.nsURI)
-    oeffneMetamodellTab(tabId, entry.name || packageInfo.name, metamodeler)
+    oeffneMetamodellTab(tabId, entry.name || packageInfo.name)
     return
   }
 
@@ -2095,89 +2062,27 @@ function registriereExplorerOben(layout: any): void {
   })
 }
 
-/**
- * Beide Baeume unten links anmelden — der Instanzbaum und der Metamodell-Baum.
- *
- * Welcher zu sehen ist, entscheidet der Tab, der vorn liegt, nicht die
- * Ansicht. Nur so laesst sich zwischen einer .ecore und einer .xmi wechseln,
- * ohne das Layout neu aufzubauen.
- */
-function registriereBaeumeUnten(layout: any): void {
-  const InstanceTree = instanceTreeComponents.value?.InstanceTree
-  const MetamodelerTree = metamodelerComponents.value?.MetamodelerTree
-  const contextService = tsm.getService<any>('gene.editor.context')
-
-  /*
-   * Beide Baeume kommen aus Modulen, die spaeter aktiviert sein koennen. Statt
-   * spaeter noch einmal alles aufzubauen, wird je Baum nachgetragen, sobald er
-   * da ist — `registerPanel` ersetzt bei gleicher Id.
-   */
-  if (!InstanceTree) {
-    tsm.whenService<any>('ui.instance-tree.components', (itc: any) => {
-      instanceTreeComponents.value = itc
-      registriereBaeumeUnten(layout)
-    })
-  }
-  if (!MetamodelerTree) {
-    tsm.whenService<any>('ui.metamodeler.components', (mmc: any) => {
-      metamodelerComponents.value = mmc
-      registriereBaeumeUnten(layout)
-    })
-  }
-
-  if (InstanceTree) {
-    const Wrapper = defineComponent({
-      setup() {
-        // Zur Renderzeit aufloesen: der vordere Tab bringt seinen Kontext mit
-        return () => h(InstanceTree, {
-          context: contextService?.getCurrentContext?.() ?? contextService?.getInstanceContext?.(),
-          onObjectSelect: handleObjectSelect
-        })
-      }
-    })
-    layout.registerPanel({
-      id: 'instance-tree',
-      title: 'Instances',
-      icon: 'pi pi-sitemap',
-      component: markRaw(Wrapper),
-      location: 'primary-bottom'
-    })
-  }
-
-  if (MetamodelerTree) {
-    layout.registerPanel({
-      id: 'metamodeler-tree',
-      title: 'Metamodel',
-      icon: 'pi pi-sitemap',
-      component: markRaw(MetamodelerTree),
-      location: 'primary-bottom'
-    })
-  }
-}
-
 /*
- * Die Arbeitsflaeche — einmal gebaut, nicht je Perspektive.
+ * The work surface - built once, not per perspective.
  *
- * Vorher gab es zwei Aufbauten, die beide mit `clearAll()` begannen und
- * dasselbe noch einmal registrierten: Explorer oben, Baeume unten, Model
- * Browser rechts, Probleme unten. Daraus folgte genau das beobachtete Bild —
- * das Layout riss ab, der Explorer verschwand, und eine Perspektive war aktiv,
- * die in der Leiste gar nicht mehr stand.
+ * What the application owns: the navigator top left, problems and jobs at the
+ * bottom, the search in the status bar. What a file owns - its tree, its
+ * properties, its model browser - is not here. It lives inside the file's tab
+ * (`InstanceEditorTab`, `MetamodelEditorTab`), so no panel of the frame ever
+ * has to ask which tab is in front, and nothing of one tab can show up in
+ * another.
  *
- * Jetzt gehoeren die Panels der Anwendung, nicht einer Ansicht. Welches davon
- * zu sehen ist, entscheidet der Tab, der vorn liegt (siehe `tabLayout`).
- *
- * Mehrfaches Rufen ist unschaedlich: `registerPanel` ersetzt bei gleicher Id,
- * und so kommt ein Panel nach, dessen Modul spaeter aktiviert wurde.
+ * Calling it twice is harmless: `registerPanel` replaces by id, which is how a
+ * panel arrives late when its module activates after this.
  */
 function baueArbeitsflaeche(layout: any): void {
   registriereExplorerOben(layout)
-  registriereBaeumeUnten(layout)
-  registriereModellBrowser(layout)
   registriereProblemePanel(layout)
   registriereSuchKnopf(layout)
   verdrahteTabSchliessen(layout)
   beobachteProbleme(layout)
+  // The metamodeler asks before saving when validation complains
+  registerMetamodelerSaveConfirm()
 
   layout.setPrimarySidebarVisible(true)
   folgeDemVorderenTab(layout)
@@ -2186,12 +2091,10 @@ function baueArbeitsflaeche(layout: any): void {
 let tabWechselBeobachtet = false
 
 /**
- * Was zur offenen Datei gehoert, folgt dem vorderen Tab.
+ * Tells the front service which tab came forward.
  *
- * Eine Stelle, nicht acht: Vorher waehlte jeder Tab im eigenen `setup()` sein
- * Panel, und wer keines waehlte — die Workspace-Vorschau — liess das des
- * vorigen stehen. So steht links unten der Baum der Datei, die wirklich vorn
- * liegt, und sonst nichts.
+ * Commands and the menu bar ask it; no panel does. A panel belongs to its tab
+ * and gets its context from it, so there is nothing to switch here.
  */
 function folgeDemVorderenTab(layout: any): void {
   if (tabWechselBeobachtet) return
@@ -2199,68 +2102,9 @@ function folgeDemVorderenTab(layout: any): void {
 
   watch(
     () => layout.state.activeEditorTabId,
-    (tabId: string | null) => holeTabLayout(layout).activateTab(tabId),
+    (tabId: string | null) => holeEditorFront().setFrontTab(tabId),
     { immediate: true }
   )
-}
-
-/**
- * Der Model Browser rechts — fuer Instanzen wie fuer Metamodelle.
- *
- * Ein Panel, nicht zwei: Welches Modell darin steht, sagt der Kontext des
- * vorderen Tabs. Ein fest eingefangener Kontext bliebe beim ersten stehen.
- */
-function registriereModellBrowser(layout: any): void {
-  const ModelBrowser = modelBrowserComponents.value?.ModelBrowser
-  if (!ModelBrowser) {
-    tsm.whenService<any>('ui.model-browser.components', (mbc: any) => {
-      modelBrowserComponents.value = mbc
-      registriereModellBrowser(layout)
-    })
-    return
-  }
-
-  const contextService = tsm.getService<any>('gene.editor.context')
-
-  /** Legt ein Objekt im Baum des vorderen Tabs an. */
-  const erzeugeInstanz = (classInfo: any): void => {
-    const eClass = classInfo?.eClass
-    if (!eClass) {
-      console.error('[App] Kein eClass in classInfo')
-      return
-    }
-    const neu = eClass.getEPackage().getEFactoryInstance().create(eClass)
-    const kontext = contextService?.getCurrentContext?.()
-    if (kontext?.addRootObject) kontext.addRootObject(neu)
-    else console.warn('[App] Kein Kontext mit addRootObject')
-  }
-
-  const Wrapper = defineComponent({
-    setup() {
-      return () => h(ModelBrowser, {
-        context: contextService?.getCurrentContext?.(),
-        onCreateInstance: erzeugeInstanz
-      })
-    }
-  })
-
-  layout.registerPanel({
-    id: 'model-browser',
-    title: 'Models',
-    icon: 'pi pi-box',
-    component: markRaw(Wrapper),
-    location: 'secondary'
-  })
-  layout.registerActivity({
-    id: 'model-browser',
-    icon: 'pi pi-box',
-    label: 'Models',
-    tooltip: 'Model Browser',
-    panel: 'model-browser'
-  })
-
-  // Der Metamodeler fragt vor dem Speichern nach, wenn die Pruefung meckert
-  registerMetamodelerSaveConfirm()
 }
 
 /** Die Probleme unten — und was die Plugins sonst dorthin stellen. */

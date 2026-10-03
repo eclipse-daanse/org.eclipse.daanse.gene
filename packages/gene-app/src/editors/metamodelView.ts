@@ -2,7 +2,7 @@
  * The metamodel editor as a view on an `.ecore` file.
  */
 import { component } from '@eclipse-daanse/tsm'
-import { EDITOR_ART, type EditorArt, type EditorArtPanels, type OpenableFile } from 'gene-contracts'
+import { EDITOR_ART, type EditorArt, type OpenableFile } from 'gene-contracts'
 import { getWorkspaceActions } from '../services/WorkspaceActionService'
 
 @component({ service: [EDITOR_ART] })
@@ -14,7 +14,6 @@ export class MetamodelView implements EditorArt {
   readonly priority = 10
   readonly replacesPerspective = 'metamodeler'
 
-  readonly panels: EditorArtPanels = { tree: 'metamodeler-tree', secondary: ['model-browser'] }
 
   open(file: OpenableFile, content: string): Promise<void> | void {
     return getWorkspaceActions()?.openMetamodelInEditor(file, content)

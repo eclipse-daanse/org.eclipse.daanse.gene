@@ -33,6 +33,7 @@ export {
   SecondarySidebar,
   EditorArea,
   EditorTabs,
+  EditorTabLayout,
   PanelArea,
   StatusBar,
   SettingsDialog

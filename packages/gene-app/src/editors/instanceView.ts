@@ -2,7 +2,7 @@
  * The instance editor as a view on an `.xmi` file.
  */
 import { component } from '@eclipse-daanse/tsm'
-import { EDITOR_ART, type EditorArt, type EditorArtPanels, type OpenableFile } from 'gene-contracts'
+import { EDITOR_ART, type EditorArt, type OpenableFile } from 'gene-contracts'
 import { getWorkspaceActions } from '../services/WorkspaceActionService'
 
 @component({ service: [EDITOR_ART] })
@@ -14,7 +14,6 @@ export class InstanceView implements EditorArt {
   readonly priority = 10
   readonly replacesPerspective = 'model-editor'
 
-  readonly panels: EditorArtPanels = { tree: 'instance-tree', secondary: ['model-browser'] }
 
   open(file: OpenableFile, content: string): Promise<void> | void {
     return getWorkspaceActions()?.loadInstances(file, content)

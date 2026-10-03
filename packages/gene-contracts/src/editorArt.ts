@@ -13,24 +13,6 @@
 import { serviceId } from '@eclipse-daanse/tsm'
 import type { Component } from 'vue'
 
-/**
- * The panels that belong to a view - visible while its tab is in front.
- *
- * Named, not owned: the panels are registered once with the frame, and a view
- * only says which of them are its own. That is what lets a tab change the left
- * tree without the layout being torn down and built again.
- *
- * The bottom area is deliberately not here. Problems and jobs are the
- * application's, not one file's: they show themselves when there is something
- * to show, and are a keystroke away otherwise.
- */
-export interface EditorArtPanels {
-  /** Bottom left: the tree of this file */
-  tree?: string
-  /** Right */
-  secondary?: string[]
-}
-
 /** The little a view needs to know about the file it is handed. */
 export interface OpenableFile {
   name: string
@@ -52,12 +34,16 @@ export interface EditorArt {
   nsURIs?: string[]
   /** Among equally precise candidates the higher number wins. Default 0. */
   priority?: number
-  /** The view itself - the contents of the tab. */
+  /**
+   * The view itself - the contents of the tab.
+   *
+   * A tab is a surface with its own division: tree, properties and browser
+   * live inside it, with the tab's context handed down by `provide`. Nothing
+   * of a file lives outside its tab, so nothing can show up in another one.
+   */
   component?: Component
   /** Opens the file in this view. */
   open?: (file: OpenableFile, content: string) => void | Promise<void>
-  /** What belongs to this view - see {@link EditorArtPanels}. */
-  panels?: EditorArtPanels
   /**
    * The perspective this view supersedes.
    *

@@ -344,6 +344,9 @@ export interface EditorContext {
   // Root object management
   addRootObject: (obj: EObject) => void
 
+  /** Every object of a type in this document - for reference pickers */
+  getAllObjectsOfType?: (eClass: EClass) => EObject[]
+
   // Root package (for metamodeler - the package being edited)
   rootPackage?: Ref<EPackage | null>
 
