@@ -135,21 +135,6 @@ export async function activate(context: ModuleContext): Promise<void> {
     offeneTabIds
   })
 
-  // Register the metamodel editor context factory. Context-aware components
-  // (Properties panel, reference/supertype search pickers) resolve `mode` and
-  // the live `rootPackage` through getCurrentContext(); without this factory
-  // they fall back to the stale registry and show an empty candidate list.
-  // The metamodeler owns useSharedMetamodeler, so it — not gene-app — is the
-  // right place to wire this. The 'ui-instance-tree' manifest dependency
-  // guarantees the context service is registered before we activate, so no
-  // polling/retry is needed.
-  const ctxSvc = context.services.get<any>('ui.instance-tree.context')
-  if (ctxSvc?.registerMetamodelContextFactory && ctxSvc.createMetamodelContext) {
-    ctxSvc.registerMetamodelContextFactory(() => ctxSvc.createMetamodelContext(useSharedMetamodeler()))
-    context.log.info('Registered metamodel editor context factory')
-  } else {
-    context.log.warn('ui.instance-tree.context unavailable — metamodel editor context not registered')
-  }
 
   // Register metamodeler perspective
   const perspectiveManager = context.services.get<PerspectiveManager>('ui.registry.perspectives')
@@ -166,12 +151,7 @@ export async function activate(context: ModuleContext): Promise<void> {
         right: ['model-browser'],
         bottom: ['ocl-problems']
       },
-      defaultVisibility: { left: true, right: true, bottom: false },
-      onActivate: () => {
-        // Set editor mode to metamodel for context-aware components
-        const editorCtx = context.services.get<any>('gene.editor.context')
-        editorCtx?.setEditorMode('metamodel')
-      }
+      defaultVisibility: { left: true, right: true, bottom: false }
     })
     context.log.info('Metamodeler perspective registered')
   }

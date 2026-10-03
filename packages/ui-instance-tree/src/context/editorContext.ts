@@ -1,26 +1,23 @@
 /**
  * Editor Context
  *
- * Provides a common interface for both Instance Editor and Metamodeler.
- * Components use inject() to get the current context and work with
- * either instance data (.xmi) or metamodel data (.ecore).
+ * One context per open file, owned by its tab. The tab builds it and hands it
+ * down with `provide`; tree, properties and model browser take it with
+ * `inject`. There is no "current" context and no mode to switch: whichever
+ * component asks gets the context of the tab it is rendered in, and nothing
+ * else exists to be asked.
+ *
+ * That is deliberate. The previous design kept one global mode and one
+ * "current" context that the panels read while rendering; whenever a switch
+ * came late, one tab's content stood in another's panel.
+ *
+ * What remains here is the contract (`EditorContext`), the injection key, and
+ * the registry of file views - published together as the `gene.editor.context`
+ * service.
  */
 
-import { inject, provide, ref, computed, type InjectionKey, type Ref, type ComputedRef } from 'tsm:vue'
+import { inject, provide, type InjectionKey, type Ref, type ComputedRef } from 'tsm:vue'
 import type { EObject, EClass, EReference, EPackage, Resource } from '@emfts/core'
-
-// ============ Global Reactive Mode ============
-// This allows components to reactively switch between contexts
-
-export type EditorMode = 'instance' | 'metamodel'
-
-// Global reactive mode state
-const currentMode = ref<EditorMode>('instance')
-
-// Reactive epoch bumped whenever a context factory (re)registers. getCurrentContext()
-// reads it so that consumer computeds re-resolve once a lazily-loaded plugin (e.g. the
-// metamodeler) registers its factory AFTER the consumer first evaluated — otherwise the
-// consumer would cache the null it saw before the factory existed and never recover.
 import { createMetamodelContext } from './metamodelContext'
 import {
   registerEditorArt,
@@ -35,171 +32,12 @@ import {
   type EditorZuordnung
 } from './editorRegistry'
 
-const factoryEpoch = ref(0)
-
-// Context factories - registered at runtime
-let instanceContextFactory: (() => EditorContext) | null = null
-let metamodelContextFactory: (() => EditorContext) | null = null
-
-/**
- * Set the current editor mode (called by App.vue on perspective switch)
- */
-export function setEditorMode(mode: EditorMode): void {
-  console.log('[EditorContext] Setting mode to:', mode)
-  currentMode.value = mode
-}
-
-/**
- * Get the current editor mode (reactive)
- */
-export function getEditorMode(): Ref<EditorMode> {
-  return currentMode
-}
-
-/**
- * Register the instance context factory
- */
-export function registerInstanceContextFactory(factory: () => EditorContext): void {
-  instanceContextFactory = factory
-  cachedInstanceContext = null
-  factoryEpoch.value++
-}
-
-/**
- * Register the metamodel context factory
- */
-export function registerMetamodelContextFactory(factory: () => EditorContext): void {
-  metamodelContextFactory = factory
-  cachedMetamodelContext = null
-  factoryEpoch.value++
-}
-
-// Cached context instances
-let cachedInstanceContext: EditorContext | null = null
-let cachedMetamodelContext: EditorContext | null = null
-
-/*
- * Contexts that belong to an editor tab — one tab, one open file.
- *
- * The tab bars are per view: the metamodeler shows the .ecore files being
- * edited, the model editor the instances. So the active tab is kept per mode,
- * and whoever asks for the current context gets the one of the tab in front.
- * As long as nobody registers a tab, everything stays as it was: one context
- * per mode.
- */
-const tabContexts = new Map<string, EditorContext>()
-const activeTabByMode: Record<EditorMode, string | null> = { instance: null, metamodel: null }
-
-/** Ties a context to a tab. Called when a file is opened in its own tab. */
-export function registerTabContext(tabId: string, context: EditorContext): void {
-  tabContexts.set(tabId, context)
-  activeTabByMode[context.mode] = tabId
-  factoryEpoch.value++
-}
-
-/**
- * Brings a tab's context to the front — the panels follow it.
- *
- * Including the mode. It used to be set when the perspective changed, and with
- * the perspective gone nothing set it any more: a metamodel tab was answered
- * with the instance context, so the properties panel asked for a selection in
- * an instance tree that was not there. The tab in front decides the mode, which
- * is where that decision belonged all along.
- */
-export function activateTabContext(tabId: string): void {
-  const context = tabContexts.get(tabId)
-  if (!context) return
-  activeTabByMode[context.mode] = tabId
-  currentMode.value = context.mode
-  factoryEpoch.value++
-}
-
-/**
- * Lets go of a tab's context when the tab closes. The mode falls back to
- * another open tab, or to the context of the mode itself.
- */
-export function releaseTabContext(tabId: string): void {
-  const context = tabContexts.get(tabId)
-  if (!context) return
-  tabContexts.delete(tabId)
-  if (activeTabByMode[context.mode] === tabId) {
-    let nachfolger: string | null = null
-    for (const [id, ctx] of tabContexts) {
-      if (ctx.mode === context.mode) nachfolger = id
-    }
-    activeTabByMode[context.mode] = nachfolger
-  }
-  factoryEpoch.value++
-}
-
-/** The context of the tab in front, for the given mode. */
-function tabContextFor(mode: EditorMode): EditorContext | null {
-  const tabId = activeTabByMode[mode]
-  return tabId ? tabContexts.get(tabId) ?? null : null
-}
-
-/**
- * Get the current context based on mode (non-reactive, for one-time access)
- */
-export function getCurrentContext(): EditorContext | null {
-  // Track the factory epoch so callers evaluating this inside a computed re-run
-  // when a context factory registers later (see factoryEpoch above).
-  void factoryEpoch.value
-  const mode = currentMode.value
-
-  const ausTab = tabContextFor(mode)
-  if (ausTab) return ausTab
-
-  if (mode === 'instance') {
-    if (!cachedInstanceContext && instanceContextFactory) {
-      cachedInstanceContext = instanceContextFactory()
-    }
-    return cachedInstanceContext
-  } else {
-    if (!cachedMetamodelContext && metamodelContextFactory) {
-      cachedMetamodelContext = metamodelContextFactory()
-    }
-    return cachedMetamodelContext
-  }
-}
-
-/**
- * Get the instance context (always returns instance context)
- */
-export function getInstanceContext(): EditorContext | null {
-  if (!cachedInstanceContext && instanceContextFactory) {
-    cachedInstanceContext = instanceContextFactory()
-  }
-  return cachedInstanceContext
-}
-
-/**
- * Get the metamodel context (always returns metamodel context)
- */
-export function getMetamodelContext(): EditorContext | null {
-  if (!cachedMetamodelContext && metamodelContextFactory) {
-    cachedMetamodelContext = metamodelContextFactory()
-  }
-  return cachedMetamodelContext
-}
+/** What `EditorContext.mode` can be */
+export type EditorMode = 'instance' | 'metamodel'
 
 // EditorContext service interface (for TSM DI registration)
 export interface EditorContextService {
-  getEditorMode: () => Ref<EditorMode>
-  getCurrentContext: () => EditorContext | null
-  getInstanceContext: () => EditorContext | null
-  getMetamodelContext: () => EditorContext | null
-  setEditorMode: (mode: EditorMode) => void
-  registerInstanceContextFactory: (factory: () => EditorContext) => void
-  registerMetamodelContextFactory: (factory: () => EditorContext) => void
-  registerTabContext: (tabId: string, context: EditorContext) => void
-  /**
-   * Builds the context of one metamodel tab.
-   *
-   * It was missing from the service, so `oeffneMetamodellTab` got `undefined`
-   * and registered no context at all. Nothing showed, because the mode still
-   * came from the perspective and answered with the shared context by accident.
-   */
+  /** Builds the context of one metamodel tab from its metamodeler instance. */
   createMetamodelContext: (metamodeler: unknown) => EditorContext
   registerEditorArt: (art: EditorArt) => void
   unregisterEditorArt: (id: string) => boolean
@@ -209,8 +47,6 @@ export interface EditorContextService {
   kandidatenFuer: (pfad: string, inhalt?: string) => EditorArt[]
   editorFuer: (pfad: string, inhalt?: string) => EditorArt | null
   wurzelNsUri: (inhalt: string) => string | null
-  activateTabContext: (tabId: string) => void
-  releaseTabContext: (tabId: string) => void
 }
 
 /**
@@ -218,12 +54,6 @@ export interface EditorContextService {
  */
 export function getEditorContextService(): EditorContextService {
   return {
-    getEditorMode: () => currentMode,
-    getCurrentContext,
-    getInstanceContext,
-    getMetamodelContext,
-    setEditorMode,
-    registerTabContext,
     createMetamodelContext,
     registerEditorArt,
     unregisterEditorArt,
@@ -232,11 +62,7 @@ export function getEditorContextService(): EditorContextService {
     setEditorZuordnungen,
     kandidatenFuer,
     editorFuer,
-    wurzelNsUri,
-    activateTabContext,
-    releaseTabContext,
-    registerInstanceContextFactory,
-    registerMetamodelContextFactory
+    wurzelNsUri
   }
 }
 

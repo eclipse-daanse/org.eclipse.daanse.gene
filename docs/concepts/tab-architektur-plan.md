@@ -369,6 +369,14 @@ links steht jedes Mal der Baum des Tabs, rechts sein Browser, die Auswahl zeigt
 seine Eigenschaften. Der globale `currentMode` stand dabei durchgehend auf
 `instance` und hat nichts mehr bewirkt; genau das war das Ziel.
 
+**Etappe 2 erledigt (2026-10-03).** `currentMode`, `getCurrentContext`,
+`getInstanceContext`/`getMetamodelContext`, die Kontext-Factories und
+`registerTabContext`/`activateTabContext`/`releaseTabContext` sind weg — samt
+ihren Aufrufern in `App.vue`, `ui-instance-tree` und dem Metamodeler. Der Dienst
+`gene.editor.context` ist nur noch Registry der Ansichten plus
+`createMetamodelContext`. Geprüft: Tabs wechseln, Auswahl bleibt je Tab erhalten,
+Menüzeile folgt dem vorderen Tab.
+
 ### Was dabei an Verhalten wegfällt
 
 - Die Zone links unten ist für Dateiansichten nicht mehr da. Der Navigator
