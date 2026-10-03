@@ -13,7 +13,7 @@
  */
 import { inject, provide } from 'tsm:vue'
 import InstanceTree from './InstanceTree.vue'
-import { instanzTabDokument, instanzTabNachVorn } from '../composables/tabDokumente'
+import { instanzTabDokument } from '../composables/tabDokumente'
 import { createInstanceContext } from '../context/instanceContext'
 import { EDITOR_CONTEXT_KEY } from '../context/editorContext'
 
@@ -22,13 +22,6 @@ const props = defineProps<{ tabId: string }>()
 const tsm = inject<any>('tsm')
 
 const tabDocument = instanzTabDokument(props.tabId)
-
-/*
- * Still needed for now: the module-level loaders (`loadInstancesFromXMI` and
- * friends) work on "the front document" until they take the document as a
- * parameter. Nothing in this tab reads the front document - only they do.
- */
-instanzTabNachVorn(props.tabId)
 
 const ctx = createInstanceContext(tabDocument.instance as any)
 provide(EDITOR_CONTEXT_KEY, ctx)

@@ -377,6 +377,28 @@ ihren Aufrufern in `App.vue`, `ui-instance-tree` und dem Metamodeler. Der Dienst
 `createMetamodelContext`. Geprüft: Tabs wechseln, Auswahl bleibt je Tab erhalten,
 Menüzeile folgt dem vorderen Tab.
 
+**Etappe 3 erledigt (2026-10-03).** Kein „vorderes Dokument" mehr. Die
+Modulfunktionen des Instanzbaums (`loadInstancesFromXMI`,
+`loadResourceStandalone`, `setSharedResource`, `getSharedResource(s)`,
+`getObjectByXmiId`, `generateMissingXmiIds`, `getInstanceLoadingState`)
+nehmen das Dokument als Parameter; ohne eines meinen sie das gemeinsame, nicht
+„das vordere". `instanzTabNachVorn`, `setActiveInstanceDocument` und die
+Fassade im Instanzbaum sind weg. Auf der Metamodeller-Seite ersetzt ein
+Resolver aus `gene.editor.front` die umgeschaltete `aktiveInstanz`; die Fassade
+`useSharedMetamodeler()` dient nur noch Befehlen. In `App.vue` fragen Suche,
+Validierung, „Instanz anlegen", „Problem → Objekt" und die Atlas-Veröffentlichung
+ausdrücklich nach der vorderen Datei (`vorderesInstanzDokument()`,
+`vorderesMetamodell()`); die Lader bekommen das Dokument des Tabs mit.
+
+Geprüft: Ecore- und XMI-Tab, Wechsel hin und her, Auswahl je Tab erhalten;
+„Instanz anlegen" aus dem Model Browser landet in der Resource des XMI-Tabs
+(2 Objekte), das gemeinsame Dokument bleibt leer; die Fassade des Metamodellers
+antwortet mit `probe`, wenn der Ecore-Tab vorn liegt, sonst mit nichts.
+
+Nebenbei behoben: Der Import-Dialog hing an einem `v-if` mit
+`tsm.getService(...)`, das nur beim Rendern ausgewertet wurde — mit weniger
+Anlässen zum Neu-Rendern erschien er gar nicht mehr. Jetzt per `whenService`.
+
 ### Was dabei an Verhalten wegfällt
 
 - Die Zone links unten ist für Dateiansichten nicht mehr da. Der Navigator

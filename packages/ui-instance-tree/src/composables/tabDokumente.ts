@@ -12,18 +12,12 @@
  */
 import { ref, type Ref } from 'tsm:vue'
 import type { Resource } from '@emfts/core'
-import {
-  useInstanceTree,
-  setActiveInstanceDocument,
-  clearActiveInstanceDocument,
-  type SharedState
-} from './useInstanceTree'
+import { useInstanceTree, type SharedState } from './useInstanceTree'
 
 /*
- * Ein Tab haelt denselben Verbund wie der gemeinsame Zustand: Resourcen,
- * aktive Resource, Baum und Ladeanzeige. Dadurch koennen die Funktionen des
- * Moduls — laden, Resourcen setzen — unveraendert auf dem vorderen Tab
- * arbeiten.
+ * A tab holds the same bundle as the shared state: resources, active resource,
+ * tree and loading indicator. The module functions - load, set resources - take
+ * this bundle as a parameter; nothing is switched to "the front" any more.
  */
 const dokumente = new Map<string, SharedState>()
 
@@ -55,17 +49,8 @@ export function instanzTabIstGeladen(tabId: string): boolean {
   return (dokumente.get(tabId)?.resources.value.length ?? 0) > 0
 }
 
-/** Meldet den Baum des Tabs als den vorderen. */
-export function instanzTabNachVorn(tabId: string): void {
-  const dokument = dokumente.get(tabId)
-  if (dokument) setActiveInstanceDocument(dokument)
-}
-
 /** Gibt das Dokument frei, wenn der Tab schließt. */
 export function instanzTabGeschlossen(tabId: string): void {
-  const dokument = dokumente.get(tabId)
-  if (!dokument) return
-  clearActiveInstanceDocument(dokument)
   dokumente.delete(tabId)
 }
 

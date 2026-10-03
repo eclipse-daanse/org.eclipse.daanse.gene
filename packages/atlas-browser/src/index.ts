@@ -348,9 +348,14 @@ export async function activate(context: ModuleContext): Promise<void> {
               resource.getContents().push(content)
             }
           } else {
-            // No object selected — get the shared instance resource
+            // No object selected - the instance file in front, asked at the front service
             const instanceTreeComposable = context.services.get<any>('ui.instance-tree.composables')
-            const sharedResource = instanceTreeComposable?.getSharedResource?.()
+            const front = context.services.get<any>('gene.editor.front')
+            const frontTab: string | null = front?.frontTabId?.() ?? null
+            const frontDocument = frontTab && front?.editorIdOf?.(frontTab) === 'instance'
+              ? instanceTreeComposable?.instanzTabDokument?.(frontTab)
+              : undefined
+            const sharedResource = instanceTreeComposable?.getSharedResource?.(frontDocument)
             if (sharedResource && sharedResource.getContents().length > 0) {
               for (const content of sharedResource.getContents()) {
                 resource.getContents().push(content)

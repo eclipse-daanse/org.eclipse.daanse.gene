@@ -2455,40 +2455,35 @@ function getOrCreateSharedState(): SharedState {
 type MetamodelerInstanz = ReturnType<typeof useMetamodeler>
 
 /**
- * Die Instanz, die gerade vorn liegt.
+ * Which instance the facade answers with.
  *
- * Jeder Editor-Tab bringt seine eigene mit, damit mehrere .ecore gleichzeitig
- * offen sein koennen. Baum und Eigenschaften liegen aber im Seitenbereich und
- * werden beim Tab-Wechsel nicht neu aufgebaut — sie halten deshalb die Fassade
- * unten, die bei jedem Zugriff durchreicht.
+ * Every tab has its own instance (see `tabDokumente`) and shows it directly.
+ * The facade below is for *commands* - save, validate, the menu - which act on
+ * the file in front. Who is in front is not switched here any more; it is
+ * asked, through a resolver the module registers from the front service.
+ * Without one, or without a metamodel tab in front, it is the shared instance.
  */
-const aktiveInstanz = shallowRef<MetamodelerInstanz | null>(null)
+let frontResolver: (() => MetamodelerInstanz | null) | null = null
 
-/** Meldet die Instanz des Tabs, der nach vorn kommt. */
-export function setActiveMetamodeler(instanz: MetamodelerInstanz): void {
-  aktiveInstanz.value = instanz
+/** Registers how to find the metamodeler of the tab in front. */
+export function setMetamodelerFrontResolver(resolver: (() => MetamodelerInstanz | null) | null): void {
+  frontResolver = resolver
 }
 
-/** Gibt die Instanz frei, wenn ihr Tab schliesst. */
-export function clearActiveMetamodeler(instanz: MetamodelerInstanz): void {
-  if (aktiveInstanz.value === instanz) aktiveInstanz.value = null
-}
-
-/** Die Instanz hinter der Fassade: der vordere Tab, sonst die gemeinsame. */
+/** The instance behind the facade: the tab in front, else the shared one. */
 function zielInstanz(): MetamodelerInstanz {
-  return aktiveInstanz.value ?? getOrCreateSharedState().instance
+  return frontResolver?.() ?? getOrCreateSharedState().instance
 }
 
 let fassade: MetamodelerInstanz | null = null
 
 /**
- * Get the shared metamodeler instance
+ * A facade onto the metamodeler in front - for commands.
  *
- * Liefert eine Fassade auf die vordere Instanz. Sie liest dafuer `aktiveInstanz`
- * bei jedem Zugriff, also laeuft die Reaktivitaet mit: wer `rootPackage.value`
- * in einem computed liest, rechnet beim Tab-Wechsel neu. Wer ein Feld einmal
- * herausnimmt und festhaelt, haelt dagegen die Instanz von damals — die
- * Komponenten greifen deshalb durchgaengig ueber die Fassade zu.
+ * Every access goes through the resolver, so a command run from the menu acts
+ * on whichever tab is in front at that moment. The resolver is not reactive: a
+ * component that keeps showing something should take the instance itself (the
+ * tabs do), not this facade.
  */
 export function useSharedMetamodeler(): MetamodelerInstanz {
   if (!fassade) {

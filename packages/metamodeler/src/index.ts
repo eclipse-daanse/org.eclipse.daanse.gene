@@ -13,13 +13,12 @@ import metamodelCommandsEcore from '../model/metamodel-commands.ecore?raw'
 export * from './types'
 
 // Re-export composables
-export { useMetamodeler, useSharedMetamodeler, setActiveMetamodeler, clearActiveMetamodeler } from './composables/useMetamodeler'
+export { useMetamodeler, useSharedMetamodeler, setMetamodelerFrontResolver } from './composables/useMetamodeler'
 // Ein Metamodell je Editor-Tab (mehrere .ecore gleichzeitig offen)
 export {
   tabIdFuer,
   metamodelerFuerTab,
   tabIstGeladen,
-  tabNachVorn,
   tabGeschlossen,
   tabIstGeaendert,
   offeneTabIds
@@ -34,12 +33,11 @@ import {
   tabIdFuer,
   metamodelerFuerTab,
   tabIstGeladen,
-  tabNachVorn,
   tabGeschlossen,
   tabIstGeaendert,
   offeneTabIds
 } from './composables/tabDokumente'
-import { useMetamodeler, useSharedMetamodeler, setMetamodelerIconRegistry, refreshMetamodelerIcons, setMetamodelerProblemsService, setMetamodelerConfirmSaveHandler, setCanonicalPackageRegistry, setMetamodelerModelRegistry } from './composables/useMetamodeler'
+import { useMetamodeler, useSharedMetamodeler, setMetamodelerFrontResolver, setMetamodelerIconRegistry, refreshMetamodelerIcons, setMetamodelerProblemsService, setMetamodelerConfirmSaveHandler, setCanonicalPackageRegistry, setMetamodelerModelRegistry } from './composables/useMetamodeler'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
@@ -129,10 +127,21 @@ export async function activate(context: ModuleContext): Promise<void> {
     tabIdFuer,
     metamodelerFuerTab,
     tabIstGeladen,
-    tabNachVorn,
     tabGeschlossen,
     tabIstGeaendert,
     offeneTabIds
+  })
+
+  /*
+   * How the facade finds the metamodel in front: asked at the front service,
+   * not switched by the tab. The facade serves commands - save, validate, the
+   * menu - which act on the file in front; the tabs themselves show their own
+   * instance directly.
+   */
+  setMetamodelerFrontResolver(() => {
+    const front = context.services.get<any>('gene.editor.front')
+    const tabId: string | null = front?.frontTabId?.() ?? null
+    return tabId && front?.editorIdOf?.(tabId) === 'metamodel' ? metamodelerFuerTab(tabId) : null
   })
 
 

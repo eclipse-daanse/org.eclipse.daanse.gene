@@ -10,7 +10,6 @@ import {
   instanzTabIdFuer,
   instanzTabDokument,
   instanzTabIstGeladen,
-  instanzTabNachVorn,
   instanzTabGeschlossen,
   offeneInstanzTabIds
 } from '../composables/tabDokumente'
@@ -45,23 +44,6 @@ describe('Instanzen je Tab', () => {
     expect(a.instance).not.toBe(b.instance)
     expect(instanzTabIstGeladen(instanzTabIdFuer('instances/a.xmi'))).toBe(true)
     expect(instanzTabIstGeladen(instanzTabIdFuer('instances/b.xmi'))).toBe(false)
-  })
-
-  it('zeigt der Fassade den Tab, der vorn liegt', () => {
-    const fassade = useSharedInstanceTree()
-    const aId = instanzTabIdFuer('instances/a.xmi')
-    const bId = instanzTabIdFuer('instances/b.xmi')
-    instanzTabDokument(aId).resources.value = [new XMIResource(URI.createURI('instances/a.xmi'))]
-    instanzTabDokument(bId).resources.value = [
-      new XMIResource(URI.createURI('instances/b1.xmi')),
-      new XMIResource(URI.createURI('instances/b2.xmi'))
-    ]
-
-    instanzTabNachVorn(aId)
-    expect(fassade.resources.value).toHaveLength(1)
-
-    instanzTabNachVorn(bId)
-    expect(fassade.resources.value).toHaveLength(2)
   })
 
   it('vergisst den Tab beim Schliessen', () => {

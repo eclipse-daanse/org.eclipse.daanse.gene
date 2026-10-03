@@ -207,12 +207,7 @@ const workspaceActionsService: WorkspaceActionService = {
     if (options) {
       handleReferenceSearch(options.feature, options.resource, options.callback, options.candidates)
     } else {
-      if (instanceTreeComposables.value?.getSharedResource) {
-        const resource = instanceTreeComposables.value.getSharedResource()
-        if (resource) {
-          showSearchDialog.value = true
-        }
-      }
+      if (vordereInstanzResource()) showSearchDialog.value = true
     }
   },
   createInstance: (classInfo) => handleCreateInstance(classInfo),
@@ -257,6 +252,16 @@ const pendingArtifacts = ref<any[]>([])
 
 // XMI Import Dialog
 const xmiImportDialogRef = ref<any>(null)
+/*
+ * The import dialog component, as a ref so the template reacts when ui-actions
+ * registers it. A `tsm.getService(...)` inside `v-if` is evaluated once per
+ * render and never again on its own - with fewer reasons to re-render, the
+ * dialog simply never appeared.
+ */
+const xmiImportDialogComponent = shallowRef<Component | null>(null)
+tsm.whenService<any>('gene.action.components', (components: any) => {
+  xmiImportDialogComponent.value = components?.XmiImportDialog ? markRaw(components.XmiImportDialog) : null
+})
 const xmiImportProps = ref<{ xmiContent: string; name: string }>({ xmiContent: '', name: '' })
 
 // Save-validation confirm dialog (Metamodeler): shown when saving with errors
@@ -834,6 +839,9 @@ async function loadInstancesFromEditorConfig(workspaceEntry: any) {
     return undefined
   }
 
+  // The last document loaded into - validation attaches to it afterwards
+  let letztesDokument: any = undefined
+
   // Load each instance source
   for (const source of instanceSources) {
     const location = getFeatureValue(source, 'location') || getFeatureValue(source, 'path')
@@ -890,16 +898,14 @@ async function loadInstancesFromEditorConfig(workspaceEntry: any) {
          * Vorher landete sie nur im gemeinsamen Baum, und die Perspektive zeigte
          * ihn — seit die untere Haelfte links dem vorderen Tab gehoert, zeigte
          * sie niemand mehr. Dieselbe Reihenfolge wie beim Oeffnen aus dem
-         * Explorer: Dokument anlegen, nach vorn holen, laden, Tab oeffnen.
+         * Explorer: Dokument anlegen, hinein laden, Tab oeffnen.
          */
         const tabId: string | null = itc?.instanzTabIdFuer?.(location) ?? null
-        if (tabId) {
-          itc.instanzTabDokument?.(tabId)
-          itc.instanzTabNachVorn?.(tabId)
-        }
+        const dokument = tabId ? itc.instanzTabDokument?.(tabId) : undefined
+        letztesDokument = dokument
 
         try {
-          const result = await instanceTreeComposables.value.loadInstancesFromXMI(content, location)
+          const result = await instanceTreeComposables.value.loadInstancesFromXMI(content, location, dokument)
           reportMissingPackages((result as any)?.missingPackages, resolution.searched, fileEntry, location)
           await registerMetamodelsAsModels(location)
           if (tabId) oeffneInstanzTab(tabId, location.split('/').pop() || location)
@@ -948,7 +954,7 @@ async function loadInstancesFromEditorConfig(workspaceEntry: any) {
   }
 
   // Enable live OCL validation after all instances are loaded
-  await enableLiveOclValidation()
+  await enableLiveOclValidation(letztesDokument)
 }
 
 /**
@@ -979,14 +985,14 @@ async function configureCascadeResolver() {
  * Enable live OCL validation on loaded instances.
  * Called after instance loading in loadInstancesFromEditorConfig-flow.
  */
-async function enableLiveOclValidation() {
+async function enableLiveOclValidation(dokument?: any) {
   // Enable live OCL validation on all loaded instances
   console.log('[App] Attempting to enable live OCL validation...')
   console.log('[App] instanceTreeComposables.value:', !!instanceTreeComposables.value)
   console.log('[App] getSharedResource exists:', !!instanceTreeComposables.value?.getSharedResource)
 
   if (instanceTreeComposables.value?.getSharedResource) {
-    const resource = instanceTreeComposables.value.getSharedResource()
+    const resource = instanceTreeComposables.value.getSharedResource(dokument ?? vorderesInstanzDokument() ?? undefined)
     console.log('[App] Got resource:', resource, 'contents:', resource?.getContents?.()?.length)
     if (resource) {
       // Attach live validation and run initial validation immediately
@@ -1223,13 +1229,8 @@ function handleSearchNavigate(hit: any) {
     return
   }
 
-  // Regular navigation
-  if (instanceTreeComposables.value) {
-    const tree = instanceTreeComposables.value.useSharedInstanceTree()
-    if (tree?.selectObject) {
-      tree.selectObject(obj)
-    }
-  }
+  // Regular navigation - in the instance file in front
+  vorderesInstanzDokument()?.instance?.selectObject?.(obj)
 }
 
 // Handle reference search request from PropertiesPanel
@@ -1240,11 +1241,11 @@ function handleReferenceSearch(feature: any, resource: any, callback: (obj: any)
   searchResource.value = resource
   referenceSearchCandidates.value = candidates ? markRaw(candidates) : null
 
-  // Get the source object (the object whose reference is being set)
-  if (instanceTreeComposables.value) {
-    const tree = instanceTreeComposables.value.useSharedInstanceTree()
-    referenceSearchSourceObject.value = tree?.selectedObject?.value || null
-  }
+  // The source object (whose reference is being set): the selection of the file in front
+  referenceSearchSourceObject.value =
+    vorderesInstanzDokument()?.instance?.selectedObject?.value
+    ?? vorderesMetamodell()?.selectedElement?.value
+    ?? null
 
   // Extract OCL referenceFilter from annotation
   referenceSearchOclConstraint.value = getOclReferenceFilter(feature)
@@ -1283,13 +1284,10 @@ function handleCreateInstance(classInfo: any) {
 
   console.log('Created instance:', newObj)
 
-  // Add to instance tree
-  if (instanceTreeComposables.value) {
-    const tree = instanceTreeComposables.value.useSharedInstanceTree()
-    if (tree?.addRootObject) {
-      tree.addRootObject(newObj)
-    }
-  }
+  // Into the instance file in front
+  const dokument = vorderesInstanzDokument()
+  if (dokument?.instance?.addRootObject) dokument.instance.addRootObject(newObj)
+  else console.warn('[App] Keine Instanzdatei vorn - nichts, wohin die Instanz gehoert')
 }
 
 // Handle adding a model (.ecore file) to the workspace
@@ -1382,6 +1380,53 @@ function holeEditorFront(): EditorFrontService {
     tsm.registerService('gene.editor.front', editorFront)
   }
   return editorFront
+}
+
+/**
+ * The document of the instance tab in front - for commands, never for panels.
+ *
+ * Search, validation, "create instance", "show the object of this problem"
+ * act on the file in front. They ask here, explicitly, at the moment they run.
+ * Nothing is switched: the front service knows the tab, the tab knows its
+ * document.
+ */
+function vorderesInstanzDokument(): any | null {
+  const front = holeEditorFront()
+  const tabId = front.frontTabId()
+  if (!tabId || front.editorIdOf(tabId) !== 'instance') return null
+  return (instanceTreeComposables.value as any)?.instanzTabDokument?.(tabId) ?? null
+}
+
+/** The metamodeler of the metamodel tab in front - for commands, see above. */
+function vorderesMetamodell(): any | null {
+  const front = holeEditorFront()
+  const tabId = front.frontTabId()
+  if (!tabId || front.editorIdOf(tabId) !== 'metamodel') return null
+  return (metamodelerComposables.value as any)?.metamodelerFuerTab?.(tabId) ?? null
+}
+
+/** The primary resource of the instance file in front, if any. */
+function vordereInstanzResource(): any | null {
+  const dokument = vorderesInstanzDokument()
+  if (!dokument) return null
+  return (instanceTreeComposables.value as any)?.getSharedResource?.(dokument) ?? null
+}
+
+/** The loaded resource of a file, in whichever open tab it lives. */
+function findeResourceZurDatei(filePath: string): any | null {
+  const itc: any = instanceTreeComposables.value
+  if (!itc) return null
+  const dokumente = [
+    ...((itc.offeneInstanzTabIds?.() ?? []) as string[]).map((id) => itc.instanzTabDokument?.(id)),
+    undefined
+  ]
+  for (const dokument of dokumente) {
+    const treffer = (itc.getSharedResources?.(dokument) ?? []).find(
+      (r: any) => String(r.getURI?.() ?? '') === filePath
+    )
+    if (treffer) return treffer
+  }
+  return null
 }
 
 function verdrahteTabSchliessen(layout: any): void {
@@ -1614,9 +1659,7 @@ async function registerMetamodelsAsModels(filePath: string): Promise<void> {
   try {
     const mb =
       (modelBrowserComposables.value as any) ?? tsm.getService<any>('ui.model-browser.composables')
-    const resource = instanceTreeComposables.value?.getSharedResources?.().find(
-      (r: any) => String(r.getURI?.() ?? '') === filePath
-    )
+    const resource = findeResourceZurDatei(filePath)
     if (!resource) return
     const registered = registerUsedModels(resource, { modelBrowserComposables: mb })
     if (registered.length > 0) {
@@ -1683,30 +1726,29 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
   const resolution = await prepareMetamodelResolution(entry, entry.path)
 
   /*
-   * Jede Datei bekommt ihren eigenen Tab mit eigenem Baum. Ab hier liegt er
-   * vorn, also laedt alles Folgende dorthin — die Funktionen des
-   * Instanz-Moduls arbeiten auf dem vorderen Dokument. Beim Zusammenfuehren
-   * (MERGE) bleibt der Tab, der gerade offen ist.
+   * Jede Datei bekommt ihren eigenen Tab mit eigenem Dokument, und die Lader
+   * bekommen dieses Dokument ausdruecklich mit — nichts arbeitet mehr auf
+   * „dem vorderen". Beim Zusammenfuehren (MERGE) ist es das Dokument des Tabs,
+   * der gerade vorn liegt.
    */
   const instanzTabId: string | null = mode === 'MERGE'
     ? null
     : (itc.instanzTabIdFuer?.(entry.path) ?? null)
-  if (instanzTabId) {
-    itc.instanzTabDokument?.(instanzTabId)
-    itc.instanzTabNachVorn?.(instanzTabId)
-  }
+  const dokument = instanzTabId
+    ? itc.instanzTabDokument?.(instanzTabId)
+    : (vorderesInstanzDokument() ?? undefined)
 
   try {
     console.log('[App] Calling instance load, mode:', mode)
     let result: any
     if (mode === 'STANDALONE') {
-      result = await itc.loadResourceStandalone(content, entry.path, { replace: true })
+      result = await itc.loadResourceStandalone(content, entry.path, { replace: true }, dokument)
     } else if (mode === 'REPLACE') {
-      itc.setSharedResource?.(null)
-      result = await itc.loadInstancesFromXMI(content, entry.path)
+      itc.setSharedResource?.(null, dokument)
+      result = await itc.loadInstancesFromXMI(content, entry.path, dokument)
     } else {
-      // MERGE — add as a new resource to the current view
-      result = await itc.loadInstancesFromXMI(content, entry.path)
+      // MERGE — add as a new resource to the document in front
+      result = await itc.loadInstancesFromXMI(content, entry.path, dokument)
     }
     console.log('[App] Instances loaded from:', entry.name, 'count:', result.loadedCount, 'errors:', result.errors.length)
     if (instanzTabId) oeffneInstanzTab(instanzTabId, entry.name || entry.path)
@@ -1714,9 +1756,7 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
     // Was der Loader geholt hat, gehoert auch in die Modell-Liste (#155)
     await registerMetamodelsAsModels(entry.path)
 
-    // Check instance tree state after loading
-    const tree = instanceTreeComposables.value.useSharedInstanceTree()
-    console.log('[App] Instance tree after load - treeNodes:', tree.treeNodes.value?.length)
+    console.log('[App] Instance tree after load - treeNodes:', dokument?.instance?.treeNodes?.value?.length)
 
     // Report any parsing errors/warnings to Problems panel
     if (result.errors.length > 0) {
@@ -1764,7 +1804,7 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
       // Enable live OCL validation on loaded objects and validate immediately
       console.log('[App] handleInstanceAdd - enabling live validation...')
       if (instanceTreeComposables.value?.getSharedResource) {
-        const resource = instanceTreeComposables.value.getSharedResource()
+        const resource = instanceTreeComposables.value.getSharedResource(dokument)
         console.log('[App] handleInstanceAdd - resource:', resource, 'contents:', resource?.getContents?.()?.length)
         if (resource) {
           // Attach and validate immediately
@@ -2125,12 +2165,8 @@ function registriereProblemePanel(layout: any): void {
  * zustaendige antwortet.
  */
 function waehleObjektImBaum(obj: any): void {
-  try {
-    metamodelerComposables.value?.useSharedMetamodeler?.().selectElement?.(obj)
-  } catch { /* kein Metamodell vorn */ }
-  try {
-    instanceTreeComposables.value?.useSharedInstanceTree?.()?.selectObject?.(obj)
-  } catch { /* keine Instanz vorn */ }
+  try { vorderesMetamodell()?.selectElement?.(obj) } catch { /* kein Metamodell vorn */ }
+  try { vorderesInstanzDokument()?.instance?.selectObject?.(obj) } catch { /* keine Instanz vorn */ }
 }
 
 let problemeBeobachtet = false
@@ -2168,8 +2204,7 @@ function beobachteProbleme(layout: any): void {
 
 /** Die Suche oeffnen, sofern ueberhaupt Instanzen geladen sind. */
 function openSearchDialogIfPossible(): void {
-  const resource = instanceTreeComposables.value?.getSharedResource?.()
-  if (resource) showSearchDialog.value = true
+  if (vordereInstanzResource()) showSearchDialog.value = true
 }
 
 let suchKnopfGesetzt = false
@@ -2509,9 +2544,9 @@ onMounted(() => {
 
   <!-- Search Dialog -->
   <SearchDialog
-    v-if="referenceSearchCandidates || searchResource || instanceTreeComposables?.getSharedResource?.()"
+    v-if="referenceSearchCandidates || searchResource || vordereInstanzResource()"
     :visible="showSearchDialog"
-    :resource="searchResource || instanceTreeComposables?.getSharedResource()"
+    :resource="searchResource || vordereInstanzResource()"
     :candidates="referenceSearchCandidates || undefined"
     :referenceOptions="referenceSearchFeature ? {
       sourceObject: referenceSearchSourceObject,
@@ -2597,8 +2632,8 @@ onMounted(() => {
 
   <!-- XMI Import Dialog (UC-ACT-006) -->
   <component
-    v-if="tsm.getService('gene.action.components')?.XmiImportDialog"
-    :is="tsm.getService('gene.action.components').XmiImportDialog"
+    v-if="xmiImportDialogComponent"
+    :is="xmiImportDialogComponent"
     ref="xmiImportDialogRef"
     :xmiContent="xmiImportProps.xmiContent"
     :name="xmiImportProps.name"
