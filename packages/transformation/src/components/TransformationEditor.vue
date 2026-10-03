@@ -67,6 +67,13 @@ interface Connection {
 const tsm = inject<any>('tsm')
 const openFileTitle = tsm?.getService('gene.layout.openFile')
 
+/*
+ * The file this editor shows, handed in by its tab. It used to come from a
+ * service the opener filled and this component emptied again - and polled
+ * every half second in case a second file arrived. Now every tab has its own.
+ */
+const props = defineProps<{ document?: { data: unknown; filePath?: string } }>()
+
 // --- Model Registry ---
 
 const modelRegistry = tsm?.getService('ui.model-browser.composables')?.useSharedModelRegistry()
@@ -453,12 +460,7 @@ onMounted(() => {
   // Initialize LSP worker
   initLspAndRegisterPackages()
 
-  // Check for loaded transformation data
-  const loadedData = tsm?.getService('gene.transformation.data')
-  if (loadedData) {
-    loadFromData(loadedData)
-    tsm?.registerService('gene.transformation.data', null)
-  }
+  if (props.document?.data) loadFromData(props.document.data)
 })
 
 onUnmounted(() => {
@@ -470,17 +472,6 @@ onUnmounted(() => {
 watch([connections, activeRelationId], () => {
   nextTick(() => updateConnections())
 }, { deep: true })
-
-// Watch for externally loaded transformation data (e.g. loading a second file)
-// Note: TSM services are not reactive, so we use a polling interval
-const _transformationPollInterval = setInterval(() => {
-  const data = tsm?.getService('gene.transformation.data')
-  if (data) {
-    loadFromData(data)
-    tsm?.registerService('gene.transformation.data', null)
-  }
-}, 500)
-onUnmounted(() => clearInterval(_transformationPollInterval))
 
 function handleNew() {
   transformationName.value = 'NewTransformation'

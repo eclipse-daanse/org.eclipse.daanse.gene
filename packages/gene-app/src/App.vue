@@ -1095,47 +1095,45 @@ function waehleNavigator(layout: any, perspectiveId: string): void {
 }
 
 /**
- * Eine Datei in der Ansicht oeffnen, die bisher eine Perspektive war.
+ * Opens a file in a view that brings its own tab component.
  *
- * cocl, Transformation und DMN hatten je eine Perspektive und keinen Tab: Die
- * Datei zu oeffnen hiess, die ganze Flaeche umzuschalten — und seit die
- * Ansichten nicht mehr in der Leiste stehen, wechselte sie auf etwas, das dort
- * gar nicht mehr auftauchte. Jetzt ist es ein Tab wie jeder andere.
+ * The plugin keeps the file's document per tab and shows it from there; the
+ * opener only hands the document over and names the tab. No service per file
+ * type any more - with one, the second file of a kind overwrote the first - and
+ * no perspective to switch.
  *
- * Den Inhalt stellt weiterhin das Panel, das die Perspektive in die Mitte
- * stellen wollte. Was es anzeigt, kommt noch aus einem Dienst je Dateiart, also
- * traegt ein zweiter Tab derselben Art denselben Inhalt — eigener Zustand je
- * Tab ist Sache des jeweiligen Plugins und bleibt offen.
- *
- * @returns true, wenn ein Tab entstanden ist.
+ * @returns true when a tab came to be.
  */
-function oeffnePerspektivTab(
-  perspectiveId: string,
-  editorId: string,
-  tabId: string,
+function oeffneAnsichtTab(opts: {
+  editorId: string
+  tabId: string
   titel: string
-): boolean {
-  const layoutSvc = layoutStateService.value
-  if (!layoutSvc) return false
-  const layout = layoutSvc.useLayoutState()
-
-  const perspektive = perspectiveManager.value?.registry?.get?.(perspectiveId)
-  const mitteId = perspektive?.defaultLayout?.center?.[0]
-  const panelRegistry = tsm.getService('ui.registry.panels') as any
-  const panel = panelRegistry?.getForPerspective?.(perspectiveId)?.find((p: any) => p.id === mitteId)
-  if (!panel) {
-    console.warn(`[App] Ansicht '${perspectiveId}' hat kein Panel fuer die Mitte`)
+  icon: string
+  componentsService: string
+  component: string
+  composablesService: string
+  document: unknown
+}): boolean {
+  const layout = layoutStateService.value?.useLayoutState()
+  const Tab = tsm.getService<any>(opts.componentsService)?.[opts.component]
+  const store = tsm.getService<any>(opts.composablesService)
+  if (!layout || !Tab || !store?.setTabDocument) {
+    console.warn('[App] Ansicht nicht verfuegbar', {
+      editor: opts.editorId, layout: !!layout, tab: !!Tab, store: !!store?.setTabDocument
+    })
     return false
   }
 
+  store.setTabDocument(opts.tabId, opts.document)
   verdrahteTabSchliessen(layout)
-  holeEditorFront().bindTab(tabId, editorId)
+  holeEditorFront().bindTab(opts.tabId, opts.editorId)
 
   layout.openEditor({
-    id: tabId,
-    title: titel,
-    icon: panel.icon,
-    component: markRaw(panel.component)
+    id: opts.tabId,
+    title: opts.titel,
+    icon: opts.icon,
+    component: markRaw(Tab),
+    props: { tabId: opts.tabId }
   })
   return true
 }
@@ -1435,6 +1433,10 @@ function verdrahteTabSchliessen(layout: any): void {
   layout.onEditorClosed((tabId: string) => {
     metamodelerComposables.value?.tabGeschlossen?.(tabId)
     ;(instanceTreeComposables.value as any)?.instanzTabGeschlossen?.(tabId)
+    // The file editors keep one document per tab - let them forget it
+    for (const svc of ['ui.cocl-editor.composables', 'ui.transformation.composables', 'ui.dmn-editor.composables']) {
+      tsm.getService<any>(svc)?.closeTabDocument?.(tabId)
+    }
     holeEditorFront().releaseTab(tabId)
   })
 }
@@ -1929,13 +1931,16 @@ async function handleCoclAdd(entry: any, content: string) {
       })
     }
 
-    // Store data for the C-OCL editor and switch to cocl-editor perspective
-    tsm.registerService('gene.cocl.data', {
-      content,
-      filePath: entry.path,
-      fileEntry: entry
+    oeffneAnsichtTab({
+      editorId: 'cocl',
+      tabId: `cocl:${entry.path}`,
+      titel: entry.name || 'Constraints',
+      icon: 'pi pi-check-square',
+      componentsService: 'ui.cocl-editor.components',
+      component: 'CoclEditorTab',
+      composablesService: 'ui.cocl-editor.composables',
+      document: { content, filePath: entry.path, fileEntry: entry }
     })
-    oeffnePerspektivTab('cocl-editor', 'cocl', `cocl:${entry.path}`, entry.name || 'Constraints')
   } catch (e: any) {
     console.error('[App] Error loading C-OCL file:', e)
 
@@ -1963,8 +1968,16 @@ async function handleTransformationLoad(entry: any, content: string) {
 
   try {
     const data = JSON.parse(content)
-    tsm.registerService('gene.transformation.data', data)
-    oeffnePerspektivTab('transformation', 'transformation', `transformation:${entry.path}`, entry.name || 'Transformation')
+    oeffneAnsichtTab({
+      editorId: 'transformation',
+      tabId: `transformation:${entry.path}`,
+      titel: entry.name || 'Transformation',
+      icon: 'pi pi-arrows-h',
+      componentsService: 'ui.transformation.components',
+      component: 'TransformationEditorTab',
+      composablesService: 'ui.transformation.composables',
+      document: { data, filePath: entry.path }
+    })
   } catch (e: any) {
     console.error('[App] Failed to parse .qvtr file:', e)
   }
@@ -1975,13 +1988,16 @@ async function handleDmnLoad(entry: any, content: string) {
   console.log('[App] Loading DMN file:', entry.name, 'content length:', content?.length)
 
   try {
-    tsm.registerService('gene.dmn.data', {
-      content,
-      filePath: entry.path,
-      fileEntry: entry,
-      sourceId: entry.sourceId
+    oeffneAnsichtTab({
+      editorId: 'dmn',
+      tabId: `dmn:${entry.path}`,
+      titel: entry.name || 'DMN',
+      icon: 'pi pi-table',
+      componentsService: 'ui.dmn-editor.components',
+      component: 'DmnEditorTab',
+      composablesService: 'ui.dmn-editor.composables',
+      document: { content, filePath: entry.path, fileEntry: entry, sourceId: entry.sourceId }
     })
-    oeffnePerspektivTab('dmn-editor', 'dmn', `dmn:${entry.path}`, entry.name || 'DMN')
   } catch (e: any) {
     console.error('[App] Failed to load DMN file:', e)
   }

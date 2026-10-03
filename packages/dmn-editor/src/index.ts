@@ -12,11 +12,13 @@ import { markRaw } from 'tsm:vue'
 export * from './types'
 
 // Re-export components
-export { DmnPerspective } from './components'
+export { DmnPerspective, DmnEditorTab } from './components'
+export { setTabDocument, tabDocument, closeTabDocument, openTabIds, type DmnDocument } from './composables/tabDocuments'
 
 // Import for service registration
-import { DmnPerspective } from './components'
+import { DmnPerspective, DmnEditorTab } from './components'
 import { setFileSystem } from './composables/useDmnEditor'
+import { setTabDocument, tabDocument, closeTabDocument, openTabIds } from './composables/tabDocuments'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
@@ -33,7 +35,15 @@ export async function activate(context: ModuleContext): Promise<void> {
 
   // Register components as service
   context.services.register('ui.dmn-editor.components', {
-    DmnPerspective
+    DmnPerspective,
+    // One .dmn as a tab with its own document
+    DmnEditorTab
+  })
+  context.services.register('ui.dmn-editor.composables', {
+    setTabDocument,
+    tabDocument,
+    closeTabDocument,
+    openTabIds
   })
 
   // Register DMN editor perspective
