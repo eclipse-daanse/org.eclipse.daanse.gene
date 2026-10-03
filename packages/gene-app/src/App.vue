@@ -147,19 +147,10 @@ const metamodelerComposables = shallowRef<{
   useSharedMetamodeler: () => any
 } | null>(null)
 
-// Editor context functions (from instance-tree)
+// Editor context service (from instance-tree): the registry of file views
 const editorContextService = shallowRef<{
-  createInstanceContext: () => any
   createMetamodelContext: (metamodeler: any) => any
-  provideEditorContext: (ctx: any) => void
-  setEditorMode: (mode: 'instance' | 'metamodel') => void
-  registerMetamodelContextFactory: (factory: () => any) => void
-  EDITOR_CONTEXT_KEY: symbol
 } | null>(null)
-
-// Pre-created contexts (created once when services are available)
-const instanceEditorContext = shallowRef<any>(null)
-const metamodelEditorContext = shallowRef<any>(null)
 
 // Workspace components (legacy)
 const workspaceComponentsService = shallowRef<{ WorkspaceExplorer: Component } | null>(null)
@@ -1054,15 +1045,6 @@ function handlePerspectiveChange(perspectiveId: string) {
     perspective.value.switchTo(perspectiveId)
   }
 
-  // Set editor mode for context switching
-  if (editorContextService.value?.setEditorMode) {
-    if (perspectiveId === 'metamodeler') {
-      editorContextService.value.setEditorMode('metamodel')
-    } else if (perspectiveId === 'model-editor') {
-      editorContextService.value.setEditorMode('instance')
-    }
-  }
-
   /*
    * Eine Perspektive waehlt nur noch den Navigator oben links. Sie baut nichts
    * auf: Die Flaeche steht, und was in ihr zu sehen ist, bestimmt der Tab.
@@ -1377,14 +1359,6 @@ async function handleModelAdd(entry: any, content: string) {
 }
 
 // Handle opening .ecore file in Metamodeler
-/**
- * Oeffnet ein Metamodell als eigenen Tab.
- *
- * Der Inhalt des Tabs ist das Eigenschaften-Panel wie bisher — neu ist, dass
- * der Tab beim Aufbau seine Instanz nach vorn meldet. Weil der Editor-Bereich
- * immer nur den vorderen Tab rendert, genuegt das: Baum (ueber die Fassade),
- * Eigenschaften und Modelle (ueber getCurrentContext) folgen ihm.
- */
 let schliessenVerdrahtet = false
 
 /**
@@ -1413,11 +1387,9 @@ function holeEditorFront(): EditorFrontService {
 function verdrahteTabSchliessen(layout: any): void {
   if (schliessenVerdrahtet || !layout.onEditorClosed) return
   schliessenVerdrahtet = true
-  const contextService = tsm.getService<any>('gene.editor.context')
   layout.onEditorClosed((tabId: string) => {
     metamodelerComposables.value?.tabGeschlossen?.(tabId)
     ;(instanceTreeComposables.value as any)?.instanzTabGeschlossen?.(tabId)
-    contextService?.releaseTabContext?.(tabId)
     holeEditorFront().releaseTab(tabId)
   })
 }
@@ -2446,16 +2418,6 @@ onMounted(() => {
         editorContextService.value = contextService
         console.log('[App] EditorContext service loaded')
       }
-    }
-
-    // Create Instance Editor context (once, when service is available)
-    if (!instanceEditorContext.value && editorContextService.value?.createInstanceContext) {
-      instanceEditorContext.value = editorContextService.value.createInstanceContext()
-      // Register factory for getCurrentContext() support
-      if (editorContextService.value.registerInstanceContextFactory) {
-        editorContextService.value.registerInstanceContextFactory(() => instanceEditorContext.value)
-      }
-      console.log('[App] Instance Editor context created')
     }
 
     // Note: the metamodel editor context factory is registered by the metamodeler

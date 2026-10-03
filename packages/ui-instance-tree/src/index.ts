@@ -24,13 +24,6 @@ export {
   EDITOR_CONTEXT_KEY,
   provideEditorContext,
   useEditorContext,
-  setEditorMode,
-  getEditorMode,
-  registerInstanceContextFactory,
-  registerMetamodelContextFactory,
-  getCurrentContext,
-  getInstanceContext,
-  getMetamodelContext,
   getEditorContextService
 } from './context/editorContext'
 
@@ -193,13 +186,6 @@ import {
   EDITOR_CONTEXT_KEY,
   provideEditorContext,
   useEditorContext,
-  setEditorMode,
-  getEditorMode,
-  registerInstanceContextFactory,
-  registerMetamodelContextFactory,
-  getCurrentContext,
-  getInstanceContext,
-  getMetamodelContext,
   getEditorContextService
 } from './context/editorContext'
 
@@ -381,13 +367,6 @@ export async function activate(context: ModuleContext): Promise<void> {
     createMetamodelContext,
     provideEditorContext,
     useEditorContext,
-    setEditorMode,
-    getEditorMode,
-    registerInstanceContextFactory,
-    registerMetamodelContextFactory,
-    getCurrentContext,
-    getInstanceContext,
-    getMetamodelContext,
     EDITOR_CONTEXT_KEY
   })
 
@@ -406,10 +385,7 @@ export async function activate(context: ModuleContext): Promise<void> {
         right: ['model-browser'],
         bottom: ['ocl-problems', 'action-jobs']
       },
-      defaultVisibility: { left: true, right: true, bottom: true },
-      onActivate: () => {
-        setEditorMode('instance')
-      }
+      defaultVisibility: { left: true, right: true, bottom: true }
     })
     context.log.info('Model Editor perspective registered')
   }
