@@ -399,6 +399,32 @@ Nebenbei behoben: Der Import-Dialog hing an einem `v-if` mit
 `tsm.getService(...)`, das nur beim Rendern ausgewertet wurde — mit weniger
 Anlässen zum Neu-Rendern erschien er gar nicht mehr. Jetzt per `whenService`.
 
+**Etappe 4 erledigt, soweit es Dateieditoren sind (2026-10-03).** C-OCL,
+Transformation und DMN haben je einen Dokument-Speicher je Tab
+(`composables/tabDocuments.ts` im jeweiligen Plugin) und eine Tab-Komponente
+(`CoclEditorTab`, `TransformationEditorTab`, `DmnEditorTab`), die ihrem Editor
+das Dokument als Prop gibt. Die Dienste `gene.cocl.data`,
+`gene.transformation.data` und `gene.dmn.data` gibt es nicht mehr — mit ihnen
+überschrieb die zweite Datei einer Art die erste, und der Transformations-Editor
+fragte den Dienst alle 500 ms ab. `App.vue` öffnet die drei über
+`oeffneAnsichtTab`; `oeffnePerspektivTab` ist weg.
+
+Geprüft: zwei `.qvtr` nebeneinander, jede mit eigenem Dokument; die Titelzeile
+folgt dem vorderen Tab (Alpha / Beta / Alpha), kein Panel einer Datei im Rahmen.
+
+**Was bewusst nicht umgebaut ist:**
+- **DMN** lädt sein Dokument je Tab, das *Modell* ist aber weiter das geteilte
+  (`useSharedDmnEditor`, von Baum, Tabelle und Executor gemeinsam genutzt). Zwei
+  DMN-Tabs zeigen also dasselbe Modell, geladen vom zuletzt vorn liegenden. Das
+  Plugin ist in den Startmodulen ohnehin auskommentiert.
+- **eorm- und SensiNact-Wizard** sind keine Dateieditoren, sondern Assistenten
+  mit eigenem Zustand im Plugin; `open()` zeigt den Wizard, die Datei wird nicht
+  übergeben. Sie bleiben, wie sie sind: Mitte-Panel als Tab über die Perspektive.
+- **Datengenerator** hat kein `open()`.
+
+Der Dokument-Speicher ist dreimal gleich geschrieben (25 Zeilen), weil ein
+Plugin kein anderes importiert und `gene-contracts` kein Verhalten trägt.
+
 ### Was dabei an Verhalten wegfällt
 
 - Die Zone links unten ist für Dateiansichten nicht mehr da. Der Navigator

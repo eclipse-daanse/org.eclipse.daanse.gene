@@ -9,12 +9,14 @@ import type { ModuleContext } from '@eclipse-daanse/tsm'
 import { markRaw } from 'tsm:vue'
 
 // Re-export components
-export { TransformationEditor, OclMonacoEditor } from './components'
+export { TransformationEditor, OclMonacoEditor, TransformationEditorTab } from './components'
 export { getSharedOclClient } from './composables/useOclLanguageClient'
+export { setTabDocument, tabDocument, closeTabDocument, openTabIds, type TransformationDocument } from './composables/tabDocuments'
 
 // Import for service registration
-import { TransformationEditor, OclMonacoEditor } from './components'
+import { TransformationEditor, OclMonacoEditor, TransformationEditorTab } from './components'
 import { getSharedOclClient } from './composables/useOclLanguageClient'
+import { setTabDocument, tabDocument, closeTabDocument, openTabIds } from './composables/tabDocuments'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
@@ -28,10 +30,16 @@ export async function activate(context: ModuleContext): Promise<void> {
   // Register components and composables as service
   context.services.register('ui.transformation.components', {
     TransformationEditor,
-    OclMonacoEditor
+    OclMonacoEditor,
+    // One .qvtr as a tab with its own document
+    TransformationEditorTab
   })
   context.services.register('ui.transformation.composables', {
-    getSharedOclClient
+    getSharedOclClient,
+    setTabDocument,
+    tabDocument,
+    closeTabDocument,
+    openTabIds
   })
 
   // Register transformation perspective

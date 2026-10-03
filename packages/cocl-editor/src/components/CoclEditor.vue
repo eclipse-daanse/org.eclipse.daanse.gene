@@ -13,6 +13,14 @@ import { serializeCoclToXml } from '../composables/useCoclSerializer'
 import { useCoclAtlas } from '../composables/useCoclAtlas'
 import ConstraintList from './ConstraintList.vue'
 import ConstraintForm from './ConstraintForm.vue'
+import type { CoclDocument } from '../composables/tabDocuments'
+
+/*
+ * The file this editor shows, handed in by its tab. Nothing is read from a
+ * service: with a service per file type, the second .c-ocl overwrote the
+ * first, and a tab that came back read whatever was there.
+ */
+const props = defineProps<{ document?: CoclDocument }>()
 
 // TSM service access
 const _tsm = inject<any>('tsm')
@@ -35,7 +43,7 @@ const selectedConstraintName = ref<string | null>(null)
 const isDirty = ref(false)
 const saveStatus = ref<'saved' | 'dirty' | 'saving' | 'error'>('saved')
 
-// Data from the window global (set by App.vue)
+// Where the file came from - for the title and for saving back
 let fileEntry: any = null
 let filePath: string = ''
 
@@ -263,9 +271,9 @@ function updateTargetNsURIs() {
 
 // Load the .c-ocl data
 onMounted(async () => {
-  const data = _tsm?.getService('gene.cocl.data')
+  const data = props.document
   if (!data) {
-    console.warn('[CoclEditor] No C-OCL data found via gene.cocl.data service')
+    console.warn('[CoclEditor] No document - this editor is meant to be opened as a tab')
     return
   }
 
@@ -514,8 +522,8 @@ async function handleSaveAs() {
 }
 
 function handleDiscard() {
-  // Reload from original data
-  const data = _tsm?.getService('gene.cocl.data')
+  // Reload from the file as it was opened
+  const data = props.document
   if (!data) return
 
   loadCoclFromString(data.content, filePath).then(parsed => {

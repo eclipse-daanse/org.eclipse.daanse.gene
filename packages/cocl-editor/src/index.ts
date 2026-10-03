@@ -10,10 +10,12 @@ import { markRaw } from 'tsm:vue'
 import coclCommandsEcore from '../model/cocl-commands.ecore?raw'
 
 // Re-export components
-export { CoclEditor } from './components'
+export { CoclEditor, CoclEditorTab } from './components'
+export { setTabDocument, tabDocument, closeTabDocument, openTabIds, type CoclDocument } from './composables/tabDocuments'
 
 // Import for service registration
-import { CoclEditor } from './components'
+import { CoclEditor, CoclEditorTab } from './components'
+import { setTabDocument, tabDocument, closeTabDocument, openTabIds } from './composables/tabDocuments'
 
 // Type imports
 import type { PanelRegistry, ActivityRegistry, PerspectiveManager } from 'ui-perspectives'
@@ -26,7 +28,15 @@ export async function activate(context: ModuleContext): Promise<void> {
 
   // Register components as service
   context.services.register('ui.cocl-editor.components', {
-    CoclEditor
+    CoclEditor,
+    // One .c-ocl as a tab with its own document
+    CoclEditorTab
+  })
+  context.services.register('ui.cocl-editor.composables', {
+    setTabDocument,
+    tabDocument,
+    closeTabDocument,
+    openTabIds
   })
 
   // Register cocl-editor perspective

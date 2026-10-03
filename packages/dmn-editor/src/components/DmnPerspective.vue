@@ -13,17 +13,20 @@ import DecisionTableEditor from './DecisionTableEditor.vue'
 const dmn = useSharedDmnEditor()
 const tsm = inject<any>('tsm')
 
+/*
+ * The file this editor shows, handed in by its tab. The model it is loaded
+ * into is still the shared one - see DmnEditorTab for what that means.
+ */
+const props = defineProps<{ document?: { content: string; filePath?: string; fileEntry?: any } }>()
+
 // Toolbar state
 const saving = ref(false)
 
 onMounted(() => {
-  // Load from TSM service if available (set by App.vue on .dmn file open)
-  const data = tsm?.getService('gene.dmn.data')
+  const data = props.document
   if (data?.content) {
     dmn.loadFromString(data.content, data.filePath, data.fileEntry?.handle)
     console.log('[DmnPerspective] Loaded DMN from file:', data.filePath)
-    // Clear the service to prevent re-loading on re-mount
-    tsm?.registerService('gene.dmn.data', null)
   }
 })
 
