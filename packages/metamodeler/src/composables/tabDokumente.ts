@@ -9,7 +9,7 @@
  * Deshalb liegen die Instanzen hier, an der Tab-Id. Die Komponente holt sich
  * beim Aufbau dieselbe wieder; freigegeben wird erst, wenn der Tab schließt.
  */
-import { useMetamodeler, setActiveMetamodeler, clearActiveMetamodeler } from './useMetamodeler'
+import { useMetamodeler } from './useMetamodeler'
 
 type MetamodelerInstanz = ReturnType<typeof useMetamodeler>
 
@@ -35,17 +35,8 @@ export function tabIstGeladen(tabId: string): boolean {
   return !!instanzen.get(tabId)?.resource.value
 }
 
-/** Meldet die Instanz des Tabs als die vordere. */
-export function tabNachVorn(tabId: string): void {
-  const instanz = instanzen.get(tabId)
-  if (instanz) setActiveMetamodeler(instanz)
-}
-
 /** Gibt die Instanz frei, wenn der Tab schließt. */
 export function tabGeschlossen(tabId: string): void {
-  const instanz = instanzen.get(tabId)
-  if (!instanz) return
-  clearActiveMetamodeler(instanz)
   instanzen.delete(tabId)
 }
 

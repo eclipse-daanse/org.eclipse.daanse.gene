@@ -10,12 +10,10 @@ import {
   tabIdFuer,
   metamodelerFuerTab,
   tabIstGeladen,
-  tabNachVorn,
   tabGeschlossen,
   tabIstGeaendert,
   offeneTabIds
 } from '../tabDokumente'
-import { useSharedMetamodeler } from '../useMetamodeler'
 
 afterEach(() => {
   for (const id of offeneTabIds()) tabGeschlossen(id)
@@ -46,20 +44,6 @@ describe('Metamodelle je Tab', () => {
     expect(lager.dirty.value).toBe(false)
     expect(tabIstGeaendert(tabIdFuer('model/shop.ecore'))).toBe(true)
     expect(tabIstGeaendert(tabIdFuer('model/lager.ecore'))).toBe(false)
-  })
-
-  it('zeigt der Fassade den Tab, der vorn liegt', () => {
-    const fassade = useSharedMetamodeler()
-    const shopId = tabIdFuer('model/shop.ecore')
-    const lagerId = tabIdFuer('model/lager.ecore')
-    metamodelerFuerTab(shopId).filePath.value = 'model/shop.ecore'
-    metamodelerFuerTab(lagerId).filePath.value = 'model/lager.ecore'
-
-    tabNachVorn(shopId)
-    expect(fassade.filePath.value).toBe('model/shop.ecore')
-
-    tabNachVorn(lagerId)
-    expect(fassade.filePath.value).toBe('model/lager.ecore')
   })
 
   it('sagt, ob ein Tab schon geladen ist — sonst wuerde erneut geparst', () => {

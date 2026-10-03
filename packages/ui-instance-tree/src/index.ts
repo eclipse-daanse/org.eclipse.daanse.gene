@@ -40,7 +40,6 @@ export {
   instanzTabIdFuer,
   instanzTabDokument,
   instanzTabIstGeladen,
-  instanzTabNachVorn,
   instanzTabGeschlossen,
   offeneInstanzTabIds
 } from './composables/tabDokumente'
@@ -55,8 +54,6 @@ export {
   getInstanceLoadingState,
   loadInstancesFromXMI,
   setPackageURIConverter,
-  setActiveInstanceDocument,
-  clearActiveInstanceDocument,
   getObjectSourcePath,
   setObjectSourcePath,
   setCanonicalPackageRegistry,
@@ -173,7 +170,6 @@ import {
   instanzTabIdFuer,
   instanzTabDokument,
   instanzTabIstGeladen,
-  instanzTabNachVorn,
   instanzTabGeschlossen,
   offeneInstanzTabIds
 } from './composables/tabDokumente'
@@ -319,7 +315,6 @@ export async function activate(context: ModuleContext): Promise<void> {
     instanzTabIdFuer,
     instanzTabDokument,
     instanzTabIstGeladen,
-    instanzTabNachVorn,
     instanzTabGeschlossen,
     offeneInstanzTabIds,
     createInstanceContext,

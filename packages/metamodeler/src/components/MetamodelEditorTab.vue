@@ -9,20 +9,13 @@
  */
 import { inject, provide } from 'tsm:vue'
 import MetamodelerTree from './MetamodelerTree.vue'
-import { metamodelerFuerTab, tabNachVorn } from '../composables/tabDokumente'
+import { metamodelerFuerTab } from '../composables/tabDokumente'
 
 const props = defineProps<{ tabId: string }>()
 
 const tsm = inject<any>('tsm')
 
 const metamodeler = metamodelerFuerTab(props.tabId)
-
-/*
- * Still needed for now: save, validation and the menu actions reach the
- * metamodeler through the shared facade, which answers with "the front
- * instance". Nothing in this tab does.
- */
-tabNachVorn(props.tabId)
 
 /*
  * `Symbol.for` on purpose: the same key in every module without one importing

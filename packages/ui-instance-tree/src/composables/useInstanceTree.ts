@@ -1549,39 +1549,16 @@ function getOrCreateSharedState(): SharedState {
   return _sharedState
 }
 
-type InstanzBaum = ReturnType<typeof useInstanceTree>
-
 /**
- * Das Dokument, das gerade vorn liegt.
+ * The shared document - what the module functions work on when no document is
+ * handed to them.
  *
- * Jeder Editor-Tab bringt seines mit, damit mehrere Instanzdateien gleichzeitig
- * offen sein koennen. Die Funktionen dieses Moduls — laden, Resourcen setzen,
- * Ladezustand — arbeiten deshalb auf dem vorderen Dokument; ohne gemeldeten Tab
- * ist es wie bisher das gemeinsame.
+ * Every tab has its own document (see `tabDokumente`) and passes it in. There
+ * is no "front" document any more: nothing here switches on which tab lies in
+ * front, so nothing of one tab can land in another. What is left is this one
+ * default, for callers that have no tab - the tree used on its own, a legacy
+ * caller.
  */
-const aktivesDokument = shallowRef<SharedState | null>(null)
-
-/** Meldet das Dokument des Tabs, der nach vorn kommt. */
-export function setActiveInstanceDocument(dokument: SharedState): void {
-  aktivesDokument.value = dokument
-}
-
-/** Gibt das Dokument frei, wenn sein Tab schliesst. */
-export function clearActiveInstanceDocument(dokument: SharedState): void {
-  if (aktivesDokument.value === dokument) aktivesDokument.value = null
-}
-
-/** Der Zustand, auf dem gearbeitet wird: der vordere Tab, sonst der gemeinsame. */
-function zustand(): SharedState {
-  return aktivesDokument.value ?? getOrCreateSharedState()
-}
-
-function zielBaum(): InstanzBaum {
-  return zustand().instance
-}
-
-let fassade: InstanzBaum | null = null
-
 export function useSharedInstanceTree(resource?: Ref<Resource | null>) {
   const state = getOrCreateSharedState()
 
@@ -1589,56 +1566,38 @@ export function useSharedInstanceTree(resource?: Ref<Resource | null>) {
   if (resource && resource.value && !state.resources.value.includes(resource.value)) {
     state.instance.setResources([resource.value])
   }
-
-  /*
-   * Eine Fassade auf den vorderen Baum. Sie liest `aktiverBaum` bei jedem
-   * Zugriff, also laeuft die Reaktivitaet mit: wer `treeNodes.value` in einem
-   * computed liest, rechnet beim Tab-Wechsel neu. Ohne gemeldeten Tab ist es
-   * der gemeinsame Baum wie bisher.
-   */
-  if (!fassade) {
-    fassade = new Proxy({} as InstanzBaum, {
-      get: (_ziel, feld) => Reflect.get(zielBaum() as object, feld),
-      has: (_ziel, feld) => Reflect.has(zielBaum() as object, feld),
-      ownKeys: () => Reflect.ownKeys(zielBaum() as object),
-      getOwnPropertyDescriptor: (_ziel, feld) => {
-        const beschreibung = Reflect.getOwnPropertyDescriptor(zielBaum() as object, feld)
-        return beschreibung ? { ...beschreibung, configurable: true } : undefined
-      }
-    })
-  }
-  return fassade
+  return state.instance
 }
 
 /**
  * Compat shim: replace the managed set with a single resource (or clear).
  */
-export function setSharedResource(resource: Resource | null): void {
-  const state = zustand()
+export function setSharedResource(resource: Resource | null, dokument: SharedState = getOrCreateSharedState()): void {
+  const state = dokument
   state.instance.setResources(resource ? [resource] : [])
 }
 
 /**
  * Compat shim: the "primary" resource = active resource, or the first managed one.
  */
-export function getSharedResource(): Resource | null {
-  const state = zustand()
+export function getSharedResource(dokument: SharedState = getOrCreateSharedState()): Resource | null {
+  const state = dokument
   return state.activeResource.value ?? state.resources.value[0] ?? null
 }
 
 /**
  * All managed resources (multi-resource API).
  */
-export function getSharedResources(): Resource[] {
-  const state = zustand()
+export function getSharedResources(dokument: SharedState = getOrCreateSharedState()): Resource[] {
+  const state = dokument
   return state.resources.value
 }
 
 /**
  * Get loading state for instance tree
  */
-export function getInstanceLoadingState() {
-  const state = zustand()
+export function getInstanceLoadingState(dokument: SharedState = getOrCreateSharedState()) {
+  const state = dokument
   return {
     isLoading: state.isLoading,
     loadingName: state.loadingName
@@ -1665,8 +1624,12 @@ export interface XMILoadResult {
  * @returns Load result with object count and any errors
  * @throws Error if critical parsing errors occurred and no objects were loaded
  */
-export async function loadInstancesFromXMI(xmiContent: string, filePath: string): Promise<XMILoadResult> {
-  const state = zustand()
+export async function loadInstancesFromXMI(
+  xmiContent: string,
+  filePath: string,
+  dokument: SharedState = getOrCreateSharedState()
+): Promise<XMILoadResult> {
+  const state = dokument
   const rs = getResourceSet()
 
   // Set loading state
@@ -1754,8 +1717,7 @@ export function setInstanceFileReader(
  * managed resources. Skips metamodel/package URIs (resolved via the package
  * registry) and URIs that are already loaded members.
  */
-function collectUnresolvedResourceUris(): string[] {
-  const state = zustand()
+function collectUnresolvedResourceUris(state: SharedState): string[] {
   const found = new Set<string>()
   const loadedUris = new Set<string>()
   for (const r of state.resources.value) {
@@ -1810,13 +1772,14 @@ function collectUnresolvedResourceUris(): string[] {
 export async function loadResourceStandalone(
   xmiContent: string,
   filePath: string,
-  opts: { replace?: boolean } = {}
+  opts: { replace?: boolean } = {},
+  dokument: SharedState = getOrCreateSharedState()
 ): Promise<XMILoadResult & { referencedLoaded: number }> {
-  const state = zustand()
+  const state = dokument
   if (opts.replace) state.instance.clearResources()
 
   // Load the primary file as its own resource
-  const primary = await loadInstancesFromXMI(xmiContent, filePath)
+  const primary = await loadInstancesFromXMI(xmiContent, filePath, state)
   const primaryRes = state.activeResource.value
 
   // Follow references and auto-load referenced resources (bounded; handles cycles)
@@ -1824,7 +1787,7 @@ export async function loadResourceStandalone(
   if (_instanceFileReader) {
     const attempted = new Set<string>()
     for (let iter = 0; iter < 25; iter++) {
-      const uris = collectUnresolvedResourceUris().filter(u => !attempted.has(u))
+      const uris = collectUnresolvedResourceUris(state).filter(u => !attempted.has(u))
       if (uris.length === 0) break
       let progressed = false
       for (const uri of uris) {
@@ -1832,7 +1795,7 @@ export async function loadResourceStandalone(
         try {
           const content = await _instanceFileReader(uri)
           if (content != null) {
-            await loadInstancesFromXMI(content, uri)
+            await loadInstancesFromXMI(content, uri, state)
             referencedLoaded++
             progressed = true
           }
@@ -1981,8 +1944,8 @@ export function assignXmiIdsRecursive(resource: Resource): void {
  * @param id The XMI ID to look up
  * @returns The EObject or null if not found
  */
-export function getObjectByXmiId(id: string): EObject | null {
-  const state = zustand()
+export function getObjectByXmiId(id: string, dokument: SharedState = getOrCreateSharedState()): EObject | null {
+  const state = dokument
   // Search across all managed resources
   for (const resource of state.resources.value) {
     const raw: any = toRaw(resource)
@@ -2000,8 +1963,8 @@ export function getObjectByXmiId(id: string): EObject | null {
  * @param rootOnly If true, only generate for root objects; if false, generate for all objects
  * @returns Number of IDs generated
  */
-export function generateMissingXmiIds(rootOnly: boolean = false): number {
-  const state = zustand()
+export function generateMissingXmiIds(rootOnly: boolean = false, dokument: SharedState = getOrCreateSharedState()): number {
+  const state = dokument
 
   let count = 0
 
