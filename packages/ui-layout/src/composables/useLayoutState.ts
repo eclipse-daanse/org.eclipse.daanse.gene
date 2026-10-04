@@ -131,7 +131,15 @@ function persistState(state: LayoutState) {
 }
 
 // Module-level shared state (singleton)
-let _sharedState: LayoutState | null = null
+/*
+ * Survives a hot update of this module. Vite re-runs the module on an HMR
+ * update; without this, components mounted before the update would keep the
+ * old state while new ones get a fresh copy - the sidebars see no dock while
+ * the tab in front has docked, and nothing shows. `import.meta.hot.data` is
+ * the one place Vite carries across updates.
+ */
+const hotData: Record<string, unknown> = (import.meta as any).hot?.data ?? {}
+let _sharedState: LayoutState | null = (hotData.sharedState as LayoutState | undefined) ?? null
 
 /**
  * Get or create the shared layout state
@@ -151,6 +159,7 @@ function getSharedState(): LayoutState {
     visibility: { ...initial.visibility, ...persisted.visibility },
     panelPositionOverrides: persisted.panelPositionOverrides || new Map()
   }) as LayoutState
+  hotData.sharedState = _sharedState
 
   return _sharedState
 }
@@ -180,7 +189,10 @@ function getEffectivePanelOrder(panel: Panel, overrides: Map<string, PanelPositi
  * layout; a record created inside it would be a different one each time, and
  * the sidebar would report its host to a record the tab never reads.
  */
-const dockHosts = shallowReactive<Record<DockZone, HTMLElement | null>>({ 'primary-bottom': null, secondary: null })
+const dockHosts: Record<DockZone, HTMLElement | null> =
+  (hotData.dockHosts as Record<DockZone, HTMLElement | null> | undefined)
+  ?? shallowReactive<Record<DockZone, HTMLElement | null>>({ 'primary-bottom': null, secondary: null })
+hotData.dockHosts = dockHosts
 
 export function useLayoutState() {
   const state = getSharedState()
