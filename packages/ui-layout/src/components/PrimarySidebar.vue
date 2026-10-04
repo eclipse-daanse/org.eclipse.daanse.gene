@@ -94,10 +94,6 @@ const showEmptyDropZone = computed(() => panels.value.length === 0 && visible.va
 const isDropTarget = computed(() => dragDrop.isDropTarget('primary'))
 const canDrop = computed(() => dragDrop.canDropOn('primary'))
 
-function handleTabClick(panelId: string) {
-  layout.selectPanel(panelId, 'primary')
-}
-
 function handleMinimize() {
   layout.setPrimarySidebarVisible(false)
 }
@@ -172,30 +168,13 @@ function onDrop(event: DragEvent) {
     @dragleave="onDragLeave"
     @drop="onDrop"
   >
-    <!-- Panel tabs (if multiple panels) -->
-    <div v-if="panels.length > 1" class="sidebar-tabs">
-      <button
-        v-for="panel in panels"
-        :key="panel.id"
-        class="sidebar-tab"
-        :class="{ active: activePanel?.id === panel.id }"
-        draggable="true"
-        @click="handleTabClick(panel.id)"
-        @dragstart="onDragStart($event, panel.id)"
-        @dragend="onDragEnd"
-      >
-        <i v-if="panel.icon" :class="panel.icon"></i>
-        <span>{{ panel.title }}</span>
-        <span v-if="panel.badge" class="badge">{{ panel.badge }}</span>
-      </button>
-      <button class="minimize-btn" title="Minimize" @click="handleMinimize">
-        <i class="pi pi-chevron-left"></i>
-      </button>
-    </div>
-
-    <!-- Panel header (if single panel) - also draggable -->
+    <!--
+      The header names the navigator in front. No tab strip here: which
+      navigator is shown is the activity bar's choice, and a second row of the
+      same choices only said it twice. The others stay mounted below, hidden.
+    -->
     <div
-      v-else-if="activePanel"
+      v-if="activePanel"
       class="sidebar-header"
       draggable="true"
       @dragstart="onDragStart($event, activePanel.id)"
@@ -391,52 +370,11 @@ function onDrop(event: DragEvent) {
   background: color-mix(in srgb, var(--primary-color) 5%, var(--surface-ground));
 }
 
-.sidebar-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--surface-border);
-  background: var(--surface-section);
-  overflow-x: auto;
-  align-items: center;
-}
 
-.sidebar-tab {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border: none;
-  background: transparent;
-  color: var(--text-color-secondary);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  cursor: grab;
-  white-space: nowrap;
-  border-radius: 6px;
-  transition: all 0.15s ease;
-}
 
-.sidebar-tab:active {
-  cursor: grabbing;
-}
 
-.sidebar-tab:hover {
-  color: var(--text-color);
-  background: var(--surface-hover);
-}
 
-.sidebar-tab.active {
-  color: var(--primary-color);
-  background: var(--surface-card);
-  border: 1px solid var(--surface-border);
-}
 
-.sidebar-tab i {
-  font-size: 1rem;
-}
 
 .sidebar-header {
   display: flex;
