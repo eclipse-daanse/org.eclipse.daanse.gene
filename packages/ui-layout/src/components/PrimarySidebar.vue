@@ -290,9 +290,13 @@ function onDrop(event: DragEvent) {
   overflow: hidden;
   border-top: 1px solid var(--surface-border, #e0e0e0);
 }
-.sidebar-bottom /* Same box the panel had as a direct child of the content area */
+.sidebar-bottom /*
+ * No box of its own: the panel lays out as a direct child of the content area,
+ * exactly as before the wrapper. v-show still works - its inline
+ * `display: none` wins over `contents`.
+ */
 .panel-host {
-  height: 100%;
+  display: contents;
 }
 
 .sidebar-content {
