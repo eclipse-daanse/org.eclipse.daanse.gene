@@ -370,6 +370,8 @@ async function handlePerspectiveClick(perspectiveId: string) {
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  /* Always at the bottom - whatever stands above it comes and goes with the tab */
+  margin-top: auto;
   padding: 10px 0;
   border-top: 1px solid var(--surface-border);
 }
