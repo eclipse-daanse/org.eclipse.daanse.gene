@@ -837,6 +837,20 @@ export function useInstanceTree(
     return addResource(res)
   }
 
+  /**
+   * An empty resource for a file that exists but has no content yet - a file
+   * just created in the explorer. The URI is the file's path as it is, so
+   * saving writes back to that file (`createResource` would rewrite the name).
+   */
+  function createEmptyResourceAt(path: string): Resource {
+    const res = new XMIResource(URI.createURI(path))
+    res.setResourceSet(getResourceSet())
+    const added = addResource(res)
+    activeResource.value = added
+    version.value++
+    return added
+  }
+
   /** Remove a resource from the managed set (and the ResourceSet) */
   function deleteResource(res: Resource): void {
     const raw: any = toRaw(res)
@@ -1490,6 +1504,7 @@ export function useInstanceTree(
     isResourceDirty,
     setActiveResource,
     createResource,
+    createEmptyResourceAt,
     addResource,
     deleteResource,
     renameResource,
