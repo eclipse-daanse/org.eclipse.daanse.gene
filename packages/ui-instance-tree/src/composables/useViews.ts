@@ -581,6 +581,8 @@ export function useViews() {
       name: view.name,
       icon: view.perspectiveIcon || 'pi pi-filter',
       requiresWorkspace: true,
+      // A view filter is the instance editor's: it shows only while an instance tab is in front
+      editorId: 'instance',
       defaultLayout: {
         left: ['instance-tree'],
         center: ['properties'],

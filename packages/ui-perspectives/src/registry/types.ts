@@ -71,6 +71,12 @@ export interface PerspectiveDefinition {
   requiresWorkspace: boolean
   /** Sort order in ActivityBar (lower = higher). Perspectives without order appear last. */
   order?: number
+  /**
+   * The editor this perspective belongs to - a view filter of the instance
+   * editor, say. Shown in the activity bar only while a tab of that editor is
+   * in front; without it, the perspective is the application's and always there.
+   */
+  editorId?: string
   /** Default layout configuration */
   defaultLayout: {
     left?: string[]    // Panel IDs
