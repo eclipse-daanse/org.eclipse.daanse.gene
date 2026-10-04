@@ -199,6 +199,7 @@ const workspaceActionsService: WorkspaceActionService = {
   loadCoclFile: (entry, content) => handleCoclAdd(entry, content),
   loadTransformation: (entry, content) => handleTransformationLoad(entry, content),
   loadDmnFile: (entry, content) => handleDmnLoad(entry, content),
+  openXmlFile: (entry, content) => handleXmlOpen(entry, content),
   publishToAtlas: (entry, content) => handleAtlasPublish(entry, content),
   selectObject: (obj) => handleObjectSelect(obj),
   selectFile: (file) => handleFileSelect(file),
@@ -1441,7 +1442,7 @@ function verdrahteTabSchliessen(layout: any): void {
     metamodelerComposables.value?.tabGeschlossen?.(tabId)
     ;(instanceTreeComposables.value as any)?.instanzTabGeschlossen?.(tabId)
     // The file editors keep one document per tab - let them forget it
-    for (const svc of ['ui.cocl-editor.composables', 'ui.transformation.composables', 'ui.dmn-editor.composables']) {
+    for (const svc of ['ui.cocl-editor.composables', 'ui.transformation.composables', 'ui.dmn-editor.composables', 'ui.xml-editor.composables']) {
       tsm.getService<any>(svc)?.closeTabDocument?.(tabId)
     }
     holeEditorFront().releaseTab(tabId)
@@ -1916,6 +1917,21 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
 }
 
 // Handle adding C-OCL constraints (.c-ocl file) to the workspace
+/** The file's text as a tab in the XML editor - one tab per file. */
+async function handleXmlOpen(entry: any, content: string): Promise<void> {
+  const filePath: string = entry.path
+  oeffneAnsichtTab({
+    editorId: 'xml',
+    tabId: `xml:${filePath}`,
+    titel: entry.name || filePath,
+    icon: 'pi pi-code',
+    componentsService: 'ui.xml-editor.components',
+    component: 'XmlEditorTab',
+    composablesService: 'ui.xml-editor.composables',
+    document: { content, filePath, fileEntry: entry, dirty: false }
+  })
+}
+
 async function handleCoclAdd(entry: any, content: string) {
   console.log('[App] Adding C-OCL constraints to workspace:', entry.name, 'content length:', content?.length)
 
