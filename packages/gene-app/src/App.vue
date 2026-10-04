@@ -1747,6 +1747,17 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
     ? itc.instanzTabDokument?.(instanzTabId)
     : (vorderesInstanzDokument() ?? undefined)
 
+  /*
+   * A file with nothing in it yet - just created in the explorer - has
+   * nothing to parse. It opens as an empty document at its path; roots come
+   * from the model browser, and saving writes the file.
+   */
+  if (instanzTabId && dokument && content.trim() === '') {
+    dokument.instance.createEmptyResourceAt?.(entry.path)
+    oeffneInstanzTab(instanzTabId, entry.name || entry.path)
+    return
+  }
+
   try {
     console.log('[App] Calling instance load, mode:', mode)
     let result: any

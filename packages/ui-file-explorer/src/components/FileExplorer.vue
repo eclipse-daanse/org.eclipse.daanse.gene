@@ -147,7 +147,7 @@ function kandidatenFuer(datei: FileEntry): any[] {
  */
 async function oeffneMit(art: any, datei: FileEntry): Promise<void> {
   const inhalt = inhaltDerAuswahl.value ?? (await fileSystem.readTextFile(datei))
-  if (!inhalt) return
+  if (inhalt == null) return
 
   const ctxSvc = tsm?.getService?.('gene.editor.context')
   const nsURI = ctxSvc?.wurzelNsUri?.(inhalt) ?? null
@@ -386,7 +386,8 @@ async function openWithDefault(entry: FileEntry): Promise<void> {
     console.warn('[FileExplorer] Datei nicht lesbar:', entry.path, e)
     return
   }
-  if (!content) return
+  // An empty file opens too - the view decides what to do with it
+  if (content == null) return
   const art = ctxSvc.editorFuer(entry.path, content)
   if (art?.open) await art.open(entry, content)
 }
