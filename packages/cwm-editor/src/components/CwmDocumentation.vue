@@ -8,7 +8,7 @@
  */
 import { computed, toRaw } from 'tsm:vue'
 import DocSection from './DocSection.vue'
-import { sectionFor, isDescription, setDescriptionField } from '../composables/documentation'
+import { sectionFor, flatten, isDescription, setDescriptionField } from '../composables/documentation'
 
 const props = defineProps<{ context: any }>()
 
@@ -19,6 +19,9 @@ const selected = computed(() => {
 })
 
 const root = computed(() => (selected.value ? sectionFor(selected.value) : null))
+// One flat column; the gutter holds as many stripe slots as the deepest section needs
+const sections = computed(() => (root.value ? flatten(root.value) : []))
+const gutter = computed(() => sections.value.reduce((m, s) => Math.max(m, s.depth), 0))
 const editable = computed(() => isDescription(selected.value))
 
 function onEdit(field: 'name' | 'body', value: string): void {
@@ -39,7 +42,16 @@ function onEdit(field: 'name' | 'body', value: string): void {
       <i class="pi pi-info-circle"></i>
       <p>Zu diesem Element gibt es keine Dokumentation.</p>
     </div>
-    <DocSection v-else :section="root" :editable="editable" @edit="onEdit" />
+    <template v-else>
+      <DocSection
+        v-for="(s, i) in sections"
+        :key="s.key"
+        :section="s"
+        :gutter="gutter"
+        :editable="i === 0 && editable"
+        @edit="onEdit"
+      />
+    </template>
   </div>
 </template>
 
