@@ -91,7 +91,8 @@ export async function activate(context: ModuleContext): Promise<void> {
       perspectives: ['data-generator'],
       defaultLocation: 'center',
       defaultOrder: 0,
-      closable: false
+      // A tab among files now - it can be closed like any other
+      closable: true
     })
     context.log.info('Data Generator panel registered')
   }

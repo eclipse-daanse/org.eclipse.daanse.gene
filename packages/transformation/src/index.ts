@@ -73,7 +73,8 @@ export async function activate(context: ModuleContext): Promise<void> {
       perspectives: ['transformation'],
       defaultLocation: 'center',
       defaultOrder: 0,
-      closable: false
+      // A tab among files now - it can be closed like any other
+      closable: true
     })
     context.log.info('Transformation panel registered')
   }
