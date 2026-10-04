@@ -117,7 +117,7 @@ onUnmounted(() => {
   eb?.off?.('datagen:upload', handleUploadToServer)
   eb?.off?.('datagen:load', handleLoadFromServer)
   eb?.off?.('datagen:add-class', handleAddClass)
-  if (openFileTitle) openFileTitle.value = null
+  // The title belongs to the frame now - it follows the tab in front
 })
 
 // --- Model registry (for other uses) ---

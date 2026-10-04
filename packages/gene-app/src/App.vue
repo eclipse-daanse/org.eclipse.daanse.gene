@@ -1126,7 +1126,7 @@ function oeffneAnsichtTab(opts: {
 
   store.setTabDocument(opts.tabId, opts.document)
   verdrahteTabSchliessen(layout)
-  holeEditorFront().bindTab(opts.tabId, opts.editorId)
+  holeEditorFront().bindTab(opts.tabId, opts.editorId, (opts.document as { filePath?: string } | null)?.filePath)
 
   layout.openEditor({
     id: opts.tabId,
@@ -1457,7 +1457,7 @@ function oeffneInstanzTab(tabId: string, titel: string): void {
     return
   }
   verdrahteTabSchliessen(layout)
-  holeEditorFront().bindTab(tabId, 'instance')
+  holeEditorFront().bindTab(tabId, 'instance', tabId.replace(/^instance:/, ''))
 
   layout.openEditor({
     id: tabId,
@@ -1482,7 +1482,7 @@ function oeffneMetamodellTab(tabId: string, titel: string): void {
     return
   }
   verdrahteTabSchliessen(layout)
-  holeEditorFront().bindTab(tabId, 'metamodel')
+  holeEditorFront().bindTab(tabId, 'metamodel', tabId.replace(/^metamodel:/, ''))
 
   layout.openEditor({
     id: tabId,
@@ -2130,9 +2130,49 @@ function folgeDemVorderenTab(layout: any): void {
 
   watch(
     () => layout.state.activeEditorTabId,
-    (tabId: string | null) => holeEditorFront().setFrontTab(tabId),
+    (tabId: string | null) => {
+      const front = holeEditorFront()
+      front.setFrontTab(tabId)
+      zeigeDateiDesVorderenTabs(front.frontFilePath())
+    },
     { immediate: true }
   )
+}
+
+/**
+ * The file in front shows in the title bar and is selected in the explorer.
+ *
+ * Switching tabs used to leave both behind: the title stayed on whatever the
+ * last editor had written, the explorer on whatever was clicked last. Now the
+ * tab says which file it is, and title and tree follow.
+ */
+function zeigeDateiDesVorderenTabs(filePath: string | null): void {
+  const titel = tsm.getService<any>('gene.layout.openFile')
+  if (titel) titel.value = filePath ? (filePath.split('/').pop() ?? filePath) : null
+
+  // No file in front (the workspace preview): the explorer keeps its selection
+  if (!filePath) return
+  const fs = tsm.getService<any>('gene.filesystem')
+  if (!fs?.selectedFile) return
+  const eintrag = findeDateiEintrag(fs, filePath)
+  if (eintrag && fs.selectedFile.value !== eintrag) fs.selectedFile.value = eintrag
+}
+
+/** The explorer entry for a path, in whichever source it lives - by name if need be. */
+function findeDateiEintrag(fs: any, filePath: string): any | null {
+  const quellen: string[] = [...(fs.filesBySource?.keys?.() ?? [])]
+  for (const id of quellen) {
+    const eintrag = fs.getFileByPath?.(id, filePath)
+    if (eintrag) return eintrag
+  }
+  const name = filePath.split('/').pop()
+  if (name) {
+    for (const id of quellen) {
+      const eintrag = fs.getFileByPath?.(id, name)
+      if (eintrag) return eintrag
+    }
+  }
+  return null
 }
 
 /** Die Probleme unten — und was die Plugins sonst dorthin stellen. */

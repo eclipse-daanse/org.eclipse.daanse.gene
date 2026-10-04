@@ -44,6 +44,18 @@ describe('The tab in front', () => {
   })
 })
 
+describe('The file in front', () => {
+  it('is the one the tab was opened for', () => {
+    front.bindTab('instance:a/daten.xmi', 'instance', 'a/daten.xmi')
+    front.bindTab('workspace-preview', 'preview')
+    front.setFrontTab('instance:a/daten.xmi')
+    expect(front.frontFilePath()).toBe('a/daten.xmi')
+
+    front.setFrontTab('workspace-preview')
+    expect(front.frontFilePath()).toBeNull()
+  })
+})
+
 describe('A closed tab', () => {
   it('is forgotten, also as the one in front', () => {
     front.bindTab('t', 'instance')

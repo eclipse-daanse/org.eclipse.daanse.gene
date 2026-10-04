@@ -16,8 +16,8 @@
 import type { EditorArt } from 'gene-contracts'
 
 export interface EditorFrontService {
-  /** Remembers which view carries a tab. Called when the tab is opened. */
-  bindTab(tabId: string, editorId: string): void
+  /** Remembers which view carries a tab, and which file. Called when the tab is opened. */
+  bindTab(tabId: string, editorId: string, filePath?: string): void
   /** Forgets a closed tab. */
   releaseTab(tabId: string): void
   /** The tab that came forward - or none. */
@@ -28,6 +28,8 @@ export interface EditorFrontService {
   editorIdOf(tabId: string): string | undefined
   /** The view carrying the tab in front, if any. */
   frontArt(): EditorArt | undefined
+  /** The file of the tab in front - for the title bar and the explorer. */
+  frontFilePath(): string | null
 }
 
 export interface EditorFrontOptions {
@@ -37,15 +39,18 @@ export interface EditorFrontOptions {
 
 export function createEditorFront({ editorArtById }: EditorFrontOptions): EditorFrontService {
   const editorIdByTab = new Map<string, string>()
+  const filePathByTab = new Map<string, string>()
   let front: string | null = null
 
   return {
-    bindTab(tabId, editorId) {
+    bindTab(tabId, editorId, filePath) {
       editorIdByTab.set(tabId, editorId)
+      if (filePath) filePathByTab.set(tabId, filePath)
     },
 
     releaseTab(tabId) {
       editorIdByTab.delete(tabId)
+      filePathByTab.delete(tabId)
       if (front === tabId) front = null
     },
 
@@ -64,6 +69,10 @@ export function createEditorFront({ editorArtById }: EditorFrontOptions): Editor
     frontArt() {
       const editorId = front === null ? undefined : editorIdByTab.get(front)
       return editorId === undefined ? undefined : editorArtById(editorId)
+    },
+
+    frontFilePath() {
+      return front === null ? null : filePathByTab.get(front) ?? null
     }
   }
 }

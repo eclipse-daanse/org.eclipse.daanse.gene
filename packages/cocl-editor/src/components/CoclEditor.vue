@@ -317,7 +317,7 @@ onUnmounted(() => {
   eb?.off?.('cocl:upload', handleUploadToServer)
   eb?.off?.('cocl:load', handleLoadFromServer)
   eb?.off?.('cocl:discard', handleDiscard)
-  if (openFileTitle) openFileTitle.value = null
+  // The title belongs to the frame now - it follows the tab in front
 })
 
 // Register metamodel packages with OCL LSP for autocompletion

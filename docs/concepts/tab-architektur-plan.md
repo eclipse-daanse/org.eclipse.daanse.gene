@@ -457,6 +457,24 @@ angedockten Baum zeigt die Eigenschaften in der Tab-Mitte; Abdocken holt den
 Baum in den Tab, Andocken bringt ihn zurück; Tab-Wechsel tauscht den Inhalt,
 die Vorschau leert die Zonen. Keine Teleport-Warnungen.
 
+### Nachtrag: Tab-Leiste, Problemfläche, Bezug zur Datei (2026-10-04)
+
+- **Tab-Leiste** scrollt nur noch waagerecht. `overflow-x: auto` allein ließ den
+  Browser den Überlauf auch senkrecht scrollen; als Flex-Kind ohne
+  `min-width: 0` wuchs sie mit ihren Tabs statt zu scrollen; und der 10 px hohe
+  Scrollbalken ließ 29 px für 32 px hohe Tabs. Jetzt `overflow-y: hidden`,
+  `min-width: 0`, Tabs ohne Schrumpfen, kein Balken — das Mausrad scrollt
+  seitwärts.
+- **Problemfläche** ist ein Wunsch, kein Gesetz: Ihre gemerkte Höhe kann aus
+  einem höheren Fenster stammen. Als Flex-Basis mit Obergrenze (70 %) gibt sie
+  nach, der Editorbereich behält mindestens 160 px — vorher blieben ihm bei
+  650 px Fensterhöhe 41 px.
+- **Bezug zur geöffneten Datei:** Der vordere Tab nennt seine Datei
+  (`gene.editor.front.frontFilePath()`); daraus setzt der Rahmen die Titelzeile
+  und wählt die Datei im Explorer (`selectedFile`, der Explorer klappt Quelle
+  und Ordner dazu auf). Die Editoren löschen den Titel beim Abbau nicht mehr —
+  das löschte den Titel des *nächsten* Tabs.
+
 ### Was dabei an Verhalten wegfällt
 
 - Die Zone links unten ist für Dateiansichten nicht mehr da. Der Navigator

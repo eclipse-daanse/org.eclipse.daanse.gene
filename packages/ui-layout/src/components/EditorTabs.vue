@@ -41,12 +41,19 @@ function onDragStart(event: DragEvent, tabId: string) {
 function onDragEnd() {
   dragDrop.endDrag()
 }
+
+/** The wheel scrolls the strip sideways - there is no vertical overflow to take it. */
+function scrollSideways(event: WheelEvent): void {
+  const strip = event.currentTarget as HTMLElement | null
+  if (!strip || event.shiftKey || !event.deltaY) return
+  strip.scrollLeft += event.deltaY
+}
 </script>
 
 <template>
   <div class="editor-tabs" v-if="tabs.length > 0">
     <!-- Multiple tabs: show tab bar -->
-    <div v-if="tabs.length > 1" class="tabs-container">
+    <div v-if="tabs.length > 1" class="tabs-container" @wheel.passive="scrollSideways">
       <div
         v-for="tab in tabs"
         :key="tab.id"
@@ -113,18 +120,35 @@ function onDragEnd() {
   border-bottom: 1px solid var(--surface-border);
 }
 
+/*
+ * The strip scrolls sideways, never up and down.
+ *
+ * `height: 100%` plus padding made it taller than its 40px row, and
+ * `overflow-x: auto` alone lets the browser scroll the overflow vertically -
+ * the tabs wobbled on the wheel. And as a flex child without `min-width: 0`
+ * it grew with its tabs instead of scrolling, pushing everything to the right.
+ */
 .tabs-container {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
   height: 100%;
+  box-sizing: border-box;
+  /* No vertical padding: with the 4px scrollbar the 32px tabs would be clipped */
+  padding: 0;
   overflow-x: auto;
-  scrollbar-width: thin;
-  padding: 4px 0;
+  overflow-y: hidden;
+  /*
+   * No scrollbar: a 10px bar would leave 29px for 32px tabs and clip them. The
+   * strip scrolls sideways with the wheel instead (see scrollSideways).
+   */
+  scrollbar-width: none;
 }
 
 .tabs-container::-webkit-scrollbar {
-  height: 4px;
+  display: none;
 }
 
 .tabs-container::-webkit-scrollbar-thumb {
@@ -136,6 +160,8 @@ function onDragEnd() {
   display: flex;
   align-items: center;
   gap: 8px;
+  /* A tab keeps its width; the strip scrolls */
+  flex-shrink: 0;
   height: 32px;
   padding: 0 14px;
   background: transparent;

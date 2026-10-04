@@ -57,8 +57,6 @@ watch(() => metamodeler.filePath.value, (fp) => {
 watch(() => metamodeler.rootPackage.value, (pkg) => {
   if (!metamodeler.filePath.value && pkg) {
     if (openFileTitle) openFileTitle.value = `${pkg.getName?.() ?? 'metamodel'}.ecore`
-  } else if (!pkg) {
-    if (openFileTitle) openFileTitle.value = null
   }
 })
 
@@ -753,7 +751,7 @@ onUnmounted(() => {
   const eb = tsm?.getService('gene.eventbus')
   eb?.off?.('metamodeler:new-package', handleCreateInitialPackage)
   eb?.off?.('metamodeler:export-json-schema', exportJsonSchema)
-  if (openFileTitle) openFileTitle.value = null
+  // The title belongs to the frame now - it follows the tab in front
 })
 
 async function exportJsonSchema() {
