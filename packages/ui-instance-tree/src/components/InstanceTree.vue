@@ -1357,6 +1357,7 @@ watch(ctxSelectedObject, (obj) => {
               'tree-node--invalid-drop': node.key === invalidDropKey
             }"
             :data-node-key="node.key"
+            @contextmenu.prevent="onNodeContextMenu(node, $event)"
           >
             <template v-if="node.kind === 'resource'">
               <i class="node-icon node-icon--resource pi pi-box"></i>
@@ -1368,7 +1369,7 @@ watch(ctxSelectedObject, (obj) => {
               <i v-else-if="node.iconClass" :class="node.iconClass" class="node-icon" />
               <span class="node-label" :title="node.xmiId ? `XMI-ID: ${node.xmiId}` : undefined">{{ node.label }}</span>
             </template>
-            <!-- No right click: the row's menu hangs on a "more" button shown on hover -->
+            <!-- The row's menu: right click, or the "more" button shown on hover -->
             <span class="node-actions" @click.stop @dblclick.stop @mousedown.stop>
               <button class="node-action" title="Mehr" @click="onNodeContextMenu(node, $event)">
                 <i class="pi pi-ellipsis-h"></i>

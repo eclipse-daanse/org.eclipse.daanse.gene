@@ -140,15 +140,18 @@ function handleNodeSelect(node: ModelTreeNode) {
   }
 }
 
-/**
- * Handle context menu
+/*
+ * The row's menu, for packages and classes: on the right click and on the
+ * "more" button a row shows on hover. The row spans its full width, so the
+ * right click hits it anywhere, not only on the text.
  */
-function handleContextMenu(event: MouseEvent, node: ModelTreeNode) {
+function hasMenu(node: ModelTreeNode): boolean {
+  return node.type === 'package' || node.type === 'subpackage' || node.type === 'class'
+}
+
+function showMenu(event: MouseEvent, node: ModelTreeNode) {
   selectedNode.value = node
-  // Show context menu for packages and classes
-  if (node.type === 'package' || node.type === 'subpackage' || node.type === 'class') {
-    contextMenu.value?.show(event)
-  }
+  if (hasMenu(node)) contextMenu.value?.show(event)
 }
 
 /**
@@ -283,7 +286,7 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
             }"
             :draggable="node.draggable"
             @dragstart="handleDragStart($event, node)"
-            @contextmenu.prevent="handleContextMenu($event, node)"
+            @contextmenu.prevent="showMenu($event, node)"
           >
             <img v-if="getIconDataUrl(node.icon)" :src="getIconDataUrl(node.icon)" class="node-icon node-icon--img" alt="" />
             <span class="node-label">{{ node.label }}</span>
@@ -299,6 +302,12 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
             </span>
             <span v-if="node.type === 'package' && (node.data as ModelPackageInfo).isBuiltIn" class="badge built-in">
               built-in
+            </span>
+            <!-- Shown on hover; the click stays here and does not select the row -->
+            <span v-if="hasMenu(node)" class="node-actions" @click.stop @dblclick.stop @mousedown.stop>
+              <button class="node-action" title="Mehr" @click="showMenu($event, node)">
+                <i class="pi pi-ellipsis-h"></i>
+              </button>
             </span>
           </div>
         </template>
@@ -411,12 +420,45 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
   background: transparent;
 }
 
+/* Full row width, so the "more" button sits at the right edge */
 .tree-node {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.25rem 0;
   cursor: default;
+  width: 100%;
+  min-width: 0;
+}
+
+.node-actions {
+  display: inline-flex;
+  margin-left: auto;
+  opacity: 0;
+}
+
+:deep(.p-tree-node-content:hover) .node-actions,
+.node-actions:focus-within {
+  opacity: 1;
+}
+
+.node-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border: none;
+  border-radius: var(--border-radius, 4px);
+  background: transparent;
+  color: var(--text-color-secondary);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.node-action:hover {
+  background: var(--surface-border);
+  color: var(--text-color);
 }
 
 .tree-node.is-draggable {
@@ -620,7 +662,10 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
   display: none;
 }
 
+/* The label takes the rest of the row; without this the row's content stops at the text */
 :deep(.p-tree-node-label) {
   font-size: 0.875rem;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 </style>
