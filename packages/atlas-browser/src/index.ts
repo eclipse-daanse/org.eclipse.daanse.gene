@@ -19,7 +19,7 @@ export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Atlas Browser plugin...')
 
   // Lazy-import components and composables to avoid top-level import issues
-  const { AtlasBrowserTree, AtlasDetailPanel, AtlasUploadDialog, AtlasGraphViewer, AtlasXmlViewer, AtlasSchemaExplorer, AtlasTransitionsEditor } = await import('./components')
+  const { AtlasBrowserTree, AtlasDetailPanel, AtlasUploadDialog, AtlasGraphViewer, AtlasXmlViewer, AtlasSchemaExplorer, AtlasTransitionsEditor, ModelAtlasTab } = await import('./components')
   const { useAtlasBrowser, useSharedAtlasBrowser } = await import('./composables/useAtlasBrowser')
 
   // Register components as service
@@ -30,7 +30,9 @@ export async function activate(context: ModuleContext): Promise<void> {
     AtlasGraphViewer,
     AtlasXmlViewer,
     AtlasSchemaExplorer,
-    AtlasTransitionsEditor
+    AtlasTransitionsEditor,
+    // The atlas as one tab: Transitions, Schemas, Schema Explorer
+    ModelAtlasTab
   })
 
   // Register composables as service
@@ -204,7 +206,8 @@ export async function activate(context: ModuleContext): Promise<void> {
       order: 80,
       defaultLayout: {
         left: ['atlas-tree'],
-        center: ['atlas-transitions'],
+        // One tab for the atlas: Transitions, Schemas, Schema Explorer behind a section switch
+        center: ['model-atlas'],
         right: [],
         bottom: []
       },
@@ -226,57 +229,21 @@ export async function activate(context: ModuleContext): Promise<void> {
       defaultOrder: 0
     })
 
+    /*
+     * The atlas as one tab. Transitions, Schemas and the Schema Explorer used to
+     * be three center panels, each its own tab; they belong together - all
+     * three look at what the tree selected - so one tab holds them.
+     */
     panelRegistry.register({
-      id: 'atlas-detail',
-      title: 'Schema Details',
-      icon: 'pi pi-info-circle',
-      component: markRaw(AtlasDetailPanel),
+      id: 'model-atlas',
+      title: 'Model Atlas',
+      icon: 'pi pi-globe',
+      component: markRaw(ModelAtlasTab),
       perspectives: ['model-atlas'],
       defaultLocation: 'center',
       defaultOrder: 0
     })
 
-    /*panelRegistry.register({
-      id: 'atlas-graph',
-      title: 'Schema Graph',
-      icon: 'pi pi-sitemap',
-      component: markRaw(AtlasGraphViewer),
-      perspectives: ['model-atlas'],
-      defaultLocation: 'center',
-      defaultOrder: 10
-    })
-
-    panelRegistry.register({
-      id: 'atlas-xml',
-      title: 'XML View',
-      icon: 'pi pi-code',
-      component: markRaw(AtlasXmlViewer),
-      perspectives: ['model-atlas'],
-      defaultLocation: 'center',
-      defaultOrder: 20
-    })*/
-
-    panelRegistry.register({
-      id: 'atlas-explorer',
-      title: 'Schema Explorer',
-      icon: 'pi pi-search',
-      component: markRaw(AtlasSchemaExplorer),
-      perspectives: ['model-atlas'],
-      defaultLocation: 'center',
-      defaultOrder: 30
-    })
-
-    panelRegistry.register({
-      id: 'atlas-transitions',
-      title: 'Transitions',
-      icon: 'pi pi-arrow-right-arrow-left',
-      component: markRaw(AtlasTransitionsEditor),
-      perspectives: ['model-atlas'],
-      defaultLocation: 'center',
-      defaultOrder: 40
-    })
-
-    console.log('[AtlasBrowser] Registered atlas-transitions panel, component:', !!AtlasTransitionsEditor)
     context.log.info('Atlas Browser panels registered')
   }
 

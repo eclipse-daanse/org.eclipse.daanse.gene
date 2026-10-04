@@ -9,6 +9,7 @@
 import { ref, computed, inject, onMounted } from 'tsm:vue'
 import { Tree, Button, Dialog, Dropdown, InputText, ContextMenu, ProgressSpinner } from 'tsm:primevue'
 import { useSharedAtlasBrowser, schemaNsUri, istWahr } from '../composables/useAtlasBrowser'
+import { useAtlasSection } from '../composables/atlasSection'
 import type { AtlasTreeNodeData, ConnectFormData } from '../types'
 
 /** PrimeVue-compatible tree node */
@@ -283,20 +284,13 @@ function openContentTabs() {
   const ls = layoutService?.useLayoutState?.()
   if (!ls || !panelRegistry) return
 
-  const tabIds = ['atlas-detail', 'atlas-graph', 'atlas-xml', 'atlas-explorer']
-  for (const id of tabIds) {
-    const panel = panelRegistry.get?.(id)
-    if (panel) {
-      ls.openEditor({
-        id: panel.id,
-        title: panel.title,
-        icon: panel.icon,
-        component: panel.component,
-        closable: false
-      })
-    }
+  // One tab for the atlas; a selected schema shows its details
+  const panel = panelRegistry.get?.('model-atlas')
+  if (panel) {
+    ls.openEditor({ id: panel.id, title: panel.title, icon: panel.icon, component: panel.component })
   }
-  ls.selectEditor('atlas-detail')
+  ls.selectEditor('model-atlas')
+  useAtlasSection().show('schemas')
 }
 
 // Handle node selection

@@ -202,14 +202,17 @@ function onDrop(event: DragEvent) {
       </button>
     </div>
 
-    <!-- Panel content -->
+    <!-- Panel content. Kept alive: switching Explorer <-> Atlas must not forget
+         what was expanded and selected in the tree that steps back -->
     <div class="sidebar-content">
-      <component
-        v-if="activePanel"
-        :is="activePanel.component"
-        :key="activePanel.id"
-      />
-      <div v-else class="empty-sidebar">
+      <KeepAlive>
+        <component
+          v-if="activePanel"
+          :is="activePanel.component"
+          :key="activePanel.id"
+        />
+      </KeepAlive>
+      <div v-if="!activePanel" class="empty-sidebar">
         <span>No panels</span>
       </div>
     </div>

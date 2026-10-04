@@ -1055,7 +1055,8 @@ function handlePerspectiveChange(perspectiveId: string) {
    * Eine Perspektive waehlt nur noch den Navigator oben links. Sie baut nichts
    * auf: Die Flaeche steht, und was in ihr zu sehen ist, bestimmt der Tab.
    */
-  waehleNavigator(layout, perspectiveId)
+  // Chosen by hand: what the perspective puts in the middle comes forward too
+  waehleNavigator(layout, perspectiveId, true)
 }
 
 /**
@@ -1065,7 +1066,7 @@ function handlePerspectiveChange(perspectiveId: string) {
  * haben wollte. Der Explorer ist die Ausnahme, weil er der Anwendung gehoert
  * und nicht aus der Registry kommt.
  */
-function waehleNavigator(layout: any, perspectiveId: string): void {
+function waehleNavigator(layout: any, perspectiveId: string, mitteNachVorn = false): void {
   /*
    * Eine abgeloeste Perspektive ist keine mehr.
    *
@@ -1085,7 +1086,7 @@ function waehleNavigator(layout: any, perspectiveId: string): void {
   if (!navigatorId) return
 
   holePanelNachOben(layout, perspectiveId, navigatorId)
-  oeffnePerspektivMitte(layout, perspectiveId)
+  oeffnePerspektivMitte(layout, perspectiveId, mitteNachVorn)
 
   // Nur was wirklich oben links liegt — sonst zeigt die Auswahl ins Leere
   const obenLinks = (layout.state.panels ?? []).find((p: any) => p.id === navigatorId)
@@ -1149,7 +1150,7 @@ function oeffneAnsichtTab(opts: {
  * Ein schon offener Tab wird nicht nach vorn geholt: Wer die Perspektive
  * wechselt, will den Navigator, nicht zwingend einen anderen Tab.
  */
-function oeffnePerspektivMitte(layout: any, perspectiveId: string): void {
+function oeffnePerspektivMitte(layout: any, perspectiveId: string, nachVorn = false): void {
   const perspektive = perspectiveManager.value?.registry?.get?.(perspectiveId)
   const mitte: string[] = perspektive?.defaultLayout?.center ?? []
   if (mitte.length === 0) return
@@ -1172,7 +1173,13 @@ function oeffnePerspektivMitte(layout: any, perspectiveId: string): void {
     })
   }
 
-  // openEditor holt den neuen Tab nach vorn — das war hier nicht gewollt
+  if (nachVorn) {
+    // Chosen by hand: the perspective's own tab comes forward
+    const erster = mitte.find((id: string) => (layout.state.editorTabs ?? []).some((t: any) => t.id === id))
+    if (erster) layout.selectEditor?.(erster)
+    return
+  }
+  // openEditor brought the new tab forward - not wanted when only the navigator changed
   if (zuvorAktiv) layout.selectEditor?.(zuvorAktiv)
 }
 
@@ -2134,9 +2141,25 @@ function folgeDemVorderenTab(layout: any): void {
       const front = holeEditorFront()
       front.setFrontTab(tabId)
       zeigeDateiDesVorderenTabs(front.frontFilePath())
+      folgeNavigatorDemTab(layout, tabId)
     },
     { immediate: true }
   )
+}
+
+/**
+ * The navigator follows the tab in front: the atlas tab brings the atlas tree,
+ * a file - or the workspace preview - brings the explorer.
+ *
+ * Only the navigator changes; the tab stays where it is. The trees keep their
+ * state meanwhile (the sidebar keeps them alive), so coming back costs nothing.
+ */
+function folgeNavigatorDemTab(layout: any, tabId: string | null): void {
+  if (!tabId) return
+  const perspectiveId = tabId === 'model-atlas' ? 'model-atlas' : 'explorer'
+  if (perspectiveManager.value?.state?.currentPerspectiveId === perspectiveId) return
+  perspectiveManager.value?.setCurrentPerspectiveId?.(perspectiveId)
+  waehleNavigator(layout, perspectiveId)
 }
 
 /**
