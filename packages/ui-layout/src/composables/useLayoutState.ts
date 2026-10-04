@@ -425,6 +425,15 @@ export function useLayoutState() {
     }
   }
 
+  /** Puts a tab at another place in the strip; `toIndex` counts the strip without it. */
+  function moveEditorTab(tabId: string, toIndex: number) {
+    const from = state.editorTabs.findIndex(t => t.id === tabId)
+    if (from < 0) return
+    const [tab] = state.editorTabs.splice(from, 1)
+    const to = Math.max(0, Math.min(toIndex, state.editorTabs.length))
+    state.editorTabs.splice(to, 0, tab!)
+  }
+
   function setEditorDirty(tabId: string, dirty: boolean) {
     const tab = state.editorTabs.find(t => t.id === tabId)
     if (tab) {
@@ -1090,6 +1099,7 @@ export function useLayoutState() {
     openEditor,
     closeEditor,
     selectEditor,
+    moveEditorTab,
     setEditorDirty,
 
     // Panel area methods

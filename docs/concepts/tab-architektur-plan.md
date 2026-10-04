@@ -491,7 +491,19 @@ die Vorschau leert die Zonen. Keine Teleport-Warnungen.
   Workspace-Vorschau → Explorer. Ein Klick in der Leiste holt zusätzlich den
   Tab der Perspektive nach vorn; ein Tab-Wechsel ändert nur den Navigator.
 - **Die Bäume behalten ihren Zustand** beim Wechsel Explorer ↔ Atlas: Die
-  Sidebar hält den zurücktretenden Navigator mit `KeepAlive` am Leben.
+  Sidebar hält jedes bisher gezeigte Navigator-Panel montiert und blendet nur
+  aus (`v-show`). Ein `KeepAlive` war der erste Versuch — es ließ das Update
+  der Sidebar beim Öffnen eines Workspace scheitern (`reading 'parentNode' of
+  null`), und mit ihm jedes weitere: die Dock-Zone erschien nie.
+
+### Nachtrag: Tabs umsortieren (2026-10-04)
+
+- Ein Tab lässt sich **in der Leiste verschieben** (`moveEditorTab`), und nur
+  dort. Das Ziehen lief vorher über das Panel-Drag-and-Drop aus der Zeit, als
+  Tabs Panels waren — dadurch waren die Seitenleisten Ablageziele, ein Tab
+  ließ sich in den Baum werfen. Die Tab-Leiste hat jetzt ihr eigenes Ziehen
+  mit eigenem Datentyp (`application/x-editor-tab`); die Leisten nehmen
+  weiter nur Panels.
 
 ### Was dabei an Verhalten wegfällt
 
