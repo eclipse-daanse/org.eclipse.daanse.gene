@@ -15,7 +15,12 @@ export class InstanceView implements EditorArt {
   readonly replacesPerspective = 'model-editor'
 
 
+  /*
+   * Every file gets a tab of its own, so there is nothing to ask: the file
+   * opens standalone, with what it references. Merging into the tab in front
+   * stays available from the explorer's "Add Instances to Workspace".
+   */
   open(file: OpenableFile, content: string): Promise<void> | void {
-    return getWorkspaceActions()?.loadInstances(file, content)
+    return getWorkspaceActions()?.loadInstances(file, content, 'STANDALONE')
   }
 }
