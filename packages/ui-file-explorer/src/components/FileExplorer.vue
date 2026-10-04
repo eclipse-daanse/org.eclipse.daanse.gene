@@ -408,8 +408,22 @@ async function handleNodeDoubleClick(node: FileTreeNode) {
  */
 const inhaltDerAuswahl = ref<string | null>(null)
 
-// Handle context menu for all node types
-function handleContextMenu(event: MouseEvent, node: FileTreeNode) {
+/*
+ * The row's menu. No right click: hovering a row shows a "more" button, and
+ * the menu that used to sit on the right click hangs there. Opening needs no
+ * button of its own - a click on the row does it.
+ */
+function hasMenu(node: FileTreeNode): boolean {
+  if (node.type === 'source' || node.type === 'directory') return true
+  if (node.type === 'file' || node.type === 'workspace') {
+    const entry = node.data as FileEntry
+    return isEcoreFile(entry) || (isXmiFile(entry) && !isWspFile(entry)) || isCoclFile(entry) || isQvtrFile(entry) || isDmnFile(entry)
+  }
+  return false
+}
+
+// The menu of a row, anchored at the "more" button
+function showMenu(event: MouseEvent, node: FileTreeNode) {
   contextMenuNode.value = node
   inhaltDerAuswahl.value = null
   if (node.type === 'file' || node.type === 'workspace') {
@@ -430,16 +444,7 @@ function handleContextMenu(event: MouseEvent, node: FileTreeNode) {
     contextMenuSource.value = fileSystem.getSource(sourceId) ?? null
   }
 
-  // Show context menu for sources, directories, .ecore files, and .xmi files (not .wsp)
-  if (node.type === 'source' || node.type === 'directory') {
-    contextMenu.value?.show(event)
-  } else if (node.type === 'file' || node.type === 'workspace') {
-    const entry = node.data as FileEntry
-    // Show for .ecore files, .xmi files (but not .wsp workspace files), .c-ocl files, .qvtr files, or .dmn files
-    if (isEcoreFile(entry) || (isXmiFile(entry) && !isWspFile(entry)) || isCoclFile(entry) || isQvtrFile(entry) || isDmnFile(entry)) {
-      contextMenu.value?.show(event)
-    }
-  }
+  if (hasMenu(node)) contextMenu.value?.show(event)
 }
 
 // Add source handlers
@@ -964,11 +969,16 @@ onUnmounted(() => {
               'is-directory': node.type === 'directory',
               'is-loading': node.loading
             }"
-            @contextmenu.prevent="handleContextMenu($event, node)"
           >
             <span class="node-label">{{ node.label }}</span>
             <i v-if="node.loading" class="pi pi-spin pi-spinner loading-spinner"></i>
             <span v-if="node.type === 'workspace'" class="workspace-badge">WS</span>
+            <!-- Shown on hover; the click stays here and does not select the row -->
+            <span class="node-actions" @click.stop @dblclick.stop @mousedown.stop>
+              <button v-if="hasMenu(node)" class="node-action" title="Mehr" @click="showMenu($event, node)">
+                <i class="pi pi-ellipsis-h"></i>
+              </button>
+            </span>
           </div>
         </template>
       </Tree>
@@ -1229,10 +1239,44 @@ onUnmounted(() => {
   background: transparent;
 }
 
+/* Full row width, so the actions sit at the right edge */
 .tree-node {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.node-actions {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+  opacity: 0;
+}
+
+:deep(.p-tree-node-content:hover) .node-actions,
+.node-actions:focus-within {
+  opacity: 1;
+}
+
+.node-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border: none;
+  border-radius: var(--border-radius);
+  background: transparent;
+  color: var(--text-color-secondary);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.node-action:hover {
+  background: var(--surface-border);
+  color: var(--text-color);
 }
 
 .tree-node.is-source {
@@ -1246,6 +1290,11 @@ onUnmounted(() => {
 
 .node-label {
   font-size: 0.875rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .loading-spinner {
@@ -1351,7 +1400,10 @@ onUnmounted(() => {
   margin-right: 0.5rem;
 }
 
+/* The label takes the rest of the row; without this the row's content stops at the text */
 :deep(.p-tree-node-label) {
   font-size: 0.875rem;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 </style>

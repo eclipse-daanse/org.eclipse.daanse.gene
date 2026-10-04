@@ -311,13 +311,28 @@ function handleNodeUnselect() {
   browser.selectNode(null)
 }
 
-// Context menu on right click
-function handleContextMenu(event: MouseEvent, node: TreeNode) {
-  const data = node.data as AtlasTreeNodeData
-  if (!data) return
+/*
+ * The row's menu. No right click: hovering a row shows a "more" button, and
+ * the menu that used to sit on the right click hangs there. Opening needs no
+ * button of its own - a click on the row does it.
+ */
+function hasMenu(node: TreeNode): boolean {
+  return menuItemsFor(node).length > 0
+}
 
+// The menu of a row, anchored at the "more" button
+function showMenu(event: MouseEvent, node: TreeNode) {
+  const items = menuItemsFor(node)
+  if (items.length === 0) return
   contextMenuNode.value = node
+  contextMenuItems.value = items
+  contextMenu.value?.show(event)
+}
+
+function menuItemsFor(node: TreeNode): any[] {
+  const data = node.data as AtlasTreeNodeData
   const items: any[] = []
+  if (!data) return items
 
   if (data.type === 'schema') {
     items.push({
@@ -386,10 +401,7 @@ function handleContextMenu(event: MouseEvent, node: TreeNode) {
     })
   }
 
-  if (items.length > 0) {
-    contextMenuItems.value = items
-    contextMenu.value?.show(event)
-  }
+  return items
 }
 
 // Add schema or object to workspace
@@ -628,11 +640,8 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
       @contextmenu.stop
     >
       <template #default="{ node }">
-        <span
-          class="atlas-tree-label"
-          @contextmenu.prevent="handleContextMenu($event, node)"
-        >
-          {{ node.label }}
+        <span class="atlas-tree-label">
+          <span class="atlas-label-text">{{ node.label }}</span>
           <i
             v-if="
               (node.data?.type === 'scope' || node.data?.type === 'error') &&
@@ -644,6 +653,12 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
           ></i>
           <span v-if="node.data?.metadata?.version" class="atlas-version">
             v{{ node.data.metadata.version }}
+          </span>
+          <!-- Shown on hover; the click stays here and does not select the row -->
+          <span class="node-actions" @click.stop @dblclick.stop @mousedown.stop>
+            <button v-if="hasMenu(node)" class="node-action" title="Mehr" @click="showMenu($event, node)">
+              <i class="pi pi-ellipsis-h"></i>
+            </button>
           </span>
         </span>
       </template>
@@ -854,11 +869,58 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
   padding: 2px 4px;
 }
 
+/* The label takes the rest of the row; without this the row's content stops at the text */
+:deep(.atlas-tree .p-tree-node-label) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .atlas-tree-label {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
+  min-width: 0;
   font-size: 0.85rem;
+}
+
+.atlas-label-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-actions {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: auto;
+  opacity: 0;
+}
+
+:deep(.p-tree-node-content:hover) .node-actions,
+.node-actions:focus-within {
+  opacity: 1;
+}
+
+.node-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border: none;
+  border-radius: var(--border-radius, 4px);
+  background: transparent;
+  color: var(--text-color-secondary);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.node-action:hover {
+  background: var(--surface-border);
+  color: var(--text-color);
 }
 
 .atlas-version {
