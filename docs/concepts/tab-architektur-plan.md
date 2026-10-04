@@ -480,6 +480,19 @@ die Vorschau leert die Zonen. Keine Teleport-Warnungen.
   Instanz-Tab vorn liegt. Eine Perspektive kann mit `editorId` sagen, zu welchem
   Editor sie gehört; die Leiste fragt den vorderen Tab (`gene.editor.front`).
 
+### Nachtrag: Model Atlas als ein Tab, Navigator folgt dem Tab (2026-10-04)
+
+- **Model Atlas** ist ein Tab (`model-atlas`) mit drei Abschnitten hinter einer
+  Abschnittswahl: Transitions, Schemas, Schema-Explorer. Vorher waren es drei
+  Mitte-Panels, jedes ein eigener Tab. Welcher Abschnitt offen ist, liegt in
+  `useAtlasSection` — der Atlas-Baum schaltet bei einer Schema-Auswahl auf
+  „Schemas", und die Wahl überlebt den Tab-Wechsel.
+- **Der Navigator folgt dem vorderen Tab:** Atlas-Tab → Atlas-Baum, Datei oder
+  Workspace-Vorschau → Explorer. Ein Klick in der Leiste holt zusätzlich den
+  Tab der Perspektive nach vorn; ein Tab-Wechsel ändert nur den Navigator.
+- **Die Bäume behalten ihren Zustand** beim Wechsel Explorer ↔ Atlas: Die
+  Sidebar hält den zurücktretenden Navigator mit `KeepAlive` am Leben.
+
 ### Was dabei an Verhalten wegfällt
 
 - Die Zone links unten ist für Dateiansichten nicht mehr da. Der Navigator
