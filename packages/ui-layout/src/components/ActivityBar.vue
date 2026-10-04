@@ -5,7 +5,7 @@
  * Displays perspective switchers.
  */
 
-import { inject, shallowRef, ref, computed, onMounted } from 'tsm:vue'
+import { inject, shallowRef, ref, computed, onMounted, watch } from 'tsm:vue'
 import WorkspaceSettingsDialog from './WorkspaceSettingsDialog.vue'
 
 // Perspective service (injected from TSM)
@@ -69,7 +69,24 @@ const allPerspectives = ref<Array<{
   label: string
   tooltip: string
   requiresWorkspace: boolean
+  isView?: boolean
+  /** The editor a view belongs to - shown only while its tab is in front */
+  editorId?: string
 }>>([])
+
+/*
+ * Which editor is in front. The view filters of the instance editor have no
+ * business in the bar while a metamodel or a transformation is being edited;
+ * they appear with an instance tab and go with it.
+ */
+const frontEditorId = ref<string | null>(null)
+tsm?.whenService?.('ui.layout.state', (svc: any) => {
+  const layout = svc.useLayoutState()
+  watch(() => layout.state.activeEditorTabId, (tabId: string | null) => {
+    const front = tsm?.getService('gene.editor.front')
+    frontEditorId.value = tabId ? (front?.editorIdOf?.(tabId) ?? null) : null
+  }, { immediate: true })
+})
 
 /*
  * Perspektiven, die eine Datei bearbeiten, gehoeren nicht mehr hierher: Was
@@ -105,7 +122,11 @@ const corePerspectives = computed(() => {
 const viewPerspectives = computed(() => {
   if (!bereit.value) return []
   return allPerspectives.value.filter(
-    p => (!p.requiresWorkspace || hasWorkspace.value) && (p as any).isView && !abgeloest.value.includes(p.id)
+    p => (!p.requiresWorkspace || hasWorkspace.value)
+      && (p as any).isView
+      && !abgeloest.value.includes(p.id)
+      // Editor-specific: only while a tab of that editor is in front
+      && (!p.editorId || p.editorId === frontEditorId.value)
   )
 })
 
@@ -136,7 +157,8 @@ onMounted(() => {
               label: p.name,
               tooltip: p.name,
               requiresWorkspace: p.requiresWorkspace ?? false,
-              isView: p.id.startsWith('view-')
+              isView: p.id.startsWith('view-'),
+              editorId: p.editorId
             }))
         }
       }

@@ -475,6 +475,11 @@ die Vorschau leert die Zonen. Keine Teleport-Warnungen.
   und Ordner dazu auf). Die Editoren löschen den Titel beim Abbau nicht mehr —
   das löschte den Titel des *nächsten* Tabs.
 
+- **Ansichten des Instanz-Editors** (die `view-*`-Perspektiven aus den
+  `treeViews` der `.wsp`) stehen nur noch in der Leiste, solange ein
+  Instanz-Tab vorn liegt. Eine Perspektive kann mit `editorId` sagen, zu welchem
+  Editor sie gehört; die Leiste fragt den vorderen Tab (`gene.editor.front`).
+
 ### Was dabei an Verhalten wegfällt
 
 - Die Zone links unten ist für Dateiansichten nicht mehr da. Der Navigator
