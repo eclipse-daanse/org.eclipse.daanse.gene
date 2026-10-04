@@ -118,6 +118,16 @@ const rightDocked = computed(() => hasRight.value && !!props.rightDock && sizes.
 const leftTarget = computed(() => (props.leftDock ? layout.dockHost(props.leftDock) : null))
 const rightTarget = computed(() => (props.rightDock ? layout.dockHost(props.rightDock) : null))
 
+/*
+ * Docked only counts while the frame offers a host. With the sidebar minimized
+ * there is no zone, and a pane that is "docked" would be nowhere at all - so it
+ * comes back into the tab until the zone is there again.
+ */
+const leftTeleported = computed(() => leftDocked.value && !!leftTarget.value)
+const rightTeleported = computed(() => rightDocked.value && !!rightTarget.value)
+const leftInTab = computed(() => hasLeft.value && !leftTeleported.value)
+const rightInTab = computed(() => hasRight.value && !rightTeleported.value)
+
 function dockLeft(docked: boolean): void {
   sizes.leftDocked = docked
   persistSizes(props.viewId)
@@ -189,12 +199,12 @@ onBeforeUnmount(endDrag)
 <template>
   <div class="editor-tab-layout" :class="{ dragging }">
     <!-- Left pane, docked: rendered into the frame's zone, still this tab's -->
-    <Teleport v-if="leftDocked && leftTarget" :to="leftTarget">
+    <Teleport v-if="leftTeleported" :to="leftTarget!">
       <slot name="left"></slot>
     </Teleport>
 
     <aside
-      v-if="hasLeft && !leftDocked"
+      v-if="leftInTab"
       class="pane pane-left"
       :class="{ collapsed: !sizes.leftOpen }"
       :style="sizes.leftOpen ? { width: sizes.left + 'px' } : undefined"
@@ -202,12 +212,20 @@ onBeforeUnmount(endDrag)
       <header class="pane-header">
         <span v-if="sizes.leftOpen" class="pane-title">{{ leftTitle }}</span>
         <button
-          v-if="sizes.leftOpen && leftDock"
+          v-if="sizes.leftOpen && leftDock && !leftDocked"
           class="pane-toggle"
           title="Links unten andocken"
           @click="dockLeft(true)"
         >
           <i class="pi pi-arrow-down-left"></i>
+        </button>
+        <button
+          v-if="sizes.leftOpen && leftDocked"
+          class="pane-toggle"
+          title="Im Tab behalten"
+          @click="dockLeft(false)"
+        >
+          <i class="pi pi-thumbtack"></i>
         </button>
         <button
           class="pane-toggle"
@@ -224,7 +242,7 @@ onBeforeUnmount(endDrag)
     </aside>
 
     <div
-      v-if="hasLeft && !leftDocked && sizes.leftOpen"
+      v-if="leftInTab && sizes.leftOpen"
       class="splitter"
       @mousedown="startDrag('left', $event)"
     ></div>
@@ -236,13 +254,13 @@ onBeforeUnmount(endDrag)
     </section>
 
     <div
-      v-if="hasRight && !rightDocked && sizes.rightOpen"
+      v-if="rightInTab && sizes.rightOpen"
       class="splitter"
       @mousedown="startDrag('right', $event)"
     ></div>
 
     <aside
-      v-if="hasRight && !rightDocked"
+      v-if="rightInTab"
       class="pane pane-right"
       :class="{ collapsed: !sizes.rightOpen }"
       :style="sizes.rightOpen ? { width: sizes.right + 'px' } : undefined"
@@ -256,12 +274,20 @@ onBeforeUnmount(endDrag)
           <i :class="sizes.rightOpen ? 'pi pi-angle-right' : 'pi pi-angle-left'"></i>
         </button>
         <button
-          v-if="sizes.rightOpen && rightDock"
+          v-if="sizes.rightOpen && rightDock && !rightDocked"
           class="pane-toggle"
           title="Rechts andocken"
           @click="dockRight(true)"
         >
           <i class="pi pi-arrow-up-right"></i>
+        </button>
+        <button
+          v-if="sizes.rightOpen && rightDocked"
+          class="pane-toggle"
+          title="Im Tab behalten"
+          @click="dockRight(false)"
+        >
+          <i class="pi pi-thumbtack"></i>
         </button>
         <span v-if="sizes.rightOpen" class="pane-title">{{ rightTitle }}</span>
       </header>
@@ -272,7 +298,7 @@ onBeforeUnmount(endDrag)
     </aside>
 
     <!-- Right pane, docked -->
-    <Teleport v-if="rightDocked && rightTarget" :to="rightTarget">
+    <Teleport v-if="rightTeleported" :to="rightTarget!">
       <slot name="right"></slot>
     </Teleport>
   </div>
