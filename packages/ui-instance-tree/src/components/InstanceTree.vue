@@ -1331,7 +1331,6 @@ watch(ctxSelectedObject, (obj) => {
               'tree-node--invalid-drop': node.key === invalidDropKey
             }"
             :data-node-key="node.key"
-            @contextmenu.prevent="(event) => onNodeContextMenu(node, event)"
           >
             <template v-if="node.kind === 'resource'">
               <i class="node-icon node-icon--resource pi pi-box"></i>
@@ -1343,6 +1342,12 @@ watch(ctxSelectedObject, (obj) => {
               <i v-else-if="node.iconClass" :class="node.iconClass" class="node-icon" />
               <span class="node-label" :title="node.xmiId ? `XMI-ID: ${node.xmiId}` : undefined">{{ node.label }}</span>
             </template>
+            <!-- No right click: the row's menu hangs on a "more" button shown on hover -->
+            <span class="node-actions" @click.stop @dblclick.stop @mousedown.stop>
+              <button class="node-action" title="Mehr" @click="onNodeContextMenu(node, $event)">
+                <i class="pi pi-ellipsis-h"></i>
+              </button>
+            </span>
           </div>
         </template>
       </Tree>
@@ -1605,10 +1610,43 @@ watch(ctxSelectedObject, (obj) => {
   background: transparent;
 }
 
+/* Full row width, so the "more" button sits at the right edge */
 .tree-node {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.node-actions {
+  display: inline-flex;
+  margin-left: auto;
+  opacity: 0;
+}
+
+:deep(.p-tree-node-content:hover) .node-actions,
+.node-actions:focus-within {
+  opacity: 1;
+}
+
+.node-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border: none;
+  border-radius: var(--border-radius, 4px);
+  background: transparent;
+  color: var(--text-color-secondary);
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.node-action:hover {
+  background: var(--surface-border);
+  color: var(--text-color);
 }
 
 .node-icon {
@@ -1631,6 +1669,11 @@ watch(ctxSelectedObject, (obj) => {
 
 .node-label {
   font-size: 0.875rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Resource nodes: distinct from folders — box icon, bolder row, subtle band */
@@ -1765,8 +1808,11 @@ watch(ctxSelectedObject, (obj) => {
   display: none;
 }
 
+/* The label takes the rest of the row; without this the row's content stops at the text */
 :deep(.p-tree-node-label) {
   font-size: 0.875rem;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* ── Drag & Drop feedback ─────────────────────────────────────────────── */

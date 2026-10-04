@@ -294,7 +294,18 @@ export async function activate(context: ModuleContext): Promise<void> {
 
   // Register shared instance tree state as DI service
   const sharedTree = useSharedInstanceTree()
-  context.services.register('gene.instance.tree.state', { instance: sharedTree })
+  /*
+   * "The" instance tree is the one of the tab in front. Every file has its own
+   * document now; what asks here (the save dialog) means the front one. The
+   * shared tree only remains as a fallback while no instance tab is in front.
+   */
+  const frontDocument = () => {
+    const tabId: string | undefined = context.services.get<any>('gene.editor.front')?.frontTabId?.()
+    return tabId && tabId.startsWith('instance:') ? instanzTabDokument(tabId) : null
+  }
+  context.services.register('gene.instance.tree.state', {
+    get instance() { return frontDocument()?.instance ?? sharedTree }
+  })
 
   // Register components as service (legacy)
   context.services.register('ui.instance-tree.components', components)
@@ -594,11 +605,20 @@ context.log.info('ViewsPanel available as component (integrated in InstanceTree)
   const menuRegistry = context.services.get<any>('gene.menu.registry')
   if (menuRegistry) {
     const eventBus = context.services.get<any>('gene.eventbus')
-    const sharedTree = useSharedInstanceTree()
     const sharedViews = useSharedViews()
-    const hasContent = () => !!(getSharedResource()?.getContents()?.size())
+    // The menu speaks for the tab in front: a document with a resource can be saved and checked
+    const frontInstance = () => frontDocument()?.instance ?? null
+    const hasContent = () => (frontDocument()?.resources.value.length ?? 0) > 0
 
     menuRegistry.registerMenu('model-editor', [
+      {
+        id: 'instance.add',
+        icon: 'pi pi-plus',
+        label: 'Neu…',
+        disabled: () => !frontInstance(),
+        // The tree in front shows its "New Instance / New Resource" menu at the button
+        action: (event?: MouseEvent) => eventBus?.emit('show-add-menu', event)
+      },
       {
         id: 'instance.save',
         icon: 'pi pi-save',
@@ -618,8 +638,8 @@ context.log.info('ViewsPanel available as component (integrated in InstanceTree)
         id: 'instance.showSupertypes',
         icon: 'pi pi-sitemap',
         label: 'Show Supertypes',
-        active: () => sharedTree.showSuperTypes.value,
-        action: () => { sharedTree.showSuperTypes.value = !sharedTree.showSuperTypes.value }
+        active: () => !!frontInstance()?.showSuperTypes.value,
+        action: () => { const t = frontInstance(); if (t) t.showSuperTypes.value = !t.showSuperTypes.value }
       },
       { id: 'sep2', separator: true, icon: '', label: '', action: () => {} },
       {

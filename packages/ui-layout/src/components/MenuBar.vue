@@ -26,7 +26,8 @@ interface ToolbarItem {
   loading?: boolean | (() => boolean)
   separator?: boolean
   popover?: Component
-  action: () => void | Promise<void>
+  /** The click event comes along, so a popup can anchor at the button */
+  action: (event?: MouseEvent) => void | Promise<void>
 }
 
 const items = ref<ToolbarItem[]>([])
@@ -114,7 +115,7 @@ async function executeItem(item: ToolbarItem, event?: MouseEvent) {
 
   executingId.value = item.id
   try {
-    await item.action()
+    await item.action(event)
   } catch (e: any) {
     console.error('[MenuBar] Action failed:', item.id, e)
   } finally {
