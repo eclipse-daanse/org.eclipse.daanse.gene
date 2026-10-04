@@ -207,6 +207,18 @@ export function sectionFor(object: any, depth = 0): DocSection | null {
   return { ...base, body: '', isDescription: false, table: null, children }
 }
 
+/**
+ * The sections in reading order, depth first. The view renders them as one
+ * flat column: every text starts at the same left edge, and the stripes in
+ * the gutter say how deep a section sits - not an indent.
+ */
+export function flatten(section: DocSection): DocSection[] {
+  const out: DocSection[] = []
+  const walk = (s: DocSection) => { out.push(s); s.children.forEach(walk) }
+  walk(section)
+  return out
+}
+
 /** Writes a description's text or name back into the model */
 export function setDescriptionField(description: any, field: 'name' | 'body', value: string): boolean {
   const o = toRaw(description)

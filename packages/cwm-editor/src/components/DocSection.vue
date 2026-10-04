@@ -1,16 +1,23 @@
 <script setup lang="ts">
 /**
- * One section of the documentation: title, text, table, and the sections
- * beneath it. Every nested section adds a stripe on the left, so the stripes
- * next to a paragraph say how deep it sits.
+ * One section of the documentation: title, text, table.
+ *
+ * All sections stand in one column - every text starts at the same left edge.
+ * How deep a section sits is said by the stripes in the gutter to its left:
+ * one per level, side by side, not by an indent.
  */
 import type { DocSection } from '../composables/documentation'
 
 const props = defineProps<{
   section: DocSection
+  /** How many stripe slots the gutter holds - the deepest section on the page */
+  gutter: number
   /** Only the selected description is edited in place */
   editable?: boolean
 }>()
+
+/** Width of one stripe slot in the gutter */
+const SLOT = 7
 
 const emit = defineEmits<{
   edit: [field: 'name' | 'body', value: string]
@@ -27,8 +34,15 @@ function onInput(field: 'name' | 'body', event: Event): void {
 
 <template>
   <section class="doc-section" :class="{ nested: section.depth > 0 }">
-    <!-- The stripe of this level; the levels above add theirs around it -->
-    <div v-if="section.depth > 0" class="doc-stripe" :style="{ '--level': section.depth }"></div>
+    <!-- One stripe per level, side by side; the text column starts after the gutter -->
+    <div class="doc-gutter" :style="{ width: `${Math.max(gutter, 1) * SLOT}px` }">
+      <span
+        v-for="level in section.depth"
+        :key="level"
+        class="doc-stripe"
+        :style="{ left: `${(level - 1) * SLOT}px`, opacity: 1 - (level - 1) * 0.12 }"
+      ></span>
+    </div>
     <div class="doc-body">
       <header class="doc-header">
         <input
@@ -80,7 +94,6 @@ function onInput(field: 'name' | 'body', event: Event): void {
         </tbody>
       </table>
 
-      <DocSection v-for="child in section.children" :key="child.key" :section="child" />
     </div>
   </section>
 </template>
@@ -96,13 +109,20 @@ function onInput(field: 'name' | 'body', event: Event): void {
   margin-top: 0.75rem;
 }
 
-/* Deeper levels: a thinner, lighter stripe */
+.doc-gutter {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+}
+
+/* A stripe per level; deeper ones a little lighter */
 .doc-stripe {
-  flex: 0 0 3px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
   border-radius: 2px;
   background: var(--primary-color);
-  opacity: calc(1 - (var(--level) - 1) * 0.15);
-  min-height: 1.5rem;
 }
 
 .doc-body {
