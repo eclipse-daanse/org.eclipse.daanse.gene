@@ -312,9 +312,9 @@ function handleNodeUnselect() {
 }
 
 /*
- * The row's menu. No right click: hovering a row shows a "more" button, and
- * the menu that used to sit on the right click hangs there. Opening needs no
- * button of its own - a click on the row does it.
+ * The row's menu: on the right click and on the "more" button a row shows on
+ * hover. The row spans its full width, so the right click hits it anywhere,
+ * not only on the text. Opening needs no button of its own - a click does it.
  */
 function hasMenu(node: TreeNode): boolean {
   return menuItemsFor(node).length > 0
@@ -640,7 +640,7 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
       @contextmenu.stop
     >
       <template #default="{ node }">
-        <span class="atlas-tree-label">
+        <span class="atlas-tree-label" @contextmenu.prevent="showMenu($event, node)">
           <span class="atlas-label-text">{{ node.label }}</span>
           <i
             v-if="

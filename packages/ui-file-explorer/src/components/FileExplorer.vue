@@ -433,9 +433,9 @@ async function handleNodeDoubleClick(node: FileTreeNode) {
 const inhaltDerAuswahl = ref<string | null>(null)
 
 /*
- * The row's menu. No right click: hovering a row shows a "more" button, and
- * the menu that used to sit on the right click hangs there. Opening needs no
- * button of its own - a click on the row does it.
+ * The row's menu: on the right click and on the "more" button a row shows on
+ * hover. The row spans its full width, so the right click hits it anywhere,
+ * not only on the text. Opening needs no button of its own - a click does it.
  */
 function hasMenu(node: FileTreeNode): boolean {
   if (node.type === 'source' || node.type === 'directory') return true
@@ -993,6 +993,7 @@ onUnmounted(() => {
               'is-directory': node.type === 'directory',
               'is-loading': node.loading
             }"
+            @contextmenu.prevent="showMenu($event, node)"
           >
             <span class="node-label">{{ node.label }}</span>
             <i v-if="node.loading" class="pi pi-spin pi-spinner loading-spinner"></i>
