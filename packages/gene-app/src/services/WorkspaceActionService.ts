@@ -37,6 +37,8 @@ export interface WorkspaceActionService {
   loadDmnFile(entry: FileEntryLike, content: string): Promise<void>
   /** Opens the file's text in the XML editor */
   openXmlFile(entry: FileEntryLike, content: string): Promise<void>
+  /** Opens a CWM model in the CWM editor (documentation view) */
+  openCwmEditor(entry: FileEntryLike, content: string): Promise<void>
   publishToAtlas(entry: FileEntryLike, content: string): void
 
   /**

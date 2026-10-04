@@ -28,6 +28,7 @@
   <startupModules>transformation</startupModules>
   <startupModules>cocl-editor</startupModules>
   <startupModules>xml-editor</startupModules>
+  <startupModules>cwm-editor</startupModules>
   <startupModules>atlas-browser</startupModules>
   <startupModules>data-generator</startupModules>
 

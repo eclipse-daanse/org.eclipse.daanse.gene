@@ -301,7 +301,8 @@ export async function activate(context: ModuleContext): Promise<void> {
    */
   const frontDocument = () => {
     const tabId: string | undefined = context.services.get<any>('gene.editor.front')?.frontTabId?.()
-    return tabId && tabId.startsWith('instance:') ? instanzTabDokument(tabId) : null
+    // Any tab that holds an instance document - the instance editor's or the CWM editor's
+    return tabId && offeneInstanzTabIds().includes(tabId) ? instanzTabDokument(tabId) : null
   }
   context.services.register('gene.instance.tree.state', {
     get instance() { return frontDocument()?.instance ?? sharedTree }

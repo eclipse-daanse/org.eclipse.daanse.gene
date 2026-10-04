@@ -85,6 +85,7 @@ export const startupModules = [
   'transformation',     // Model transformation mapping editor
   'cocl-editor',        // C-OCL constraint editor
   'xml-editor',         // Text editor for XMI/Ecore/XML
+  'cwm-editor',         // CWM editor (documentation view)
   //'dmn-editor',         // DMN Decision Table Editor
   'atlas-browser',       // Model Atlas Browser
   'data-generator',      // Data generator for test data (must load after atlas-browser)
