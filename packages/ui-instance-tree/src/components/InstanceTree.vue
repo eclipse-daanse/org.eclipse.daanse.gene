@@ -874,7 +874,6 @@ const contextMenuItems = computed(() => {
     const paste = (ctx as any).canPasteIntoResource?.(res) ?? { ok: false, reason: 'Nicht verfügbar.' }
     return [
       newInstanceItem(),
-      { label: 'New Resource…', icon: 'pi pi-box', command: () => createResourcePrompt() },
       { separator: true },
       {
         label: paste.ok ? 'Paste' : `Paste (${paste.reason ?? 'nicht möglich'})`,
