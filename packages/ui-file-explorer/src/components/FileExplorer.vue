@@ -365,7 +365,30 @@ function handleNodeSelect(node: FileTreeNode) {
   // Auto-expand directories on select
   if (entry.isDirectory) {
     expandedKeys.value[treeNode.key] = true
+    return
   }
+  // A workspace file opens on double click; any other file opens on the click
+  if (!isWorkspaceFile(entry)) void openWithDefault(entry)
+}
+
+/**
+ * Opens a file with its default editor: the one remembered for its model,
+ * otherwise the first that fits path and content. "Öffnen mit" in the row's
+ * menu is for choosing another one.
+ */
+async function openWithDefault(entry: FileEntry): Promise<void> {
+  const ctxSvc = tsm?.getService?.('gene.editor.context')
+  if (!ctxSvc?.editorFuer) return
+  let content: string | null = null
+  try {
+    content = await fileSystem.readTextFile(entry)
+  } catch (e) {
+    console.warn('[FileExplorer] Datei nicht lesbar:', entry.path, e)
+    return
+  }
+  if (!content) return
+  const art = ctxSvc.editorFuer(entry.path, content)
+  if (art?.open) await art.open(entry, content)
 }
 
 // Handle double-click to open files
