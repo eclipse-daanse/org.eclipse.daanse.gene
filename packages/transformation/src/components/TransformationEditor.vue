@@ -465,7 +465,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   resizeObserver?.disconnect()
-  openFileTitle.value = null
+  // The title belongs to the frame now - it follows the tab in front
 })
 
 // Redraw connections when active relation or mappings change

@@ -10,7 +10,7 @@
  * Workspace files (.wsp, .xmi) are highlighted and can be opened.
  */
 
-import { ref, computed, inject, onMounted, onUnmounted } from 'tsm:vue'
+import { ref, computed, inject, onMounted, onUnmounted, watch } from 'tsm:vue'
 import { Tree } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
 import { Menu } from 'tsm:primevue'
@@ -37,6 +37,23 @@ function getActions() {
 // Tree state
 const selectedKey = ref<Record<string, boolean>>({})
 const expandedKeys = ref<Record<string, boolean>>({})
+
+/*
+ * Follow the file in front. Whoever sets the shared `selectedFile` from
+ * outside - a tab that came forward - gets that file selected and revealed
+ * here too: its node selected, its folders and its source expanded.
+ */
+watch(() => fileSystem.selectedFile.value, (entry: any) => {
+  if (!entry?.path || !entry.sourceId) return
+  const key = `${entry.sourceId}:${entry.path}`
+  if (selectedKey.value[key]) return
+  selectedKey.value = { [key]: true }
+  expandedKeys.value[`source:${entry.sourceId}`] = true
+  const parts = String(entry.path).split('/')
+  for (let i = 1; i < parts.length; i++) {
+    expandedKeys.value[`${entry.sourceId}:${parts.slice(0, i).join('/')}`] = true
+  }
+})
 
 // Add source menu
 const addMenu = ref<InstanceType<typeof Menu> | null>(null)

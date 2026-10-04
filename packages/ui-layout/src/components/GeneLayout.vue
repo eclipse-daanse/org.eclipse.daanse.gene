@@ -108,7 +108,12 @@ const panelAreaStyle = computed(() => {
   const hasTabs = layout.state.panelTabs.length > 0
   if (!hasTabs) return { height: '0px', display: 'none' }
   if (!layout.state.visibility.panelArea) return { height: '0px', display: 'none' }
-  return { height: `${layout.state.dimensions.panelAreaHeight}px`, display: 'flex' }
+  /*
+   * A wish, not a law: the remembered height may stem from a taller window.
+   * As a flex basis with a ceiling it yields when the window is small, so the
+   * editor never shrinks below its minimum.
+   */
+  return { flex: `0 1 ${layout.state.dimensions.panelAreaHeight}px`, maxHeight: '70%', display: 'flex' }
 })
 
 // Resize handlers
@@ -406,6 +411,8 @@ onUnmounted(() => {
 .editor-container {
   display: flex;
   flex: 1;
+  /* Room to work in, whatever the panel below asks for */
+  min-height: 160px;
   overflow: hidden;
 }
 
@@ -413,7 +420,7 @@ onUnmounted(() => {
   position: relative;
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
+  min-height: 0;
 }
 
 /* Resize handles */
