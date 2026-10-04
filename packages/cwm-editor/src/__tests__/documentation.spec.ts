@@ -5,7 +5,7 @@
  * eGet(), eContainer() - so plain objects that answer those calls are enough.
  */
 import { describe, it, expect } from 'vitest'
-import { sectionFor, tableView } from '../composables/documentation'
+import { sectionFor, tableView, flatten } from '../composables/documentation'
 
 interface Fake { cls: string; ns: string; values: Record<string, any>; parent?: Fake }
 
@@ -52,6 +52,8 @@ describe('Dokumentation aus CWM-Beschreibungen', () => {
     expect(s.isDescription).toBe(true)
     expect(s.children.map(c => [c.title, c.depth])).toEqual([['Liegenschaftskataster', 1]])
     expect(s.children[0]!.children.map(c => [c.title, c.depth])).toEqual([['Zuständigkeit', 2]])
+    // Flach, in Lesereihenfolge - die Tiefe bleibt an jeder Sektion
+    expect(flatten(s).map(x => [x.title, x.depth])).toEqual([['Handbuch', 0], ['Liegenschaftskataster', 1], ['Zuständigkeit', 2]])
   })
 
   it('eine Tabelle: Spalten mit Typ, Null, Schlüsseln und ihrer Beschreibung', () => {
