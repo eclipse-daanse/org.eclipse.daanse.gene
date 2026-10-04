@@ -7,7 +7,7 @@
  * When minimized, shows a collapsed bar with panel icons.
  */
 
-import { computed, inject } from 'tsm:vue'
+import { computed, inject, ref, watch, onBeforeUnmount } from 'tsm:vue'
 import { useLayoutState } from '../composables/useLayoutState'
 import { usePanelDragDrop } from '../composables/usePanelDragDrop'
 
@@ -33,7 +33,17 @@ const panels = computed(() => layout.secondaryPanels.value)
  * Der eingeklappte Balken zeigt sich erst, wenn ein Panel gewaehlt ist — nicht
  * schon, weil eines angemeldet wurde. Die rechte Seite gehoert dem offenen Tab.
  */
-const showMinimized = computed(() => !visible.value && !!activePanel.value)
+const showMinimized = computed(() => !visible.value && (!!activePanel.value || !!dock.value))
+
+/*
+ * The right side is a dock zone as well: the tab in front docks its model
+ * browser here and renders it into the host by Teleport. While something is
+ * docked, it takes the content area; the panel tabs step back.
+ */
+const dock = computed(() => layout.state.docks?.secondary ?? null)
+const dockHostEl = ref<HTMLElement | null>(null)
+watch(dockHostEl, (el) => layout.setDockHost?.('secondary', el))
+onBeforeUnmount(() => layout.setDockHost?.('secondary', null))
 
 // Show empty drop zone when no panels at all
 const showEmptyDropZone = computed(() => panels.value.length === 0)
@@ -96,6 +106,15 @@ function onDrop(event: DragEvent) {
     @drop="onDrop"
   >
     <button
+      v-if="dock"
+      class="minimized-tab active"
+      :title="dock.title"
+      @click="handleExpand()"
+    >
+      <i v-if="dock.icon" :class="dock.icon"></i>
+      <span v-else class="tab-letter">{{ dock.title.charAt(0) }}</span>
+    </button>
+    <button
       v-for="panel in panels"
       :key="panel.id"
       class="minimized-tab"
@@ -120,8 +139,25 @@ function onDrop(event: DragEvent) {
     @dragleave="onDragLeave"
     @drop="onDrop"
   >
+    <!-- Docked pane of the tab in front -->
+    <template v-if="dock">
+      <div class="sidebar-header">
+        <div class="sidebar-title-container">
+          <i v-if="dock.icon" :class="dock.icon"></i>
+          <span class="sidebar-title">{{ dock.title }}</span>
+        </div>
+        <button class="minimize-btn" title="Zurück in den Tab" @click.stop="dock.undock()">
+          <i class="pi pi-external-link"></i>
+        </button>
+        <button class="minimize-btn" title="Minimize" @click="handleMinimize">
+          <i class="pi pi-chevron-right"></i>
+        </button>
+      </div>
+      <div ref="dockHostEl" class="sidebar-content dock-host"></div>
+    </template>
+
     <!-- Header with tabs -->
-    <div class="sidebar-header">
+    <div v-if="!dock" class="sidebar-header">
       <div v-if="panels.length > 1" class="sidebar-tabs">
         <button
           v-for="panel in panels"
@@ -168,7 +204,7 @@ function onDrop(event: DragEvent) {
     </div>
 
     <!-- Panel content -->
-    <div class="sidebar-content">
+    <div v-if="!dock" class="sidebar-content">
       <component
         v-if="activePanel"
         :is="activePanel.component"

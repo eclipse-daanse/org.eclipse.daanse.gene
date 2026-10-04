@@ -425,6 +425,38 @@ folgt dem vorderen Tab (Alpha / Beta / Alpha), kein Panel einer Datei im Rahmen.
 Der Dokument-Speicher ist dreimal gleich geschrieben (25 Zeilen), weil ein
 Plugin kein anderes importiert und `gene-contracts` kein Verhalten trägt.
 
+### Nachtrag: Dock-Zonen (2026-10-04)
+
+Der geteilte Baum links unten war praktisch — er kommt zurück, ohne dass etwas
+geteilt wird. Die Zone gehört dem Rahmen, der **Inhalt** dem Tab:
+
+- `ui-layout` hat zwei Dock-Zonen, `primary-bottom` und `secondary`.
+  `layout.dock(zone, { title, icon, undock })` lässt die Zone erscheinen (mit
+  Kopfzeile und Knopf „Zurück in den Tab"), `undock(zone)` lässt sie
+  verschwinden. Die Sidebars melden ihr Host-Element mit `setDockHost`.
+- `EditorTabLayout` nimmt je Seite eine Zone (`left-dock`, `right-dock`).
+  Angedockt wird der Slot-Inhalt per `<Teleport>` in den Host gerendert — er
+  bleibt Kind der Tab-Komponente, behält also deren Kontext (`provide`) und
+  geht mit dem Tab. Angedockt oder im Tab ist je **Ansicht** gemerkt, wie die
+  Größen; Vorgabe: beide angedockt.
+- Instanz- und Metamodell-Tab nennen nur die Zonen.
+
+Wechselt der Tab, verschwindet sein Inhalt aus der Zone und der nächste dockt
+seinen an — oder keinen, dann ist die Zone leer (Workspace-Vorschau).
+
+Weg sind dafür `activePrimaryBottomPanelId`, `primaryBottomPanels`,
+`activePrimaryBottomPanel` und `'primary-bottom'` als `PanelLocation`: Die Zone
+kennt nur noch das Andocken.
+
+Stolperstein beim Bauen: `dockHosts` lag zuerst *in* `useLayoutState()`, das
+jede Komponente neu aufruft — die Sidebar meldete ihren Host an ein Exemplar,
+das der Tab nie las; die Zone zeigte nur die Überschrift. Jetzt auf Modulebene.
+
+Geprüft: beide Zonen zeigen Baum und Browser des vorderen Tabs; Auswahl im
+angedockten Baum zeigt die Eigenschaften in der Tab-Mitte; Abdocken holt den
+Baum in den Tab, Andocken bringt ihn zurück; Tab-Wechsel tauscht den Inhalt,
+die Vorschau leert die Zonen. Keine Teleport-Warnungen.
+
 ### Was dabei an Verhalten wegfällt
 
 - Die Zone links unten ist für Dateiansichten nicht mehr da. Der Navigator

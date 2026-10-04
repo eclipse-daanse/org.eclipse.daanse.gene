@@ -7,9 +7,11 @@
  * lives here, inside the tab, and nowhere else. That is what keeps one tab's
  * content from ever showing up in another: there is no shared zone to switch.
  *
- * Sizes are remembered per **view** (all instance tabs share one division, all
- * metamodel tabs another), not per tab. A tab is opened and closed often; the
- * way somebody likes a view divided is not.
+ * A side pane can be **docked** into a zone of the frame - the tree to the
+ * lower left, the browser to the right. The zone is the frame's; the content
+ * stays the tab's: it is rendered there by Teleport, so it keeps the tab's
+ * context and leaves with the tab. Whether a pane is docked is remembered per
+ * view, like the sizes.
  *
  * Knows neither files nor contexts. It takes three slots and keeps three widths.
  */
@@ -20,6 +22,8 @@ interface PaneSizes {
   right: number
   leftOpen: boolean
   rightOpen: boolean
+  leftDocked: boolean
+  rightDocked: boolean
 }
 
 const STORAGE_PREFIX = 'gene.editorTabLayout.'
@@ -52,31 +56,48 @@ function persistSizes(viewId: string): void {
 </script>
 
 <script setup lang="ts">
-import { computed, ref, useSlots, onBeforeUnmount } from 'tsm:vue'
+import { computed, ref, useSlots, watch, onBeforeUnmount } from 'tsm:vue'
+import { useLayoutState } from '../composables/useLayoutState'
+import type { DockZone } from '../types'
 
 const props = withDefaults(defineProps<{
-  /** Which view this is - sizes are remembered per view, not per tab */
+  /** Which view this is - sizes and docking are remembered per view, not per tab */
   viewId: string
   leftTitle?: string
+  leftIcon?: string
   rightTitle?: string
+  rightIcon?: string
   defaultLeft?: number
   defaultRight?: number
+  /** The frame zone the left pane may dock into; without one it cannot dock */
+  leftDock?: DockZone
+  /** The frame zone the right pane may dock into */
+  rightDock?: DockZone
 }>(), {
   leftTitle: '',
+  leftIcon: '',
   rightTitle: '',
+  rightIcon: '',
   defaultLeft: 280,
-  defaultRight: 300
+  defaultRight: 300,
+  leftDock: undefined,
+  rightDock: undefined
 })
 
 const slots = useSlots()
 const hasLeft = computed(() => !!slots.left)
 const hasRight = computed(() => !!slots.right)
 
+const layout = useLayoutState()
+
 const sizes = loadSizes(props.viewId, {
   left: props.defaultLeft,
   right: props.defaultRight,
   leftOpen: true,
-  rightOpen: true
+  rightOpen: true,
+  // Docked by default where a zone is offered - the familiar picture
+  leftDocked: !!props.leftDock,
+  rightDocked: !!props.rightDock
 })
 
 function toggleLeft(): void {
@@ -88,6 +109,45 @@ function toggleRight(): void {
   sizes.rightOpen = !sizes.rightOpen
   persistSizes(props.viewId)
 }
+
+// ── Docking ──────────────────────────────────────────────────────────────
+const leftDocked = computed(() => hasLeft.value && !!props.leftDock && sizes.leftDocked)
+const rightDocked = computed(() => hasRight.value && !!props.rightDock && sizes.rightDocked)
+
+/** Where the frame wants docked content - null while the zone is not shown */
+const leftTarget = computed(() => (props.leftDock ? layout.dockHost(props.leftDock) : null))
+const rightTarget = computed(() => (props.rightDock ? layout.dockHost(props.rightDock) : null))
+
+function dockLeft(docked: boolean): void {
+  sizes.leftDocked = docked
+  persistSizes(props.viewId)
+}
+
+function dockRight(docked: boolean): void {
+  sizes.rightDocked = docked
+  persistSizes(props.viewId)
+}
+
+/*
+ * Tell the frame when a pane is docked and when it is taken back. Only the tab
+ * in front is mounted, so there is no one else to argue with about the zone.
+ */
+watch(leftDocked, (docked) => {
+  if (!props.leftDock) return
+  if (docked) layout.dock(props.leftDock, { title: props.leftTitle, icon: props.leftIcon || undefined, undock: () => dockLeft(false) })
+  else layout.undock(props.leftDock)
+}, { immediate: true })
+
+watch(rightDocked, (docked) => {
+  if (!props.rightDock) return
+  if (docked) layout.dock(props.rightDock, { title: props.rightTitle, icon: props.rightIcon || undefined, undock: () => dockRight(false) })
+  else layout.undock(props.rightDock)
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  if (props.leftDock && leftDocked.value) layout.undock(props.leftDock)
+  if (props.rightDock && rightDocked.value) layout.undock(props.rightDock)
+})
 
 // ── Splitters ────────────────────────────────────────────────────────────
 const dragging = ref(false)
@@ -128,14 +188,27 @@ onBeforeUnmount(endDrag)
 
 <template>
   <div class="editor-tab-layout" :class="{ dragging }">
+    <!-- Left pane, docked: rendered into the frame's zone, still this tab's -->
+    <Teleport v-if="leftDocked && leftTarget" :to="leftTarget">
+      <slot name="left"></slot>
+    </Teleport>
+
     <aside
-      v-if="hasLeft"
+      v-if="hasLeft && !leftDocked"
       class="pane pane-left"
       :class="{ collapsed: !sizes.leftOpen }"
       :style="sizes.leftOpen ? { width: sizes.left + 'px' } : undefined"
     >
       <header class="pane-header">
         <span v-if="sizes.leftOpen" class="pane-title">{{ leftTitle }}</span>
+        <button
+          v-if="sizes.leftOpen && leftDock"
+          class="pane-toggle"
+          title="Links unten andocken"
+          @click="dockLeft(true)"
+        >
+          <i class="pi pi-arrow-down-left"></i>
+        </button>
         <button
           class="pane-toggle"
           :title="sizes.leftOpen ? 'Einklappen' : leftTitle || 'Ausklappen'"
@@ -151,7 +224,7 @@ onBeforeUnmount(endDrag)
     </aside>
 
     <div
-      v-if="hasLeft && sizes.leftOpen"
+      v-if="hasLeft && !leftDocked && sizes.leftOpen"
       class="splitter"
       @mousedown="startDrag('left', $event)"
     ></div>
@@ -163,13 +236,13 @@ onBeforeUnmount(endDrag)
     </section>
 
     <div
-      v-if="hasRight && sizes.rightOpen"
+      v-if="hasRight && !rightDocked && sizes.rightOpen"
       class="splitter"
       @mousedown="startDrag('right', $event)"
     ></div>
 
     <aside
-      v-if="hasRight"
+      v-if="hasRight && !rightDocked"
       class="pane pane-right"
       :class="{ collapsed: !sizes.rightOpen }"
       :style="sizes.rightOpen ? { width: sizes.right + 'px' } : undefined"
@@ -182,6 +255,14 @@ onBeforeUnmount(endDrag)
         >
           <i :class="sizes.rightOpen ? 'pi pi-angle-right' : 'pi pi-angle-left'"></i>
         </button>
+        <button
+          v-if="sizes.rightOpen && rightDock"
+          class="pane-toggle"
+          title="Rechts andocken"
+          @click="dockRight(true)"
+        >
+          <i class="pi pi-arrow-up-right"></i>
+        </button>
         <span v-if="sizes.rightOpen" class="pane-title">{{ rightTitle }}</span>
       </header>
       <div v-if="sizes.rightOpen" class="pane-body">
@@ -189,6 +270,11 @@ onBeforeUnmount(endDrag)
       </div>
       <span v-else class="pane-title-vertical">{{ rightTitle }}</span>
     </aside>
+
+    <!-- Right pane, docked -->
+    <Teleport v-if="rightDocked && rightTarget" :to="rightTarget">
+      <slot name="right"></slot>
+    </Teleport>
   </div>
 </template>
 

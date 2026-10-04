@@ -96,7 +96,8 @@ const primarySidebarStyle = computed(() => {
 })
 
 const secondarySidebarStyle = computed(() => {
-  const hasPanels = layout.secondaryPanels.value.length > 0
+  // A docked pane of the tab in front counts like a panel
+  const hasPanels = layout.secondaryPanels.value.length > 0 || !!layout.state.docks?.secondary
   if (!hasPanels) return { width: '0px', display: 'none' }
   if (!layout.state.visibility.secondarySidebar) return { width: '48px', display: 'flex' }
   return { width: `${layout.state.dimensions.secondarySidebarWidth}px`, display: 'flex' }

@@ -37,7 +37,11 @@ const ModelBrowser = tsm?.getService('ui.model-browser.components')?.ModelBrowse
     v-if="TabLayout"
     view-id="instance"
     left-title="Instanzen"
+    left-icon="pi pi-sitemap"
+    left-dock="primary-bottom"
     right-title="Modelle"
+    right-icon="pi pi-box"
+    right-dock="secondary"
   >
     <template #left>
       <InstanceTree :context="ctx" />

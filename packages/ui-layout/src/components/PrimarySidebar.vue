@@ -7,7 +7,7 @@
  * When minimized, shows a collapsed bar with panel icons.
  */
 
-import { computed, inject } from 'tsm:vue'
+import { computed, inject, ref, watch, onBeforeUnmount } from 'tsm:vue'
 import { useLayoutState } from '../composables/useLayoutState'
 import { usePanelDragDrop } from '../composables/usePanelDragDrop'
 
@@ -30,11 +30,15 @@ const activePanel = computed(() => layout.activePrimaryPanel.value)
 const panels = computed(() => layout.primaryPanels.value)
 
 /*
- * Die untere Haelfte: die Ansicht zur offenen Datei, meist ihr Baum. Sie liegt
- * unter dem Navigator, nicht als weiterer Reiter daneben — beide sollen
- * gleichzeitig sichtbar sein.
+ * The lower half is a dock zone. It belongs to the frame, what is shown in it
+ * belongs to the tab in front: the tab docks its tree here and renders it into
+ * the host by Teleport, and takes it along when it goes. Without a docked pane
+ * the zone is not there.
  */
-const untenPanel = computed(() => layout.activePrimaryBottomPanel?.value ?? null)
+const dock = computed(() => layout.state.docks?.['primary-bottom'] ?? null)
+const dockHostEl = ref<HTMLElement | null>(null)
+watch(dockHostEl, (el) => layout.setDockHost?.('primary-bottom', el))
+onBeforeUnmount(() => layout.setDockHost?.('primary-bottom', null))
 const untenHoehe = computed(() => layout.state.dimensions.primaryBottomHeight)
 
 let ziehtTrenner = false
@@ -210,17 +214,18 @@ function onDrop(event: DragEvent) {
       </div>
     </div>
 
-    <!-- Untere Haelfte: die Ansicht zur offenen Datei -->
-    <template v-if="untenPanel">
-      <div class="sidebar-splitter" title="Hoehe ziehen" @mousedown="trennerGedrueckt"></div>
+    <!-- Lower half: the dock zone - the tab in front renders its pane into the host -->
+    <template v-if="dock">
+      <div class="sidebar-splitter" title="Höhe ziehen" @mousedown="trennerGedrueckt"></div>
       <div class="sidebar-bottom" :style="{ height: `${untenHoehe}px` }">
         <div class="sidebar-header bottom-header">
-          <i v-if="untenPanel.icon" :class="untenPanel.icon"></i>
-          <span class="sidebar-title">{{ untenPanel.title }}</span>
+          <i v-if="dock.icon" :class="dock.icon"></i>
+          <span class="sidebar-title">{{ dock.title }}</span>
+          <button class="minimize-btn" title="Zurück in den Tab" @click.stop="dock.undock()">
+            <i class="pi pi-external-link"></i>
+          </button>
         </div>
-        <div class="sidebar-content">
-          <component :is="untenPanel.component" :key="untenPanel.id" />
-        </div>
+        <div ref="dockHostEl" class="sidebar-content dock-host"></div>
       </div>
     </template>
 
