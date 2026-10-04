@@ -35,6 +35,24 @@ const panels = computed(() => layout.primaryPanels.value)
  * the host by Teleport, and takes it along when it goes. Without a docked pane
  * the zone is not there.
  */
+/*
+ * Every panel this sidebar has shown stays mounted and is only hidden, so the
+ * tree that steps back (Explorer <-> Atlas) keeps what it had expanded and
+ * selected. KeepAlive did the same, but failed the sidebar's update when the
+ * panels were rebuilt on a workspace opening ("reading 'parentNode' of null")
+ * - and every later update with it, so the dock zone below never appeared.
+ * A panel that leaves the layout is dropped and starts fresh if it returns.
+ */
+const shownIds = ref<string[]>([])
+watch(activePanel, (panel) => {
+  if (panel && !shownIds.value.includes(panel.id)) shownIds.value.push(panel.id)
+}, { immediate: true })
+const shownPanels = computed(() =>
+  shownIds.value
+    .map(id => layout.state.panels.find(p => p.id === id))
+    .filter((p): p is NonNullable<typeof p> => !!p)
+)
+
 const dock = computed(() => layout.state.docks?.['primary-bottom'] ?? null)
 const dockHostEl = ref<HTMLElement | null>(null)
 watch(dockHostEl, (el) => layout.setDockHost?.('primary-bottom', el))
@@ -202,16 +220,16 @@ function onDrop(event: DragEvent) {
       </button>
     </div>
 
-    <!-- Panel content. Kept alive: switching Explorer <-> Atlas must not forget
-         what was expanded and selected in the tree that steps back -->
+    <!-- Panel content: every panel shown so far stays mounted, see shownPanels -->
     <div class="sidebar-content">
-      <KeepAlive>
-        <component
-          v-if="activePanel"
-          :is="activePanel.component"
-          :key="activePanel.id"
-        />
-      </KeepAlive>
+      <div
+        v-for="panel in shownPanels"
+        :key="panel.id"
+        v-show="activePanel?.id === panel.id"
+        class="panel-host"
+      >
+        <component :is="panel.component" />
+      </div>
       <div v-if="!activePanel" class="empty-sidebar">
         <span>No panels</span>
       </div>
@@ -272,7 +290,12 @@ function onDrop(event: DragEvent) {
   overflow: hidden;
   border-top: 1px solid var(--surface-border, #e0e0e0);
 }
-.sidebar-bottom .sidebar-content {
+.sidebar-bottom /* Same box the panel had as a direct child of the content area */
+.panel-host {
+  height: 100%;
+}
+
+.sidebar-content {
   flex: 1;
   min-height: 0;
   overflow: auto;
