@@ -218,6 +218,7 @@ const workspaceActionsService: WorkspaceActionService = {
   loadTransformation: (entry, content) => handleTransformationLoad(entry, content),
   loadDmnFile: (entry, content) => handleDmnLoad(entry, content),
   openXmlFile: (entry, content) => handleXmlOpen(entry, content),
+  openCwmEditor: (entry, content) => handleCwmOpen(entry, content),
   publishToAtlas: (entry, content) => handleAtlasPublish(entry, content),
   selectObject: (obj) => handleObjectSelect(obj),
   selectFile: (file) => handleFileSelect(file),
@@ -1593,8 +1594,10 @@ function instanceTabModified(tabId: string): boolean {
 function vorderesInstanzDokument(): any | null {
   const front = holeEditorFront()
   const tabId = front.frontTabId()
-  if (!tabId || front.editorIdOf(tabId) !== 'instance') return null
-  return (instanceTreeComposables.value as any)?.instanzTabDokument?.(tabId) ?? null
+  const itc: any = instanceTreeComposables.value
+  // Any tab that holds an instance document - the instance editor's, the CWM editor's
+  if (!tabId || !itc?.offeneInstanzTabIds?.().includes(tabId)) return null
+  return itc.instanzTabDokument?.(tabId) ?? null
 }
 
 /** The metamodeler of the metamodel tab in front - for commands, see above. */
@@ -1908,7 +1911,16 @@ function reportMissingPackages(
   }
 }
 
-async function handleInstanceAdd(entry: any, content: string, mode: 'STANDALONE' | 'MERGE' | 'REPLACE' = 'STANDALONE') {
+/**
+ * Another view on an instance file - the CWM editor - loads through the same
+ * path, under its own tab id and with its own tab component.
+ */
+interface InstanzAnsicht {
+  tabId: string
+  oeffne: (tabId: string, titel: string) => void
+}
+
+async function handleInstanceAdd(entry: any, content: string, mode: 'STANDALONE' | 'MERGE' | 'REPLACE' = 'STANDALONE', ansicht?: InstanzAnsicht) {
   console.log('[App] Adding instances to workspace:', entry.name, 'content length:', content?.length)
 
   const itc: any = instanceTreeComposables.value
@@ -1939,7 +1951,8 @@ async function handleInstanceAdd(entry: any, content: string, mode: 'STANDALONE'
    */
   const instanzTabId: string | null = mode === 'MERGE'
     ? null
-    : (itc.instanzTabIdFuer?.(entry.path) ?? null)
+    : (ansicht?.tabId ?? itc.instanzTabIdFuer?.(entry.path) ?? null)
+  const oeffne = ansicht?.oeffne ?? oeffneInstanzTab
   const dokument = instanzTabId
     ? itc.instanzTabDokument?.(instanzTabId)
     : (vorderesInstanzDokument() ?? undefined)
@@ -1951,7 +1964,7 @@ async function handleInstanceAdd(entry: any, content: string, mode: 'STANDALONE'
    */
   if (instanzTabId && dokument && content.trim() === '') {
     dokument.instance.createEmptyResourceAt?.(entry.path)
-    oeffneInstanzTab(instanzTabId, entry.name || entry.path)
+    oeffne(instanzTabId, entry.name || entry.path)
     return
   }
 
@@ -1968,7 +1981,7 @@ async function handleInstanceAdd(entry: any, content: string, mode: 'STANDALONE'
       result = await itc.loadInstancesFromXMI(content, entry.path, dokument)
     }
     console.log('[App] Instances loaded from:', entry.name, 'count:', result.loadedCount, 'errors:', result.errors.length)
-    if (instanzTabId) oeffneInstanzTab(instanzTabId, entry.name || entry.path)
+    if (instanzTabId) oeffne(instanzTabId, entry.name || entry.path)
     reportMissingPackages(result.missingPackages, resolution.searched, entry, entry.path)
     // Was der Loader geholt hat, gehoert auch in die Modell-Liste (#155)
     await registerMetamodelsAsModels(entry.path)
@@ -2131,6 +2144,32 @@ async function resolveDeclaredMetamodels(content: string, entry: unknown): Promi
   } catch (e) {
     console.warn('[App] Metamodell-Aufloesung schlug fehl:', e)
   }
+}
+
+/** A CWM file in the CWM editor: the same loading as the instance editor, under its own tab. */
+async function handleCwmOpen(entry: any, content: string): Promise<void> {
+  await handleInstanceAdd(entry, content, 'STANDALONE', {
+    tabId: `cwm:${entry.path}`,
+    oeffne: (tabId, titel) => oeffneCwmTab(tabId, titel)
+  })
+}
+
+function oeffneCwmTab(tabId: string, titel: string): void {
+  const layout = layoutStateService.value?.useLayoutState()
+  const CwmEditorTab = tsm.getService<any>('ui.cwm-editor.components')?.CwmEditorTab
+  if (!layout || !CwmEditorTab) {
+    console.warn('[App] CWM-Tab nicht verfuegbar', { layout: !!layout, CwmEditorTab: !!CwmEditorTab })
+    return
+  }
+  verdrahteTabSchliessen(layout)
+  holeEditorFront().bindTab(tabId, 'cwm', tabId.replace(/^cwm:/, ''))
+  layout.openEditor({
+    id: tabId,
+    title: titel,
+    icon: 'pi pi-book',
+    component: markRaw(CwmEditorTab),
+    props: { tabId }
+  })
 }
 
 /** The file's text as a tab in the XML editor - one tab per file. */
