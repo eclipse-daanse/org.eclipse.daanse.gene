@@ -36,7 +36,11 @@ const ModelBrowser = tsm?.getService('ui.model-browser.components')?.ModelBrowse
     v-if="TabLayout"
     view-id="metamodel"
     left-title="Metamodell"
+    left-icon="pi pi-sitemap"
+    left-dock="primary-bottom"
     right-title="Ecore-Typen"
+    right-icon="pi pi-box"
+    right-dock="secondary"
   >
     <template #left>
       <MetamodelerTree :metamodeler="metamodeler" />

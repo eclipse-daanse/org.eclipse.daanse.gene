@@ -31,7 +31,24 @@ export interface Activity {
  * Die linke Seite ist zweigeteilt: oben der Navigator (Explorer, Model Atlas),
  * unten die Ansicht zur offenen Datei — ihr Baum. Deshalb 'primary-bottom'.
  */
-export type PanelLocation = 'primary' | 'primary-bottom' | 'secondary' | 'editor' | 'bottom'
+export type PanelLocation = 'primary' | 'secondary' | 'editor' | 'bottom'
+
+/**
+ * A zone of the frame that a tab can dock one of its panes into.
+ *
+ * The zone is the frame's; what is shown in it belongs to the tab in front,
+ * rendered there by Teleport and gone when the tab goes. Lower left is where a
+ * file's tree docks, the right side where its model browser docks.
+ */
+export type DockZone = 'primary-bottom' | 'secondary'
+
+/** What a tab tells the frame when it docks a pane. */
+export interface DockInfo {
+  title: string
+  icon?: string
+  /** Takes the pane back into the tab - the frame offers it as a button. */
+  undock: () => void
+}
 
 /**
  * Sidebar/Panel content definition
@@ -137,8 +154,8 @@ export interface LayoutState {
   // Panels
   panels: Panel[]
   activePrimaryPanelId: string | null
-  /** Aktives Panel der unteren Haelfte links (Baum der offenen Datei) */
-  activePrimaryBottomPanelId: string | null
+  /** What is docked into each zone right now - by the tab in front, or nobody */
+  docks: Record<DockZone, DockInfo | null>
   activeSecondaryPanelId: string | null
 
   // Panel position overrides (allows moving panels to different locations)

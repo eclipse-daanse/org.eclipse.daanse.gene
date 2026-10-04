@@ -5,19 +5,8 @@
  * Uses a singleton pattern for shared state across components.
  */
 
-import { reactive, computed, markRaw, type Component, type Raw } from 'tsm:vue'
-import type {
-  Activity,
-  Panel,
-  PanelLocation,
-  PanelPositionOverride,
-  EditorTab,
-  PanelTab,
-  StatusBarItem,
-  LayoutState,
-  LayoutDimensions,
-  LayoutVisibility
-} from '../types'
+import { reactive, computed, markRaw, type Component, type Raw, shallowReactive } from 'tsm:vue'
+import type { Activity, Panel, PanelLocation, PanelPositionOverride, EditorTab, PanelTab, StatusBarItem, LayoutState, LayoutDimensions, LayoutVisibility, DockZone, DockInfo } from '../types'
 import { DEFAULT_DIMENSIONS, DEFAULT_VISIBILITY } from '../types'
 
 const STORAGE_KEY = 'gene-layout-state'
@@ -76,8 +65,8 @@ function createInitialState(): LayoutState {
     activeActivityId: null,
     panels: [],
     activePrimaryPanelId: null,
-    activePrimaryBottomPanelId: null,
     activeSecondaryPanelId: null,
+    docks: { 'primary-bottom': null, secondary: null },
     panelPositionOverrides: new Map(),
     editorTabs: [],
     activeEditorTabId: null,
@@ -185,6 +174,14 @@ function getEffectivePanelOrder(panel: Panel, overrides: Map<string, PanelPositi
 /**
  * Layout state composable
  */
+/*
+ * Where docked content goes - one record for the whole frame, not one per
+ * caller. `useLayoutState()` is called by every component that needs the
+ * layout; a record created inside it would be a different one each time, and
+ * the sidebar would report its host to a record the tab never reads.
+ */
+const dockHosts = shallowReactive<Record<DockZone, HTMLElement | null>>({ 'primary-bottom': null, secondary: null })
+
 export function useLayoutState() {
   const state = getSharedState()
 
@@ -219,31 +216,6 @@ export function useLayoutState() {
     state.panels
       .filter(p => getEffectivePanelLocation(p, state.panelPositionOverrides) === 'primary')
       .sort((a, b) => getEffectivePanelOrder(a, state.panelPositionOverrides) - getEffectivePanelOrder(b, state.panelPositionOverrides))
-  )
-
-  /*
-   * Die untere Haelfte links. Oben steht der Navigator, unten die Ansicht zur
-   * offenen Datei — beide gleichzeitig sichtbar, deshalb eine eigene Zone und
-   * nicht nur ein weiterer Reiter oben.
-   */
-  const primaryBottomPanels = computed(() =>
-    state.panels
-      .filter(p => getEffectivePanelLocation(p, state.panelPositionOverrides) === 'primary-bottom')
-      .sort((a, b) => getEffectivePanelOrder(a, state.panelPositionOverrides) - getEffectivePanelOrder(b, state.panelPositionOverrides))
-  )
-
-  /*
-   * Genau das Gewaehlte, sonst nichts.
-   *
-   * Kein Rueckfall auf das erste Panel: Diese Zone gehoert der offenen Datei,
-   * und solange keine offen ist, soll sie leer bleiben. Mit dem Rueckfall stand
-   * der Instanzbaum auch dann da, wenn gar nichts geladen war.
-   */
-  const activePrimaryBottomPanel = computed(() =>
-    state.panels.find(p =>
-      p.id === state.activePrimaryBottomPanelId &&
-      getEffectivePanelLocation(p, state.panelPositionOverrides) === 'primary-bottom'
-    ) ?? null
   )
 
   const secondaryPanels = computed(() =>
@@ -341,8 +313,6 @@ export function useLayoutState() {
   function selectPanel(panelId: string | null, location: PanelLocation) {
     if (location === 'primary') {
       state.activePrimaryPanelId = panelId
-    } else if (location === 'primary-bottom') {
-      state.activePrimaryBottomPanelId = panelId
     } else if (location === 'secondary') {
       state.activeSecondaryPanelId = panelId
     }
@@ -352,6 +322,38 @@ export function useLayoutState() {
   function setPrimaryBottomHeight(hoehe: number) {
     const min = state.dimensions.primaryBottomMinHeight
     state.dimensions.primaryBottomHeight = Math.max(min, hoehe)
+  }
+
+  // ── Docking ──────────────────────────────────────────────────────────────
+  /*
+   * A tab can dock one of its panes into a zone of the frame. The frame then
+   * shows the zone with the pane's title and an undock button; the pane's
+   * content is rendered there by the tab through Teleport, so it stays the
+   * tab's - same context, same owner - and leaves with it.
+   *
+   * The host elements are not part of the persisted state: they are DOM nodes
+   * the sidebars report while they are mounted.
+   */
+
+  function dock(zone: DockZone, info: DockInfo) {
+    state.docks[zone] = info
+    // A docked pane wants to be seen - the right side opens for it
+    if (zone === 'secondary') state.visibility.secondarySidebar = true
+  }
+
+  function undock(zone: DockZone) {
+    state.docks[zone] = null
+    // Nothing left on the right: close it, so no empty strip remains
+    if (zone === 'secondary' && secondaryPanels.value.length === 0) state.visibility.secondarySidebar = false
+  }
+
+  /** The sidebar reports where docked content goes - null while the zone is not shown. */
+  function setDockHost(zone: DockZone, el: HTMLElement | null) {
+    dockHosts[zone] = el
+  }
+
+  function dockHost(zone: DockZone): HTMLElement | null {
+    return dockHosts[zone]
   }
 
   // Editor tab management
@@ -1059,8 +1061,6 @@ export function useLayoutState() {
     activeEditorTab,
     activePanelTab,
     primaryPanels,
-    primaryBottomPanels,
-    activePrimaryBottomPanel,
     secondaryPanels,
     bottomPanels,
 
@@ -1118,6 +1118,11 @@ export function useLayoutState() {
     clearEditorTabs,
     onEditorClosed,
     setPrimaryBottomHeight,
+    // Docking
+    dock,
+    undock,
+    setDockHost,
+    dockHost,
     clearPanelTabs,
     clearAll,
 
