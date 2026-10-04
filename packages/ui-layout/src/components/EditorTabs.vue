@@ -3,16 +3,18 @@
  * EditorTabs - Tab bar for the editor area
  *
  * Displays tabs for open editors with close buttons.
- * Tabs are draggable and can be moved to sidebars or bottom panel.
+ *
+ * A tab is a surface of its own, not a panel: it can be reordered within the
+ * strip, and that is all dragging does. It used to go through the panel drag
+ * and drop, which made the sidebars drop targets - a tab could be dropped
+ * into the tree, where it has no place.
  */
 
-import { computed } from 'tsm:vue'
+import { computed, ref } from 'tsm:vue'
 import { useLayoutState } from '../composables/useLayoutState'
-import { usePanelDragDrop } from '../composables/usePanelDragDrop'
 import type { EditorTab } from '../types'
 
 const layout = useLayoutState()
-const dragDrop = usePanelDragDrop()
 
 const tabs = computed(() => layout.state.editorTabs)
 const activeId = computed(() => layout.state.activeEditorTabId)
@@ -33,13 +35,51 @@ function handleMiddleClick(event: MouseEvent, tab: EditorTab) {
   }
 }
 
-// Drag handlers
+// ── Reordering by drag ───────────────────────────────────────────────────
+const draggedId = ref<string | null>(null)
+/** Where the dragged tab would land: the index of the tab it is held over, and which side */
+const dropAt = ref<{ index: number; after: boolean } | null>(null)
+
 function onDragStart(event: DragEvent, tabId: string) {
-  dragDrop.startDrag(event, tabId, 'editor')
+  draggedId.value = tabId
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    // Its own type: the sidebars only take panels and ignore this
+    event.dataTransfer.setData('application/x-editor-tab', tabId)
+  }
+}
+
+function onDragOver(event: DragEvent, index: number) {
+  if (!draggedId.value) return
+  event.preventDefault()
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  dropAt.value = { index, after: event.clientX > rect.left + rect.width / 2 }
+}
+
+function onDrop(event: DragEvent) {
+  event.preventDefault()
+  const id = draggedId.value
+  const at = dropAt.value
+  if (id && at) {
+    const from = tabs.value.findIndex(t => t.id === id)
+    let to = at.after ? at.index + 1 : at.index
+    // The strip without the dragged tab
+    if (from < to) to -= 1
+    if (to !== from) layout.moveEditorTab(id, to)
+  }
+  onDragEnd()
 }
 
 function onDragEnd() {
-  dragDrop.endDrag()
+  draggedId.value = null
+  dropAt.value = null
+}
+
+function dropClass(index: number): Record<string, boolean> {
+  const at = dropAt.value
+  const hit = !!at && at.index === index && draggedId.value !== tabs.value[index]?.id
+  return { 'drop-before': hit && !at!.after, 'drop-after': hit && at!.after }
 }
 
 /** The wheel scrolls the strip sideways - there is no vertical overflow to take it. */
@@ -53,20 +93,30 @@ function scrollSideways(event: WheelEvent): void {
 <template>
   <div class="editor-tabs" v-if="tabs.length > 0">
     <!-- Multiple tabs: show tab bar -->
-    <div v-if="tabs.length > 1" class="tabs-container" @wheel.passive="scrollSideways">
+    <div
+      v-if="tabs.length > 1"
+      class="tabs-container"
+      @wheel.passive="scrollSideways"
+      @dragover.prevent
+      @drop="onDrop"
+      @dragleave.self="dropAt = null"
+    >
       <div
-        v-for="tab in tabs"
+        v-for="(tab, index) in tabs"
         :key="tab.id"
         class="editor-tab"
         :class="{
           active: activeId === tab.id,
           dirty: tab.dirty,
-          pinned: tab.pinned
+          pinned: tab.pinned,
+          dragging: draggedId === tab.id,
+          ...dropClass(index)
         }"
         draggable="true"
         @click="handleTabClick(tab)"
         @mousedown="handleMiddleClick($event, tab)"
         @dragstart="onDragStart($event, tab.id)"
+        @dragover="onDragOver($event, index)"
         @dragend="onDragEnd"
       >
         <i v-if="tab.icon" :class="tab.icon" class="tab-icon"></i>
@@ -84,15 +134,8 @@ function scrollSideways(event: WheelEvent): void {
       </div>
     </div>
 
-    <!-- Single tab: show header style -->
-    <div
-      v-else
-      class="editor-header"
-      draggable="true"
-      @dragstart="onDragStart($event, tabs[0].id)"
-      @dragend="onDragEnd"
-    >
-      <i class="pi pi-arrows-alt drag-handle" title="Drag to move"></i>
+    <!-- Single tab: show header style - nothing to reorder, so not draggable -->
+    <div v-else class="editor-header">
       <i v-if="tabs[0].icon" :class="tabs[0].icon" class="header-icon"></i>
       <span class="editor-title">{{ tabs[0].title }}</span>
       <span v-if="tabs[0].badge" class="badge">{{ tabs[0].badge }}</span>
@@ -154,6 +197,17 @@ function scrollSideways(event: WheelEvent): void {
 .tabs-container::-webkit-scrollbar-thumb {
   background: var(--surface-border);
   border-radius: 2px;
+}
+
+/* Where the dragged tab would land */
+.editor-tab.drop-before {
+  box-shadow: inset 2px 0 0 var(--primary-color);
+}
+.editor-tab.drop-after {
+  box-shadow: inset -2px 0 0 var(--primary-color);
+}
+.editor-tab.dragging {
+  opacity: 0.4;
 }
 
 .editor-tab {
@@ -262,16 +316,6 @@ function scrollSideways(event: WheelEvent): void {
   cursor: grabbing;
 }
 
-.drag-handle {
-  font-size: 0.75rem;
-  color: var(--text-color-secondary);
-  opacity: 0.5;
-  transition: opacity 0.15s ease;
-}
-
-.editor-header:hover .drag-handle {
-  opacity: 1;
-}
 
 .header-icon {
   font-size: 0.875rem;
