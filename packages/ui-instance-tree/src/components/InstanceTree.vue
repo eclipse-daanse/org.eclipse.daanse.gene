@@ -873,7 +873,8 @@ const contextMenuItems = computed(() => {
     // Einfügen auf einer Resource macht das Element zum Wurzelobjekt (#63).
     const paste = (ctx as any).canPasteIntoResource?.(res) ?? { ok: false, reason: 'Nicht verfügbar.' }
     return [
-      { label: 'New Resource…', icon: 'pi pi-plus', command: () => createResourcePrompt() },
+      newInstanceItem(),
+      { label: 'New Resource…', icon: 'pi pi-box', command: () => createResourcePrompt() },
       { separator: true },
       {
         label: paste.ok ? 'Paste' : `Paste (${paste.reason ?? 'nicht möglich'})`,
@@ -1232,26 +1233,52 @@ function handleDrop(event: DragEvent) {
   }
 }
 
+/** A root object of this class in the active resource */
+function createRootOf(classInfo: any): void {
+  const eClass = classInfo.eClass
+  const factory = eClass.getEPackage().getEFactoryInstance()
+  const newObj = factory.create(eClass)
+  // Add to resource (create resource if needed)
+  ctx.addRootObject(newObj)
+  emit('object-create', newObj)
+}
+
 /**
  * Create a new root instance from selected class
  */
 function handleCreateRootInstance() {
   if (!selectedClass.value) return
-
-  const classInfo = selectedClass.value
-  const eClass = classInfo.eClass
-
-  // Create instance using factory
-  const factory = eClass.getEPackage().getEFactoryInstance()
-  const newObj = factory.create(eClass)
-
-  // Add to resource (create resource if needed)
-  ctx.addRootObject(newObj)
-
+  createRootOf(selectedClass.value)
   showNewInstanceDialog.value = false
   selectedClass.value = null
+}
 
-  emit('object-create', newObj)
+/*
+ * "New Instance" on a resource row. With few classes to choose from - a view
+ * that narrows them, a small model - they are listed right in the menu; with
+ * many, the dialog with its search is the better place. The row's menu has
+ * selected the resource already, so the root lands in it.
+ */
+const MAX_CLASSES_IN_MENU = 25
+function newInstanceItem(): any {
+  const classes = availableClasses.value
+  if (classes.length > 0 && classes.length <= MAX_CLASSES_IN_MENU) {
+    return {
+      label: 'New Instance',
+      icon: 'pi pi-plus',
+      items: classes.map((cls: any) => ({
+        label: cls.name,
+        icon: 'pi pi-circle',
+        command: () => createRootOf(cls)
+      }))
+    }
+  }
+  return {
+    label: 'New Instance…',
+    icon: 'pi pi-plus',
+    disabled: classes.length === 0,
+    command: () => { showNewInstanceDialog.value = true }
+  }
 }
 
 // Watch for selection changes to emit events
