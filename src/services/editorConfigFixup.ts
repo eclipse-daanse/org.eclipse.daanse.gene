@@ -85,9 +85,16 @@ function lehreFactoryDieKlasse(fennecui: EPackage, binding: any): void {
    */
   const urspruenglich = factory.create?.bind(factory)
   factory.create = (eClass: any) => {
-    if (eClass === binding) {
+    /*
+     * Nach dem Namen, nicht nach Identitaet: Das Paket liegt zur Laufzeit in
+     * zwei Kopien vor (Modell-Registry und Paket-Registry), jede mit ihrer
+     * eigenen ergaenzten Klasse. Eine Fabrik, die nur ihre eigene Kopie kennt,
+     * wirft fuer die andere "Unknown class" - so wie beim Anlegen aus dem
+     * Instanzbaum, dessen Klassenliste aus der anderen Kopie kommt.
+     */
+    if (eClass === binding || eClass?.getName?.() === BINDING_KLASSE) {
       // createDynamic gibt es an jeder Factory, die von BasicEFactory erbt
-      return factory.createDynamic?.(binding) ?? null
+      return factory.createDynamic?.(eClass) ?? null
     }
     return urspruenglich?.(eClass)
   }

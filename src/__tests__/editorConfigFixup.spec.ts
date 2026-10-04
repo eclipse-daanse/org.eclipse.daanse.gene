@@ -10,7 +10,7 @@
  * wieder und der Fixup kann weg.
  */
 import { describe, it, expect, beforeEach } from 'vitest'
-import { XMIResource, URI, BasicResourceSet, EPackageRegistry } from '@emfts/core'
+import { XMIResource, URI, BasicResourceSet, EPackageRegistry, BasicEClass } from '@emfts/core'
 import { FennecuiPackage } from '../generated/fennecui'
 import { fixupEditorConfigPackage, resetEditorConfigFixup } from '../services/editorConfigFixup'
 
@@ -51,6 +51,19 @@ describe('editorBindings am EditorConfig', () => {
       (f: any) => f.getName?.() === 'editorBindings'
     ).length
     expect(danach).toBe(anzahl)
+  })
+
+  it('erzeugt auch eine fremde Kopie der Klasse', () => {
+    /*
+     * Zur Laufzeit liegt das Paket zweimal vor; die Klassenliste des
+     * Instanzbaums kommt aus der anderen Kopie als die Fabrik. Die Fabrik muss
+     * eine EditorBinding-Klasse am Namen erkennen, nicht an der Identitaet.
+     */
+    fixupEditorConfigPackage(FennecuiPackage.eINSTANCE as any)
+    const fremd = new BasicEClass()
+    fremd.setName('EditorBinding')
+    const fabrik = (FennecuiPackage.eINSTANCE as any).getEFactoryInstance()
+    expect(fabrik.create(fremd)).toBeTruthy()
   })
 
   it('liest die Zuordnungen aus einer .wsp', async () => {
