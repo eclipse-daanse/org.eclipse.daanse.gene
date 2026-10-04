@@ -341,7 +341,13 @@ export class PerspectiveManagerImpl implements PerspectiveManager {
             title: panel.title,
             icon: panel.icon,
             component: panel.component,
-            closable: panel.closable ?? false
+            /*
+             * A tab can be closed unless the panel says otherwise. The old
+             * default was `false`, from the time a perspective's center was
+             * the whole editor area - now it is one tab among files, and a
+             * wizard that cannot be closed is just in the way.
+             */
+            closable: panel.closable ?? true
           })
         }
       }
