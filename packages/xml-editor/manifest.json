@@ -1,0 +1,17 @@
+{
+  "id": "xml-editor",
+  "name": "XML Editor",
+  "version": "0.1.0",
+  "description": "Text editor for XMI, Ecore and XML files with syntax highlighting",
+  "entry": "src/index.ts",
+  "dependencies": [
+    "gene-app",
+    "ui-layout"
+  ],
+  "provides": [
+    {
+      "id": "ui.xml-editor.components",
+      "description": "XML editor UI components"
+    }
+  ]
+}

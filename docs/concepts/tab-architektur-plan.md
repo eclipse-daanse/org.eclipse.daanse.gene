@@ -505,6 +505,18 @@ die Vorschau leert die Zonen. Keine Teleport-Warnungen.
   mit eigenem Datentyp (`application/x-editor-tab`); die Leisten nehmen
   weiter nur Panels.
 
+### Nachtrag: XML-Editor (2026-10-04)
+
+- Neues Plugin `xml-editor`: der Text einer `.xmi`/`.ecore`/`.xml` in Monaco
+  (XML-Highlighting, Zeilennummern, Faltung), von Hand editierbar. Als
+  Editor-Art `xml` („XML-Editor“, `priority: -10`) nie der Standard — erreichbar
+  über „Öffnen mit“; die strukturierten Ansichten bleiben vorn.
+- Ein Tab je Datei (`xml:<pfad>`), Text liegt im Tab-Dokument des Plugins;
+  Speichern per Strg+S oder Menüleiste (`xml:save`) schreibt über
+  `gene.filesystem` in die Datei zurück. Der Tab zeigt den Dirty-Punkt.
+- Der alte `ui-xmi-viewer` (nur lesen, eigener Highlighter) bleibt unberührt
+  und wird weiterhin nicht geladen.
+
 ### Was dabei an Verhalten wegfällt
 
 - Die Zone links unten ist für Dateiansichten nicht mehr da. Der Navigator
