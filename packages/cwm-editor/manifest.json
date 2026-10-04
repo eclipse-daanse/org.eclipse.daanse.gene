@@ -1,0 +1,18 @@
+{
+  "id": "cwm-editor",
+  "name": "CWM Editor",
+  "version": "0.1.0",
+  "description": "Editor for CWM models - documentation view on descriptions and tables",
+  "entry": "src/index.ts",
+  "dependencies": [
+    "gene-app",
+    "ui-layout",
+    "ui-instance-tree"
+  ],
+  "provides": [
+    {
+      "id": "ui.cwm-editor.components",
+      "description": "CWM editor UI components"
+    }
+  ]
+}
