@@ -18,7 +18,7 @@ import {
   registerEcorePackage,
   URI,
 } from '@emfts/core';
-import type { EPackage } from '@emfts/core';
+import type { EPackage, URIConverter } from '@emfts/core';
 import { UimodelPackage, UimodelFactory } from '@emfts/uimodel-composer';
 import { MappingwizardPackage, MappingwizardFactory } from '../generated';
 import { fixupWizardPackage } from './wizardPackageFixup';
@@ -40,8 +40,71 @@ export const LEGACY_MAPPING_NS_URI = 'https://fennec.eclipse.org/sensinact/core/
 
 let mappingPackage: EPackage | undefined;
 
+/*
+ * Ecore files by name. A model refers to its neighbours by file name
+ * (`lorawan-uplink.ecore#//UplinkMessage`), while the resources live under
+ * their nsURI - the name EMF itself gives a package, and the one the Java side
+ * resolves through its registry. The resource set's URI converter maps the
+ * one onto the other, so both forms meet the same resource (see
+ * `newResourceSet`). Filled by `registerEcoreFromString`.
+ */
+const ecoreAliases = new Map<string, string>();
+
+/** nsURI of the root package in an .ecore text - known before loading. */
+export function nsUriOf(ecoreXml: string): string | undefined {
+  return ecoreXml.match(/<ecore:EPackage[^>]*?\bnsURI="([^"]+)"/)?.[1];
+}
+
+/** Name of the root package in an .ecore text - known before loading. */
+export function packageNameOf(ecoreXml: string): string | undefined {
+  return ecoreXml.match(/<ecore:EPackage[^>]*?\bname="([^"]+)"/)?.[1];
+}
+
+/** Lets `<fileName>` stand for the model at `nsUri` in every resource set of the wizard. */
+export function registerEcoreAlias(fileName: string, nsUri: string): void {
+  const name = fileName.split('/').pop();
+  if (name) ecoreAliases.set(name, nsUri);
+}
+
+function lastSegment(uriText: string): string {
+  return uriText.split('#')[0].split('?')[0].split('/').pop() ?? '';
+}
+
+/**
+ * The resource set's converter, extended by the file-name aliases: a URI whose
+ * last segment is a known Ecore file name normalizes to that model's nsURI,
+ * whatever base it was resolved against. Everything else goes to the original.
+ */
+function withEcoreAliases(base: URIConverter): URIConverter {
+  return {
+    normalize(uri: URI): URI {
+      const text = uri.toString();
+      const nsUri = ecoreAliases.get(lastSegment(text));
+      if (nsUri) {
+        const hash = text.indexOf('#');
+        return URI.createURI(hash >= 0 ? `${nsUri}${text.substring(hash)}` : nsUri);
+      }
+      return base.normalize(uri);
+    },
+    createInputStream: (uri: URI) => base.createInputStream(uri),
+    createOutputStream: (uri: URI) => base.createOutputStream(uri),
+    exists: (uri: URI) => base.exists(uri),
+    delete: (uri: URI) => base.delete(uri),
+    getURIMap: () => base.getURIMap(),
+  } as URIConverter;
+}
+
+/**
+ * The mapping metamodel. Normally put in place by `setupPackages()`; a caller
+ * that comes earlier (the transformer under test) gets the registered one, or
+ * the bundled .ecore loaded on the spot.
+ */
 export function getMappingPackage(): EPackage {
-  if (!mappingPackage) throw new Error('setupPackages() wurde noch nicht ausgeführt');
+  if (!mappingPackage) {
+    mappingPackage =
+      (EPackageRegistry.INSTANCE.get(MAPPING_NS_URI) as EPackage | undefined)
+      ?? registerEcoreFromString(mappingEcoreXml, 'event-atlas-mapping.ecore');
+  }
   return mappingPackage;
 }
 
@@ -49,6 +112,11 @@ export function getMappingPackage(): EPackage {
  * Lädt eine .ecore aus einem XML-String und registriert alle enthaltenen EPackages.
  * Optional in ein gemeinsames ResourceSet laden (nötig, wenn Modelle einander
  * per relativem Datei-href referenzieren).
+ *
+ * The resource takes the package's nsURI as its URI; `uri` - the file name -
+ * becomes an alias for it, as does `<packagename>.ecore`, the name EMF writes
+ * into neighbouring models. References into this model then serialize as
+ * `nsURI#//Class/feature`, which the Java side resolves through its registry.
  */
 export function registerEcoreFromString(
   ecoreXml: string,
@@ -56,7 +124,13 @@ export function registerEcoreFromString(
   resourceSet?: BasicResourceSet,
 ): EPackage {
   const rs = resourceSet ?? newResourceSet();
-  const resource = rs.createResource(URI.createURI(uri)) as XMIResource;
+  const nsUri = nsUriOf(ecoreXml);
+  if (nsUri) {
+    registerEcoreAlias(uri, nsUri);
+    const name = packageNameOf(ecoreXml);
+    if (name) registerEcoreAlias(`${name}.ecore`, nsUri);
+  }
+  const resource = rs.createResource(URI.createURI(nsUri ?? uri)) as XMIResource;
   resource.loadFromString(ecoreXml);
   if (resource.getContents().isEmpty()) {
     throw new Error(`Ecore-Modell ${uri} konnte nicht geladen werden`);
@@ -82,8 +156,18 @@ function registerPackageTree(pkg: EPackage): void {
  */
 export function registerEcoreFiles(files: { name: string; content: string }[]): EPackage[] {
   const rs = newResourceSet();
+  // Every name is known before the first file loads - the order of the upload
+  // must not decide whether a reference between two of them resolves
+  for (const f of files) {
+    const nsUri = nsUriOf(f.content);
+    if (nsUri) {
+      registerEcoreAlias(f.name, nsUri);
+      const name = packageNameOf(f.content);
+      if (name) registerEcoreAlias(`${name}.ecore`, nsUri);
+    }
+  }
   const resources = files.map((f) => {
-    const resource = rs.createResource(URI.createURI(f.name)) as XMIResource;
+    const resource = rs.createResource(URI.createURI(nsUriOf(f.content) ?? f.name)) as XMIResource;
     resource.loadFromString(f.content);
     return { file: f, resource };
   });
@@ -99,13 +183,17 @@ export function registerEcoreFiles(files: { name: string; content: string }[]): 
   return packages;
 }
 
-/** ResourceSet mit XMI-Factory für .xmi und .ecore. */
+/** ResourceSet mit XMI-Factory für .xmi und .ecore — und den Ecore-Aliasen. */
 export function newResourceSet(): BasicResourceSet {
   const rs = new BasicResourceSet();
   const xmiFactory = new XMIResourceFactory();
   const map = rs.getResourceFactoryRegistry().getExtensionToFactoryMap();
   map.set('xmi', xmiFactory);
   map.set('ecore', xmiFactory);
+  // A model resource lives under its nsURI, which has no file extension: the
+  // wildcard entry (Resource.Factory.Registry.DEFAULT_EXTENSION) catches it
+  map.set('*', xmiFactory);
+  rs.setURIConverter(withEcoreAliases(rs.getURIConverter()));
   return rs;
 }
 

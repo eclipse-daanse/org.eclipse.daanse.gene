@@ -3,19 +3,33 @@
  * SensiNact-ProviderMapping-XMI (Metamodell event-atlas-mapping.ecore,
  * nsURI https://fennec.eclipse.org/event.atlas/mapping/1.0).
  *
- * Das XMI wird direkt erzeugt (kein generischer Serializer), aus zwei Gründen:
- *  - Die hrefs müssen nsURI-basiert sein (z. B.
- *    "https://eclipse.org/fennec/lorawan#//UplinkMessage/time"), damit die
- *    Java-Seite sie über die EPackage-Registry auflöst — hochgeladene
- *    Sensor-Modelle haben keinen stabilen Dateipfad.
- *  - featurePath/valueFeature/unitFeature/*Ref brauchen zwingend
- *    xsi:type="ecore:EAttribute|EReference" (deklarierter Typ ist das
- *    abstrakte EStructuralFeature) — siehe sensinact-mapping-user-guide.md.
+ * Das Mapping entsteht als echte EObjects des (dynamisch geladenen)
+ * Mapping-Metamodells und wird vom XMI-Serializer von @emfts/core
+ * geschrieben. Was früher ein Text-Template erzwang, liefert der Kern heute
+ * selbst:
+ *  - hrefs auf Sensormodelle nsURI-basiert ("https://eclipse.org/fennec/lorawan
+ *    #//UplinkMessage/time"), weil die Modell-Resources unter ihrer nsURI
+ *    liegen (emf/setup.ts) — die Java-Seite löst sie über die Registry auf.
+ *  - xsi:type="ecore:EAttribute|EReference" an featurePath/valueFeature/…,
+ *    deren deklarierter Typ das abstrakte EStructuralFeature ist.
+ *  - Referenzen innerhalb des Dokuments nach den Regeln des Kerns: ID-Attribut
+ *    (mid, id, profileId), sonst Pfad.
  *
  * Konformanz wird über Golden-/Round-Trip-Tests abgesichert
  * (test/toProviderMapping.test.ts).
  */
-import type { EClass, EClassifier, EDataType, EReference, EStructuralFeature } from '@emfts/core';
+import type {
+  EClass,
+  EClassifier,
+  EDataType,
+  EEnum,
+  EObject,
+  EPackage,
+  EReference,
+  EStructuralFeature,
+  Resource,
+} from '@emfts/core';
+import { URI, getEcorePackage } from '@emfts/core';
 import type { FeaturePath, Measurement, SensorMappingSetup } from '../generated';
 import {
   FriendlyNameSource,
@@ -26,9 +40,15 @@ import {
   TimestampSource,
 } from '../generated';
 import { classifyDataType } from '../emf/featurePaths';
+import { getMappingPackage, newResourceSet } from '../emf/setup';
 
 export const MAPPING_NS_URI = 'https://fennec.eclipse.org/event.atlas/mapping/1.0';
-const ECORE_NS_URI = 'http://www.eclipse.org/emf/2002/Ecore';
+
+/*
+ * The documents are written as neighbours in one folder and refer to each
+ * other by bare file name: the resources carry exactly that name as URI, so
+ * an href from the mapping into its rules file reads `<rules>.xmi#<id>`.
+ */
 
 export interface TransformResult {
   /** Das ProviderMapping-XMI (Endprodukt). */
@@ -50,98 +70,134 @@ export function slug(value: string): string {
     .replace(/^-+|-+$/g, '') || 'mapping';
 }
 
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 function isReference(f: EStructuralFeature): f is EReference {
   return typeof (f as EReference).isContainment === 'function';
 }
 
-/** nsURI-basierter href auf ein Feature — zeigt auf die DEKLARIERENDE Klasse. */
-function featureHref(f: EStructuralFeature): string {
-  const owner = f.getEContainingClass();
-  const pkg = owner?.getEPackage();
-  if (!owner || !pkg?.getNsURI()) {
-    throw new Error(`Feature ${f.getName()} hat keine auflösbare deklarierende Klasse/Package`);
-  }
-  return `${pkg.getNsURI()}#//${owner.getName()}/${f.getName()}`;
+// ── The mapping model, reflectively ──────────────────────────────────────
+
+function mappingClass(name: string): EClass {
+  const c = getMappingPackage().getEClassifier(name) as EClass | null;
+  if (!c) throw new Error(`Das Mapping-Metamodell kennt keine Klasse ${name}`);
+  return c;
 }
 
-function classifierHref(c: EClassifier): string {
-  const pkg = c.getEPackage();
-  if (!pkg?.getNsURI()) throw new Error(`Klassifizierer ${c.getName()} hat kein Package mit nsURI`);
-  return `${pkg.getNsURI()}#//${c.getName()}`;
+function create(className: string): EObject {
+  const factory = getMappingPackage().getEFactoryInstance();
+  if (!factory) throw new Error('Das Mapping-Metamodell hat keine Factory');
+  return factory.create(mappingClass(className));
 }
 
-function featureXsiType(f: EStructuralFeature): string {
-  return isReference(f) ? 'ecore:EReference' : 'ecore:EAttribute';
+function featureOf(obj: EObject, name: string): EStructuralFeature {
+  const f = obj.eClass().getEStructuralFeature(name);
+  if (!f) throw new Error(`${obj.eClass().getName()} hat kein Feature ${name}`);
+  return f;
 }
 
-/** Pfad-Segmente als Kind-Elemente (featurePath, valueFeature, *Ref …). */
-function pathElements(tag: string, path: FeaturePath, indent: string): string[] {
-  return path.segments.map(
-    (seg: EStructuralFeature) =>
-      `${indent}<${tag} xsi:type="${featureXsiType(seg)}" href="${escapeXml(featureHref(seg))}"/>`,
-  );
+function set(obj: EObject, name: string, value: unknown): void {
+  if (value === undefined || value === null || value === '') return;
+  obj.eSet(featureOf(obj, name), value);
+}
+
+/** An enum value by literal name - the factory turns the literal back into text on save */
+function setEnum(obj: EObject, name: string, literal: string): void {
+  const f = featureOf(obj, name);
+  const type = f.getEType() as EEnum | null;
+  const value = (type as EEnum | null)?.getEEnumLiteral?.(literal as never) ?? null;
+  obj.eSet(f, value ?? literal);
+}
+
+function addAll(obj: EObject, name: string, values: readonly unknown[]): void {
+  const list = obj.eGet(featureOf(obj, name)) as { add: (v: unknown) => unknown };
+  for (const v of values) list.add(v);
+}
+
+function pathSegments(path: FeaturePath | undefined | null): EStructuralFeature[] {
+  return [...((path?.segments ?? []) as Iterable<EStructuralFeature>)];
 }
 
 /**
  * Ziel-EDataType eines Messwerts: explizite Wahl > Quelltyp (falls Ecore-Typ) >
  * kanonischer Typ nach Wertart.
  */
-function resolveETypeHref(m: Measurement): string {
+function resolveEType(m: Measurement): EDataType {
+  const ecore = getEcorePackage();
   const explicit = m.targetType as EDataType | undefined;
-  if (explicit?.getEPackage()?.getNsURI()) {
-    return classifierHref(explicit);
-  }
-  const last = m.valuePath?.segments[m.valuePath.segments.length - 1];
+  if (explicit?.getEPackage()?.getNsURI()) return explicit;
+  const segments = pathSegments(m.valuePath);
+  const last = segments[segments.length - 1];
   const sourceType = last && !isReference(last) ? (last.getEType() as EDataType | null) : null;
-  if (sourceType?.getEPackage()?.getNsURI() === ECORE_NS_URI) {
-    return classifierHref(sourceType);
-  }
-  switch (classifyDataType(sourceType)) {
-    case 'NUMERIC':
-      return `${ECORE_NS_URI}#//EDouble`;
-    case 'BOOLEAN':
-      return `${ECORE_NS_URI}#//EBoolean`;
-    case 'TEMPORAL':
-      return `${ECORE_NS_URI}#//EDate`;
-    default:
-      return `${ECORE_NS_URI}#//EString`;
-  }
+  if (sourceType?.getEPackage() === ecore) return sourceType;
+  const byKind: Record<string, string> = { NUMERIC: 'EDouble', BOOLEAN: 'EBoolean', TEMPORAL: 'EDate' };
+  const name = byKind[classifyDataType(sourceType)] ?? 'EString';
+  return ecore.getEClassifier(name) as EDataType;
 }
 
 /** Persistenz-Presets → Regel-Definitionen mit stabilen ids. */
-const CHANGE_RULES: Partial<Record<StoragePreset, { id: string; xml: string }>> = {
+interface RuleSpec {
+  id: string;
+  className: string;
+  values: Record<string, unknown>;
+  enums?: Record<string, string>;
+}
+const CHANGE_RULES: Partial<Record<StoragePreset, RuleSpec>> = {
   [StoragePreset.CHANGED_5_PERCENT]: {
     id: 'change-5-percent',
-    xml: '<changeRules xsi:type="mapping:PercentageChangeRule" id="change-5-percent" name="Nur bei Änderung ab 5 %" percentage="5.0"/>',
+    className: 'PercentageChangeRule',
+    values: { name: 'Nur bei Änderung ab 5 %', percentage: 5.0 },
   },
   [StoragePreset.MAX_ONCE_10MIN]: {
     id: 'throttle-10min',
-    xml: '<changeRules xsi:type="mapping:TimeThrottleChangeRule" id="throttle-10min" name="Höchstens alle 10 Minuten" interval="10" intervalUnit="MINUTES"/>',
+    className: 'TimeThrottleChangeRule',
+    values: { name: 'Höchstens alle 10 Minuten', interval: 10 },
+    enums: { intervalUnit: 'MINUTES' },
   },
 };
-const DELETION_RULES: Partial<Record<RetentionPreset, { id: string; xml: string }>> = {
+const DELETION_RULES: Partial<Record<RetentionPreset, RuleSpec>> = {
   [RetentionPreset.DAYS_90]: {
     id: 'keep-90-days',
-    xml: '<deletionRules id="keep-90-days" name="90 Tage aufbewahren" retention="90" retentionUnit="DAYS" cleanupInterval="1" cleanupIntervalUnit="DAYS"/>',
+    className: 'DeletionRule',
+    values: { name: '90 Tage aufbewahren', retention: 90, cleanupInterval: 1 },
+    enums: { retentionUnit: 'DAYS', cleanupIntervalUnit: 'DAYS' },
   },
   [RetentionPreset.YEAR_1]: {
     id: 'keep-1-year',
-    xml: '<deletionRules id="keep-1-year" name="1 Jahr aufbewahren" retention="365" retentionUnit="DAYS" cleanupInterval="7" cleanupIntervalUnit="DAYS"/>',
+    className: 'DeletionRule',
+    values: { name: '1 Jahr aufbewahren', retention: 365, cleanupInterval: 7 },
+    enums: { retentionUnit: 'DAYS', cleanupIntervalUnit: 'DAYS' },
   },
 };
 
+function createRule(spec: RuleSpec): EObject {
+  const rule = create(spec.className);
+  set(rule, 'id', spec.id);
+  for (const [k, v] of Object.entries(spec.values)) set(rule, k, v);
+  for (const [k, v] of Object.entries(spec.enums ?? {})) setEnum(rule, k, v);
+  return rule;
+}
+
 /** Basis-Resource-Id eines Messwerts (identisch in Mapping und Profil). */
 function resourceIdOf(m: Measurement): string {
-  const last = m.valuePath.segments[m.valuePath.segments.length - 1];
+  const segments = pathSegments(m.valuePath);
+  const last = segments[segments.length - 1];
   return slug(m.label || last?.getName() || 'value');
+}
+
+/** A NameMapping: static text, a feature path, or both */
+function nameMapping(text?: string | null, path?: FeaturePath | null): EObject {
+  const name = create('NameMapping');
+  set(name, 'name', text || undefined);
+  const segments = pathSegments(path);
+  if (segments.length) {
+    addAll(name, 'featurePath', segments);
+    if (path?.collectionIndex) set(name, 'collectionIndex', path.collectionIndex);
+  }
+  return name;
+}
+
+function serialize(resource: Resource): string {
+  const text = (resource as unknown as { saveToString: () => string }).saveToString();
+  return text.endsWith('\n') ? text : `${text}\n`;
 }
 
 export interface ProfileRef {
@@ -161,70 +217,67 @@ export function buildProviderMappingXmi(
 
   const sensorClass = setup.sensorClass as EClass | undefined;
   if (!sensorClass) throw new Error('Es wurde keine Sensor-Nachrichtenklasse gewählt');
-  const sensorPkg = sensorClass.getEPackage();
+  const sensorPkg = sensorClass.getEPackage() as EPackage | null;
   if (!sensorPkg?.getNsURI()) throw new Error('Die Sensorklasse hat kein Package mit nsURI');
 
-  const measurements = setup.measurements.filter((m) => m.selected && m.valuePath?.segments.length);
+  const measurements = setup.measurements.filter((m) => m.selected && pathSegments(m.valuePath).length);
   if (measurements.length === 0) {
     throw new Error('Es wurde kein Messwert ausgewählt');
   }
 
-  // Welche Regeln werden gebraucht?
-  const usedChangeRules = new Map<string, string>();
-  const usedDeletionRules = new Map<string, string>();
-  for (const m of measurements) {
-    const cr = CHANGE_RULES[m.storagePreset as StoragePreset];
-    if (cr) usedChangeRules.set(cr.id, cr.xml);
-    const dr = DELETION_RULES[m.retentionPreset as RetentionPreset];
-    if (dr) usedDeletionRules.set(dr.id, dr.xml);
-  }
-  const hasRules = usedChangeRules.size > 0 || usedDeletionRules.size > 0;
-
-  const lines: string[] = [];
-  lines.push('<?xml version="1.0" encoding="UTF-8"?>');
-  lines.push(`<mapping:ProviderMapping`);
-  lines.push(`    xmi:version="2.0"`);
-  lines.push(`    xmlns:xmi="http://www.omg.org/XMI"`);
-  lines.push(`    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"`);
-  lines.push(`    xmlns:ecore="${ECORE_NS_URI}"`);
-  lines.push(`    xmlns:mapping="${MAPPING_NS_URI}"`);
-  lines.push(`    mid="${escapeXml(mid)}">`);
-
-  // Provider-Zeitstempel — Resources referenzieren ihn per Fragment (//@timestamp).
-  const ts = setup.timestamp;
-  if (ts?.source === TimestampSource.DEVICE_TIME && ts.path?.segments.length) {
-    const hint = ts.formatHint ? ` hint="${escapeXml(ts.formatHint)}"` : '';
-    const idx = ts.path.collectionIndex ? ` collectionIndex="${ts.path.collectionIndex}"` : '';
-    lines.push(`  <timestamp strategy="FEATURE"${hint}${idx}>`);
-    lines.push(...pathElements('featurePath', ts.path, '    '));
-    lines.push(`  </timestamp>`);
-  } else {
-    lines.push(`  <timestamp strategy="NOW"/>`);
-  }
-
-  // Provider-Name: entweder Feldwert ODER fester Text (nameSource).
+  // Name validation first - the message names what is missing, not a half-built model
   const useNameField = setup.nameSource !== NameSource.STATIC;
-  const fallback = !useNameField && setup.nameFallback ? ` name="${escapeXml(setup.nameFallback)}"` : '';
-  if (useNameField && setup.namePath?.segments.length) {
-    const idx = setup.namePath.collectionIndex
-      ? ` collectionIndex="${setup.namePath.collectionIndex}"`
-      : '';
-    lines.push(`  <name${fallback}${idx}>`);
-    lines.push(...pathElements('featurePath', setup.namePath, '    '));
-    lines.push(`  </name>`);
-  } else if (fallback) {
-    lines.push(`  <name${fallback}/>`);
-  } else {
-    throw new Error(
-      useNameField
-        ? 'Es wurde kein Feld für den Namen des Sensors gewählt'
-        : 'Es wurde kein fester Name für den Sensor angegeben',
-    );
+  if (useNameField && !pathSegments(setup.namePath).length) {
+    throw new Error('Es wurde kein Feld für den Namen des Sensors gewählt');
+  }
+  if (!useNameField && !setup.nameFallback) {
+    throw new Error('Es wurde kein fester Name für den Sensor angegeben');
   }
 
-  lines.push(`  <providerClasses href="${escapeXml(classifierHref(sensorClass))}"/>`);
+  const rs = newResourceSet();
+  const mappingResource = rs.createResource(URI.createURI(mappingFileName));
 
-  // Messwerte, gruppiert nach serviceGroup → je ein Service.
+  // Regeln: nur die gebrauchten, jede genau einmal, in ihrer eigenen Datei
+  const rules = new Map<string, EObject>();
+  let rulesResource: Resource | null = null;
+  const ruleFor = (spec: RuleSpec | undefined, list: 'changeRules' | 'deletionRules'): EObject | undefined => {
+    if (!spec) return undefined;
+    let rule = rules.get(spec.id);
+    if (!rule) {
+      if (!rulesResource) {
+        rulesResource = rs.createResource(URI.createURI(rulesFileName));
+        rulesResource.getContents().add(create('PersistenceRuleRegistry'));
+      }
+      rule = createRule(spec);
+      addAll(rulesResource.getContents().get(0) as EObject, list, [rule]);
+      rules.set(spec.id, rule);
+    }
+    return rule;
+  };
+
+  const root = create('ProviderMapping');
+  mappingResource.getContents().add(root);
+  set(root, 'mid', mid);
+
+  // Provider-Zeitstempel - die Resources verweisen auf dasselbe Objekt
+  const timestamp = create('TimestampMapping');
+  const ts = setup.timestamp;
+  if (ts?.source === TimestampSource.DEVICE_TIME && pathSegments(ts.path).length) {
+    setEnum(timestamp, 'strategy', 'FEATURE');
+    set(timestamp, 'hint', ts.formatHint || undefined);
+    if (ts.path?.collectionIndex) set(timestamp, 'collectionIndex', ts.path.collectionIndex);
+    addAll(timestamp, 'featurePath', pathSegments(ts.path));
+  } else {
+    setEnum(timestamp, 'strategy', 'NOW');
+  }
+  set(root, 'timestamp', timestamp);
+
+  // Provider-Name: entweder Feldwert ODER fester Text (nameSource)
+  set(root, 'name', useNameField ? nameMapping(undefined, setup.namePath) : nameMapping(setup.nameFallback));
+
+  addAll(root, 'providerClasses', [sensorClass]);
+
+  // Messwerte, gruppiert nach serviceGroup → je ein Service
   const groups = new Map<string, Measurement[]>();
   for (const m of measurements) {
     const group = slug(m.serviceGroup || 'data');
@@ -234,102 +287,79 @@ export function buildProviderMappingXmi(
   }
   const usedResourceIds = new Set<string>();
   for (const [group, ms] of groups) {
-    lines.push(`  <services mid="${escapeXml(group)}">`);
-    lines.push(`    <name name="${escapeXml(ms[0].serviceGroup || group)}"/>`);
+    const service = create('ServiceMapping');
+    set(service, 'mid', group);
+    set(service, 'name', nameMapping(ms[0].serviceGroup || group));
     for (const m of ms) {
       let rid = resourceIdOf(m);
       while (usedResourceIds.has(`${group}/${rid}`)) rid = `${rid}-2`;
       usedResourceIds.add(`${group}/${rid}`);
 
-      if (m.valuePath.segments.some((s: EStructuralFeature) => s.isMany())) {
+      const valuePath = pathSegments(m.valuePath);
+      if (valuePath.some((s) => s.isMany())) {
         warnings.push(
           `Messwert "${m.label ?? rid}": Der Pfad durchquert eine Sammlung — es wird immer das erste Element verwendet.`,
         );
       }
 
-      // Dynamische Einheit (unitFeature) hat Vorrang vor der statischen.
-      const hasUnitPath = !!m.unitPath?.segments.length;
-      const unit = !hasUnitPath && m.unit ? ` unit="${escapeXml(m.unit)}"` : '';
-      const label = m.label ? ` name="${escapeXml(m.label)}"` : '';
-      lines.push(`    <resources${label}${unit} timestamp="//@timestamp" mid="${escapeXml(rid)}">`);
-      lines.push(`      <eType xsi:type="ecore:EDataType" href="${escapeXml(resolveETypeHref(m))}"/>`);
-      lines.push(...pathElements('valueFeature', m.valuePath, '      '));
-      if (hasUnitPath) {
-        lines.push(...pathElements('unitFeature', m.unitPath!, '      '));
-      }
-      const cr = CHANGE_RULES[m.storagePreset as StoragePreset];
-      if (cr) lines.push(`      <changeRule href="${escapeXml(rulesFileName)}#${cr.id}"/>`);
-      const dr = DELETION_RULES[m.retentionPreset as RetentionPreset];
-      if (dr) lines.push(`      <deletionRule href="${escapeXml(rulesFileName)}#${dr.id}"/>`);
-      lines.push(`    </resources>`);
+      const resource = create('ResourceMapping');
+      set(resource, 'name', m.label || undefined);
+      // Dynamische Einheit (unitFeature) hat Vorrang vor der statischen
+      const unitPath = pathSegments(m.unitPath);
+      if (unitPath.length) addAll(resource, 'unitFeature', unitPath);
+      else set(resource, 'unit', m.unit || undefined);
+      set(resource, 'timestamp', timestamp);
+      set(resource, 'mid', rid);
+      set(resource, 'eType', resolveEType(m));
+      addAll(resource, 'valueFeature', valuePath);
+      set(resource, 'changeRule', ruleFor(CHANGE_RULES[m.storagePreset as StoragePreset], 'changeRules'));
+      set(resource, 'deletionRule', ruleFor(DELETION_RULES[m.retentionPreset as RetentionPreset], 'deletionRules'));
+      addAll(service, 'resources', [resource]);
     }
-    lines.push(`  </services>`);
+    addAll(root, 'services', [service]);
   }
 
-  // Admin-Service: Anzeigename, Standort, Quell-Package.
-  // Anzeigename: keiner, aus einem Feld ODER fester Text (friendlyNameSource).
-  const staticFriendly =
-    setup.friendlyNameSource === FriendlyNameSource.STATIC && setup.friendlyName
-      ? ` friendlyName="${escapeXml(setup.friendlyName)}"`
-      : '';
-  lines.push(`  <admin mid="admin"${staticFriendly}>`);
-  lines.push(`    <name name="Admin"/>`);
-  if (
-    setup.friendlyNameSource === FriendlyNameSource.FROM_FIELD &&
-    setup.friendlyNamePath?.segments.length
-  ) {
-    lines.push(...pathElements('friendlyNameFeature', setup.friendlyNamePath, '    '));
+  // Admin-Service: Anzeigename, Standort, Quell-Package
+  const admin = create('AdminMapping');
+  set(admin, 'mid', 'admin');
+  set(admin, 'name', nameMapping('Admin'));
+  if (setup.friendlyNameSource === FriendlyNameSource.STATIC && setup.friendlyName) {
+    set(admin, 'friendlyName', setup.friendlyName);
+  } else if (setup.friendlyNameSource === FriendlyNameSource.FROM_FIELD) {
+    addAll(admin, 'friendlyNameFeature', pathSegments(setup.friendlyNamePath));
   }
   const loc = setup.location;
   if (loc?.mode === LocationMode.STATIC) {
-    const parts: string[] = [];
-    if (Number.isFinite(loc.latitude)) parts.push(`latitude="${loc.latitude}"`);
-    if (Number.isFinite(loc.longitude)) parts.push(`longitude="${loc.longitude}"`);
-    if (Number.isFinite(loc.elevation)) parts.push(`elevation="${loc.elevation}"`);
-    if (parts.length) {
-      // statische Koordinaten sind Attribute des admin-Elements
-      const adminOpen = lines.lastIndexOf(`  <admin mid="admin"${staticFriendly}>`);
-      lines[adminOpen] = `  <admin mid="admin"${staticFriendly} ${parts.join(' ')}>`;
-    }
+    if (Number.isFinite(loc.latitude)) set(admin, 'latitude', loc.latitude);
+    if (Number.isFinite(loc.longitude)) set(admin, 'longitude', loc.longitude);
+    if (Number.isFinite(loc.elevation)) set(admin, 'elevation', loc.elevation);
   } else if (loc?.mode === LocationMode.FROM_DATA) {
-    if (loc.latitudePath?.segments.length) lines.push(...pathElements('latitudeRef', loc.latitudePath, '    '));
-    if (loc.longitudePath?.segments.length) lines.push(...pathElements('longitudeRef', loc.longitudePath, '    '));
-    if (loc.elevationPath?.segments.length) lines.push(...pathElements('elevationRef', loc.elevationPath, '    '));
+    addAll(admin, 'latitudeRef', pathSegments(loc.latitudePath));
+    addAll(admin, 'longitudeRef', pathSegments(loc.longitudePath));
+    addAll(admin, 'elevationRef', pathSegments(loc.elevationPath));
   }
-  lines.push(`    <providerPackage href="${escapeXml(sensorPkg.getNsURI()!)}#/"/>`);
-  lines.push(`  </admin>`);
+  set(admin, 'providerPackage', sensorPkg);
+  set(root, 'admin', admin);
 
   // Gemeinsamer Provider über mehrere Nachrichtentypen: Referenz auf das
   // MappingProfile (providerStrategy=UNIFIED, siehe buildMappingProfileXmi).
+  // The profile is another document; a proxy carries its address - relative,
+  // as the two files lie side by side, and written out unchanged.
   if (options.profile) {
-    lines.push(
-      `  <profile href="${escapeXml(options.profile.fileName)}#${escapeXml(options.profile.profileId)}"/>`,
-    );
+    const profile = create('MappingProfile') as EObject & { eSetProxyURI?: (uri: URI) => void };
+    profile.eSetProxyURI?.(URI.createURI(`${options.profile.fileName}#${options.profile.profileId}`));
+    set(root, 'profile', profile);
   }
 
-  lines.push(`</mapping:ProviderMapping>`);
-
   const result: TransformResult = {
-    mappingXmi: lines.join('\n') + '\n',
+    mappingXmi: serialize(mappingResource),
     mappingFileName,
     warnings,
   };
-
-  if (hasRules) {
-    const ruleLines: string[] = [];
-    ruleLines.push('<?xml version="1.0" encoding="UTF-8"?>');
-    ruleLines.push(`<mapping:PersistenceRuleRegistry`);
-    ruleLines.push(`    xmi:version="2.0"`);
-    ruleLines.push(`    xmlns:xmi="http://www.omg.org/XMI"`);
-    ruleLines.push(`    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"`);
-    ruleLines.push(`    xmlns:mapping="${MAPPING_NS_URI}">`);
-    for (const xml of usedChangeRules.values()) ruleLines.push(`  ${xml}`);
-    for (const xml of usedDeletionRules.values()) ruleLines.push(`  ${xml}`);
-    ruleLines.push(`</mapping:PersistenceRuleRegistry>`);
-    result.rulesXmi = ruleLines.join('\n') + '\n';
+  if (rulesResource) {
+    result.rulesXmi = serialize(rulesResource);
     result.rulesFileName = rulesFileName;
   }
-
   return result;
 }
 
@@ -361,17 +391,17 @@ export function buildMappingProfileXmi(
   const profileId = slug(providerName);
   const profileFileName = `${profileId}-profile.xmi`;
 
-  // Union: Service → Resource-Id → {typeHref, unit, name, count}
+  // Union: Service → Resource-Id → {type, unit, name, count}
   interface ProfileResource {
     name: string;
     unit?: string;
-    typeHref: string;
+    type: EClassifier;
     count: number;
   }
   const services = new Map<string, { name: string; resources: Map<string, ProfileResource> }>();
   for (const setup of setups) {
     for (const m of setup.measurements) {
-      if (!m.selected || !m.valuePath?.segments.length) continue;
+      if (!m.selected || !pathSegments(m.valuePath).length) continue;
       const group = slug(m.serviceGroup || 'data');
       const service = services.get(group) ?? {
         name: m.serviceGroup || group,
@@ -386,7 +416,7 @@ export function buildMappingProfileXmi(
         service.resources.set(rid, {
           name: m.label || rid,
           unit: m.unit || undefined,
-          typeHref: resolveETypeHref(m),
+          type: resolveEType(m),
           count: 1,
         });
       }
@@ -401,37 +431,44 @@ export function buildMappingProfileXmi(
     (s) => s.location && s.location.mode !== LocationMode.NONE,
   );
 
-  const lines: string[] = [];
-  lines.push('<?xml version="1.0" encoding="UTF-8"?>');
-  lines.push(`<mapping:MappingProfile`);
-  lines.push(`    xmi:version="2.0"`);
-  lines.push(`    xmlns:xmi="http://www.omg.org/XMI"`);
-  lines.push(`    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"`);
-  lines.push(`    xmlns:mapping="${MAPPING_NS_URI}"`);
-  lines.push(`    profileId="${escapeXml(profileId)}"`);
-  lines.push(`    name="${escapeXml(providerName)}"`);
-  lines.push(`    description="Gemeinsamer Provider aus ${setups.length} Nachrichtentyp(en), erzeugt vom SensiNact-Mapping-Assistenten."`);
-  lines.push(`    providerStrategy="UNIFIED">`);
-  lines.push(`  <provider providerId="${escapeXml(profileId)}">`);
-  for (const [serviceId, service] of services) {
-    lines.push(`    <services serviceId="${escapeXml(serviceId)}" serviceName="${escapeXml(service.name)}">`);
-    for (const [rid, resource] of service.resources) {
-      const unit = resource.unit ? ` expectedUnit="${escapeXml(resource.unit)}"` : '';
-      // Nur Resources, die JEDER Nachrichtentyp liefert, sind verpflichtend.
-      const required = resource.count < setups.length ? ' required="false"' : '';
-      lines.push(
-        `      <resources resourceId="${escapeXml(rid)}" resourceName="${escapeXml(resource.name)}"${unit}${required}>`,
-      );
-      lines.push(`        <expectedType href="${escapeXml(resource.typeHref)}"/>`);
-      lines.push(`      </resources>`);
-    }
-    lines.push(`    </services>`);
-  }
-  lines.push(
-    `    <admin serviceId="admin" serviceName="Admin"${requiresFriendlyName ? ' requiresFriendlyName="true"' : ''}${requiresLocation ? ' requiresLocation="true"' : ''}/>`,
+  const rs = newResourceSet();
+  const resource = rs.createResource(URI.createURI(profileFileName));
+  const profile = create('MappingProfile');
+  resource.getContents().add(profile);
+  set(profile, 'profileId', profileId);
+  set(profile, 'name', providerName);
+  set(
+    profile,
+    'description',
+    `Gemeinsamer Provider aus ${setups.length} Nachrichtentyp(en), erzeugt vom SensiNact-Mapping-Assistenten.`,
   );
-  lines.push(`  </provider>`);
-  lines.push(`</mapping:MappingProfile>`);
+  setEnum(profile, 'providerStrategy', 'UNIFIED');
 
-  return { profileXmi: lines.join('\n') + '\n', profileFileName, profileId };
+  const provider = create('ProfileProvider');
+  set(provider, 'providerId', profileId);
+  for (const [serviceId, service] of services) {
+    const profileService = create('ProfileService');
+    set(profileService, 'serviceId', serviceId);
+    set(profileService, 'serviceName', service.name);
+    for (const [rid, r] of service.resources) {
+      const profileResource = create('ProfileResource');
+      set(profileResource, 'resourceId', rid);
+      set(profileResource, 'resourceName', r.name);
+      set(profileResource, 'expectedUnit', r.unit);
+      // Nur Resources, die JEDER Nachrichtentyp liefert, sind verpflichtend
+      if (r.count < setups.length) set(profileResource, 'required', false);
+      set(profileResource, 'expectedType', r.type);
+      addAll(profileService, 'resources', [profileResource]);
+    }
+    addAll(provider, 'services', [profileService]);
+  }
+  const admin = create('ProfileAdmin');
+  set(admin, 'serviceId', 'admin');
+  set(admin, 'serviceName', 'Admin');
+  if (requiresFriendlyName) set(admin, 'requiresFriendlyName', true);
+  if (requiresLocation) set(admin, 'requiresLocation', true);
+  set(provider, 'admin', admin);
+  set(profile, 'provider', provider);
+
+  return { profileXmi: serialize(resource), profileFileName, profileId };
 }

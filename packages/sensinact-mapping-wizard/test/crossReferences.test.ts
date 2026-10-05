@@ -13,9 +13,9 @@ beforeAll(() => registerEcorePackage());
 
 /**
  * Modelle aus dem Atlas referenzieren einander teils per Dateiname
- * (`lorawan-uplink.ecore#//UplinkMessage`). Das löst nur auf, wenn die
- * Resources unter genau diesem Namen im gemeinsamen ResourceSet liegen —
- * mit url-kodierten nsURIs als Dateinamen nicht.
+ * (`lorawan-uplink.ecore#//UplinkMessage`). Die Resources liegen unter ihrer
+ * nsURI; der URI-Converter des ResourceSets kennt die Dateinamen als Aliase
+ * (emf/setup.ts) — egal, unter welchem Namen ein Modell registriert wurde.
  */
 describe('Datei-Querverweise zwischen Atlas-Modellen', () => {
   const lorawan = () => readFileSync(path.join(FIXTURES, 'lorawan-uplink.ecore'), 'utf-8');
@@ -30,17 +30,14 @@ describe('Datei-Querverweise zwischen Atlas-Modellen', () => {
     expect(uplink.getEStructuralFeature('object')).toBeTruthy();
   });
 
-  it('bricht mit url-kodierten nsURIs als Resource-URI', () => {
+  it('löst auch mit url-kodierten nsURIs als Resource-Namen auf', () => {
     const rs = newResourceSet();
     registerEcoreFromString(lorawan(), `atlas/${encodeURIComponent('https://eclipse.org/fennec/lorawan')}.ecore`, rs);
     const pkg = registerEcoreFromString(em310(), `atlas/${encodeURIComponent('http://www.example.org/lorawan/specific/em310udl')}.ecore`, rs);
     const uplink = pkg.getEClassifier('EM310UDLUplink') as EClass;
-    // Der Supertyp bleibt ein unaufgelöster Proxy: ohne Namen, die geerbten
-    // Features fehlen. (Bis @emfts/core 0.3.0-next.2 warf schon der
-    // Feature-Zugriff; seit next.4 wird der Proxy still übergangen.)
     const [superType] = [...uplink.getESuperTypes()] as Array<EClass & { eIsProxy?: () => boolean }>;
-    expect(superType?.eIsProxy?.()).toBe(true);
-    expect(superType?.getName()).toBeFalsy();
-    expect(uplink.getEAllStructuralFeatures().length).toBe(uplink.getEStructuralFeatures().length);
+    expect(superType?.eIsProxy?.()).toBe(false);
+    expect(superType?.getName()).toBe('UplinkMessage');
+    expect(uplink.getEStructuralFeature('object')).toBeTruthy();
   });
 });

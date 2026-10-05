@@ -4,6 +4,7 @@
  * handgeschriebenen event.atlas-Beispiels (Datei-hrefs).
  */
 import { describe, it, expect, beforeAll } from 'vitest';
+import { newResourceSet, registerEcoreFromString } from '../src/emf/setup';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -69,42 +70,17 @@ beforeAll(() => {
   wiz.setEFactoryInstance(MappingwizardFactory.eINSTANCE);
   EPackageRegistry.INSTANCE.set(wiz.getNsURI()!, wiz);
 
-  rs = new BasicResourceSet();
-  const xmiFactory = new XMIResourceFactory();
-  rs.getResourceFactoryRegistry().getExtensionToFactoryMap().set('xmi', xmiFactory);
-  rs.getResourceFactoryRegistry().getExtensionToFactoryMap().set('ecore', xmiFactory);
-
-  lorawanPkg = loadResource(
-    'lorawan-uplink.ecore',
-    readFileSync(path.join(FIXTURES, 'lorawan-uplink.ecore'), 'utf-8'),
-  )
-    .getContents()
-    .get(0) as unknown as EPackage;
-  EPackageRegistry.INSTANCE.set(lorawanPkg.getNsURI()!, lorawanPkg);
-
-  em310Pkg = loadResource(
-    'em310udl-message.ecore',
-    readFileSync(path.join(FIXTURES, 'em310udl-message.ecore'), 'utf-8'),
-  )
-    .getContents()
-    .get(0) as unknown as EPackage;
-  EPackageRegistry.INSTANCE.set(em310Pkg.getNsURI()!, em310Pkg);
-
-  waterparkPkg = loadResource(
-    'waterparc-domain.ecore',
-    readFileSync(path.join(FIXTURES, 'waterparc-domain.ecore'), 'utf-8'),
-  )
-    .getContents()
-    .get(0) as unknown as EPackage;
-  EPackageRegistry.INSTANCE.set(waterparkPkg.getNsURI()!, waterparkPkg);
-
-  const mappingPkg = loadResource(
-    'event-atlas-mapping.ecore',
+  // Wie im Assistenten: Resources unter ihrer nsURI, Dateinamen als Aliase
+  rs = newResourceSet();
+  const ecore = (name: string) => readFileSync(path.join(FIXTURES, name), 'utf-8');
+  lorawanPkg = registerEcoreFromString(ecore('lorawan-uplink.ecore'), 'lorawan-uplink.ecore', rs);
+  em310Pkg = registerEcoreFromString(ecore('em310udl-message.ecore'), 'em310udl-message.ecore', rs);
+  waterparkPkg = registerEcoreFromString(ecore('waterparc-domain.ecore'), 'waterparc-domain.ecore', rs);
+  registerEcoreFromString(
     readFileSync(path.join(__dirname, '..', 'src', 'assets', 'event-atlas-mapping.ecore'), 'utf-8'),
-  )
-    .getContents()
-    .get(0) as unknown as EPackage;
-  EPackageRegistry.INSTANCE.set(mappingPkg.getNsURI()!, mappingPkg);
+    'event-atlas-mapping.ecore',
+    rs,
+  );
 
   uplinkClass = em310Pkg.getEClassifier('EM310UDLUplink') as EClass;
 });
