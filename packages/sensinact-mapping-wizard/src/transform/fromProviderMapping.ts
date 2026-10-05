@@ -448,7 +448,16 @@ export function restoreSetupFromMappingXmi(
 
   const sensorClasses = egetList(root, 'providerClasses') as unknown as EClass[];
   const sensorClass = sensorClasses[0];
-  if (!sensorClass || typeof sensorClass.getEPackage !== 'function') {
+  /*
+   * Seit @emfts/core 0.3.0-next.4 ist eine Klasse aus einem fehlenden Modell
+   * kein kaputtes Objekt mehr, sondern ein sauberer Proxy mit vollem
+   * EClass-Interface - und ohne Namen, Features oder Package. Der ist genauso
+   * unbrauchbar und wird genauso gemeldet.
+   */
+  const unresolved = !sensorClass
+    || typeof sensorClass.getEPackage !== 'function'
+    || (sensorClass as { eIsProxy?: () => boolean }).eIsProxy?.() === true;
+  if (unresolved) {
     throw new Error(
       'Die Sensorklasse des Mappings konnte nicht aufgelöst werden. ' +
         'Vermutlich fehlt das zugehörige Modell — laden Sie es in Schritt 1.',
