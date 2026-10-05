@@ -1891,51 +1891,48 @@ export function hasXmiId(obj: EObject): boolean {
   return getXmiId(obj) !== null
 }
 
+/** Whether the class declares an attribute with isID() - the object's own identity */
+export function hasIdAttribute(eClass: EClass | null | undefined): boolean {
+  if (!eClass) return false
+  try {
+    for (const feature of eClass.getEAllStructuralFeatures()) {
+      if ('isID' in feature && typeof (feature as any).isID === 'function' && (feature as any).isID()) return true
+    }
+  } catch { /* ignore */ }
+  return false
+}
+
 /**
- * Assign an xmi:id to an EObject using the following priority:
- * 1. Already has a manually set xmi:id → keep it
- * 2. EClass has an EAttribute with isID()=true and value is set → use that value
- * 3. Otherwise → generate a UUID
+ * Give an object the xmi:id it needs - and only then:
+ * 1. It already has one (read from the file) → keep it.
+ * 2. Its class declares an ID attribute → none. The resource addresses the
+ *    object by that attribute (EMFTs ≥ 0.3.0-next.4 does what Java EMF does:
+ *    `EcoreUtil.getID()` before any path). A UUID handed out here would win
+ *    over the attribute for good - every reference fell back to the UUID,
+ *    whatever the user typed into the key later.
+ * 3. Otherwise → a UUID, so references survive reordering.
  *
- * Also sets the ID in the resource's ID map for cross-reference resolution.
+ * Returns the id the object is addressed by in the resource, or null when the
+ * ID attribute does that job.
  */
 export function assignXmiId(obj: EObject): string | null {
   const rawObj = toRaw(obj)
 
-  // 1. Already has an ID
   const existing = getXmiId(rawObj)
   if (existing) return existing
 
-  // 2. Check for iD-attribute value
-  try {
-    const eClass = rawObj.eClass()
-    if (eClass) {
-      for (const feature of eClass.getEAllStructuralFeatures()) {
-        if ('isID' in feature && typeof (feature as any).isID === 'function' && (feature as any).isID()) {
-          const val = rawObj.eGet(feature)
-          if (val !== null && val !== undefined && val !== '') {
-            const id = String(val)
-            setXmiId(rawObj, id)
-            return id
-          }
-          break
-        }
-      }
-    }
-  } catch { /* ignore */ }
+  if (hasIdAttribute(rawObj.eClass?.())) return null
 
-  // 3. Generate UUID
   return generateXmiId(rawObj)
 }
 
 /**
- * Update the xmi:id when an iD-attribute value changes.
- * Call this from the editor when a feature with isID()=true is modified.
+ * Formerly copied a changed ID attribute into the xmi:id. The attribute is the
+ * id now (see assignXmiId); an object that still carries an xmi:id from its
+ * file keeps it, as Java EMF would. Kept for callers, does nothing.
  */
-export function updateXmiIdFromAttribute(obj: EObject, newValue: any): void {
-  if (newValue !== null && newValue !== undefined && newValue !== '') {
-    setXmiId(toRaw(obj), String(newValue))
-  }
+export function updateXmiIdFromAttribute(_obj: EObject, _newValue: any): void {
+  // intentionally empty
 }
 
 /**
@@ -1984,7 +1981,8 @@ export function generateMissingXmiIds(rootOnly: boolean = false, dokument: Share
   let count = 0
 
   function processObject(obj: EObject): void {
-    if (!hasXmiId(obj)) {
+    // An object with an ID attribute is addressed by that attribute - no UUID on top
+    if (!hasXmiId(obj) && !hasIdAttribute(toRaw(obj).eClass?.())) {
       if (generateXmiId(obj)) {
         count++
       }
