@@ -35,8 +35,12 @@ describe('Datei-Querverweise zwischen Atlas-Modellen', () => {
     registerEcoreFromString(lorawan(), `atlas/${encodeURIComponent('https://eclipse.org/fennec/lorawan')}.ecore`, rs);
     const pkg = registerEcoreFromString(em310(), `atlas/${encodeURIComponent('http://www.example.org/lorawan/specific/em310udl')}.ecore`, rs);
     const uplink = pkg.getEClassifier('EM310UDLUplink') as EClass;
-    // Der Supertyp bleibt ein unaufgelöster Proxy — damit ist die Klasse
-    // unbenutzbar: schon der Feature-Zugriff läuft über die Hierarchie.
-    expect(() => uplink.getEStructuralFeature('object')).toThrow();
+    // Der Supertyp bleibt ein unaufgelöster Proxy: ohne Namen, die geerbten
+    // Features fehlen. (Bis @emfts/core 0.3.0-next.2 warf schon der
+    // Feature-Zugriff; seit next.4 wird der Proxy still übergangen.)
+    const [superType] = [...uplink.getESuperTypes()] as Array<EClass & { eIsProxy?: () => boolean }>;
+    expect(superType?.eIsProxy?.()).toBe(true);
+    expect(superType?.getName()).toBeFalsy();
+    expect(uplink.getEAllStructuralFeatures().length).toBe(uplink.getEStructuralFeatures().length);
   });
 });
