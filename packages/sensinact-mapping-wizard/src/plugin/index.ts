@@ -32,6 +32,7 @@ import {
   saveToWorkspace,
   setFileSystem,
 } from '../wizard/artifacts';
+import { setMetamodelResolver, type HostMetamodelResolver } from '../wizard/metamodelResolver';
 import type { GeneFileSystem } from '../wizard/artifacts';
 import { setAtlasBrowser } from '../wizard/useAtlasConnection';
 import type { GeneAtlasBrowser } from '../wizard/useAtlasConnection';
@@ -196,9 +197,11 @@ let hostServiceRetry: ReturnType<typeof setTimeout> | undefined;
 function adoptHostServices(context: ModuleContext, attempt = 0): void {
   const browser = context.services.get<GeneAtlasBrowser>('gene.atlas.browser');
   const files = context.services.get<GeneFileSystem>('gene.filesystem');
+  const resolver = context.services.get<HostMetamodelResolver>('gene.metamodel.resolver');
   if (browser) setAtlasBrowser(browser);
   if (files) setFileSystem(files);
-  if ((browser && files) || attempt >= 20) return; // ~5 s
+  if (resolver) setMetamodelResolver(resolver);
+  if ((browser && files && resolver) || attempt >= 20) return; // ~5 s
   hostServiceRetry = setTimeout(() => adoptHostServices(context, attempt + 1), 250);
 }
 

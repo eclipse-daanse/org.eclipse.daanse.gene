@@ -57,22 +57,16 @@ export interface AtlasResolutionSetup {
  * Wirft nicht: ohne Provider bleibt es beim bisherigen Verhalten, der Loader
  * meldet die offenen nsURIs dann selbst.
  */
-export async function prepareAtlasResolution(
+/**
+ * The Atlas providers that apply to a document: the scope it came from with its
+ * inherited parents, plus the resolver chain of the workspace settings. Shared
+ * by the instance loader's converter and the metamodel resolver.
+ */
+export async function collectAtlasProviders(
   entry: any,
-  deps: {
-    editorConfig?: any
-    /** The instance tree's hook; the converter type comes from @emfts/core */
-    instanceTreeComposables?: { setPackageURIConverter?: (c: never) => void }
-  },
-): Promise<AtlasResolutionSetup> {
-  const install = deps.instanceTreeComposables?.setPackageURIConverter
-  if (!install) {
-    return { searched: [], providers: [], note: 'Instanzbaum bietet keinen URIConverter-Haken' }
-  }
-
-  const { ModelAtlasClient, providersForScopeChain, createAtlasURIConverter, describeProvider } =
-    await import('storage-model-atlas')
-
+  editorConfig: any,
+): Promise<{ providers: unknown[]; searched: string[] }> {
+  const { ModelAtlasClient, providersForScopeChain, describeProvider } = await import('storage-model-atlas')
   const providers: any[] = []
 
   // 1. Implicit: the instance's own scope and its inherited parents
@@ -83,7 +77,7 @@ export async function prepareAtlasResolution(
   }
 
   // 2. In addition: the resolver chain from the workspace settings
-  const chain = deps.editorConfig?.packageResolverChain?.value
+  const chain = editorConfig?.packageResolverChain?.value
   const resolvers = chain ? featureValue(chain.__v_raw || chain, 'resolvers') || [] : []
   for (const resolver of resolvers) {
     if ((featureValue(resolver, 'enabled') ?? true) === false) continue
@@ -97,6 +91,24 @@ export async function prepareAtlasResolution(
       stage: featureValue(resolver, 'stage') || 'release',
     })
   }
+  return { providers, searched: providers.map((p) => describeProvider(p)) }
+}
+
+export async function prepareAtlasResolution(
+  entry: any,
+  deps: {
+    editorConfig?: any
+    /** The instance tree's hook; the converter type comes from @emfts/core */
+    instanceTreeComposables?: { setPackageURIConverter?: (c: never) => void }
+  },
+): Promise<AtlasResolutionSetup> {
+  const install = deps.instanceTreeComposables?.setPackageURIConverter
+  if (!install) {
+    return { searched: [], providers: [], note: 'Instanzbaum bietet keinen URIConverter-Haken' }
+  }
+
+  const { createAtlasURIConverter } = await import('storage-model-atlas')
+  const { providers, searched } = await collectAtlasProviders(entry, deps.editorConfig)
 
   if (providers.length === 0) {
     return {
@@ -106,8 +118,8 @@ export async function prepareAtlasResolution(
     }
   }
 
-  install(createAtlasURIConverter(providers) as never)
-  return { searched: providers.map((p) => describeProvider(p)), providers }
+  install(createAtlasURIConverter(providers as never) as never)
+  return { searched, providers }
 }
 
 /**
