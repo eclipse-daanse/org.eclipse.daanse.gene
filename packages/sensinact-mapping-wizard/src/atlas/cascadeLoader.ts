@@ -66,20 +66,6 @@ function packageNameOf(ecoreXml: string): string | undefined {
   return ecoreXml.match(/<ecore:EPackage[^>]*?\bname="([^"]+)"/)?.[1];
 }
 
-/**
- * Resource-URI eines aus dem Atlas geladenen Modells.
- *
- * Der Dateiname muss dem entsprechen, unter dem sich das Modell **selbst**
- * adressiert: EMF schreibt Verweise auf eigene Klassifizierer teils als
- * `<paketname>.ecore#//X`. Lag die Resource unter
- * `atlas/<url-kodierte-nsURI>.ecore`, blieben genau diese Referenzen
- * unaufgelöst („Forward ref UNRESOLVED"), und betroffene Attribute hatten
- * keinen Typ (z. B. Enum-Felder wie `status`).
- */
-function resourceUriFor(content: string, nsUri: string): string {
-  const name = packageNameOf(content);
-  return name ? `${name}.ecore` : `atlas/${encodeURIComponent(nsUri)}.ecore`;
-}
 
 export interface CascadeLoadResult {
   /** Das eigentlich angeforderte Package (zuletzt geladen). */
@@ -144,11 +130,9 @@ export async function loadSchemaWithDependencies(
       }
     }
 
-    const pkg = registerEcoreFromString(
-      content,
-      resourceUriFor(content, uri),
-      sharedResourceSet,
-    );
+    // The resource lives under its nsURI; `<name>.ecore`, the form EMF writes
+    // into neighbouring models, is an alias the resource set resolves (setup.ts)
+    const pkg = registerEcoreFromString(content, uri, sharedResourceSet);
     loadedPackages.push(pkg);
     return pkg;
   }

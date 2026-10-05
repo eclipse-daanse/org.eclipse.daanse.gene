@@ -16,6 +16,7 @@ import {
 } from '@emfts/core';
 import type { EClass, EObject, EPackage, EStructuralFeature, XMIResource } from '@emfts/core';
 import { enumerateFeaturePaths, suggestMeasurementPaths } from '../src/emf/featurePaths';
+import { newResourceSet, registerEcoreFromString } from '../src/emf/setup';
 import { buildMappingProfileXmi, buildProviderMappingXmi, MAPPING_NS_URI, slug } from '../src/transform/toProviderMapping';
 import {
   MappingwizardFactory,
@@ -67,35 +68,24 @@ beforeAll(() => {
   wiz.setEFactoryInstance(MappingwizardFactory.eINSTANCE);
   EPackageRegistry.INSTANCE.set(wiz.getNsURI()!, wiz);
 
-  rs = new BasicResourceSet();
-  const xmiFactory = new XMIResourceFactory();
-  rs.getResourceFactoryRegistry().getExtensionToFactoryMap().set('xmi', xmiFactory);
-  rs.getResourceFactoryRegistry().getExtensionToFactoryMap().set('ecore', xmiFactory);
-
-  // Reihenfolge wichtig: em310udl referenziert lorawan-uplink.ecore relativ.
-  const lorawanRes = loadXmiResource(
-    rs,
-    'lorawan-uplink.ecore',
+  // Wie im Assistenten: die Resources liegen unter ihrer nsURI, Dateinamen
+  // sind Aliase - die hrefs im Ergebnis kommen dann nsURI-basiert aus dem Kern
+  rs = newResourceSet();
+  lorawanPkg = registerEcoreFromString(
     readFileSync(path.join(FIXTURES, 'lorawan-uplink.ecore'), 'utf-8'),
-  );
-  lorawanPkg = lorawanRes.getContents().get(0) as unknown as EPackage;
-  EPackageRegistry.INSTANCE.set(lorawanPkg.getNsURI()!, lorawanPkg);
-
-  const em310Res = loadXmiResource(
+    'lorawan-uplink.ecore',
     rs,
-    'em310udl-message.ecore',
+  );
+  em310Pkg = registerEcoreFromString(
     readFileSync(path.join(FIXTURES, 'em310udl-message.ecore'), 'utf-8'),
-  );
-  em310Pkg = em310Res.getContents().get(0) as unknown as EPackage;
-  EPackageRegistry.INSTANCE.set(em310Pkg.getNsURI()!, em310Pkg);
-
-  const mappingRes = loadXmiResource(
+    'em310udl-message.ecore',
     rs,
-    'event-atlas-mapping.ecore',
-    readFileSync(path.join(__dirname, '..', 'src', 'assets', 'event-atlas-mapping.ecore'), 'utf-8'),
   );
-  mappingPkg = mappingRes.getContents().get(0) as unknown as EPackage;
-  EPackageRegistry.INSTANCE.set(mappingPkg.getNsURI()!, mappingPkg);
+  mappingPkg = registerEcoreFromString(
+    readFileSync(path.join(__dirname, '..', 'src', 'assets', 'event-atlas-mapping.ecore'), 'utf-8'),
+    'event-atlas-mapping.ecore',
+    rs,
+  );
 
   uplinkClass = em310Pkg.getEClassifier('EM310UDLUplink') as EClass;
   expect(uplinkClass).toBeTruthy();
@@ -252,10 +242,12 @@ describe('buildProviderMappingXmi', () => {
     const result = buildProviderMappingXmi(setup);
     expect(result.rulesFileName).toBe('em310udl-battery-sensor-persistence-rules.xmi');
     expect(result.rulesXmi).toContain('mapping:PercentageChangeRule');
-    expect(result.rulesXmi).toContain('percentage="5.0"');
+    // Der Kern schreibt die Zahl ohne Nachkommastelle; Java liest beides als Double
+    expect(result.rulesXmi).toMatch(/percentage="5(\.0)?"/);
     expect(result.rulesXmi).toContain('retention="90"');
-    expect(result.mappingXmi).toContain(
-      '<changeRule href="em310udl-battery-sensor-persistence-rules.xmi#change-5-percent"/>',
+    // Der Kern schreibt den konkreten Typ als xsi:type, weil ChangeRule abstrakt ist - wie Java EMF
+    expect(result.mappingXmi).toMatch(
+      /<changeRule( xsi:type="mapping:PercentageChangeRule")? href="em310udl-battery-sensor-persistence-rules\.xmi#change-5-percent"\/>/,
     );
     expect(result.mappingXmi).toContain(
       '<deletionRule href="em310udl-battery-sensor-persistence-rules.xmi#keep-90-days"/>',
