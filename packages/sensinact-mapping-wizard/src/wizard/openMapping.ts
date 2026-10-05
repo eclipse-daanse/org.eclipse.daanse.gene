@@ -16,6 +16,7 @@ import {
 } from '../transform/fromProviderMapping';
 import { applyOpenedMapping } from './context';
 import type { MappingDocument } from './context';
+import { getMetamodelResolver } from './metamodelResolver';
 
 export interface OpenResult {
   warnings: string[];
@@ -66,6 +67,19 @@ export async function openMappingContent(options: OpenContentOptions): Promise<O
   const loadedModels: string[] = [];
 
   // Referenzierte Sensormodelle: registrierte übernehmen, fehlende nachladen.
+  // Fehlende zuerst beim Host erfragen - der kennt den Workspace und dessen
+  // Atlas-Kette, genau wie der Instanz-Editor, der das Modell sonst als
+  // Erster gefunden haette.
+  const hostResolver = getMetamodelResolver();
+  const unknown = analysis.nsUris.filter((ns) => !registeredPackage(ns));
+  if (hostResolver && unknown.length > 0) {
+    try {
+      const found = await hostResolver.resolve(unknown);
+      loadedModels.push(...found.resolved.filter((ns) => unknown.includes(ns)));
+    } catch (error) {
+      warnings.push(`Die Metamodell-Auflösung des Hosts schlug fehl: ${(error as Error).message}`);
+    }
+  }
   for (const nsUri of analysis.nsUris) {
     const registered = registeredPackage(nsUri);
     if (registered) {

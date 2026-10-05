@@ -13,6 +13,7 @@ import type { Resource } from 'tsm:emfts'
 import { Dialog, InputText, Dropdown, Button, ProgressSpinner } from 'tsm:primevue'
 import type { File, Repository } from 'storage-core'
 import { getGlobalEditorConfig } from '@/services/useEditorConfig'
+import { createMetamodelResolver } from './services/metamodelResolver'
 import { ProblemsPanel, useSharedProblemsService } from 'ui-problems-panel'
 import { SearchDialog, setViewsService } from 'ui-search'
 import type { CommandRegistryImpl } from 'ui-actions'
@@ -115,6 +116,14 @@ function openAtlasUploadDialog(
 
 // Register as TSM service for cross-plugin access
 tsm.registerService('gene.atlas.openUpload', openAtlasUploadDialog)
+
+// Metamodelle per nsURI - die eine Kette (Registry, Workspace, Atlas) fuer alle Plugins
+tsm.registerService('gene.metamodel.resolver', createMetamodelResolver({
+  fileSystem: () => tsm.getService('gene.filesystem'),
+  workspaceSourceId: () => currentWorkspaceEntry.value?.sourceId,
+  modelBrowser: () => (modelBrowserComposables.value as any) ?? tsm.getService('ui.model-browser.composables'),
+  editorConfig: () => getGlobalEditorConfig()
+}))
 
 // XMI Load result type
 interface XMILoadResult {
