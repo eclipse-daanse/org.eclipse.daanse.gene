@@ -4,10 +4,10 @@
  * It is the case the whole registry exists for: the same file opens as this
  * view or as an ordinary instance tree, and "Open with" offers both.
  *
- * The opener is a dynamic reference. The wizard is a plugin that may load after
- * this view has been declared, and may be undeployed while it is still
- * declared - so the view stays and is handed the change, rather than being
- * rebuilt around it.
+ * The opener is a dynamic, mandatory reference. The wizard is a plugin that
+ * may load after this view has been declared and may be undeployed again -
+ * the view is registered while the opener is there and withdrawn with it, so
+ * "Open with" never offers a wizard that is not installed.
  */
 import { component, bind, unbind, serviceId } from '@eclipse-daanse/tsm'
 import { EDITOR_ART, type EditorArt } from 'gene-contracts'
@@ -26,7 +26,7 @@ export class EormView implements EditorArt {
 
   private opener?: () => void
 
-  @bind(EORM_OPEN, { optional: true })
+  @bind(EORM_OPEN)
   setOpener(opener: () => void): void {
     this.opener = opener
   }
