@@ -2,8 +2,10 @@
  * TSM-Plugin-Einstieg für den Betrieb in der gene-Shell
  * (eclipse-daanse/org.eclipse.daanse.gene).
  *
- * Registriert die Perspective „SensiNact Mapping" mit der WizardShell als
- * Center-Panel (Vorbild: gene/packages/atlas-browser/src/index.ts). Alle
+ * Every mapping is a tab of its own (`sensinact:<document>`), with its own
+ * context - two open mappings never meet. The openers (explorer action, Atlas
+ * action, the view gene picks by nsURI, the menu) all go through
+ * `openWizardTab`; the menu acts on the tab in front. Alle
  * Package-Registrierungen laufen über setupPackages() und sind idempotent —
  * Ecore-Basis und UIModel-Package bringt der gene-Host bereits mit.
  *
@@ -19,12 +21,11 @@ import { openMappingContent } from '../wizard/openMapping';
 import { analyzeMappingXmi } from '../transform/fromProviderMapping';
 import {
   atlasSource as sharedAtlasSource,
-  openDialogOpen,
-  setup as wizardSetup,
-  showStatus,
-  startNewMapping,
-  uploadDialogOpen,
+  closeWizardContext,
+  wizardContextFor,
+  WIZARD_TAB_PREFIX,
 } from '../wizard/context';
+import type { WizardContext } from '../wizard/context';
 import {
   buildArtifacts,
   canPublish,
@@ -36,10 +37,11 @@ import { setMetamodelResolver, type HostMetamodelResolver } from '../wizard/meta
 import type { GeneFileSystem } from '../wizard/artifacts';
 import { setAtlasBrowser } from '../wizard/useAtlasConnection';
 import type { GeneAtlasBrowser } from '../wizard/useAtlasConnection';
-import WizardShell from '../wizard/WizardShell.vue';
+import WizardTab from '../wizard/WizardTab.vue';
 
+/** The menu key - the view names it as the perspective it supersedes */
 const PERSPECTIVE_ID = 'sensinact-mapping';
-const PANEL_ID = 'sensinact-wizard';
+const EDITOR_ID = 'sensinact-mapping';
 const OBJECT_ACTION_ID = 'sensinact-mapping-wizard.open';
 const FILE_ACTION_ID = 'sensinact-mapping-wizard.openFile';
 
@@ -94,18 +96,67 @@ interface AtlasNodeDataLike {
 }
 
 /** Minimale Sichten auf die gene-Registries (Strukturen siehe ui-perspectives). */
-interface PerspectiveManagerLike {
-  registry: { register(p: unknown): void; unregister?(id: string): void };
-  /** Umschalten der aktiven Perspective (der echte Manager, nicht das Composable). */
-  switchTo?(perspectiveId: string): void | Promise<void>;
+
+/** Sicht auf den Layout-Zustand (gene/packages/ui-layout). */
+interface LayoutLike {
+  state: { activeEditorTabId: string | null };
+  openEditor(tab: { id: string; title: string; icon?: string; component: unknown; props?: Record<string, unknown> }): void;
+  selectEditor?(tabId: string): void;
+  onEditorClosed?(handler: (tabId: string) => void): () => void;
 }
-interface PanelRegistryLike {
-  register(p: unknown): void;
-  unregister?(id: string): void;
+/** Sicht auf `gene.editor.front` - welcher Tab vorn liegt, und was ihn traegt. */
+interface EditorFrontLike {
+  bindTab?(tabId: string, editorId: string, filePath?: string): void;
+  releaseTab?(tabId: string): void;
+  frontTabId?(): string | null;
 }
-interface ActivityRegistryLike {
-  register(a: unknown): void;
-  unregister?(id: string): void;
+
+let tabCloseWired = false;
+let newMappingCount = 0;
+
+function layoutOf(context: ModuleContext): LayoutLike | undefined {
+  return context.services.get<{ useLayoutState?: () => LayoutLike }>('ui.layout.state')?.useLayoutState?.();
+}
+
+/**
+ * Opens (or brings forward) the tab of a document and returns its context.
+ * The tab id names the document, so the same file opens the same tab.
+ */
+function openWizardTab(context: ModuleContext, tabId: string, title: string, filePath?: string): WizardContext {
+  const ctx = wizardContextFor(tabId);
+  const layout = layoutOf(context);
+  if (!layout) return ctx;
+  const front = context.services.get<EditorFrontLike>('gene.editor.front');
+  front?.bindTab?.(tabId, EDITOR_ID, filePath);
+  if (!tabCloseWired && layout.onEditorClosed) {
+    tabCloseWired = true;
+    layout.onEditorClosed((closed) => {
+      if (!closed.startsWith(WIZARD_TAB_PREFIX)) return;
+      closeWizardContext(closed);
+      front?.releaseTab?.(closed);
+    });
+  }
+  layout.openEditor({
+    id: tabId,
+    title,
+    icon: 'pi pi-share-alt',
+    component: markRaw(WizardTab),
+    props: { tabId },
+  });
+  return ctx;
+}
+
+/** A fresh, empty mapping in a tab of its own. */
+function openNewMappingTab(context: ModuleContext): WizardContext {
+  newMappingCount += 1;
+  return openWizardTab(context, `${WIZARD_TAB_PREFIX}neu-${newMappingCount}`, `Neues Mapping ${newMappingCount}`);
+}
+
+/** The context of the wizard tab in front, if a wizard tab is in front. */
+function frontContext(context: ModuleContext): WizardContext | undefined {
+  const front = context.services.get<EditorFrontLike>('gene.editor.front');
+  const tabId = front?.frontTabId?.() ?? layoutOf(context)?.state.activeEditorTabId ?? null;
+  return tabId && tabId.startsWith(WIZARD_TAB_PREFIX) ? wizardContextFor(tabId) : undefined;
 }
 
 export async function activate(context: ModuleContext): Promise<void> {
@@ -113,66 +164,23 @@ export async function activate(context: ModuleContext): Promise<void> {
   await setupPackages();
   registerWizardWidgets();
 
-  // 2. Perspective + Panel + Activity registrieren
-  const perspectives = context.services.get<PerspectiveManagerLike>('ui.registry.perspectives');
-  perspectives?.registry.register({
-    id: PERSPECTIVE_ID,
-    name: 'SensiNact Mapping',
-    icon: 'pi pi-share-alt',
-    requiresWorkspace: false,
-    order: 85,
-    defaultLayout: {
-      left: [],
-      center: [PANEL_ID],
-      right: [],
-      bottom: [],
-    },
-    defaultVisibility: { left: false, right: false, bottom: false },
-  });
+  // 2. No perspective, no panel of its own: a mapping is a tab (see openWizardTab).
+  //    The menu keeps the old perspective id as its key - the view gene picks
+  //    for a mapping names it as the perspective it supersedes.
 
-  const panels = context.services.get<PanelRegistryLike>('ui.registry.panels');
-  panels?.register({
-    id: PANEL_ID,
-    title: 'SensiNact Mapping-Assistent',
-    icon: 'pi pi-share-alt',
-    component: markRaw(WizardShell),
-    perspectives: [PERSPECTIVE_ID],
-    defaultLocation: 'center',
-    defaultOrder: 0,
-  });
-
-  const activities = context.services.get<ActivityRegistryLike>('ui.registry.activities');
-  activities?.register({
-    id: 'sensinact-mapping-wizard',
-    icon: 'pi pi-share-alt',
-    label: 'SensiNact Mapping',
-    tooltip: 'SensiNact-Mapping aus Sensormodell erzeugen',
-    panelId: PANEL_ID,
-    perspectiveId: PERSPECTIVE_ID,
-    order: 30,
-    perspectives: [PERSPECTIVE_ID],
-  });
-
-  // 3. Opener-Service (Perspective-Wechsel).
-  //    Wichtig: Der Wechsel muss über den Manager aus `ui.registry.perspectives`
-  //    laufen. `ui.perspectives.usePerspective()` liefert eine eigene
-  //    Composable-Instanz, deren switchTo die aktive Oberfläche nicht ändert.
+  // 3. Opener-Service.
   //    With a file and its content - the explorer's "Open with", or the view
   //    gene picks for a mapping by its nsURI - the mapping is opened as well;
   //    without, the wizard just comes to the front.
   context.services.register(
     'ui.sensinact-wizard.open',
     (file?: { name: string; path?: string }, content?: string) => {
-      const manager = context.services.get<PerspectiveManagerLike>('ui.registry.perspectives');
-      if (manager?.switchTo) {
-        void manager.switchTo(PERSPECTIVE_ID);
+      if (file && content !== undefined) {
+        const ctx = openWizardTab(context, `${WIZARD_TAB_PREFIX}${file.path ?? file.name}`, file.name, file.path);
+        void openWorkspaceMapping(ctx, file.name, content);
       } else {
-        context.services
-          .get<{ usePerspective?: () => { switchTo(id: string): void } }>('ui.perspectives')
-          ?.usePerspective?.()
-          .switchTo(PERSPECTIVE_ID);
+        openNewMappingTab(context);
       }
-      if (file && content !== undefined) void openWorkspaceMapping(file.name, content);
     },
   );
 
@@ -191,7 +199,7 @@ export async function activate(context: ModuleContext): Promise<void> {
   //    (T22/#193 — Contribution-Point gene.atlas.objectActions).
   registerAtlasObjectAction(context);
 
-  context.log.info('[sensinact-wizard] Perspective, Panel und Activity registriert');
+  context.log.info('[sensinact-wizard] Oeffner, Menue und Aktionen registriert');
 }
 
 /**
@@ -233,23 +241,24 @@ function createFileAction(context: ModuleContext) {
         );
         return;
       }
-      context.services.get<() => void>('ui.sensinact-wizard.open')?.();
-      await openWorkspaceMapping(entry.name, content);
+      const ctx = openWizardTab(context, `${WIZARD_TAB_PREFIX}${entry.path}`, entry.name, entry.path);
+      await openWorkspaceMapping(ctx, entry.name, content);
     },
   };
 }
 
 /** A mapping from a workspace file: missing sensor models come from the host or the Atlas. */
-async function openWorkspaceMapping(name: string, content: string): Promise<void> {
+async function openWorkspaceMapping(ctx: WizardContext, name: string, content: string): Promise<void> {
   try {
     await openMappingContent({
+      context: ctx,
       content,
       // Fehlende Sensormodelle notfalls aus dem verbundenen Atlas nachladen.
       source: sharedAtlasSource.value,
       document: { source: 'file', name },
     });
   } catch (error) {
-    showStatus((error as Error).message, 'error');
+    ctx.showStatus((error as Error).message, 'error');
   }
 }
 
@@ -282,16 +291,14 @@ function registerMenu(context: ModuleContext): void {
   const menu = context.services.get<MenuRegistryLike>('gene.menu.registry');
   if (!menu) return;
 
+  // Every action means the tab in front; "new" and "open" start a tab when none is
   menu.registerMenu(PERSPECTIVE_ID, [
     {
       id: 'sensinact.new',
       icon: 'pi pi-file',
       label: 'Neues Mapping',
       action: () => {
-        if (wizardSetup.value && !window.confirm('Aktuelles Mapping verwerfen und neu beginnen?')) {
-          return;
-        }
-        startNewMapping();
+        openNewMappingTab(context);
       },
     },
     {
@@ -299,7 +306,8 @@ function registerMenu(context: ModuleContext): void {
       icon: 'pi pi-folder-open',
       label: 'Mapping öffnen',
       action: () => {
-        openDialogOpen.value = true;
+        const ctx = frontContext(context) ?? openNewMappingTab(context);
+        ctx.openDialogOpen.value = true;
       },
     },
     { id: 'sensinact.sep1', separator: true, icon: '', label: '', action: () => {} },
@@ -307,17 +315,22 @@ function registerMenu(context: ModuleContext): void {
       id: 'sensinact.save',
       icon: 'pi pi-save',
       label: 'Speichern',
-      disabled: () => !canSaveToWorkspace(),
+      disabled: () => {
+        const ctx = frontContext(context);
+        return !ctx || !canSaveToWorkspace(ctx);
+      },
       action: async () => {
+        const ctx = frontContext(context);
+        if (!ctx) return;
         try {
-          const written = await saveToWorkspace(buildArtifacts().files);
-          showStatus(
+          const written = await saveToWorkspace(buildArtifacts(ctx).files);
+          ctx.showStatus(
             written.length === 1
               ? `„${written[0]}" im Workspace gespeichert.`
               : `${written.length} Dateien im Workspace gespeichert.`,
           );
         } catch (error) {
-          showStatus((error as Error).message, 'error');
+          ctx.showStatus((error as Error).message, 'error');
         }
       },
     },
@@ -325,9 +338,13 @@ function registerMenu(context: ModuleContext): void {
       id: 'sensinact.publish',
       icon: 'pi pi-cloud-upload',
       label: 'In den Modelatlas',
-      disabled: () => !canPublish(),
+      disabled: () => {
+        const ctx = frontContext(context);
+        return !ctx || !canPublish(ctx);
+      },
       action: () => {
-        uploadDialogOpen.value = true;
+        const ctx = frontContext(context);
+        if (ctx) ctx.uploadDialogOpen.value = true;
       },
     },
   ]);
@@ -362,8 +379,12 @@ function createObjectAction(context: ModuleContext) {
           : undefined;
       if (source) sharedAtlasSource.value = source;
 
-      context.services.get<() => void>('ui.sensinact-wizard.open')?.();
+      const objectId = nodeData.objectId ?? detail.objectId ?? 'mapping';
+      const registry = nodeData.registryName ?? detail.registry ?? '';
+      const title = detail.objectName || detail.objectId || 'Mapping';
+      const ctx = openWizardTab(context, `${WIZARD_TAB_PREFIX}atlas/${registry}/${objectId}`, title);
       await openMappingContent({
+        context: ctx,
         content,
         source,
         document: {
@@ -408,12 +429,6 @@ export async function deactivate(context: ModuleContext): Promise<void> {
   context.services
     .get<AtlasObjectActionsLike>('gene.atlas.objectActions')
     ?.unregister(OBJECT_ACTION_ID);
-  context.services.get<PanelRegistryLike>('ui.registry.panels')?.unregister?.(PANEL_ID);
-  context.services
-    .get<ActivityRegistryLike>('ui.registry.activities')
-    ?.unregister?.('sensinact-mapping-wizard');
-  context.services
-    .get<PerspectiveManagerLike>('ui.registry.perspectives')
-    ?.registry.unregister?.(PERSPECTIVE_ID);
+  context.services.unregister('ui.sensinact-wizard.open');
   context.log.info('[sensinact-wizard] deaktiviert');
 }

@@ -145,15 +145,10 @@
 import { computed, ref } from 'vue';
 import { buildArtifacts, canPublish, downloadFile } from './artifacts';
 import type { ArtifactResult } from './artifacts';
-import {
-  allSetups,
-  editing,
-  freezeCurrentSetup,
-  mappingDocument,
-  providerName,
-  setup,
-  uploadDialogOpen,
-} from './context';
+import { useWizardContext } from './context';
+
+const ctx = useWizardContext();
+const { allSetups, editing, freezeCurrentSetup, mappingDocument, providerName, setup, uploadDialogOpen } = ctx;
 
 const emit = defineEmits<{ (e: 'add-type'): void }>();
 
@@ -187,7 +182,7 @@ function addAnotherType(): void {
 // konsistent einordnet (vue/no-side-effects-in-computed-properties).
 const berechnet = computed<{ wert: ArtifactResult | undefined; fehler: string }>(() => {
   try {
-    return { wert: buildArtifacts(), fehler: '' };
+    return { wert: buildArtifacts(ctx), fehler: '' };
   } catch (e) {
     return { wert: undefined, fehler: e instanceof Error ? e.message : String(e) };
   }
@@ -195,7 +190,7 @@ const berechnet = computed<{ wert: ArtifactResult | undefined; fehler: string }>
 const result = computed<ArtifactResult | undefined>(() => berechnet.value.wert);
 const error = computed<string>(() => berechnet.value.fehler);
 
-const publishable = computed(() => canPublish());
+const publishable = computed(() => canPublish(ctx));
 
 /** Speichern/Veröffentlichen liegen in der Menü-Toolbar (T24/#201). */
 function openUpload(): void {

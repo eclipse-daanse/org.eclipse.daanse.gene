@@ -11,7 +11,8 @@ import {
   slug,
 } from '../transform/toProviderMapping';
 import type { ProfileRef } from '../transform/toProviderMapping';
-import { allSetups, atlasSource, editing, mappingDocument, providerName } from './context';
+import { atlasSource } from './context';
+import type { WizardContext } from './context';
 
 export interface OutputFile {
   title: string;
@@ -32,7 +33,8 @@ export interface ArtifactResult {
  * Baut alle Artefakte des aktuellen Dokuments. Wirft mit nutzerlesbarer
  * Meldung, wenn Pflichtangaben fehlen (kein Modell, kein Messwert …).
  */
-export function buildArtifacts(): ArtifactResult {
+export function buildArtifacts(ctx: WizardContext): ArtifactResult {
+  const { allSetups, editing, mappingDocument, providerName } = ctx;
   const all = allSetups();
   if (all.length === 0) {
     throw new Error('Es wurde noch kein Sensormodell geladen.');
@@ -95,9 +97,9 @@ export function buildArtifacts(): ArtifactResult {
 }
 
 /** Lässt sich überhaupt etwas erzeugen? (für die Menü-Zustände) */
-export function hasArtifacts(): boolean {
+export function hasArtifacts(ctx: WizardContext): boolean {
   try {
-    return buildArtifacts().files.length > 0;
+    return buildArtifacts(ctx).files.length > 0;
   } catch {
     return false;
   }
@@ -152,8 +154,8 @@ export function writableWorkspace(): FileSourceLike | undefined {
   return fileSystem?.sources.value.find((s) => s.type === 'local');
 }
 
-export function canSaveToWorkspace(): boolean {
-  return !!writableWorkspace() && hasArtifacts();
+export function canSaveToWorkspace(ctx: WizardContext): boolean {
+  return !!writableWorkspace() && hasArtifacts(ctx);
 }
 
 /**
@@ -186,8 +188,8 @@ export async function saveToWorkspace(files: OutputFile[]): Promise<string[]> {
 // Modelatlas
 // ---------------------------------------------------------------------------
 
-export function canPublish(): boolean {
-  return !!atlasSource.value?.canPublish && hasArtifacts();
+export function canPublish(ctx: WizardContext): boolean {
+  return !!atlasSource.value?.canPublish && hasArtifacts(ctx);
 }
 
 export interface PublishProgress {

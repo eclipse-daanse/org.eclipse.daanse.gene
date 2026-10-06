@@ -28,7 +28,10 @@ import { computed } from 'vue';
 import type { EObject, EStructuralFeature } from '@emfts/core';
 import { enumerateFeaturePaths } from '../emf/featurePaths';
 import type { ValueKind } from '../emf/featurePaths';
-import { candidateFromPath, sensorClass, touch } from '../wizard/context';
+import { useWizardContext, candidateFromPath } from '../wizard/context';
+
+const ctx = useWizardContext();
+const { sensorClass, touch } = ctx;
 import type { FeaturePath } from '../generated';
 
 const props = defineProps<{

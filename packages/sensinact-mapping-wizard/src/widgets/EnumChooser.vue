@@ -24,7 +24,10 @@
  */
 import { computed } from 'vue';
 import type { EObject, EStructuralFeature } from '@emfts/core';
-import { touch } from '../wizard/context';
+import { useWizardContext } from '../wizard/context';
+
+const ctx = useWizardContext();
+const { touch } = ctx;
 
 const props = defineProps<{
   eObject: EObject;
