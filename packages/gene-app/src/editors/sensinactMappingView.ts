@@ -2,10 +2,10 @@
  * The SensiNact mapping view, opened by the wizard that owns it.
  */
 import { component, bind, unbind, serviceId } from '@eclipse-daanse/tsm'
-import { EDITOR_ART, type EditorArt } from 'gene-contracts'
+import { EDITOR_ART, type EditorArt, type OpenableFile } from 'gene-contracts'
 
-/** What the SensiNact wizard registers to say "I can open my mapping" */
-const SENSINACT_OPEN = serviceId<() => void>('ui.sensinact-wizard.open')
+/** What the SensiNact wizard registers to say "I can open my mapping" - with the file, it opens it */
+const SENSINACT_OPEN = serviceId<(file?: OpenableFile, content?: string) => void>('ui.sensinact-wizard.open')
 
 @component({ service: [EDITOR_ART] })
 export class SensinactMappingView implements EditorArt {
@@ -16,10 +16,10 @@ export class SensinactMappingView implements EditorArt {
   readonly nsURIs = ['https://fennec.eclipse.org/event.atlas/mapping/1.0']
   readonly replacesPerspective = 'sensinact-mapping'
 
-  private opener?: () => void
+  private opener?: (file?: OpenableFile, content?: string) => void
 
   @bind(SENSINACT_OPEN, { optional: true })
-  setOpener(opener: () => void): void {
+  setOpener(opener: (file?: OpenableFile, content?: string) => void): void {
     this.opener = opener
   }
 
@@ -28,7 +28,7 @@ export class SensinactMappingView implements EditorArt {
     this.opener = undefined
   }
 
-  open(): void {
-    this.opener?.()
+  open(file: OpenableFile, content: string): void {
+    this.opener?.(file, content)
   }
 }

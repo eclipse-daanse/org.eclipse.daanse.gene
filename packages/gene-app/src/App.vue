@@ -13,7 +13,7 @@ import type { Resource } from 'tsm:emfts'
 import { Dialog, InputText, Dropdown, Button, ProgressSpinner } from 'tsm:primevue'
 import type { File, Repository } from 'storage-core'
 import { getGlobalEditorConfig } from '@/services/useEditorConfig'
-import { createMetamodelResolver } from './services/metamodelResolver'
+import { createMetamodelResolver, nsUrisDeclaredIn } from './services/metamodelResolver'
 import { ProblemsPanel, useSharedProblemsService } from 'ui-problems-panel'
 import { SearchDialog, setViewsService } from 'ui-search'
 import type { CommandRegistryImpl } from 'ui-actions'
@@ -900,6 +900,7 @@ async function loadInstancesFromEditorConfig(workspaceEntry: any) {
 
         // Where the loader may fetch missing metamodels from
         const resolution = await prepareMetamodelResolution(fileEntry, location)
+        await resolveDeclaredMetamodels(content, fileEntry)
 
         /*
          * Auch eine Datei, die der Workspace selbst mitbringt, ist eine offene
@@ -1743,6 +1744,8 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
 
   // Where the loader may fetch missing metamodels from
   const resolution = await prepareMetamodelResolution(entry, entry.path)
+  // What the file declares and nobody registered yet: the workspace's .ecore files come first
+  await resolveDeclaredMetamodels(content, entry)
 
   /*
    * Jede Datei bekommt ihren eigenen Tab mit eigenem Dokument, und die Lader
@@ -1926,6 +1929,26 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
 }
 
 // Handle adding C-OCL constraints (.c-ocl file) to the workspace
+/**
+ * Lets the metamodel resolver supply what an instance file declares and the
+ * registry lacks - a .ecore lying in the workspace without being listed as a
+ * model source, say. The loader itself only knows the registry and the Atlas
+ * converter; eventatlas.xmi next to its deployment.ecore failed on that.
+ */
+async function resolveDeclaredMetamodels(content: string, entry: unknown): Promise<void> {
+  const resolver = tsm.getService<any>('gene.metamodel.resolver')
+  const nsURIs = nsUrisDeclaredIn(content)
+  if (!resolver || nsURIs.length === 0) return
+  try {
+    const result = await resolver.resolve(nsURIs, entry)
+    if (result.missing.length > 0) {
+      console.log('[App] Metamodelle nicht auffindbar:', result.missing.join(', '), '- durchsucht:', result.searched.join(' | ') || '(nichts)')
+    }
+  } catch (e) {
+    console.warn('[App] Metamodell-Aufloesung schlug fehl:', e)
+  }
+}
+
 /** The file's text as a tab in the XML editor - one tab per file. */
 async function handleXmlOpen(entry: any, content: string): Promise<void> {
   const filePath: string = entry.path

@@ -157,17 +157,24 @@ export async function activate(context: ModuleContext): Promise<void> {
   //    Wichtig: Der Wechsel muss über den Manager aus `ui.registry.perspectives`
   //    laufen. `ui.perspectives.usePerspective()` liefert eine eigene
   //    Composable-Instanz, deren switchTo die aktive Oberfläche nicht ändert.
-  context.services.register('ui.sensinact-wizard.open', () => {
-    const manager = context.services.get<PerspectiveManagerLike>('ui.registry.perspectives');
-    if (manager?.switchTo) {
-      void manager.switchTo(PERSPECTIVE_ID);
-      return;
-    }
-    context.services
-      .get<{ usePerspective?: () => { switchTo(id: string): void } }>('ui.perspectives')
-      ?.usePerspective?.()
-      .switchTo(PERSPECTIVE_ID);
-  });
+  //    With a file and its content - the explorer's "Open with", or the view
+  //    gene picks for a mapping by its nsURI - the mapping is opened as well;
+  //    without, the wizard just comes to the front.
+  context.services.register(
+    'ui.sensinact-wizard.open',
+    (file?: { name: string; path?: string }, content?: string) => {
+      const manager = context.services.get<PerspectiveManagerLike>('ui.registry.perspectives');
+      if (manager?.switchTo) {
+        void manager.switchTo(PERSPECTIVE_ID);
+      } else {
+        context.services
+          .get<{ usePerspective?: () => { switchTo(id: string): void } }>('ui.perspectives')
+          ?.usePerspective?.()
+          .switchTo(PERSPECTIVE_ID);
+      }
+      if (file && content !== undefined) void openWorkspaceMapping(file.name, content);
+    },
+  );
 
   // 4. Laufzeit-Dienste des Hosts übernehmen: Atlas-Verbindungen (für Modell-
   //    und Mapping-Dialoge) und der Workspace (für „Speichern").
@@ -227,18 +234,23 @@ function createFileAction(context: ModuleContext) {
         return;
       }
       context.services.get<() => void>('ui.sensinact-wizard.open')?.();
-      try {
-        await openMappingContent({
-          content,
-          // Fehlende Sensormodelle notfalls aus dem verbundenen Atlas nachladen.
-          source: sharedAtlasSource.value,
-          document: { source: 'file', name: entry.name },
-        });
-      } catch (error) {
-        showStatus((error as Error).message, 'error');
-      }
+      await openWorkspaceMapping(entry.name, content);
     },
   };
+}
+
+/** A mapping from a workspace file: missing sensor models come from the host or the Atlas. */
+async function openWorkspaceMapping(name: string, content: string): Promise<void> {
+  try {
+    await openMappingContent({
+      content,
+      // Fehlende Sensormodelle notfalls aus dem verbundenen Atlas nachladen.
+      source: sharedAtlasSource.value,
+      document: { source: 'file', name },
+    });
+  } catch (error) {
+    showStatus((error as Error).message, 'error');
+  }
 }
 
 /** Wie beim Atlas-Browser: Der File Explorer kann später aktiviert werden. */
