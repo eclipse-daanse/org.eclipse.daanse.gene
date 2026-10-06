@@ -117,16 +117,10 @@ import { loadWizardUiModels } from './uiModels';
 import type { WizardUiModels } from './uiModels';
 import OpenMappingDialog from './dialogs/OpenMappingDialog.vue';
 import UploadDialog from './dialogs/UploadDialog.vue';
-import {
-  mappingDocument,
-  openDialogOpen,
-  restoreWarnings,
-  sensorPackages,
-  setup,
-  statusMessage,
-  uploadDialogOpen,
-  version,
-} from './context';
+import { useWizardContext } from './context';
+
+const ctx = useWizardContext();
+const { mappingDocument, openDialogOpen, restoreWarnings, sensorPackages, setup, statusMessage, uploadDialogOpen, version } = ctx;
 import type { EPackage } from '@emfts/core';
 import { FriendlyNameSource, NameSource, TimestampSource } from '../generated';
 import type { FeaturePath } from '../generated';

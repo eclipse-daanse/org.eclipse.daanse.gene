@@ -14,8 +14,7 @@ import {
   restoreSetupFromMappingXmi,
   rewriteEcoreFileHrefs,
 } from '../transform/fromProviderMapping';
-import { applyOpenedMapping } from './context';
-import type { MappingDocument } from './context';
+import type { MappingDocument, WizardContext } from './context';
 import { getMetamodelResolver } from './metamodelResolver';
 
 export interface OpenResult {
@@ -25,6 +24,8 @@ export interface OpenResult {
 }
 
 export interface OpenContentOptions {
+  /** The tab the mapping goes into */
+  context: WizardContext;
   /** Das Mapping-XMI. */
   content: string;
   /** Woher es kommt — steuert später das Speichern. */
@@ -155,13 +156,14 @@ export async function openMappingContent(options: OpenContentOptions): Promise<O
   // Bewusst ohne die Kandidaten-Packages der Suche: Klassen-Kandidaten liefert
   // nur das Modell der Sensorklasse — die übrigen sind registriert und damit
   // für Pfade/Vererbung verfügbar (wie bei der Schema-Auswahl).
-  applyOpenedMapping({ setup: restored.setup, warnings, profile: restored.profile }, document);
+  options.context.applyOpenedMapping({ setup: restored.setup, warnings, profile: restored.profile }, document);
 
   return { warnings, loadedModels };
 }
 
 /** Ein Objekt aus einer Registry-Stage des Modelatlas öffnen. */
 export async function openMappingFromAtlas(options: {
+  context: WizardContext;
   source: AtlasModelSource;
   registry: string;
   stage: string;
@@ -173,6 +175,7 @@ export async function openMappingFromAtlas(options: {
     throw new Error(`Das Objekt „${object.objectId}" konnte nicht geladen werden.`);
   }
   return openMappingContent({
+    context: options.context,
     content,
     source,
     document: {

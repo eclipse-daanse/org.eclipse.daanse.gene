@@ -68,7 +68,9 @@ import { registerEcoreFiles } from '../emf/setup';
 import { findMissingReferences } from '../atlas/cascadeLoader';
 import { analyzeMappingXmi } from '../transform/fromProviderMapping';
 import { openMappingContent } from './openMapping';
-import { atlasSource } from './context';
+import { atlasSource, useWizardContext } from './context';
+
+const ctx = useWizardContext();
 
 const emit = defineEmits<{
   (e: 'packages-loaded', packages: EPackage[], warnings: string[]): void;
@@ -198,6 +200,7 @@ async function processContents(contents: { name: string; content: string }[]): P
   }
 
   const result = await openMappingContent({
+    context: ctx,
     content: mappings[0].content,
     document: { source: 'file', name: mappings[0].name },
     packages,

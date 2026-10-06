@@ -75,7 +75,10 @@ import type { EClass, EPackage } from '@emfts/core';
 import ClassPickerDialog from './dialogs/ClassPickerDialog.vue';
 import type { ClassCandidate } from './dialogs/ClassPickerDialog.vue';
 import ModelPickerDialog from './dialogs/ModelPickerDialog.vue';
-import { editing, initSetup, restoreWarnings, sensorPackages, setup } from './context';
+import { useWizardContext } from './context';
+
+const ctx = useWizardContext();
+const { editing, initSetup, restoreWarnings, sensorPackages, setup } = ctx;
 import { suggestMeasurementPaths } from '../emf/featurePaths';
 
 const warnings = ref<string[]>(restoreWarnings.value);

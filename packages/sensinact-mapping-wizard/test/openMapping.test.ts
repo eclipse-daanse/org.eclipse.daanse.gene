@@ -22,13 +22,10 @@ import {
 } from '@emfts/core';
 import type { EPackage, XMIResource } from '@emfts/core';
 import { openMappingContent } from '../src/wizard/openMapping';
-import {
-  editing,
-  mappingDocument,
-  restoreWarnings,
-  setup as wizardSetup,
-  startNewMapping,
-} from '../src/wizard/context';
+import { wizardContextFor } from '../src/wizard/context';
+
+// Ein Tab, ein Kontext - der Test arbeitet auf einem eigenen
+const ctx = wizardContextFor('sensinact:test');
 import { MappingwizardFactory, MappingwizardPackage } from '../src/generated';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -72,7 +69,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
-  startNewMapping();
+  ctx.startNewMapping();
   EPackageRegistry.INSTANCE.set(WATERPARK_NS, waterparkPkg);
 });
 
@@ -82,21 +79,22 @@ const mappingXmi = () =>
 describe('openMappingContent', () => {
   it('öffnet ein Mapping aus einer Datei und hält die Herkunft fest', async () => {
     const result = await openMappingContent({
+      context: ctx,
       content: mappingXmi(),
       document: { source: 'file', name: 'waterpark-water-quality.xmi' },
       packages: [waterparkPkg],
     });
 
     expect(result.warnings).toEqual([]);
-    expect(mappingDocument.value).toEqual({
+    expect(ctx.mappingDocument.value).toEqual({
       source: 'file',
       name: 'waterpark-water-quality.xmi',
     });
     // Aus einer Datei geöffnet heißt: kein Atlas-Objekt zum Überschreiben.
-    expect(editing.value).toBeUndefined();
-    expect(wizardSetup.value?.sensorClass?.getName()).toBe('WaterQuality');
-    expect(wizardSetup.value?.measurements.filter((m) => m.selected)).toHaveLength(5);
-    expect(restoreWarnings.value).toEqual([]);
+    expect(ctx.editing.value).toBeUndefined();
+    expect(ctx.setup.value?.sensorClass?.getName()).toBe('WaterQuality');
+    expect(ctx.setup.value?.measurements.filter((m) => m.selected)).toHaveLength(5);
+    expect(ctx.restoreWarnings.value).toEqual([]);
   });
 
   it('meldet ein fehlendes Sensormodell verständlich', async () => {
@@ -105,6 +103,7 @@ describe('openMappingContent', () => {
     const unknown = mappingXmi().replaceAll(WATERPARK_NS, 'http://example.org/unbekannt');
     await expect(
       openMappingContent({
+        context: ctx,
         content: unknown,
         document: { source: 'file', name: 'fremd.xmi' },
       }),
@@ -115,20 +114,34 @@ describe('openMappingContent', () => {
     const profile = readFileSync(PROFIL_BEISPIEL, 'utf-8');
     await expect(
       openMappingContent({
+        context: ctx,
         content: profile,
         document: { source: 'file', name: 'battery-sensor-profile.xmi' },
       }),
     ).rejects.toThrow(/kein Sensor-Mapping/);
   });
 
+  it('zwei Tabs, zwei Kontexte - nichts wandert vom einen in den anderen', async () => {
+    const a = wizardContextFor('sensinact:a');
+    const b = wizardContextFor('sensinact:b');
+    await openMappingContent({ context: a, content: mappingXmi(), document: { source: 'file', name: 'a.xmi' } });
+    expect(a.setup.value?.sensorClass?.getName()).toBe('WaterQuality');
+    expect(b.setup.value).toBeUndefined();
+    expect(b.mappingDocument.value).toEqual({ source: 'new', name: '' });
+    b.startNewMapping();
+    expect(a.mappingDocument.value.name).toBe('a.xmi');
+    expect(a.setup.value).toBeTruthy();
+  });
+
   it('startNewMapping verwirft das geöffnete Dokument', async () => {
     await openMappingContent({
+      context: ctx,
       content: mappingXmi(),
       document: { source: 'file', name: 'waterpark-water-quality.xmi' },
       packages: [waterparkPkg],
     });
-    startNewMapping();
-    expect(mappingDocument.value).toEqual({ source: 'new', name: '' });
-    expect(wizardSetup.value).toBeUndefined();
+    ctx.startNewMapping();
+    expect(ctx.mappingDocument.value).toEqual({ source: 'new', name: '' });
+    expect(ctx.setup.value).toBeUndefined();
   });
 });

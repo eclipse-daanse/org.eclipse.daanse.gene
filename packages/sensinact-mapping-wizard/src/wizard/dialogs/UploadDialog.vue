@@ -87,7 +87,10 @@
 import { computed, ref, watch } from 'vue';
 import BaseDialog from './BaseDialog.vue';
 import AtlasConnectionSelect from '../AtlasConnectionSelect.vue';
-import { atlasSource, editing } from '../context';
+import { atlasSource, useWizardContext } from '../context';
+
+const ctx = useWizardContext();
+const { editing } = ctx;
 import { buildArtifacts, publishToAtlas } from '../artifacts';
 import type { OutputFile, PublishProgress } from '../artifacts';
 import type { AtlasRegistryInfo, AtlasStageInfo } from '../../atlas/atlasSource';
@@ -134,7 +137,7 @@ watch(
     error.value = '';
     progress.value = [];
     try {
-      const result = buildArtifacts();
+      const result = buildArtifacts(ctx);
       files.value = result.files;
       warnings.value = result.warnings;
     } catch (e) {
