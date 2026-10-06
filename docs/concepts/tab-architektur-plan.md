@@ -531,6 +531,28 @@ die Vorschau leert die Zonen. Keine Teleport-Warnungen.
   nicht mehr — der Menü-Schlüssel `sensinact-mapping` bleibt als abgelöste
   Perspektive.
 
+### Nachtrag: Datei-Kontextmenü nur mit installiertem Editor (2026-10-06)
+
+**Beobachtung:** Das Kontextmenü einer Datei bot „Edit Metamodel", „Load
+Transformation", „Open in DMN Editor" usw. fest verdrahtet an — doppelt zu
+„Öffnen mit" und auch dann, wenn das Plugin gar nicht geladen war. „Publish to
+Atlas…" prüfte einen Vue-`inject`, den nie jemand bereitstellt, und war damit
+immer ausgegraut.
+
+**Entschieden:**
+- **Jede Editor-Art hält eine Pflichtreferenz** auf das Plugin, das sie
+  ausführt (`@bind` ohne `optional`). Ohne Plugin ist die Art nicht
+  registriert; „Öffnen mit" und der Klick auf die Datei erreichen keinen
+  Editor, den es nicht gibt. Kommt das Plugin, erscheint die Art — die
+  TSM-Laufzeit zieht sie zurück und stellt sie wieder her (DS 112.5.18).
+- **Datengenerator** öffnet jetzt über `gene.datagen.loader`; die Art hatte
+  bisher kein `open`.
+- Die festen Einträge je Endung sind weg; es bleiben die Workspace-Aktionen
+  („Add … to Workspace", ohne Workspace ausgegraut) und die Server-Aktionen.
+- **„Publish to Atlas…"** erscheint für `.ecore` (Schema) und `.xmi` (Objekt)
+  nur, wenn der Atlas-Browser geladen ist (`gene.atlas.upload`); „Send to
+  Server" für Constraints nur mit `gene.atlas.browser`.
+
 ### Was dabei an Verhalten wegfällt
 
 - Die Zone links unten ist für Dateiansichten nicht mehr da. Der Navigator
