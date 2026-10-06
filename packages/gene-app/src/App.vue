@@ -1570,9 +1570,10 @@ async function handleMetamodelEdit(entry: any, content: string) {
   showMetamodelLoadError(entry, String(loadError?.message ?? loadError ?? 'Unbekannter Fehler'))
 }
 
-// Handle publishing .ecore file to Atlas from FileExplorer
+// Publish a file from the explorer: a model goes up as schema, an instance file as object
 function handleAtlasPublish(entry: any, content: string) {
-  openAtlasUploadDialog(content, entry.name)
+  const kind = /\.xmi$/i.test(entry.name ?? '') ? 'object' : 'schema'
+  openAtlasUploadDialog(content, entry.name, kind)
 }
 
 // Register metamodel preview function as TSM service (used by Atlas Browser)

@@ -75,8 +75,19 @@ const addMenuItems = [
   }
 ]
 
-// TSM DI services via Vue inject
-const _atlasUpload = inject<any>('gene.atlas.upload', null)
+/*
+ * Publishing to the Atlas needs the Atlas browser plugin: it brings the upload
+ * service and the dialog. Without it the entry is not offered at all - a
+ * disabled "Publish" for a plugin that is not installed explains nothing.
+ */
+function atlasUploadAvailable(): boolean {
+  return !!tsm?.getService?.('gene.atlas.upload') && !!tsm?.getService?.('gene.atlas.openUpload')
+}
+
+/** Server actions on constraints go through the Atlas browser's connection */
+function atlasBrowserAvailable(): boolean {
+  return !!tsm?.getService?.('gene.atlas.browser')
+}
 
 // Dialog state
 const showAddIndexedDBDialog = ref(false)
@@ -114,19 +125,9 @@ function isCoclFile(entry: FileEntry): boolean {
   return entry.extension?.toLowerCase() === '.c-ocl'
 }
 
-// Check if file is a .qvtr file (QVT-R transformation)
-function isQvtrFile(entry: FileEntry): boolean {
-  return entry.extension?.toLowerCase() === '.qvtr'
-}
-
 // Check if file is a .datagen file (Data Generator config)
 function isDatagenFile(entry: FileEntry): boolean {
   return entry.extension?.toLowerCase() === '.datagen'
-}
-
-// Check if file is a .dmn file (DMN Decision Table)
-function isDmnFile(entry: FileEntry): boolean {
-  return entry.extension?.toLowerCase() === '.dmn'
 }
 
 // Context menu items - dynamic based on clicked node type
@@ -163,12 +164,15 @@ async function oeffneMit(art: any, datei: FileEntry): Promise<void> {
 const contextMenuItems = computed(() => {
   const items: any[] = []
 
-  console.log('[FileExplorer] contextMenuItems - workspaceOpen:', getActions()?.isWorkspaceOpen?.value)
-
-  // For .ecore files, show "Add Model to Workspace" and "Edit Metamodel"
-  // For .xmi files (not .wsp), show "Add Instances to Workspace"
+  /*
+   * A file's menu: the editors that can open it come from the registry, so an
+   * editor whose plugin is not installed is simply not listed. What follows
+   * are workspace actions - loading a file into the open workspace - and
+   * server actions, each only when the service behind it is there.
+   */
   if (contextMenuNode.value?.type === 'file' || contextMenuNode.value?.type === 'workspace') {
     const entry = contextMenuNode.value.data as FileEntry
+    const workspaceOpen = !!getActions()?.isWorkspaceOpen?.value
 
     const ansichten = kandidatenFuer(entry)
     if (ansichten.length > 0) {
@@ -186,41 +190,40 @@ const contextMenuItems = computed(() => {
 
     if (isEcoreFile(entry)) {
       items.push({
-        label: 'Edit Metamodel',
-        icon: 'pi pi-sitemap',
-        disabled: !getActions()?.isWorkspaceOpen?.value,
-        command: () => handleEditMetamodel()
-      })
-      items.push({
         label: 'Add Model to Workspace',
         icon: 'pi pi-plus-circle',
-        disabled: !getActions()?.isWorkspaceOpen?.value,
+        disabled: !workspaceOpen,
         command: () => handleAddModelToWorkspace()
       })
-      items.push({
-        label: 'Publish to Atlas...',
-        icon: 'pi pi-cloud-upload',
-        disabled: !_atlasUpload,
-        command: () => handlePublishToAtlas()
-      })
-      items.push({ separator: true })
     }
     if (isXmiFile(entry) && !isWspFile(entry)) {
       items.push({
         label: 'Add Instances to Workspace',
         icon: 'pi pi-database',
-        disabled: !getActions()?.isWorkspaceOpen?.value,
+        disabled: !workspaceOpen,
         command: () => handleAddInstancesToWorkspace()
       })
-      items.push({ separator: true })
     }
     if (isCoclFile(entry)) {
       items.push({
         label: 'Add C-OCL Constraints to Workspace',
         icon: 'pi pi-check-square',
-        disabled: !getActions()?.isWorkspaceOpen?.value,
+        disabled: !workspaceOpen,
         command: () => handleAddCoclToWorkspace()
       })
+    }
+    if (items.length > 0 && !items[items.length - 1].separator) items.push({ separator: true })
+
+    // Models and instances go to the Atlas - as schema or as object
+    if ((isEcoreFile(entry) || (isXmiFile(entry) && !isWspFile(entry))) && atlasUploadAvailable()) {
+      items.push({
+        label: 'Publish to Atlas...',
+        icon: 'pi pi-cloud-upload',
+        command: () => handlePublishToAtlas()
+      })
+      items.push({ separator: true })
+    }
+    if (isCoclFile(entry) && atlasBrowserAvailable()) {
       items.push({
         label: 'Send to Server',
         icon: 'pi pi-cloud-upload',
@@ -228,34 +231,7 @@ const contextMenuItems = computed(() => {
       })
       items.push({ separator: true })
     }
-    // Von Plugins beigesteuerte Aktionen (siehe fileActions.ts)
-    for (const action of fileActionRegistry.matching(entry)) {
-      items.push({
-        label: action.label,
-        icon: action.icon || 'pi pi-external-link',
-        command: () => runFileAction(action, entry)
-      })
-    }
-    if (fileActionRegistry.matching(entry).length > 0) {
-      items.push({ separator: true })
-    }
-
-    if (isQvtrFile(entry)) {
-      items.push({
-        label: 'Load Transformation',
-        icon: 'pi pi-arrows-h',
-        disabled: !getActions()?.isWorkspaceOpen?.value,
-        command: () => handleLoadTransformation()
-      })
-      items.push({ separator: true })
-    }
     if (isDatagenFile(entry)) {
-      items.push({
-        label: 'Open in Data Generator',
-        icon: 'pi pi-bolt',
-        disabled: !getActions()?.isWorkspaceOpen?.value,
-        command: () => handleLoadDatagen()
-      })
       items.push({
         label: 'Send to Server',
         icon: 'pi pi-cloud-upload',
@@ -268,14 +244,18 @@ const contextMenuItems = computed(() => {
       })
       items.push({ separator: true })
     }
-    if (isDmnFile(entry)) {
+
+    // Actions plugins contribute (see fileActions.ts)
+    const actions = fileActionRegistry.matching(entry)
+    for (const action of actions) {
       items.push({
-        label: 'Open in DMN Editor',
-        icon: 'pi pi-table',
-        command: () => handleLoadDmn()
+        label: action.label,
+        icon: action.icon || 'pi pi-external-link',
+        command: () => runFileAction(action, entry)
       })
-      items.push({ separator: true })
     }
+    if (actions.length > 0) items.push({ separator: true })
+    if (items.length > 0 && items[items.length - 1].separator) items.pop()
   }
 
   // For directories and sources, show create options
@@ -441,7 +421,8 @@ function hasMenu(node: FileTreeNode): boolean {
   if (node.type === 'source' || node.type === 'directory') return true
   if (node.type === 'file' || node.type === 'workspace') {
     const entry = node.data as FileEntry
-    return isEcoreFile(entry) || (isXmiFile(entry) && !isWspFile(entry)) || isCoclFile(entry) || isQvtrFile(entry) || isDmnFile(entry)
+    return isEcoreFile(entry) || (isXmiFile(entry) && !isWspFile(entry)) || isCoclFile(entry) || isDatagenFile(entry)
+      || kandidatenFuer(entry).length > 0 || fileActionRegistry.matching(entry).length > 0
   }
   return false
 }
@@ -654,27 +635,6 @@ async function handleAddModelToWorkspace() {
   }
 }
 
-// Handle editing metamodel (.ecore) in Metamodeler
-async function handleEditMetamodel() {
-  if (!contextMenuNode.value || contextMenuNode.value.type !== 'file') return
-
-  const entry = contextMenuNode.value.data as FileEntry
-  if (!isEcoreFile(entry)) return
-
-  try {
-    // Read the .ecore file content
-    const content = await fileSystem.readTextFile(entry)
-
-    if (content) {
-      console.log('Opening metamodel in editor:', entry.name)
-      getActions()?.openMetamodelInEditor(entry, content)
-    }
-  } catch (e: any) {
-    console.error('Failed to read .ecore file:', e)
-  }
-}
-
-// Handle publishing .ecore to Atlas
 /** Plugin-Aktion ausführen — der Explorer liefert den Dateiinhalt. */
 async function runFileAction(action: FileAction, entry: FileEntry) {
   try {
@@ -685,11 +645,12 @@ async function runFileAction(action: FileAction, entry: FileEntry) {
   }
 }
 
+/** Publish a model or an instance file to the Atlas - the app's dialog decides schema or object */
 async function handlePublishToAtlas() {
   if (!contextMenuNode.value || contextMenuNode.value.type !== 'file') return
 
   const entry = contextMenuNode.value.data as FileEntry
-  if (!isEcoreFile(entry)) return
+  if (!isEcoreFile(entry) && !isXmiFile(entry)) return
 
   try {
     const content = await fileSystem.readTextFile(entry)
@@ -697,7 +658,7 @@ async function handlePublishToAtlas() {
       getActions()?.publishToAtlas(entry, content)
     }
   } catch (e: any) {
-    console.error('[FileExplorer] Failed to read .ecore file for Atlas publish:', e)
+    console.error('[FileExplorer] Failed to read file for Atlas publish:', e)
   }
 }
 
@@ -780,42 +741,6 @@ async function handleCoclSendToServer() {
   }
 }
 
-// Handle loading a QVT-R transformation (.qvtr) into the Transformation Editor
-async function handleLoadTransformation() {
-  if (!contextMenuNode.value || contextMenuNode.value.type !== 'file') return
-
-  const entry = contextMenuNode.value.data as FileEntry
-  if (!isQvtrFile(entry)) return
-
-  try {
-    const content = await fileSystem.readTextFile(entry)
-
-    if (content) {
-      console.log('[FileExplorer] Loading transformation:', entry.name, 'content length:', content.length)
-      getActions()?.loadTransformation(entry, content)
-    }
-  } catch (e: any) {
-    console.error('[FileExplorer] Failed to read .qvtr file:', e)
-  }
-}
-
-// Handle loading a .datagen file into the Data Generator
-async function handleLoadDatagen() {
-  if (!contextMenuNode.value || contextMenuNode.value.type !== 'file') return
-
-  const entry = contextMenuNode.value.data as FileEntry
-  if (!isDatagenFile(entry)) return
-
-  try {
-    const content = await fileSystem.readTextFile(entry)
-    if (content) {
-      getActions()?.loadDatagenFile?.(entry, content)
-    }
-  } catch (e: any) {
-    console.error('[FileExplorer] Failed to read .datagen file:', e)
-  }
-}
-
 // Send .datagen file to Atlas server
 async function handleDatagenSendToServer() {
   if (!contextMenuNode.value || contextMenuNode.value.type !== 'file') return
@@ -891,24 +816,6 @@ async function handleDatagenGenerateOnServer() {
     if (e.name !== 'AbortError') {
       console.error('[FileExplorer] Failed to generate on server:', e)
     }
-  }
-}
-
-// Handle loading a .dmn file into the DMN Editor
-async function handleLoadDmn() {
-  if (!contextMenuNode.value || contextMenuNode.value.type !== 'file') return
-
-  const entry = contextMenuNode.value.data as FileEntry
-  if (!isDmnFile(entry)) return
-
-  try {
-    const content = await fileSystem.readTextFile(entry)
-    if (content) {
-      console.log('[FileExplorer] Loading DMN:', entry.name, 'content length:', content.length)
-      getActions()?.loadDmnFile(entry, content)
-    }
-  } catch (e: any) {
-    console.error('[FileExplorer] Failed to read .dmn file:', e)
   }
 }
 

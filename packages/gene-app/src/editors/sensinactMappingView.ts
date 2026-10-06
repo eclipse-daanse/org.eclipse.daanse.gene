@@ -18,7 +18,7 @@ export class SensinactMappingView implements EditorArt {
 
   private opener?: (file?: OpenableFile, content?: string) => void
 
-  @bind(SENSINACT_OPEN, { optional: true })
+  @bind(SENSINACT_OPEN)
   setOpener(opener: (file?: OpenableFile, content?: string) => void): void {
     this.opener = opener
   }
