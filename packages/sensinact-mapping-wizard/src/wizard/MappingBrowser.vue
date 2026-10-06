@@ -92,6 +92,9 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import type { AtlasModelSource, AtlasObjectInfo, AtlasRegistryInfo } from '../atlas/atlasSource';
 import { openMappingFromAtlas } from './openMapping';
+import { useWizardContext } from './context';
+
+const ctx = useWizardContext();
 
 const props = defineProps<{ source: AtlasModelSource }>();
 const emit = defineEmits<{ (e: 'opened', warnings: string[]): void }>();
@@ -194,6 +197,7 @@ async function open(object: AtlasObjectInfo): Promise<void> {
   opening.value = object.objectId;
   try {
     const result = await openMappingFromAtlas({
+      context: ctx,
       source: props.source,
       registry: registry.value,
       stage: stage.value,

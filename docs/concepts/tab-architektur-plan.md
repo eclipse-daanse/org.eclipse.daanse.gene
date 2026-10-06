@@ -517,6 +517,20 @@ die Vorschau leert die Zonen. Keine Teleport-Warnungen.
 - Der alte `ui-xmi-viewer` (nur lesen, eigener Highlighter) bleibt unberührt
   und wird weiterhin nicht geladen.
 
+### Nachtrag: SensiNact-Assistent je Tab (2026-10-06)
+
+- Der Assistent war ein Singleton (`wizard/context.ts` als Modul-Zustand, ein
+  Mitte-Panel seiner Perspektive): ein zweites Mapping überschrieb das erste.
+  Jetzt `createWizardContext()` je Tab (`sensinact:<datei>` bzw.
+  `sensinact:atlas/<registry>/<objectId>`, `sensinact:neu-<n>`), `WizardTab`
+  stellt den Kontext per `provide`, Schritte/Widgets/Dialoge nehmen ihn mit
+  `useWizardContext()`. Geteilt bleibt nur die Atlas-Verbindung.
+- Öffner (`ui.sensinact-wizard.open(file, content)`, Explorer-Aktion,
+  Atlas-Aktion, Editor-Art) laufen über `openWizardTab`; das Menü wirkt auf
+  den vorderen Tab. Perspektive, Panel und Aktivität des Assistenten gibt es
+  nicht mehr — der Menü-Schlüssel `sensinact-mapping` bleibt als abgelöste
+  Perspektive.
+
 ### Was dabei an Verhalten wegfällt
 
 - Die Zone links unten ist für Dateiansichten nicht mehr da. Der Navigator

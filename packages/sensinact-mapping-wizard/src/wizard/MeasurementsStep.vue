@@ -103,7 +103,10 @@
 import { computed } from 'vue';
 import type { Measurement } from '../generated';
 import { StoragePreset, RetentionPreset } from '../generated';
-import { candidateFromPath, sensorClass, setup, touch, version } from './context';
+import { useWizardContext, candidateFromPath } from './context';
+
+const ctx = useWizardContext();
+const { sensorClass, setup, touch, version } = ctx;
 import { enumerateFeaturePaths } from '../emf/featurePaths';
 
 // Die Measurements sind EMF-Objekte (nicht deep-reactive). Vue benachrichtigt
