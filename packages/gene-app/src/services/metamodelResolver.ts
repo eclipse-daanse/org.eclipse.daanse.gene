@@ -55,6 +55,15 @@ function walk(entries: any[] | undefined, out: any[]): any[] {
   return out
 }
 
+/** The namespaces an XMI declares - its metamodels, Ecore's own and XMI/XSI left out */
+export function nsUrisDeclaredIn(xml: string): string[] {
+  const skip = new Set(['http://www.omg.org/XMI', 'http://www.w3.org/2001/XMLSchema-instance', 'http://www.eclipse.org/emf/2002/Ecore'])
+  const head = xml.slice(0, 20000)
+  const found = new Set<string>()
+  for (const m of head.matchAll(/xmlns:[\w.-]+="([^"]+)"/g)) if (!skip.has(m[1]!)) found.add(m[1]!)
+  return [...found]
+}
+
 export function createMetamodelResolver(deps: MetamodelResolverDeps): MetamodelResolver {
   async function fromWorkspace(wanted: Set<string>, searched: string[], resolved: string[]): Promise<void> {
     const fs = deps.fileSystem()
