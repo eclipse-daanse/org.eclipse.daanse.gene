@@ -10,7 +10,8 @@
  * into the tree, where it has no place.
  */
 
-import { computed, ref } from 'tsm:vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'tsm:vue'
+import { Menu } from 'tsm:primevue'
 import { useLayoutState } from '../composables/useLayoutState'
 import type { EditorTab } from '../types'
 
@@ -18,6 +19,51 @@ const layout = useLayoutState()
 
 const tabs = computed(() => layout.state.editorTabs)
 const activeId = computed(() => layout.state.activeEditorTabId)
+
+// ── More tabs than the strip can show ────────────────────────────────────
+/*
+ * The strip scrolls sideways and shows no scrollbar, so without help a tab
+ * beyond the edge is out of sight and out of reach: the one in front is
+ * scrolled into view whenever it changes, and a list at the right end names
+ * every open tab while the strip overflows.
+ */
+const strip = ref<HTMLElement | null>(null)
+const overflowing = ref(false)
+const allTabsMenu = ref<InstanceType<typeof Menu> | null>(null)
+let observer: ResizeObserver | null = null
+
+function measureOverflow(): void {
+  const el = strip.value
+  overflowing.value = !!el && el.scrollWidth > el.clientWidth + 1
+}
+
+function revealActive(): void {
+  strip.value?.querySelector<HTMLElement>('.editor-tab.active')?.scrollIntoView({ inline: 'nearest', block: 'nearest' })
+}
+
+watch([activeId, () => tabs.value.length], () => { void nextTick(() => { measureOverflow(); revealActive() }) }, { immediate: true })
+
+onMounted(() => {
+  if (typeof ResizeObserver !== 'undefined') {
+    observer = new ResizeObserver(() => measureOverflow())
+    if (strip.value) observer.observe(strip.value)
+  }
+  measureOverflow()
+})
+// The strip comes and goes with the second tab - follow it
+watch(strip, (el, old) => { if (old) observer?.unobserve(old); if (el) observer?.observe(el); measureOverflow() })
+onBeforeUnmount(() => observer?.disconnect())
+
+const allTabsItems = computed(() => tabs.value.map(tab => ({
+  label: tab.title,
+  icon: tab.icon,
+  class: tab.id === activeId.value ? 'is-active' : undefined,
+  command: () => layout.selectEditor(tab.id)
+})))
+
+function toggleAllTabs(event: Event): void {
+  allTabsMenu.value?.toggle(event)
+}
 
 function handleTabClick(tab: EditorTab) {
   layout.selectEditor(tab.id)
@@ -95,6 +141,7 @@ function scrollSideways(event: WheelEvent): void {
     <!-- Multiple tabs: show tab bar -->
     <div
       v-if="tabs.length > 1"
+      ref="strip"
       class="tabs-container"
       @wheel.passive="scrollSideways"
       @dragover.prevent
@@ -134,8 +181,19 @@ function scrollSideways(event: WheelEvent): void {
       </div>
     </div>
 
+    <!-- Every open tab, while the strip overflows -->
+    <button
+      v-if="tabs.length > 1 && overflowing"
+      class="tabs-overflow"
+      title="Alle Tabs"
+      @click="toggleAllTabs"
+    >
+      <i class="pi pi-chevron-down"></i>
+    </button>
+    <Menu ref="allTabsMenu" :model="allTabsItems" :popup="true" />
+
     <!-- Single tab: show header style - nothing to reorder, so not draggable -->
-    <div v-else class="editor-header">
+    <div v-if="tabs.length === 1" class="editor-header">
       <i v-if="tabs[0].icon" :class="tabs[0].icon" class="header-icon"></i>
       <span class="editor-title">{{ tabs[0].title }}</span>
       <span v-if="tabs[0].badge" class="badge">{{ tabs[0].badge }}</span>
@@ -192,6 +250,26 @@ function scrollSideways(event: WheelEvent): void {
 
 .tabs-container::-webkit-scrollbar {
   display: none;
+}
+
+.tabs-overflow {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-left: 4px;
+  border: none;
+  border-radius: var(--border-radius);
+  background: transparent;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+}
+
+.tabs-overflow:hover {
+  background: var(--surface-hover);
+  color: var(--text-color);
 }
 
 .tabs-container::-webkit-scrollbar-thumb {
