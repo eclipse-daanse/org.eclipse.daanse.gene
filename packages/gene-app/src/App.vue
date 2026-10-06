@@ -1923,7 +1923,8 @@ async function handleXmlOpen(entry: any, content: string): Promise<void> {
   oeffneAnsichtTab({
     editorId: 'xml',
     tabId: `xml:${filePath}`,
-    titel: entry.name || filePath,
+    // Next to the file's structured tab the name alone would read as a twin
+    titel: `${entry.name || filePath} (XML)`,
     icon: 'pi pi-code',
     componentsService: 'ui.xml-editor.components',
     component: 'XmlEditorTab',
