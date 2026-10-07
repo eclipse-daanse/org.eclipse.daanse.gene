@@ -24,6 +24,15 @@
       </span>
     </p>
 
+    <p class="unit-hint">
+      <i class="pi pi-info-circle" aria-hidden="true"></i>
+      <span>
+        Die Gruppe ist die <code>mid</code> des Services — sie wird unverändert
+        geschrieben. Erlaubt sind Kleinbuchstaben, Ziffern und Bindestriche, also
+        etwa <code>water-quality</code>.
+      </span>
+    </p>
+
     <div class="table-card">
       <table>
         <thead>
@@ -33,7 +42,7 @@
             <th>Anzeigename</th>
             <th>Einheit</th>
             <th>Einheit aus Feld</th>
-            <th>Gruppe</th>
+            <th>Gruppe (mid)</th>
             <th>Speichern</th>
             <th>Aufbewahren</th>
           </tr>
@@ -61,7 +70,15 @@
                 <option v-for="c in unitCandidates" :key="c.key" :value="c.key">{{ c.label }}</option>
               </select>
             </td>
-            <td class="group"><input type="text" :value="m.serviceGroup" @input="m.serviceGroup = str($event)" /></td>
+            <td class="group">
+              <input
+                type="text"
+                :value="m.serviceGroup"
+                :class="{ invalid: m.selected && !groupOk(m) }"
+                :title="m.selected && !groupOk(m) ? 'Keine gültige mid: Kleinbuchstaben, Ziffern und Bindestriche, keine Leerzeichen' : ''"
+                @input="setGroup(m, $event)"
+              />
+            </td>
             <td>
               <select :value="m.storagePreset" @change="m.storagePreset = storage($event)">
                 <option value="EVERY_CHANGE">jede Änderung</option>
@@ -104,6 +121,7 @@ import { computed } from 'vue';
 import type { Measurement } from '../generated';
 import { StoragePreset, RetentionPreset } from '../generated';
 import { useWizardContext, candidateFromPath } from './context';
+import { isValidMid } from '../transform/toProviderMapping';
 
 const ctx = useWizardContext();
 const { sensorClass, setup, touch, version } = ctx;
@@ -149,6 +167,21 @@ function setUnitPath(m: Measurement, event: Event): void {
   touch();
 }
 
+/** The group is written as the service's mid, so it has to be a valid one. */
+function groupOk(m: Measurement): boolean {
+  void version.value;
+  return isValidMid((m.serviceGroup ?? '').trim());
+}
+
+/**
+ * Measurements are EMF objects and not deep-reactive, so the marker in the row
+ * and the reason on the "Weiter" button only follow along after touch().
+ */
+function setGroup(m: Measurement, event: Event): void {
+  m.serviceGroup = str(event);
+  touch();
+}
+
 function str(event: Event): string {
   return (event.target as HTMLInputElement).value;
 }
@@ -170,6 +203,10 @@ function setAll(value: boolean): void {
 
 <style scoped>
 .step { display: flex; flex-direction: column; gap: 0.75rem; }
+.group input.invalid {
+  border-color: var(--red-500, #d32f2f);
+  outline-color: var(--red-500, #d32f2f);
+}
 .step h2 { margin: 0; font-size: 1.25rem; }
 .lead { margin: 0; color: var(--text-color-secondary, #666); max-width: 44rem; }
 

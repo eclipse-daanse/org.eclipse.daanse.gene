@@ -17,7 +17,7 @@ import {
 import type { EClass, EObject, EPackage, EStructuralFeature, XMIResource } from '@emfts/core';
 import { enumerateFeaturePaths, suggestMeasurementPaths } from '../src/emf/featurePaths';
 import { newResourceSet, registerEcoreFromString } from '../src/emf/setup';
-import { buildMappingProfileXmi, buildProviderMappingXmi, MAPPING_NS_URI, slug } from '../src/transform/toProviderMapping';
+import { buildMappingProfileXmi, buildProviderMappingXmi, isValidMid, MAPPING_NS_URI, slug } from '../src/transform/toProviderMapping';
 import {
   MappingwizardFactory,
   MappingwizardPackage,
@@ -442,5 +442,28 @@ describe('Dynamische Einheiten (unitFeature)', () => {
     const xmi = buildProviderMappingXmi(batterySetup()).mappingXmi;
     expect(xmi).toContain('unit="V"');
     expect(xmi).not.toContain('unitFeature');
+  });
+});
+
+describe('isValidMid', () => {
+  it('nimmt an, was unveraendert als mid geschrieben wird', () => {
+    for (const value of ['quality', 'water-quality', 'battery', 'ph2']) {
+      expect(isValidMid(value)).toBe(true);
+      // genau das ist der Punkt: slug() laesst es in Ruhe
+      expect(slug(value)).toBe(value);
+    }
+  });
+
+  it('lehnt ab, was beim Schreiben umgeschrieben wuerde', () => {
+    for (const value of ['Water Quality', 'Battery', 'temp_2', 'a b', ' quality', 'punkt.wert']) {
+      expect(isValidMid(value)).toBe(false);
+      expect(slug(value)).not.toBe(value);
+    }
+  });
+
+  it('lehnt Leeres und lose Bindestriche ab', () => {
+    for (const value of ['', '-', '-quality', 'quality-']) {
+      expect(isValidMid(value)).toBe(false);
+    }
   });
 });
