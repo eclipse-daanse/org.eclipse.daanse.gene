@@ -37,9 +37,8 @@
         <details key="category" value="MODEL"/>
         <details key="scope" value="GLOBAL"/>
         <details key="icon" value="pi pi-plus"/>
-        <details key="when" value="hasWorkspace"/>
       </eAnnotations>
-      <eParameters name="className" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" lowerBound="1"/>
+      <eParameters name="className" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     </eOperations>
 
     <eOperations name="setIcon">
