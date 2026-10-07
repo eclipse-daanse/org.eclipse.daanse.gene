@@ -10,7 +10,7 @@
  * - Metamodeler: shows .ecore elements as instances of Ecore.ecore
  */
 
-import { ref, computed, watch, inject, nextTick, toRaw } from 'tsm:vue'
+import { ref, computed, watch, inject, nextTick, toRaw, onBeforeUnmount } from 'tsm:vue'
 import { Tree } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
 import { ContextMenu } from 'tsm:primevue'
@@ -50,10 +50,35 @@ const ctx = props.context
   ?? createInstanceContext()
 const eventBus = tsm?.getService('gene.eventbus') as any
 
-// Listen for events from sidebar header actions and central menu
-eventBus?.on?.('show-new-instance-dialog', () => { showNewInstanceDialog.value = true })
+/*
+ * Events from the menu and the command palette. Only the tree of the tab in
+ * front is mounted, so it is the one that answers - as long as the listeners
+ * go with the tree. A tree left subscribed after its tab went to the back
+ * would answer too, and create the instance in that other document.
+ */
+// "Create Instance": with a class name it is created right away, else the dialog asks
+function onNewInstanceRequest(payload?: { className?: string }) {
+  const wanted = payload?.className
+  if (wanted) {
+    const match = availableClasses.value.find((cls: any) => cls.qualifiedName === wanted)
+      ?? availableClasses.value.find((cls: any) => cls.name === wanted)
+    if (match) {
+      createRootOf(match)
+      return
+    }
+  }
+  showNewInstanceDialog.value = true
+}
 // The header "+" opens a menu: New Instance / New Resource
-eventBus?.on?.('show-add-menu', (e: any) => { addMenu.value?.show?.(e) })
+function onAddMenuRequest(e: any) {
+  addMenu.value?.show?.(e)
+}
+eventBus?.on?.('show-new-instance-dialog', onNewInstanceRequest)
+eventBus?.on?.('show-add-menu', onAddMenuRequest)
+onBeforeUnmount(() => {
+  eventBus?.off?.('show-new-instance-dialog', onNewInstanceRequest)
+  eventBus?.off?.('show-add-menu', onAddMenuRequest)
+})
 
 
 // Helper to get name from ENamedElement - handles both native and DynamicEObject

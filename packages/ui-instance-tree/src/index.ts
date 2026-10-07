@@ -592,6 +592,21 @@ context.log.info('ViewsPanel available as component (integrated in InstanceTree)
     // Set Icon: open the (workspace) icon settings prefilled with the class of
     // the selected object. Bridges to the ui-layout dialog via the event bus
     // (same pattern as instance.importXmi -> instance:showImportDialog).
+    /*
+     * Create Instance acts on the instance tab in front. With a class name
+     * (from an action) the root is created at once; from the palette the
+     * tree's dialog asks for the class. Without an instance tab there is
+     * nothing to create into.
+     */
+    commandRegistry.registerHandler('instance.createInstance', async (args: any) => {
+      if (!frontDocument()) {
+        context.log.warn('Create Instance: no instance editor in front')
+        return
+      }
+      const eb = context.services.get<any>('gene.eventbus')
+      eb?.emit('show-new-instance-dialog', { className: args?.className as string | undefined })
+    })
+
     commandRegistry.registerHandler('instance.setIcon', async (args: any) => {
       const targetType = args?.targetType as string | undefined
       const eb = context.services.get<any>('gene.eventbus')
