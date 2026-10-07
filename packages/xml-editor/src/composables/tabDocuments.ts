@@ -21,7 +21,10 @@ export interface XmlDocument {
 const documents = new Map<string, XmlDocument>()
 
 /** Puts a tab's document in place - called by whoever opens the tab. */
-export function setTabDocument(tabId: string, document: XmlDocument): void {
+export function setTabDocument(
+  tabId: string,
+  document: Omit<XmlDocument, 'dirty'> & { dirty?: boolean }
+): void {
   documents.set(tabId, { dirty: false, ...document })
 }
 
