@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gene:AppConfig xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:gene="http://gene/config/1.0"
     name="Gene Workspace" version="1.0">
 
@@ -30,6 +31,9 @@
   <startupModules>xml-editor</startupModules>
   <startupModules>atlas-browser</startupModules>
   <startupModules>data-generator</startupModules>
+  <startupModules>icons-cwm</startupModules>
+  <startupModules>eorm-wizard</startupModules>
+  <startupModules>sensinact-mapping-wizard</startupModules>
 
   <!-- Plugin Configs -->
   <pluginConfigs xsi:type="actions:ActionsPluginConfig"
