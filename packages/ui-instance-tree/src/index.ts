@@ -54,6 +54,7 @@ export {
   getInstanceLoadingState,
   loadInstancesFromXMI,
   setPackageURIConverter,
+  getSharedResourceSet,
   getObjectSourcePath,
   setObjectSourcePath,
   setCanonicalPackageRegistry,
@@ -141,6 +142,7 @@ import {
   loadResourceStandalone,
   setInstanceFileReader,
   setPackageURIConverter,
+  getSharedResourceSet,
   getObjectSourcePath,
   setObjectSourcePath,
   getXmiId,
@@ -329,6 +331,7 @@ export async function activate(context: ModuleContext): Promise<void> {
     instanzTabGeschlossen,
     offeneInstanzTabIds,
     createInstanceContext,
+    getSharedResourceSet,
     getObjectSourcePath,
     setObjectSourcePath,
     // XMI ID functions
@@ -342,6 +345,13 @@ export async function activate(context: ModuleContext): Promise<void> {
     updateXmiIdFromAttribute,
     assignXmiIdsRecursive
   })
+
+  /*
+   * The one resource set of the application. Whoever loads models - the model
+   * browser, the metamodeler - takes this one, so a reference from an instance
+   * into a metamodel is resolved against the same resources.
+   */
+  context.services.register('gene.resourceset', getSharedResourceSet())
 
   // Register icon registries as TSM services
   context.services.register('gene.icons.classRegistry', getIconRegistryService())

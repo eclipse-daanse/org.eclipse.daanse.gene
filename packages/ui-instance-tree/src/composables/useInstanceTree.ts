@@ -36,6 +36,18 @@ export function setCanonicalPackageRegistry(registry: any) {
   }
 }
 
+/**
+ * The one resource set of the application.
+ *
+ * Instances and metamodels belong in the same one: a reference into a metamodel
+ * is resolved against the resources of *this* set, and a resource kept under
+ * its logical URI (its nsURI) is only found there. Two sets and the loader sees
+ * an empty one.
+ */
+export function getSharedResourceSet(): BasicResourceSet {
+  return getResourceSet()
+}
+
 function getResourceSet(): BasicResourceSet {
   if (!resourceSet) {
     resourceSet = _canonicalRegistry
@@ -48,10 +60,12 @@ function getResourceSet(): BasicResourceSet {
      * catch-all entry a BasicResource would be created, whose `load()` is only
      * a placeholder, and the converter would never be asked.
      */
-    resourceSet
-      .getResourceFactoryRegistry()
-      .getExtensionToFactoryMap()
-      .set(ResourceKonstanten.DEFAULT_EXTENSION, new XMIResourceFactory())
+    const factories = resourceSet.getResourceFactoryRegistry().getExtensionToFactoryMap()
+    factories.set(ResourceKonstanten.DEFAULT_EXTENSION, new XMIResourceFactory())
+    // Named as well, so an .ecore loaded here behaves like one from
+    // EResourceSetImpl — metamodels share this set (see getSharedResourceSet)
+    factories.set('ecore', new XMIResourceFactory())
+    factories.set('xmi', new XMIResourceFactory())
   }
   return resourceSet
 }

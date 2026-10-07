@@ -218,6 +218,12 @@ export default defineConfig({
       // Service contracts: names and types only, shared by every module without
       // any of them depending on another
       { find: 'gene-contracts', replacement: fileURLToPath(new URL('./packages/gene-contracts/src/index.ts', import.meta.url)) },
+      // Working against a local @emfts/core checkout: EMFTS_LOCAL=/path/to/emfts.
+      // A symlink in node_modules alone is not enough — the composer keeps
+      // resolving the npm copy, and two core instances break eClass identity.
+      ...(process.env.EMFTS_LOCAL
+        ? [{ find: /^@emfts\/core$/, replacement: path.resolve(process.env.EMFTS_LOCAL, 'dist/index.js') }]
+        : []),
     ],
     // Force a single instance of these packages. @emfts/uimodel-composer
     // depends on vue/@emfts/core/@emfts/vue-registry itself; without dedupe
