@@ -162,8 +162,10 @@ defineExpose({ open, close, visible })
 </script>
 
 <style scoped>
+/* Theme tokens only, so the palette follows light and dark mode like the panels */
 .command-palette {
-  background: var(--p-surface-0);
+  background: var(--p-content-background);
+  color: var(--p-text-color);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -172,7 +174,7 @@ defineExpose({ open, close, visible })
   display: flex;
   align-items: center;
   padding: 8px 12px;
-  border-bottom: 1px solid var(--p-surface-200);
+  border-bottom: 1px solid var(--p-content-border-color);
   gap: 8px;
 }
 
@@ -188,6 +190,7 @@ defineExpose({ open, close, visible })
   background: transparent !important;
   padding: 4px 0;
   font-size: 0.875rem;
+  color: var(--p-text-color);
 }
 
 .command-palette-list {
@@ -216,7 +219,8 @@ defineExpose({ open, close, visible })
 
 .command-palette-item:hover,
 .command-palette-item--active {
-  background: var(--p-surface-100);
+  background: var(--p-content-hover-background);
+  color: var(--p-content-hover-color, var(--p-text-color));
 }
 
 .command-palette-item-icon {
@@ -233,7 +237,7 @@ defineExpose({ open, close, visible })
 .command-palette-item-keybinding {
   font-size: 0.7rem;
   color: var(--p-text-muted-color);
-  background: var(--p-surface-200);
+  border: 1px solid var(--p-content-border-color);
   padding: 1px 6px;
   border-radius: 3px;
   font-family: monospace;
