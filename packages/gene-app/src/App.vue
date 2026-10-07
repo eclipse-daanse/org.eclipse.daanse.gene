@@ -1038,9 +1038,6 @@ const workspaceContent = ref<string | null>(null)
 // Current workspace entry (for saving)
 const currentWorkspaceEntry = ref<any | null>(null)
 
-// Pending explorer instance-add awaiting the user's load-mode choice
-const pendingInstanceAdd = ref<{ entry: any; content: string } | null>(null)
-
 // Handle perspective change from activity bar
 function handlePerspectiveChange(perspectiveId: string) {
   console.log('handlePerspectiveChange:', perspectiveId)
@@ -1723,7 +1720,7 @@ function reportMissingPackages(
   }
 }
 
-async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE' | 'MERGE' | 'REPLACE') {
+async function handleInstanceAdd(entry: any, content: string, mode: 'STANDALONE' | 'MERGE' | 'REPLACE' = 'STANDALONE') {
   console.log('[App] Adding instances to workspace:', entry.name, 'content length:', content?.length)
 
   const itc: any = instanceTreeComposables.value
@@ -1732,13 +1729,11 @@ async function handleInstanceAdd(entry: any, content: string, mode?: 'STANDALONE
     return
   }
 
-  // No mode yet → ask the user how to open (standalone incl. referenced / add / replace)
-  if (!mode) {
-    pendingInstanceAdd.value = { entry, content }
-    const eventBus = tsm.getService<any>('gene.eventbus')
-    eventBus?.emit('instance:showImportDialog', { xmiContent: content, name: entry.name })
-    return
-  }
+  /*
+   * No question how to open: every file gets a tab of its own, so "alone or
+   * together with other files in one editor" does not arise. Merging into the
+   * document in front is still there for whoever asks for it explicitly.
+   */
 
   // Clear previous errors for this file
   problemsService.clearIssuesForFile(entry.path)
@@ -2451,14 +2446,6 @@ onMounted(() => {
   })
 
   eventBus.on('xmiImport:execute', async (data: any) => {
-    // Explorer-origin add: route the chosen mode back to the full add flow
-    // (keeps EditorConfig instanceSource + live OCL wiring)
-    if (pendingInstanceAdd.value) {
-      const p = pendingInstanceAdd.value
-      pendingInstanceAdd.value = null
-      await handleInstanceAdd(p.entry, p.content, data.mode)
-      return
-    }
     const cr = tsm.getService<any>('gene.command.registry')
     if (cr) await cr.execute('instance.importXmi', { xmiContent: data.xmiContent, mode: data.mode })
   })

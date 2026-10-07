@@ -26,7 +26,7 @@ export interface ReferenceSearchOptions {
 export interface WorkspaceActionService {
   // --- Model / Instance Loading ---
   loadModel(entry: FileEntryLike, content: string): Promise<void>
-  /** Without a mode the user is asked how to open; a view passes 'STANDALONE' */
+  /** Without a mode the file opens in a tab of its own ('STANDALONE'); 'MERGE' adds it to the tab in front */
   loadInstances(entry: FileEntryLike, content: string, mode?: 'STANDALONE' | 'MERGE' | 'REPLACE'): Promise<void>
 
   // --- File Type Handlers ---
