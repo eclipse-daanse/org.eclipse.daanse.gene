@@ -382,12 +382,18 @@ function handleShowImportDialog(data: any) {
   setTimeout(() => xmiImportDialogRef.value?.open(), 50)
 }
 
-// Poll for commandRegistry
-watchEffect(() => {
-  if (!commandRegistryRef.value) {
-    const cr = tsm.getService<any>('gene.command.registry')
-    if (cr) commandRegistryRef.value = cr
-  }
+/*
+ * The command registry and the palette come from ui-actions, which loads
+ * after the app. A watchEffect over `tsm.getService` ran once and never again -
+ * the registry is no reactive source - so the palette was never rendered and
+ * Ctrl+Shift+P opened nothing. Wait for the services instead.
+ */
+tsm.whenService<any>('gene.command.registry', (cr: any) => {
+  commandRegistryRef.value = cr
+})
+const commandPaletteComponent = shallowRef<Component | null>(null)
+tsm.whenService<any>('gene.action.components', (components: any) => {
+  commandPaletteComponent.value = components?.CommandPalette ? markRaw(components.CommandPalette) : null
 })
 
 // Register the styled metamodeler save-confirm handler as soon as the
@@ -2740,8 +2746,8 @@ onMounted(() => {
 
   <!-- Command Palette -->
   <component
-    v-if="commandRegistryRef"
-    :is="tsm.getService('gene.action.components')?.CommandPalette"
+    v-if="commandRegistryRef && commandPaletteComponent"
+    :is="commandPaletteComponent"
     ref="commandPaletteRef"
     :commandRegistry="commandRegistryRef"
     :contextProvider="getCommandContext"
