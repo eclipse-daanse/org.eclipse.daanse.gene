@@ -661,6 +661,33 @@ export function useFileSystem() {
   }
 
   /**
+   * Write a file with its content in one step - creating it or replacing it.
+   *
+   * For content that comes from elsewhere (a download from the Atlas): the
+   * caller picks folder and name, this writes, refreshes the tree and hands
+   * back the entry, so the file can be opened like any other.
+   */
+  async function writeNewTextFile(
+    sourceId: string,
+    parentPath: string,
+    fileName: string,
+    content: string
+  ): Promise<FileEntry | undefined> {
+    const source = getSource(sourceId)
+    if (!source) throw new Error('Source not found')
+    if (source.type !== 'local') throw new Error(`Cannot write files to a ${source.type} source`)
+
+    const rootHandle = source.data.handle as FileSystemDirectoryHandle
+    const dirHandle = await getDirectoryHandle(rootHandle, parentPath)
+    const fileHandle = await dirHandle.getFileHandle(fileName, { create: true })
+    const writable = await fileHandle.createWritable()
+    await writable.write(content)
+    await writable.close()
+    await refreshSource(sourceId)
+    return getFileByPath(sourceId, parentPath ? `${parentPath}/${fileName}` : fileName)
+  }
+
+  /**
    * Navigate to a directory handle by path
    */
   async function getDirectoryHandle(
@@ -917,6 +944,7 @@ export function useFileSystem() {
     writeTextFile,
     createFolder,
     createFile,
+    writeNewTextFile,
     createWorkspace,
     getFileByPath,
 
