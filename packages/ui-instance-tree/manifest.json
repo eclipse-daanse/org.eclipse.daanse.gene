@@ -4,6 +4,12 @@
   "version": "0.0.1",
   "description": "EMF instance tree editor for the Model Perspective center area",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" },
+    { "id": "primevue", "versionRange": "^4.5.0" },
+    { "id": "@emfts/core", "versionRange": "^0.3.0-next.4" },
+    { "id": "@eclipse-daanse/tsm", "versionRange": "^0.1.0-next.1" }
+  ],
   "provides": [
     {
       "id": "ui.instance-tree.components",

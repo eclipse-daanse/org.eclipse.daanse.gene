@@ -4,6 +4,9 @@
   "version": "0.0.1",
   "description": "Test plugin that uses Vue from gene-app",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" }
+  ],
   "dependencies": ["gene-app"],
   "provides": [
     {

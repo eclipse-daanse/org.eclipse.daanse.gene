@@ -4,6 +4,10 @@
   "version": "0.1.0",
   "description": "Visual model-to-model transformation mapping editor",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" },
+    { "id": "primevue", "versionRange": "^4.5.0" }
+  ],
   "dependencies": [
     "gene-app",
     "ui-layout"

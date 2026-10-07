@@ -4,6 +4,10 @@
   "version": "0.0.1",
   "description": "Local file system browser using File System Access API",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" },
+    { "id": "primevue", "versionRange": "^4.5.0" }
+  ],
   "provides": [
     {
       "id": "ui.file-explorer.components",

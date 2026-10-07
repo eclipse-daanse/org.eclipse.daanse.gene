@@ -4,6 +4,11 @@
   "version": "0.1.0",
   "description": "DMN Decision Table Editor with FEEL expression support",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" },
+    { "id": "primevue", "versionRange": "^4.5.0" },
+    { "id": "@emfts/core", "versionRange": "^0.3.0-next.4" }
+  ],
   "dependencies": [
     "gene-app",
     "ui-layout",

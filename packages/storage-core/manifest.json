@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "description": "Core storage abstractions and registry",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "@eclipse-daanse/tsm", "versionRange": "^0.1.0-next.1" }
+  ],
   "exports": {
     "./registry": {
       "type": "service",

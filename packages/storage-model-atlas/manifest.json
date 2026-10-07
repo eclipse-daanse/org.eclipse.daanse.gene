@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "description": "Storage adapter for Model Atlas server (remote EMF model management)",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "@emfts/core", "versionRange": "^0.3.0-next.4" }
+  ],
   "exports": {
     "./adapter": {
       "type": "adapter",

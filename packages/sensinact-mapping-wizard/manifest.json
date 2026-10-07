@@ -9,22 +9,10 @@
     "ui-layout"
   ],
   "sharedDependencies": [
-    {
-      "id": "vue",
-      "versionRange": "^3.5.0"
-    },
-    {
-      "id": "@emfts/core",
-      "versionRange": ">=0.1.0"
-    },
-    {
-      "id": "@emfts/vue-registry",
-      "versionRange": ">=0.0.1"
-    },
-    {
-      "id": "@emfts/uimodel-composer",
-      "versionRange": ">=0.0.1"
-    }
+    { "id": "vue", "versionRange": "^3.5.0" },
+    { "id": "@emfts/core", "versionRange": "^0.3.0-next.4" },
+    { "id": "@emfts/vue-registry", "versionRange": "^0.0.1-next.1" },
+    { "id": "@emfts/uimodel-composer", "versionRange": "^0.0.2-next.1" }
   ],
   "provides": [
     {

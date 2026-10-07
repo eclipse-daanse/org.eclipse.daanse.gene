@@ -4,6 +4,10 @@
   "version": "0.0.1",
   "description": "Properties panel for editing selected EMF instance attributes",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" },
+    { "id": "primevue", "versionRange": "^4.5.0" }
+  ],
   "provides": [
     {
       "id": "ui.properties-panel.components",
