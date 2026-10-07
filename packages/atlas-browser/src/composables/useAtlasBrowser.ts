@@ -42,6 +42,14 @@ function createAtlasBrowser() {
   // State
   const connections = ref<AtlasConnection[]>([])
   const treeNodes = ref<TreeNode[]>([])
+  /*
+   * Which rows are open and which one is selected. Belongs here, not in the
+   * tree component: switching the view unmounts it, and a tree that collapses
+   * every time takes the transitions panel down with it — it shows what the
+   * tree has loaded.
+   */
+  const expandedKeys = ref<Record<string, boolean>>({})
+  const selectionKeys = ref<Record<string, boolean>>({})
   const selectedNodeKey = ref<string | null>(null)
   const selectedDetail = shallowRef<ObjectMetadata | null>(null)
   const selectedNodeData = shallowRef<AtlasTreeNodeData | null>(null)
@@ -843,6 +851,47 @@ function createAtlasBrowser() {
   /**
    * Collect all loaded object metadata from tree nodes
    */
+  /**
+   * Makes sure a stage's objects are loaded, without anyone having to open it
+   * in the tree.
+   *
+   * The transitions panel reads what the tree holds. Until now that meant it
+   * stayed empty until the user expanded the stage — a panel that depends on
+   * where someone clicked. It asks for the stage it shows instead, and the
+   * objects land in the same place as before.
+   */
+  async function ensureStageLoaded(
+    connectionId: string,
+    registryName: string,
+    stageName: string
+  ): Promise<void> {
+    const treffer = findeStage(treeNodes.value, connectionId, registryName, stageName)
+    if (!treffer || (treffer.children && treffer.children.length > 0)) return
+    await loadStageChildren(treffer)
+  }
+
+  function findeStage(
+    nodes: TreeNode[],
+    connectionId: string,
+    registryName: string,
+    stageName: string
+  ): TreeNode | null {
+    for (const node of nodes) {
+      const data = node.data as AtlasTreeNodeData | undefined
+      if (
+        data?.type === 'stage' &&
+        data.connectionId === connectionId &&
+        data.registryName === registryName &&
+        data.stageName === stageName
+      ) {
+        return node
+      }
+      const tiefer = node.children ? findeStage(node.children, connectionId, registryName, stageName) : null
+      if (tiefer) return tiefer
+    }
+    return null
+  }
+
   function getAllLoadedMetadata(): Array<{ metadata: ObjectMetadata; nodeData: AtlasTreeNodeData }> {
     const result: Array<{ metadata: ObjectMetadata; nodeData: AtlasTreeNodeData }> = []
     function collect(nodes: TreeNode[]) {
@@ -997,6 +1046,9 @@ function createAtlasBrowser() {
     showValidationDialog,
     showLoginDialog,
     loginRequest,
+    expandedKeys,
+    selectionKeys,
+    ensureStageLoaded,
     requestCredential,
     resolveCredential,
     requestValidationChoice,
