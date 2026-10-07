@@ -4,6 +4,12 @@
   "version": "0.1.0",
   "description": "Browse and import models from Model Atlas servers",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" },
+    { "id": "primevue", "versionRange": "^4.5.0" },
+    { "id": "@emfts/core", "versionRange": "^0.3.0-next.4" },
+    { "id": "@eclipse-daanse/tsm", "versionRange": "^0.1.0-next.1" }
+  ],
   "dependencies": [
     "gene-app",
     "ui-layout",

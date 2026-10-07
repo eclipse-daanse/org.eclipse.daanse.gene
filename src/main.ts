@@ -8,7 +8,8 @@
 import { getTsmPluginSystem, type TsmPluginSystem } from './tsm'
 import { repositories as defaultRepositories, tsmConfig, startupModules as defaultStartupModules } from './tsm/repositories.config'
 import { loadAppConfig, type AppConfigData } from './services/appConfigLoader'
-import { initTsmRuntime, injectable, singleton, inject as tsmInject } from '@eclipse-daanse/tsm'
+import * as tsmLibrary from '@eclipse-daanse/tsm'
+import { initTsmRuntime } from '@eclipse-daanse/tsm'
 import type { ModuleContext } from '@eclipse-daanse/tsm'
 
 // Import shared libraries for TSM registration
@@ -26,43 +27,12 @@ import Tooltip from 'primevue/tooltip'
 import Aura from '@primevue/themes/aura'
 import 'primeicons/primeicons.css'
 
-// Import PrimeVue components
-import Tree from 'primevue/tree'
-import Button from 'primevue/button'
-import Dialog from 'primevue/dialog'
-import ContextMenu from 'primevue/contextmenu'
-import Dropdown from 'primevue/dropdown'
-import InputText from 'primevue/inputtext'
-import Textarea from 'primevue/textarea'
-import Checkbox from 'primevue/checkbox'
-import RadioButton from 'primevue/radiobutton'
-import InputNumber from 'primevue/inputnumber'
-import Calendar from 'primevue/calendar'
-import DataTable from 'primevue/datatable'
-import Column from 'primevue/column'
-import Menu from 'primevue/menu'
-import Breadcrumb from 'primevue/breadcrumb'
-import Card from 'primevue/card'
-import Fieldset from 'primevue/fieldset'
-import Message from 'primevue/message'
-import Tag from 'primevue/tag'
-import Splitter from 'primevue/splitter'
-import SplitterPanel from 'primevue/splitterpanel'
-import SelectButton from 'primevue/selectbutton'
-import Tabs from 'primevue/tabs'
-import TabList from 'primevue/tablist'
-import Tab from 'primevue/tab'
-import TabPanels from 'primevue/tabpanels'
-import TabPanel from 'primevue/tabpanel'
-import Select from 'primevue/select'
-import Panel from 'primevue/panel'
-import ToggleSwitch from 'primevue/toggleswitch'
-import Toolbar from 'primevue/toolbar'
-import IconField from 'primevue/iconfield'
-import InputIcon from 'primevue/inputicon'
-import ProgressBar from 'primevue/progressbar'
-import ProgressSpinner from 'primevue/progressspinner'
-import Editor from 'primevue/editor'
+// The whole PrimeVue, not a selection: a component missing from a hand-kept
+// list (DatePicker, for the DMN editor) only shows in the release build
+import * as PrimeVueLibrary from 'primevue'
+
+/** Versions of the shared libraries, set at build time by vite.config.ts */
+declare const __SHARED_LIBRARY_VERSIONS__: Record<string, string>
 
 // TSM instance (global for app access)
 let tsm: TsmPluginSystem
@@ -78,24 +48,36 @@ async function bootstrap(): Promise<void> {
     const tsmRuntime = initTsmRuntime()
 
     // 2. Register shared libraries with TSM Runtime (BEFORE loading plugins!)
-    tsmRuntime.register('vue', Vue, '3.5.0')
-    tsmRuntime.register('vue-router', VueRouter, '4.5.0')
+    /*
+     * Every library whole and under the version actually installed (read at
+     * build time, see SHARED_LIBRARIES in vite.config.ts). Plugins declare in
+     * their manifest which of them they need and in which range; TSM checks
+     * that before a plugin starts, so a missing or wrong library is reported
+     * by name instead of failing later as "x is not a function".
+     *
+     * TSM in particular has to be this one instance: the decorators write
+     * metadata that the host's component runtime reads.
+     */
+    const versionOf = (library: string): string => {
+      const version = __SHARED_LIBRARY_VERSIONS__[library]
+      if (!version) throw new Error(`No version known for shared library '${library}'`)
+      return version
+    }
+    tsmRuntime.register('vue', Vue, versionOf('vue'))
+    tsmRuntime.register('vue-router', VueRouter, versionOf('vue-router'))
     tsmRuntime.register('primevue', {
-      // Config and directives
+      ...PrimeVueLibrary,
+      // Config, directive and theme are no components; plugins take them from here too
       default: PrimeVue,
-      PrimeVue, Tooltip, Aura,
-      // Components
-      Tree, Button, Dialog, ContextMenu, Dropdown, InputText, Textarea,
-      Checkbox, RadioButton, InputNumber, Calendar, DataTable, Column, Menu, Breadcrumb,
-      Card, Fieldset, Message, Tag, Splitter, SplitterPanel, Tabs, TabList,
-      Tab, TabPanels, TabPanel, Select, SelectButton, Panel, ToggleSwitch, Toolbar,
-      IconField, InputIcon, ProgressBar, ProgressSpinner, Editor
-    }, '4.3.0')
-    tsmRuntime.register('@emfts/core', emfts, '1.0.0')
-    tsmRuntime.register('@emfts/vue-registry', emftsVueRegistry, '0.1.0')
-    tsmRuntime.register('@eclipse-daanse/tsm', { injectable, singleton, inject: tsmInject }, '1.0.0')
-    tsmRuntime.register('@emfts/codec.jsonschema', emftsCodecJsonSchema, '1.0.0')
-    tsmRuntime.register('@emfts/uimodel-composer', emftsUimodelComposer, '0.0.1')
+      PrimeVue,
+      Tooltip,
+      Aura
+    }, versionOf('primevue'))
+    tsmRuntime.register('@emfts/core', emfts, versionOf('@emfts/core'))
+    tsmRuntime.register('@emfts/vue-registry', emftsVueRegistry, versionOf('@emfts/vue-registry'))
+    tsmRuntime.register('@eclipse-daanse/tsm', tsmLibrary, versionOf('@eclipse-daanse/tsm'))
+    tsmRuntime.register('@emfts/codec.jsonschema', emftsCodecJsonSchema, versionOf('@emfts/codec.jsonschema'))
+    tsmRuntime.register('@emfts/uimodel-composer', emftsUimodelComposer, versionOf('@emfts/uimodel-composer'))
     console.log('[main] Registered shared libraries: vue, vue-router, primevue, @emfts/core, @emfts/vue-registry, @eclipse-daanse/tsm, @emfts/uimodel-composer')
 
     // 3. Load AppConfig from config.xmi (fallback to hardcoded defaults)

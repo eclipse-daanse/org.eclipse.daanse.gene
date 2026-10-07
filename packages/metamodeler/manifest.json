@@ -4,6 +4,12 @@
   "version": "0.1.0",
   "description": "Visual Ecore Metamodel Editor with OCL Support",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" },
+    { "id": "primevue", "versionRange": "^4.5.0" },
+    { "id": "@emfts/core", "versionRange": "^0.3.0-next.4" },
+    { "id": "@emfts/codec.jsonschema", "versionRange": "^0.0.1-next.1" }
+  ],
   "dependencies": [
     "gene-app",
     "ui-layout",

@@ -4,6 +4,11 @@
   "version": "0.0.1",
   "description": "EMF instance editor for creating and editing model instances",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" },
+    { "id": "primevue", "versionRange": "^4.5.0" },
+    { "id": "@emfts/core", "versionRange": "^0.3.0-next.4" }
+  ],
   "exports": {
     "./components": {
       "type": "component",

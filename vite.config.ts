@@ -76,10 +76,34 @@ const geneVersion: string = (() => {
   }
 })()
 
+/*
+ * The libraries the host shares with the plugins, with the versions actually
+ * installed. The host registers them under these versions (src/main.ts) and
+ * TSM checks each plugin's `sharedDependencies` against them - so the numbers
+ * have to be the real ones, read here rather than written down by hand.
+ */
+const SHARED_LIBRARIES = [
+  'vue',
+  'vue-router',
+  'primevue',
+  '@emfts/core',
+  '@emfts/vue-registry',
+  '@emfts/codec.jsonschema',
+  '@emfts/uimodel-composer',
+  '@eclipse-daanse/tsm'
+]
+const sharedLibraryVersions: Record<string, string> = Object.fromEntries(
+  SHARED_LIBRARIES.map((name) => [
+    name,
+    JSON.parse(fs.readFileSync(path.resolve(__dirname, 'node_modules', name, 'package.json'), 'utf-8')).version
+  ])
+)
+
 // https://vite.dev/config/
 export default defineConfig({
   define: {
-    __GENE_VERSION__: JSON.stringify(geneVersion)
+    __GENE_VERSION__: JSON.stringify(geneVersion),
+    __SHARED_LIBRARY_VERSIONS__: JSON.stringify(sharedLibraryVersions)
   },
   plugins: [
     tidPlugin(),

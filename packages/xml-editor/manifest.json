@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "description": "Text editor for XMI, Ecore and XML files with syntax highlighting",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" }
+  ],
   "dependencies": [
     "gene-app",
     "ui-layout"

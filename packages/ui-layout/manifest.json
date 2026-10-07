@@ -4,6 +4,11 @@
   "version": "0.0.1",
   "description": "VS Code-like layout system with dockable panels",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" },
+    { "id": "primevue", "versionRange": "^4.5.0" },
+    { "id": "@eclipse-daanse/tsm", "versionRange": "^0.1.0-next.1" }
+  ],
   "exports": {
     "./components": {
       "type": "component",

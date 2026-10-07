@@ -3,5 +3,8 @@
   "name": "Storage Model",
   "version": "1.0.0",
   "description": "EMF-based storage model types",
-  "entry": "src/generated/storage/index.ts"
+  "entry": "src/generated/storage/index.ts",
+  "sharedDependencies": [
+    { "id": "@emfts/core", "versionRange": "^0.3.0-next.4" }
+  ]
 }

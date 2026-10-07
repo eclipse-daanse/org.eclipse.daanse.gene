@@ -4,6 +4,13 @@
   "version": "0.0.1",
   "description": "UIModel-driven property forms (renders the instance property view via @emfts/uimodel-composer)",
   "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" },
+    { "id": "primevue", "versionRange": "^4.5.0" },
+    { "id": "@emfts/core", "versionRange": "^0.3.0-next.4" },
+    { "id": "@emfts/vue-registry", "versionRange": "^0.0.1-next.1" },
+    { "id": "@emfts/uimodel-composer", "versionRange": "^0.0.2-next.1" }
+  ],
   "provides": [
     {
       "id": "ui.uimodel.forms",
