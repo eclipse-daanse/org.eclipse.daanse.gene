@@ -13,7 +13,7 @@
 import { inject, onMounted, onUnmounted, ref, shallowRef } from 'tsm:vue'
 import * as monaco from 'monaco-editor'
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
-import type { XmlDocument } from '../composables/tabDocuments'
+import { tabDocument, type XmlDocument } from '../composables/tabDocuments'
 
 // Configure Monaco's built-in editor worker (shared with the other Monaco editors)
 if (!(self as any).MonacoEnvironment) {
@@ -29,6 +29,13 @@ const props = defineProps<{
   document: XmlDocument
 }>()
 
+/*
+ * The text lives in the tab's document, not in this component (see
+ * tabDocuments.ts). Changes go there - into the stored document, not into the
+ * prop, which is only how the tab hands it over.
+ */
+const doc: XmlDocument = tabDocument(props.tabId) ?? { ...props.document }
+
 const tsm = inject<any>('tsm')
 const layout = tsm?.getService('ui.layout.state')?.useLayoutState?.()
 const eventBus = tsm?.getService('gene.eventbus')
@@ -43,7 +50,7 @@ function isDarkMode(): boolean {
 }
 
 function markDirty(dirty: boolean): void {
-  props.document.dirty = dirty
+  doc.dirty = dirty
   layout?.setEditorDirty?.(props.tabId, dirty)
 }
 
@@ -52,7 +59,7 @@ async function save(): Promise<void> {
   if (!editor) return
   const text = editor.getValue()
   const fs = tsm?.getService('gene.filesystem')
-  if (!fs?.writeTextFile || !props.document.fileEntry) {
+  if (!fs?.writeTextFile || !doc.fileEntry) {
     saveStatus.value = 'error'
     saveError.value = 'Keine Datei zum Schreiben - die Datei kam nicht aus dem Explorer.'
     return
@@ -60,15 +67,15 @@ async function save(): Promise<void> {
   saveStatus.value = 'saving'
   saveError.value = null
   try {
-    await fs.writeTextFile(props.document.fileEntry, text)
-    props.document.content = text
+    await fs.writeTextFile(doc.fileEntry, text)
+    doc.content = text
     markDirty(false)
     saveStatus.value = 'saved'
     setTimeout(() => { if (saveStatus.value === 'saved') saveStatus.value = 'idle' }, 2000)
   } catch (e: any) {
     saveStatus.value = 'error'
     saveError.value = e?.message ?? String(e)
-    console.error('[XmlEditor] Speichern fehlgeschlagen:', props.document.filePath, e)
+    console.error('[XmlEditor] Speichern fehlgeschlagen:', doc.filePath, e)
   }
 }
 
@@ -82,7 +89,7 @@ onMounted(() => {
   if (!editorContainer.value) return
 
   const editor = monaco.editor.create(editorContainer.value, {
-    value: props.document.content,
+    value: doc.content,
     language: 'xml',
     theme: isDarkMode() ? 'vs-dark' : 'vs',
     lineNumbers: 'on',
@@ -101,8 +108,8 @@ onMounted(() => {
 
   editor.onDidChangeModelContent(() => {
     const text = editor.getValue()
-    props.document.content = text
-    if (!props.document.dirty) markDirty(true)
+    doc.content = text
+    if (!doc.dirty) markDirty(true)
   })
 
   editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => { void save() })
@@ -115,7 +122,7 @@ onMounted(() => {
   themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
 
   // Reopened with unsaved text: the tab shows it as dirty again
-  if (props.document.dirty) layout?.setEditorDirty?.(props.tabId, true)
+  if (doc.dirty) layout?.setEditorDirty?.(props.tabId, true)
 })
 
 onUnmounted(() => {
