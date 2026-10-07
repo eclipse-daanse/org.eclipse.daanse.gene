@@ -553,6 +553,26 @@ immer ausgegraut.
   nur, wenn der Atlas-Browser geladen ist (`gene.atlas.upload`); „Send to
   Server" für Constraints nur mit `gene.atlas.browser`.
 
+### Nachtrag: Download aus dem Model Atlas, keine Modus-Frage mehr (2026-10-07)
+
+**Beobachtung:** Ein Objekt aus dem Atlas hieß im Menü „Add Instances to
+Workspace" und landete nur im Speicher, unter `atlas://…`. Danach kam die
+Frage, ob die Datei allein oder mit anderen XMIs in einem Editor öffnen soll.
+Mit einem Tab je Datei stellt sich diese Frage nicht mehr.
+
+**Entschieden:**
+- Im Atlas-Baum und im Detailpanel heißt es **„Download…"** (Objekte und
+  Schemas). Ein Dialog fragt **Dateiname** und **Verzeichnis** ab; angeboten
+  werden alle Ordner der lokalen Explorer-Quellen, vorbelegt mit dem Ordner der
+  Explorer-Auswahl. Gibt es die Datei schon, warnt der Dialog und überschreibt
+  erst auf ausdrücklichen Knopfdruck.
+- Danach steht die Datei im Explorer, ist dort ausgewählt und öffnet mit ihrem
+  Standard-Editor in einem eigenen Tab.
+- Für Schemas bleibt „Add Model to Workspace" zusätzlich erhalten.
+- `loadInstances` ohne Modus öffnet die Datei in ihrem eigenen Tab
+  (`STANDALONE`); die Modus-Abfrage ist entfallen. „MERGE" bleibt für Aufrufer,
+  die es ausdrücklich wollen.
+
 ### Was dabei an Verhalten wegfällt
 
 - Die Zone links unten ist für Dateiansichten nicht mehr da. Der Navigator

@@ -10,6 +10,8 @@ import { ref, computed, inject, onMounted } from 'tsm:vue'
 import { Tree, Button, Dialog, Dropdown, InputText, ContextMenu, ProgressSpinner } from 'tsm:primevue'
 import { useSharedAtlasBrowser, schemaNsUri, istWahr } from '../composables/useAtlasBrowser'
 import { useAtlasSection } from '../composables/atlasSection'
+import { useAtlasDownload } from '../composables/atlasDownload'
+import AtlasDownloadDialog from './AtlasDownloadDialog.vue'
 import type { AtlasTreeNodeData, ConnectFormData } from '../types'
 
 /** PrimeVue-compatible tree node */
@@ -338,12 +340,17 @@ function menuItemsFor(node: TreeNode): any[] {
     items.push({
       label: 'Add Model to Workspace',
       icon: 'pi pi-plus',
-      command: () => addToWorkspace(data, true)
+      command: () => addToWorkspace(data)
     })
     items.push({
       label: 'Open in Modeler',
       icon: 'pi pi-pencil',
       command: () => openInModeler(data)
+    })
+    items.push({
+      label: 'Download...',
+      icon: 'pi pi-download',
+      command: () => downloadFile(data)
     })
     if (isStageWritable(node)) {
       items.push({ separator: true })
@@ -355,9 +362,9 @@ function menuItemsFor(node: TreeNode): any[] {
     }
   } else if (data.type === 'object') {
     items.push({
-      label: 'Add Instances to Workspace',
-      icon: 'pi pi-plus',
-      command: () => addToWorkspace(data, false)
+      label: 'Download...',
+      icon: 'pi pi-download',
+      command: () => downloadFile(data)
     })
     if (isStageWritable(node)) {
       items.push({ separator: true })
@@ -405,23 +412,28 @@ function menuItemsFor(node: TreeNode): any[] {
 }
 
 // Add schema or object to workspace
-async function addToWorkspace(data: AtlasTreeNodeData, isSchema: boolean) {
+async function addToWorkspace(data: AtlasTreeNodeData) {
   const result = await browser.getContentForWorkspace(data)
   if (!result) return
 
-  const actions = getActions()
-  const entry = {
-      name: result.filename,
-      path: `atlas://${result.filename}`,
-      sourceId: 'atlas',
-      // Origin, so missing metamodels are looked for in the same scope
-      handle: result.handle
-    }
-  if (isSchema) {
-    actions?.loadModel(entry, result.content)
-  } else {
-    actions?.loadInstances(entry, result.content)
-  }
+  getActions()?.loadModel({
+    name: result.filename,
+    path: `atlas://${result.filename}`,
+    sourceId: 'atlas',
+    // Origin, so missing metamodels are looked for in the same scope
+    handle: result.handle
+  }, result.content)
+}
+
+/*
+ * Download into a folder of the explorer. The dialog asks for name and
+ * folder; the file then opens in its own tab like any file of the explorer.
+ */
+const download = useAtlasDownload()
+async function downloadFile(data: AtlasTreeNodeData) {
+  const result = await browser.getContentForWorkspace(data)
+  if (!result) return
+  download.open({ content: result.content, filename: result.filename })
 }
 
 // Check if a node's stage is writable (not final)
@@ -778,6 +790,8 @@ const isEmpty = computed(() => browser.treeNodes.value.length === 0)
         />
       </template>
     </Dialog>
+
+    <AtlasDownloadDialog />
   </div>
 </template>
 

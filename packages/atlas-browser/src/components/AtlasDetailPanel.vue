@@ -10,6 +10,7 @@ import { ref, computed, inject } from 'tsm:vue'
 import { Button, ProgressSpinner, Tag } from 'tsm:primevue'
 import { useSharedAtlasBrowser } from '../composables/useAtlasBrowser'
 import { objectActionRegistry } from '../objectActions'
+import { useAtlasDownload } from '../composables/atlasDownload'
 import type { AtlasObjectAction } from '../objectActions'
 
 // TSM for service access
@@ -112,16 +113,34 @@ async function handleAddToWorkspace() {
       // Origin, so missing metamodels are looked for in the same scope
       handle: result.handle
     }
-    if (isSchema.value) {
-      actions?.loadModel(entry, result.content)
-    } else {
-      actions?.loadInstances(entry, result.content)
-    }
+    actions?.loadModel(entry, result.content)
   } catch (e: any) {
     console.error('[AtlasDetailPanel] handleAddToWorkspace error:', e)
     actionError.value = e.message || 'Failed to add to workspace'
   } finally {
     addingToWorkspace.value = false
+  }
+}
+
+/** Download: name and folder are asked for by the dialog, the file then opens in its tab */
+const download = useAtlasDownload()
+const downloading = ref(false)
+async function handleDownload() {
+  actionError.value = null
+  const data = nodeData.value
+  if (!data) return
+  downloading.value = true
+  try {
+    const result = await browser.getContentForWorkspace(data)
+    if (!result) {
+      actionError.value = 'Failed to load content from Atlas server'
+      return
+    }
+    download.open({ content: result.content, filename: result.filename })
+  } catch (e: any) {
+    actionError.value = e.message || 'Download failed'
+  } finally {
+    downloading.value = false
   }
 }
 
@@ -236,12 +255,21 @@ async function handleOpenInModeler() {
       <!-- Actions -->
       <div class="detail-actions">
         <Button
-          :label="isSchema ? 'Add Model to Workspace' : 'Add Instances to Workspace'"
+          v-if="isSchema"
+          label="Add Model to Workspace"
           icon="pi pi-plus"
           :disabled="!getActions()?.isWorkspaceOpen?.value"
           :loading="addingToWorkspace"
           size="small"
           @click="handleAddToWorkspace"
+        />
+        <Button
+          label="Download..."
+          icon="pi pi-download"
+          :severity="isSchema ? 'secondary' : undefined"
+          :loading="downloading"
+          size="small"
+          @click="handleDownload"
         />
         <Button
           v-if="isSchema"
