@@ -1,10 +1,11 @@
 <script setup lang="ts">
 /**
- * The attributes of an ObjectRow, edited in place (PH-7, first part).
+ * The attributes of an ObjectRow, edited in place (PH-7 after CR-2).
  *
- * Set attributes show by default; "alle anzeigen" reveals the unset ones.
- * Suggested values, UI defaults and hidden attributes from an overlay
- * resource are still to come.
+ * Set attributes show by default, unset ones with a UI default too;
+ * "alle anzeigen" reveals the rest, including those a field rule hides.
+ * Text fields offer the rule's suggested values; a UI default shows as
+ * placeholder and is never written.
  */
 import { computed, inject, ref } from 'tsm:vue'
 import { fieldsOf, hiddenFieldCount, setField, type RowField } from '../composables/rowContent'
@@ -43,12 +44,18 @@ function onInput(field: RowField, event: Event): void {
   <div class="fields" :data-testid="testId" data-wire-kind="INPUT">
     <div v-if="fields.length" class="grid">
       <template v-for="f in fields" :key="f.name">
-        <label :for="`${testId}.${f.name}`" :class="{ unset: !f.isSet }">{{ f.label }}</label>
+        <label
+          :for="`${testId}.${f.name}`"
+          :class="{ unset: !f.isSet }"
+          :title="f.hidden ? 'Durch eine Feldregel ausgeblendet' : undefined"
+        >{{ f.label }}<span v-if="f.hidden" class="hidden-mark"> ◌</span></label>
         <input
           v-if="f.kind === 'boolean'"
           :id="`${testId}.${f.name}`"
           type="checkbox"
-          :checked="!!f.value"
+          :class="{ 'ui-default': !f.isSet && f.uiDefault != null }"
+          :checked="f.isSet ? !!f.value : f.uiDefault === 'true'"
+          :title="!f.isSet && f.uiDefault != null ? 'UI-Default, nicht im Modell' : undefined"
           @change="onInput(f, $event)"
         />
         <select
@@ -57,7 +64,7 @@ function onInput(field: RowField, event: Event): void {
           :value="f.value ?? ''"
           @change="onInput(f, $event)"
         >
-          <option v-if="!f.isSet" value="" disabled>–</option>
+          <option v-if="!f.isSet" value="" disabled>{{ f.uiDefault ?? '–' }}</option>
           <option v-for="o in f.options" :key="o" :value="o">{{ o }}</option>
         </select>
         <input
@@ -65,8 +72,14 @@ function onInput(field: RowField, event: Event): void {
           :id="`${testId}.${f.name}`"
           :type="f.kind === 'number' ? 'number' : 'text'"
           :value="f.value ?? ''"
+          :placeholder="f.uiDefault ?? undefined"
+          :title="!f.isSet && f.uiDefault != null ? 'UI-Default, nicht im Modell' : undefined"
+          :list="f.suggestions.length ? `${testId}.${f.name}.suggestions` : undefined"
           @change="onInput(f, $event)"
         />
+        <datalist v-if="f.suggestions.length" :id="`${testId}.${f.name}.suggestions`">
+          <option v-for="s in f.suggestions" :key="s" :value="s"></option>
+        </datalist>
       </template>
     </div>
     <button
@@ -74,7 +87,7 @@ function onInput(field: RowField, event: Event): void {
       type="button"
       class="show-all"
       @click="showAll = !showAll"
-    >{{ showAll ? 'nur gesetzte' : `alle anzeigen (+${hidden})` }}</button>
+    >{{ showAll ? 'weniger anzeigen' : `alle anzeigen (+${hidden})` }}</button>
   </div>
 </template>
 
@@ -97,6 +110,20 @@ label {
 
 label.unset {
   opacity: 0.7;
+}
+
+.hidden-mark {
+  color: var(--text-color-secondary);
+}
+
+input::placeholder,
+select:invalid {
+  font-style: italic;
+  color: var(--text-color-secondary);
+}
+
+input.ui-default {
+  opacity: 0.6;
 }
 
 input[type='text'],
