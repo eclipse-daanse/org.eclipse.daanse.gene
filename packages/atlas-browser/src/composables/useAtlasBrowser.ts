@@ -19,6 +19,9 @@ import {
 import type { ObjectMetadata, Scope, Stage, StageTransition } from 'storage-model-atlas'
 import type { AtlasConnection, AtlasTreeNodeData, ConnectFormData } from '../types'
 
+/** No sensible scope hierarchy is deeper - and cycles end here (as in the schema resolver) */
+const MAX_INHERITED_DEPTH = 10
+
 /** PrimeVue-compatible tree node */
 interface TreeNode {
   key?: string
@@ -122,23 +125,32 @@ function createAtlasBrowser() {
       // Build tree nodes from scope
       const scopeNode = buildScopeTree(id, form.scopeName, scope)
 
-      // Load parent scope if inherited
-      const parentScopeName = scope.parentScope
-      if (parentScopeName) {
+      /*
+       * The inherited scopes, the whole chain: dimcity builds on platform,
+       * platform on atlas. Each parent goes in as the first child of the scope
+       * that inherits from it. Only one level used to be loaded, so a tenant
+       * showed platform but never atlas - where the shared system schemas
+       * live, and where the resolver does look.
+       */
+      let heir = scopeNode
+      let parentScopeName = scope.parentScope
+      const visited = new Set<string>([form.scopeName])
+      for (let depth = 0; parentScopeName && depth < MAX_INHERITED_DEPTH; depth++) {
+        if (visited.has(parentScopeName)) break
+        visited.add(parentScopeName)
         try {
           const parentXml = await client.getScope(parentScopeName)
-          if (parentXml) {
-            const parentScope = parseScopeXmi(parentXml)
-            if (parentScope) {
-              const parentNode = buildScopeTree(id, parentScopeName, parentScope)
-              parentNode.label = `[inherited] ${parentScopeName}`
-              parentNode.icon = 'pi pi-link'
-              // Insert parent as first child of scope node
-              scopeNode.children = [parentNode, ...(scopeNode.children || [])]
-            }
-          }
+          const parentScope = parentXml ? parseScopeXmi(parentXml) : null
+          if (!parentScope) break
+          const parentNode = buildScopeTree(id, parentScopeName, parentScope)
+          parentNode.label = `[inherited] ${parentScopeName}`
+          parentNode.icon = 'pi pi-link'
+          heir.children = [parentNode, ...(heir.children || [])]
+          heir = parentNode
+          parentScopeName = parentScope.parentScope
         } catch (e) {
           console.warn(`[AtlasBrowser] Failed to load parent scope '${parentScopeName}':`, e)
+          break
         }
       }
 
