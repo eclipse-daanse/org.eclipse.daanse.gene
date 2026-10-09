@@ -79,7 +79,6 @@ export const startupModules = [
   'instance-builder',   // EMF instance editor components
   'ui-uimodel-forms',   // UiModel-driven property forms (uimodel-composer)
   'icons-cwm',          // CWM 1.1 class icon provider
-  'ui-cwm-views',       // CWM-specific instance views (relational tables)
   'tsm-devtools',       // Browser console DevTools
   'ui-model-view',      // Model View system (unified editor)
   'metamodeler',        // Ecore metamodel editor

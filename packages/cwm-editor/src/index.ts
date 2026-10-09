@@ -7,14 +7,14 @@
  */
 
 import type { ModuleContext } from '@eclipse-daanse/tsm'
-import { CwmEditorTab, CwmDocumentation, DocSection } from './components'
+import { CwmEditorTab, CwmDocumentation, DocSection, ColumnsTable } from './components'
 
-export { CwmEditorTab, CwmDocumentation, DocSection } from './components'
-export { sectionFor, tableView, isDescription, isTable, type DocSection as DocSectionModel, type TableView } from './composables/documentation'
+export { CwmEditorTab, CwmDocumentation, DocSection, ColumnsTable } from './components'
+export { sectionFor, tableView, isDescription, isTable, slug, objectSlug, type DocSection as DocSectionModel, type TableView } from './composables/documentation'
 
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating CWM Editor plugin...')
-  context.services.register('ui.cwm-editor.components', { CwmEditorTab, CwmDocumentation, DocSection })
+  context.services.register('ui.cwm-editor.components', { CwmEditorTab, CwmDocumentation, DocSection, ColumnsTable })
   context.log.info('CWM Editor plugin activated')
 }
 

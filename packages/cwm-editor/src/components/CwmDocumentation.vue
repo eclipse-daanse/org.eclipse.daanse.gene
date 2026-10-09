@@ -24,6 +24,11 @@ const sections = computed(() => (root.value ? flatten(root.value) : []))
 const gutter = computed(() => sections.value.reduce((m, s) => Math.max(m, s.depth), 0))
 const editable = computed(() => isDescription(selected.value))
 
+/** A column or a foreign-key target picked in a columns table: select it like in the tree */
+function onNavigate(object: any): void {
+  if (object) props.context.selectObject?.(object)
+}
+
 function onEdit(field: 'name' | 'body', value: string): void {
   if (!selected.value) return
   if (!setDescriptionField(selected.value, field, value)) return
@@ -50,6 +55,7 @@ function onEdit(field: 'name' | 'body', value: string): void {
         :gutter="gutter"
         :editable="i === 0 && editable"
         @edit="onEdit"
+        @navigate="onNavigate"
       />
     </template>
   </div>
