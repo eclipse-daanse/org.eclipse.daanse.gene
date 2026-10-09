@@ -51,6 +51,8 @@
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="properties" upperBound="-1"
         eType="#//StringToObjectMapEntry" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="diagnostics" upperBound="-1"
+        eType="#//Diagnostic" containment="true" resolveProxies="false" eKeys="#//Diagnostic/id"/>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="StringToObjectMapEntry">
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="key" lowerBound="1"
@@ -89,5 +91,51 @@
     <eLiterals name="COMPLETED" value="2" literal="COMPLETED"/>
     <eLiterals name="FAILED" value="3" literal="FAILED"/>
     <eLiterals name="CANCELLED" value="4" literal="CANCELLED"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Diagnostic">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
+        iD="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="producer" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="source" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="code" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="severity" lowerBound="1"
+        eType="#//DiagnosticSeverity"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="message" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="category" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="target" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="status" lowerBound="1"
+        eType="#//DiagnosticStatus" defaultValueLiteral="OPEN"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="createdTime" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lastChangeTime" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="version" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong" defaultValueLiteral="0"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="children" upperBound="-1"
+        eType="#//Diagnostic" containment="true" resolveProxies="false" eKeys="#//Diagnostic/id"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="history" upperBound="-1"
+        eType="#//DiagnosticChange" containment="true" resolveProxies="false"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="DiagnosticChange">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="changeTime" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="changedBy" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="oldSeverity" eType="#//DiagnosticSeverity"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="newSeverity" eType="#//DiagnosticSeverity"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="oldStatus" eType="#//DiagnosticStatus"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="newStatus" eType="#//DiagnosticStatus"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="reason" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="DiagnosticSeverity">
+    <eLiterals name="INFO"/>
+    <eLiterals name="WARNING" value="1"/>
+    <eLiterals name="ERROR" value="2"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="DiagnosticStatus">
+    <eLiterals name="OPEN"/>
+    <eLiterals name="ACKNOWLEDGED" value="1"/>
+    <eLiterals name="RESOLVED" value="2"/>
   </eClassifiers>
 </ecore:EPackage>

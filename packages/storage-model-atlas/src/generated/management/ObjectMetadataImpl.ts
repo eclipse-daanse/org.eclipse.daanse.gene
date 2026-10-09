@@ -8,6 +8,7 @@
 import { BasicEObject } from '@emfts/core';
 import type { EClass, EStructuralFeature } from '@emfts/core';
 import type { StringToObjectMapEntry } from './StringToObjectMapEntry';
+import type { Diagnostic } from './Diagnostic';
 import { ObjectStatus } from './ObjectStatus';
 import type { ObjectMetadata } from './ObjectMetadata';
 import { ManagementPackage } from './ManagementPackage';
@@ -42,6 +43,7 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
   static readonly GOVERNANCE_DOCUMENTATION_ID: number = 21;
   static readonly GENERATION_TRIGGER_FINGERPRINT: number = 22;
   static readonly PROPERTIES: number = 23;
+  static readonly DIAGNOSTICS: number = 24;
 
   // Private fields
   private _objectId: string = "";
@@ -68,6 +70,7 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
   private _governanceDocumentationId?: string;
   private _generationTriggerFingerprint?: string;
   private _properties: StringToObjectMapEntry[] = [];
+  private _diagnostics: Diagnostic[] = [];
 
   /**
    * Returns the EClass of this object
@@ -653,6 +656,30 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
     }
   }
 
+  get diagnostics(): Diagnostic[] {
+    return this._diagnostics;
+  }
+
+  set diagnostics(value: Diagnostic[]) {
+    const oldValue = this._diagnostics;
+    this._diagnostics = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.DIAGNOSTICS),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.DIAGNOSTICS,
+        merge: () => false
+      });
+    }
+  }
+
   // Reflective API
 
   /**
@@ -709,6 +736,8 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
         return this.generationTriggerFingerprint;
       case ObjectMetadataImpl.PROPERTIES:
         return this.properties;
+      case ObjectMetadataImpl.DIAGNOSTICS:
+        return this.diagnostics;
       default:
         return super.eGet(feature);
     }
@@ -816,6 +845,10 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
         this.properties = newValue as StringToObjectMapEntry[];
         super.eSet(feature, newValue);
         break;
+      case ObjectMetadataImpl.DIAGNOSTICS:
+        this.diagnostics = newValue as Diagnostic[];
+        super.eSet(feature, newValue);
+        break;
       default:
         super.eSet(feature, newValue);
     }
@@ -875,6 +908,8 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
         return this._generationTriggerFingerprint !== undefined;
       case ObjectMetadataImpl.PROPERTIES:
         return this._properties !== undefined && this._properties.length > 0;
+      case ObjectMetadataImpl.DIAGNOSTICS:
+        return this._diagnostics !== undefined && this._diagnostics.length > 0;
       default:
         return super.eIsSet(feature);
     }
@@ -957,6 +992,9 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
         return;
       case ObjectMetadataImpl.PROPERTIES:
         this._properties = [];
+        return;
+      case ObjectMetadataImpl.DIAGNOSTICS:
+        this._diagnostics = [];
         return;
       default:
         super.eUnset(feature);
