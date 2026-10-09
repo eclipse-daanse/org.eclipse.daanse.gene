@@ -4,16 +4,21 @@
  *
  * Left the gutter with one line per ancestor - the outermost for the context
  * object - and the +/- of the row's own subtree. Right of it the Row: Body
- * (fields, text, columns table) and RightRail (validation, actions).
+ * (diagram, fields, text, columns table, references) and RightRail
+ * (validation, actions).
  * Rows stand one below the other, never inside each other; only the lines
  * tell the hierarchy.
  */
 import { computed } from 'tsm:vue'
 import type { ContextRow } from '../composables/contextView'
-import { displayName, parentOf } from '../composables/contextView'
+import { displayName, parentOf, shownByTable } from '../composables/contextView'
 import { className, isTable, objectSlug, tableView } from '../composables/documentation'
-import { fieldsOf, textOf } from '../composables/rowContent'
+import { hasDiagram } from '../composables/diagrams'
 import ColumnsTable from './ColumnsTable.vue'
+import DiagramArea from './DiagramArea.vue'
+import ReferencesTable from './ReferencesTable.vue'
+import RowFields from './RowFields.vue'
+import RowTextView from './RowTextView.vue'
 
 const props = defineProps<{
   row: ContextRow
@@ -55,19 +60,15 @@ function lineTitle(owner: any, level: number): string {
   return `${className(owner)} ${displayName(owner)} · Ebene ${level} · Eltern: ${parentText}`
 }
 
-const fields = computed(() => {
-  void props.version
-  return fieldsOf(props.row.object)
-})
-
-const text = computed(() => {
-  void props.version
-  return textOf(props.row.object)
-})
-
 const table = computed(() => {
   void props.version
   return isTable(props.row.object) ? tableView(props.row.object) : null
+})
+
+/** What the row shows in its text and columns table stays out of its references */
+const shown = computed(() => {
+  void props.version
+  return isTable(props.row.object) ? shownByTable(props.row.object) : new Set<any>()
 })
 </script>
 
@@ -102,31 +103,31 @@ const table = computed(() => {
     </div>
 
     <div class="row" :data-testid="`${id}.Row`">
-      <div class="body" :data-testid="`${id}.Row.Body`">
+      <div class="main">
         <header class="row-title" @click="emit('select', row.object)">
           <span class="kind">{{ row.kind }}</span>
           <span class="name">{{ row.name }}</span>
         </header>
-
-        <dl v-if="fields.length" class="fields" :data-testid="`${id}.Row.Body.Fields`" data-wire-kind="INPUT">
-          <template v-for="f in fields" :key="f.name">
-            <dt>{{ f.label }}</dt>
-            <dd>{{ f.value }}</dd>
-          </template>
-        </dl>
-        <div v-else class="fields empty" :data-testid="`${id}.Row.Body.Fields`" data-wire-kind="INPUT"></div>
-
-        <div class="text-view" :data-testid="`${id}.Row.Body.TextView`" data-wire-kind="TEXT">
-          <p v-for="(p, i) in text" :key="i">{{ p }}</p>
+        <div class="body" :data-testid="`${id}.Row.Body`">
+          <DiagramArea
+            v-if="hasDiagram(row.object)"
+            :title="`${row.kind} ${row.name}`"
+            :test-id="`${id}.Row.Body.Diagram`"
+          />
+          <RowFields :object="row.object" :test-id="`${id}.Row.Body.Fields`" :version="version" />
+          <RowTextView :object="row.object" :test-id="`${id}.Row.Body.TextView`" :version="version" />
+          <ColumnsTable
+            v-if="table && table.columns.length > 0"
+            :table="table"
+            :test-id="`${id}.Row.Body.Columns`"
+          />
+          <ReferencesTable
+            :object="row.object"
+            :shown="shown"
+            :test-id="`${id}.Row.Body.References`"
+            :version="version"
+          />
         </div>
-
-        <ColumnsTable
-          v-if="table && table.columns.length > 0"
-          :table="table"
-          :test-id="`${id}.Row.Body.Columns`"
-          data-wire-kind="TABLE"
-          @navigate="emit('select', $event)"
-        />
       </div>
 
       <div class="right-rail" :data-testid="`${id}.Row.RightRail`">
@@ -196,7 +197,7 @@ const table = computed(() => {
   background: color-mix(in srgb, var(--primary-color) 7%, transparent);
 }
 
-.body {
+.main {
   flex: 10 1 auto;
   min-width: 0;
 }
@@ -218,33 +219,6 @@ const table = computed(() => {
 .row-title .name {
   font-weight: 600;
   color: var(--text-color);
-}
-
-.fields {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.1rem 0.75rem;
-  margin: 0.35rem 0 0;
-  font-size: 0.8rem;
-}
-
-.fields.empty {
-  display: none;
-}
-
-.fields dt {
-  color: var(--text-color-secondary);
-}
-
-.fields dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.text-view p {
-  margin: 0.35rem 0 0;
-  line-height: 1.5;
-  white-space: pre-wrap;
 }
 
 .right-rail {

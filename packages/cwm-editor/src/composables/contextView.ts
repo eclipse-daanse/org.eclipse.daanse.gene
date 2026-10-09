@@ -61,7 +61,7 @@ export function displayName(o: any): string {
 }
 
 /** Objects a table shows itself, so they get no row of their own */
-function shownByTable(table: any): Set<any> {
+export function shownByTable(table: any): Set<any> {
   const shown = new Set<any>()
   const columns = many(attr(table, 'feature')).filter(c => className(c) === 'Column')
   columns.forEach(c => shown.add(c))

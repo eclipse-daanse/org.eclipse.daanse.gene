@@ -11,10 +11,13 @@
  * tree. Selecting an object outside of it moves the context to that object's
  * container, so the selection always has its row.
  */
-import { computed, nextTick, reactive, ref, shallowRef, toRaw, watch } from 'tsm:vue'
+import { computed, nextTick, provide, reactive, ref, shallowRef, toRaw, watch } from 'tsm:vue'
 import ContextObjectRow from './ContextObjectRow.vue'
 import { contextRows, displayName, isInside, parentOf, pathTo, siblingOf, visibleRows } from '../composables/contextView'
-import { className } from '../composables/documentation'
+import { className, isDescription } from '../composables/documentation'
+import { CWM_EDITING } from '../composables/editing'
+import { allObjects, buildReferenceIndex, referenceCandidates } from '../composables/references'
+import { dataTypes } from '../composables/columnsEdit'
 
 const props = defineProps<{ context: any }>()
 
@@ -36,6 +39,28 @@ const rows = computed(() => {
 const shownRows = computed(() => visibleRows(rows.value, collapsed))
 /** Context line plus one slot per level, plus one for the deepest row's toggle */
 const gutter = computed(() => rows.value.reduce((m, r) => Math.max(m, r.depth), 0) + 2)
+
+// Indexes over the whole resource set, once per model version - not once per row
+const everything = computed(() => {
+  void version.value
+  return contextObject.value ? allObjects(contextObject.value) : []
+})
+
+provide(CWM_EDITING, {
+  change(write: () => void) {
+    write()
+    props.context.markDirty?.()
+    props.context.triggerUpdate?.()
+  },
+  select: (o: any) => select(o),
+  dataTypes: computed(() => dataTypes(everything.value)),
+  descriptionClass: computed(() => everything.value.find(isDescription)?.eClass?.() ?? null),
+  references: computed(() => {
+    void version.value
+    return contextObject.value ? buildReferenceIndex(contextObject.value) : new Map()
+  }),
+  referenceCandidates: (target: any) => (contextObject.value ? referenceCandidates(contextObject.value, target) : [])
+})
 
 const hierarchy = computed(() => (contextObject.value ? [...pathTo(contextObject.value), contextObject.value] : []))
 const up = computed(() => (contextObject.value ? parentOf(contextObject.value) : null))

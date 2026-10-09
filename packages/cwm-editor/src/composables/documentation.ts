@@ -28,6 +28,8 @@ export interface TableColumnView {
   column: any
   /** The table the foreign key points at, or null */
   foreignKeyTable: any
+  /** The column's SQL data type object, or null */
+  typeObject: any
 }
 
 export interface TableView {
@@ -153,7 +155,8 @@ export function tableView(table: any): TableView {
           .filter(Boolean)
           .join(' '),
         column,
-        foreignKeyTable: targetTable
+        foreignKeyTable: targetTable,
+        typeObject: toRaw(attr(column, 'type')) ?? null
       }
     })
   }
