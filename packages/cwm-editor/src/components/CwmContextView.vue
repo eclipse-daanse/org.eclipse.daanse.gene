@@ -11,7 +11,7 @@
  * tree. Selecting an object outside of it moves the context to that object's
  * container, so the selection always has its row.
  */
-import { computed, inject, nextTick, provide, reactive, ref, shallowReactive, shallowRef, toRaw, watch } from 'tsm:vue'
+import { computed, inject, nextTick, onBeforeUnmount, provide, reactive, ref, shallowReactive, shallowRef, toRaw, watch } from 'tsm:vue'
 import ContextObjectRow from './ContextObjectRow.vue'
 import { contextRows, displayName, isInside, parentOf, pathTo, siblingOf, visibleRows } from '../composables/contextView'
 import { className, isDescription } from '../composables/documentation'
@@ -21,6 +21,11 @@ import { dataTypes } from '../composables/columnsEdit'
 import { setCreatedHook } from '../composables/creation'
 
 const props = defineProps<{ context: any }>()
+
+const emit = defineEmits<{
+  /** The object of the topmost visible row, for the tree to mark (PH-3) */
+  'top-object': [object: any]
+}>()
 
 /** How many visited objects the flow breadcrumb keeps */
 const FLOW_LENGTH = 8
@@ -145,6 +150,39 @@ function rowObjectFor(o: any): any | null {
 
 const selectedRowObject = computed(() => (selected.value ? rowObjectFor(selected.value) : null))
 
+/* ── topmost visible row (PH-3) ─────────────────────────────────── */
+
+let frame = 0
+let lastTop: any = null
+
+/** The first row whose bottom lies below the sticky header */
+function reportTopRow(): void {
+  frame = 0
+  const root = rootEl.value
+  if (!root) return
+  const headerBottom = root.querySelector('.header')?.getBoundingClientRect().bottom ?? root.getBoundingClientRect().top
+  const els = root.querySelectorAll<HTMLElement>('.rows > [data-wire-kind="LIST"]')
+  for (let i = 0; i < els.length; i++) {
+    if (els[i]!.getBoundingClientRect().bottom > headerBottom + 1) {
+      const top = shownRows.value[i]?.object ?? null
+      if (top !== lastTop) {
+        lastTop = top
+        emit('top-object', top)
+      }
+      return
+    }
+  }
+}
+
+function onScroll(): void {
+  if (!frame) frame = requestAnimationFrame(reportTopRow)
+}
+
+onBeforeUnmount(() => { if (frame) cancelAnimationFrame(frame) })
+
+// A new context or other rows change what is on top
+watch(shownRows, () => { lastTop = null; void nextTick(reportTopRow) })
+
 watch(selected, async (o) => {
   if (!o) return
   // Flow breadcrumb: most recent last, no duplicates
@@ -165,7 +203,7 @@ watch(selected, async (o) => {
 </script>
 
 <template>
-  <div ref="rootEl" class="context-view" data-testid="cwm.Editor.ContextView">
+  <div ref="rootEl" class="context-view" data-testid="cwm.Editor.ContextView" @scroll.passive="onScroll">
     <div class="header" data-testid="cwm.Editor.ContextView.Header">
       <nav class="crumbs" data-testid="cwm.Editor.ContextView.Header.HierarchyBreadcrumb" data-wire-kind="NAV">
         <template v-for="(o, i) in hierarchy" :key="i">
