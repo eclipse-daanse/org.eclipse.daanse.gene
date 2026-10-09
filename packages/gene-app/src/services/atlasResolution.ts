@@ -68,15 +68,31 @@ export async function collectAtlasProviders(
 ): Promise<{ providers: unknown[]; searched: string[] }> {
   const { ModelAtlasClient, providersForScopeChain, describeProvider } = await import('storage-model-atlas')
   const providers: any[] = []
+  // The same scope may come twice - from the file and from the settings
+  const seen = new Set<string>()
+  const add = (baseUrl: string, found: any[]) => {
+    for (const p of found) {
+      const key = `${baseUrl}|${describeProvider(p)}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      providers.push(p)
+    }
+  }
 
   // 1. Implicit: the instance's own scope and its inherited parents
   const handle = atlasHandle(entry)
   if (handle) {
     const client = new ModelAtlasClient({ baseUrl: handle.atlasBaseUrl, token: handle.token })
-    providers.push(...(await providersForScopeChain(client, handle.scopeName, handle.stage)))
+    add(handle.atlasBaseUrl, await providersForScopeChain(client, handle.scopeName, handle.stage))
   }
 
-  // 2. In addition: the resolver chain from the workspace settings
+  /*
+   * 2. In addition: the resolver chain from the workspace settings - with the
+   * inherited parents too. Shared metamodels live up the chain (a tenant's
+   * `compiled` sits in `atlas`, two levels above it), and a scope's own
+   * listing does not carry them. The configured stage is asked first where a
+   * scope has it; otherwise each scope's own stages count.
+   */
   const chain = editorConfig?.packageResolverChain?.value
   const resolvers = chain ? featureValue(chain.__v_raw || chain, 'resolvers') || [] : []
   for (const resolver of resolvers) {
@@ -85,11 +101,8 @@ export async function collectAtlasProviders(
     const baseUrl = featureValue(resolver, 'baseUrl')
     const scopeName = featureValue(resolver, 'scopeName')
     if (!baseUrl || !scopeName) continue
-    providers.push({
-      client: new ModelAtlasClient({ baseUrl, token: featureValue(resolver, 'token') }),
-      scopeName,
-      stage: featureValue(resolver, 'stage') || 'release',
-    })
+    const client = new ModelAtlasClient({ baseUrl, token: featureValue(resolver, 'token') })
+    add(baseUrl, await providersForScopeChain(client, scopeName, featureValue(resolver, 'stage') || undefined))
   }
   return { providers, searched: providers.map((p) => describeProvider(p)) }
 }
