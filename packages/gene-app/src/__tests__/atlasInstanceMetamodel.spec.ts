@@ -17,6 +17,7 @@ import { useFileSystem } from 'ui-file-explorer'
 import { loadInstancesFromXMI } from 'ui-instance-tree'
 import { setPackageURIConverter } from 'ui-instance-tree'
 import { prepareAtlasResolution } from '../services/atlasResolution'
+import { ModelAtlasClient } from 'storage-model-atlas'
 
 const NS = 'https://example.org/person/1.0.0'
 /** Its own nsURI for the inheritance case — NS is long registered by then. */
@@ -121,9 +122,10 @@ function fakeAtlas(url: string): Response {
 }
 
 /** Installs the Atlas converter for this entry, the way the app does. */
-async function installConverter(entry: unknown, editorConfig?: unknown) {
+async function installConverter(entry: unknown, editorConfig?: unknown, atlasBrowser?: unknown) {
   return prepareAtlasResolution(entry, {
     editorConfig,
+    atlasBrowser: atlasBrowser as never,
     instanceTreeComposables: { setPackageURIConverter },
   })
 }
@@ -249,5 +251,32 @@ describe('instance from the Model Atlas', () => {
     )
     expect(result.loadedCount).toBe(1)
     expect(result.missingPackages).toEqual([])
+  })
+
+  it('a connected Atlas is asked too - a downloaded file has no origin and no settings', async () => {
+    // The case after "Download...": a local file, nothing in the settings,
+    // but the Atlas browser is connected to the tenant scope.
+    inherited = true
+    const client = new ModelAtlasClient({ baseUrl: '/atlas/rest' })
+    const browser = {
+      connections: { value: [{ id: 'c1', baseUrl: '/atlas/rest', scopeName: 'jena', status: 'connected' }] },
+      getClient: (id: string) => (id === 'c1' ? client : undefined),
+    }
+    const setup = await installConverter({ name: 'downloaded.xmi', path: 'instances/downloaded.xmi' }, undefined, browser)
+    expect(setup.searched).toContain('platform/atlas-schema-registry/release')
+
+    const result = await loadInstancesFromXMI(PERSONS_XMI.replace(NS, NS_INHERITED), 'downloaded.xmi')
+    expect(result.loadedCount).toBe(1)
+    expect(result.missingPackages).toEqual([])
+  })
+
+  it('a connection that is not connected is left out', async () => {
+    const browser = {
+      connections: { value: [{ id: 'c1', baseUrl: '/atlas/rest', scopeName: 'jena', status: 'error' }] },
+      getClient: () => new ModelAtlasClient({ baseUrl: '/atlas/rest' }),
+    }
+    const setup = await installConverter({ name: 'x.xmi', path: 'x.xmi' }, undefined, browser)
+    expect(setup.searched).toEqual([])
+    expect(setup.note).toMatch(/kein Atlas verbunden/)
   })
 })

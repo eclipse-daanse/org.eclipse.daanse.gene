@@ -122,7 +122,8 @@ tsm.registerService('gene.metamodel.resolver', createMetamodelResolver({
   fileSystem: () => tsm.getService('gene.filesystem'),
   workspaceSourceId: () => currentWorkspaceEntry.value?.sourceId,
   modelBrowser: () => (modelBrowserComposables.value as any) ?? tsm.getService('ui.model-browser.composables'),
-  editorConfig: () => getGlobalEditorConfig()
+  editorConfig: () => getGlobalEditorConfig(),
+  atlasBrowser: () => tsm.getService('gene.atlas.browser')
 }))
 
 // XMI Load result type
@@ -1656,6 +1657,7 @@ async function prepareMetamodelResolution(
   try {
     const setup = await prepareAtlasResolution(entry, {
       editorConfig: getGlobalEditorConfig(),
+      atlasBrowser: tsm.getService<any>('gene.atlas.browser'),
       instanceTreeComposables: instanceTreeComposables.value as any
     })
     console.log(
