@@ -102,8 +102,8 @@ die Dokumentationsansicht:
   Overlay-Resource.
 - **FR-2.5/CON-2.5 TextView:** Text der Description (bzw. der eigenen
   Description einer Table), gerendert nach Typ – Markdown (marked +
-  DOMPurify), README als Absätze, Mermaid vorerst als Quelltext. „Bearbeiten“
-  schaltet auf den Editor mit Typauswahl. Der Typ wird beim Speichern als
+  DOMPurify), README als Absätze, Mermaid als Diagramm (siehe unten).
+  „Bearbeiten“ schaltet auf den Editor mit Typauswahl. Der Typ wird beim Speichern als
   TaggedValue `textType` an der Description abgelegt (CWM hat kein Attribut
   dafür; `type` ist schon mit doc/inline belegt).
 - **PH-8 Columns:** Name, Typ (SQL-Datentypen des ResourceSets), PK (legt den
@@ -184,8 +184,21 @@ orthogonalen Metamodell (ChangeRequest CR-2 im Pflichtenheft):
   und bietet `suggestions` als Auswahlliste bei freier Eingabe. `createIn`
   schreibt die `backendDefault`s in jedes neue Objekt.
 
-Offen: Mermaid-Rendering, Daanse-Validierungen im Menü (sobald Daanse sie
-anbietet), ein Editor für Feldregeln (bis dahin Instanz-Editor oder XMI).
+## Mermaid-Darstellung (2026-10-09)
+
+- Abhängigkeit `mermaid` (^12.1.0) im Plugin `cwm-editor`; geladen erst beim
+  ersten Mermaid-Text (`composables/mermaid.ts`).
+- `securityLevel: 'strict'` (keine Skripte, keine Klicks, HTML-Labels
+  kodiert), daher darf das SVG direkt in die Seite. Thema folgt dem Dark Mode
+  von GenE (`dark-theme` an `<html>`).
+- Fehler im Text: Meldung von Mermaid und der Quelltext; Reste eines
+  fehlgeschlagenen Renderns werden aus dem DOM entfernt.
+- Texttyp beim Bearbeiten (CON-2.5): Er folgt dem Text, solange er nicht
+  bewusst gewählt ist – also wenn er nicht gespeichert ist oder dem erkannten
+  Typ entspricht. Eine Auswahl im Editor hält ihn fest.
+
+Offen: Daanse-Validierungen im Menü (sobald Daanse sie anbietet), ein Editor
+für Feldregeln (bis dahin Instanz-Editor oder XMI).
 
 ## Offen / nächste Etappen
 
