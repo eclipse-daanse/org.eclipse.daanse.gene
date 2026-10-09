@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="ASCII"?>
+<mgmt:ObjectMetadataContainer xmlns:mgmt="http://eclipse.org/fennec/model/atlas/management/1.0.0">
+  <metadata uploadUser="system" uploadTime="2026-10-07T14:22:12.082Z" contentHash="2ae9bbdaad7400a8e440c0f6fd0f8c49e46aee52aa570b2318892ffd734cdcf0" objectType="http://www.eclipse.org/emf/2002/Ecore#//EPackage" lastChangeTime="2026-10-07T14:22:12.082Z" version="1.0" objectId="aHR0cDovL3d3dy5lY2xpcHNlLm9yZy9mZW5uZWMvbTJ4L3F2dGQvcXZ0dGVtcGxhdGUvMS4w" objectName="qvttemplate" stage="released" scope="atlas" isReadOnly="true" registry="atlas-schema-registry" fingerprint="fp1:f220d13f20dd2a5a2d48d9cf01fd9ec8389bdc5f701386e20b4f80b057920260">
+    <properties key="nsUri" value="http://www.eclipse.org/fennec/m2x/qvtd/qvttemplate/1.0"/>
+  </metadata>
+  <metadata uploadUser="system" uploadTime="2026-10-07T14:22:08.704Z" contentHash="546e44a843c25f09a2ca0e31c6b7f0a40f6b451353f235664fd5f7c6020c65a9" objectType="http://www.eclipse.org/emf/2002/Ecore#//EPackage" lastChangeTime="2026-10-07T14:22:08.704Z" version="1.0" objectId="aHR0cDovL3d3dy5lY2xpcHNlLm9yZy9mZW5uZWMvbTJ4L2NvbXBpbGVkLzEuMA==" objectName="compiled" stage="released" scope="atlas" isReadOnly="true" registry="atlas-schema-registry" fingerprint="fp1:9d3a9b1665e2137db6f1c479d8bb9d84eabba451f9d67d9cb7216b528d5c6f28">
+    <properties key="nsUri" value="http://www.eclipse.org/fennec/m2x/compiled/1.0"/>
+  </metadata>
+</mgmt:ObjectMetadataContainer>

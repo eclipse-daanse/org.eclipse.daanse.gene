@@ -6,12 +6,13 @@
  */
 
 import { BasicEObject } from '@emfts/core';
-import type { EClass, EStructuralFeature } from '@emfts/core';
-import type { StringToObjectMapEntry } from './StringToObjectMapEntry';
-import type { Diagnostic } from './Diagnostic';
-import { ObjectStatus } from './ObjectStatus';
-import type { ObjectMetadata } from './ObjectMetadata';
-import { ManagementPackage } from './ManagementPackage';
+import { createContainmentEList } from '@emfts/core';
+import type { EClass, EStructuralFeature, EList, EReference, EObject } from '@emfts/core';
+import type { StringToObjectMapEntry } from './StringToObjectMapEntry.js';
+import type { Diagnostic } from './Diagnostic.js';
+import { ObjectStatus } from './ObjectStatus.js';
+import type { ObjectMetadata } from './ObjectMetadata.js';
+import { ManagementPackage } from './ManagementPackage.js';
 
 /**
  * Implementation of ObjectMetadata
@@ -19,58 +20,62 @@ import { ManagementPackage } from './ManagementPackage';
  */
 export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
   // Feature ID Constants (eLiterals)
-  static readonly OBJECT_ID: number = 0;
-  static readonly OBJECT_NAME: number = 1;
-  static readonly OBJECT_TYPE: number = 2;
-  static readonly STAGE: number = 3;
-  static readonly SCOPE: number = 4;
-  static readonly REGISTRY: number = 5;
-  static readonly STATUS: number = 6;
-  static readonly IS_READ_ONLY: number = 7;
-  static readonly VERSION: number = 8;
-  static readonly CONTENT_HASH: number = 9;
-  static readonly UPLOAD_USER: number = 10;
-  static readonly UPLOAD_TIME: number = 11;
-  static readonly SOURCE_CHANNEL: number = 12;
+  static readonly UPLOAD_USER: number = 0;
+  static readonly UPLOAD_TIME: number = 1;
+  static readonly SOURCE_CHANNEL: number = 2;
+  static readonly CONTENT_HASH: number = 3;
+  static readonly OBJECT_TYPE: number = 4;
+  static readonly REVIEW_USER: number = 5;
+  static readonly REVIEW_TIME: number = 6;
+  static readonly REVIEW_REASON: number = 7;
+  static readonly GENERATION_TRIGGER_FINGERPRINT: number = 8;
+  static readonly COMPLIANCE_CHECK_TIME: number = 9;
+  static readonly COMPLIANCE_STATUS: number = 10;
+  static readonly GOVERNANCE_DOCUMENTATION_ID: number = 11;
+  static readonly PROPERTIES: number = 12;
   static readonly LAST_CHANGE_USER: number = 13;
   static readonly LAST_CHANGE_TIME: number = 14;
-  static readonly LAST_CHANGE_REASON: number = 15;
-  static readonly REVIEW_USER: number = 16;
-  static readonly REVIEW_TIME: number = 17;
-  static readonly REVIEW_REASON: number = 18;
-  static readonly COMPLIANCE_CHECK_TIME: number = 19;
-  static readonly COMPLIANCE_STATUS: number = 20;
-  static readonly GOVERNANCE_DOCUMENTATION_ID: number = 21;
-  static readonly GENERATION_TRIGGER_FINGERPRINT: number = 22;
-  static readonly PROPERTIES: number = 23;
-  static readonly DIAGNOSTICS: number = 24;
+  static readonly STATUS: number = 15;
+  static readonly VERSION: number = 16;
+  static readonly OBJECT_REF: number = 17;
+  static readonly OBJECT_ID: number = 18;
+  static readonly OBJECT_NAME: number = 19;
+  static readonly STAGE: number = 20;
+  static readonly LAST_CHANGE_REASON: number = 21;
+  static readonly SCOPE: number = 22;
+  static readonly IS_READ_ONLY: number = 23;
+  static readonly REGISTRY: number = 24;
+  static readonly FINGERPRINT: number = 25;
+  static readonly DIAGNOSTICS: number = 26;
 
   // Private fields
-  private _objectId: string = "";
-  private _objectName?: string;
-  private _objectType: string = "";
-  private _stage: string = "";
-  private _scope: string = "";
-  private _registry: string = "";
-  private _status: ObjectStatus = ObjectStatus.DRAFT;
-  private _isReadOnly?: boolean;
-  private _version?: string;
-  private _contentHash: string = "";
   private _uploadUser: string = "";
   private _uploadTime: string = "";
   private _sourceChannel: string = "";
-  private _lastChangeUser?: string;
-  private _lastChangeTime?: string;
-  private _lastChangeReason?: string;
+  private _contentHash: string = "";
+  private _objectType: string = "";
   private _reviewUser?: string;
   private _reviewTime?: string;
   private _reviewReason?: string;
+  private _generationTriggerFingerprint?: string;
   private _complianceCheckTime?: string;
   private _complianceStatus?: string;
   private _governanceDocumentationId?: string;
-  private _generationTriggerFingerprint?: string;
-  private _properties: StringToObjectMapEntry[] = [];
-  private _diagnostics: Diagnostic[] = [];
+  private _properties!: EList<StringToObjectMapEntry>;
+  private _lastChangeUser?: string;
+  private _lastChangeTime?: string;
+  private _status: ObjectStatus = ObjectStatus.DRAFT;
+  private _version?: string;
+  private _objectRef?: EObject;
+  private _objectId: string = "";
+  private _objectName?: string;
+  private _stage: string = "";
+  private _lastChangeReason?: string;
+  private _scope: string = "";
+  private _isReadOnly?: boolean;
+  private _registry: string = "";
+  private _fingerprint?: string;
+  private _diagnostics!: EList<Diagnostic>;
 
   /**
    * Returns the EClass of this object
@@ -80,246 +85,6 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
   }
 
   // Getters and Setters
-  get objectId(): string {
-    return this._objectId!;
-  }
-
-  set objectId(value: string) {
-    const oldValue = this._objectId;
-    this._objectId = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.OBJECT_ID),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.OBJECT_ID,
-        merge: () => false
-      });
-    }
-  }
-
-  get objectName(): string {
-    return this._objectName!;
-  }
-
-  set objectName(value: string) {
-    const oldValue = this._objectName;
-    this._objectName = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.OBJECT_NAME),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.OBJECT_NAME,
-        merge: () => false
-      });
-    }
-  }
-
-  get objectType(): string {
-    return this._objectType!;
-  }
-
-  set objectType(value: string) {
-    const oldValue = this._objectType;
-    this._objectType = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.OBJECT_TYPE),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.OBJECT_TYPE,
-        merge: () => false
-      });
-    }
-  }
-
-  get stage(): string {
-    return this._stage!;
-  }
-
-  set stage(value: string) {
-    const oldValue = this._stage;
-    this._stage = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.STAGE),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.STAGE,
-        merge: () => false
-      });
-    }
-  }
-
-  get scope(): string {
-    return this._scope!;
-  }
-
-  set scope(value: string) {
-    const oldValue = this._scope;
-    this._scope = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.SCOPE),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.SCOPE,
-        merge: () => false
-      });
-    }
-  }
-
-  get registry(): string {
-    return this._registry!;
-  }
-
-  set registry(value: string) {
-    const oldValue = this._registry;
-    this._registry = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.REGISTRY),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.REGISTRY,
-        merge: () => false
-      });
-    }
-  }
-
-  get status(): ObjectStatus {
-    return this._status!;
-  }
-
-  set status(value: ObjectStatus) {
-    const oldValue = this._status;
-    this._status = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.STATUS),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.STATUS,
-        merge: () => false
-      });
-    }
-  }
-
-  get isReadOnly(): boolean {
-    return this._isReadOnly!;
-  }
-
-  set isReadOnly(value: boolean) {
-    const oldValue = this._isReadOnly;
-    this._isReadOnly = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.IS_READ_ONLY),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.IS_READ_ONLY,
-        merge: () => false
-      });
-    }
-  }
-
-  get version(): string {
-    return this._version!;
-  }
-
-  set version(value: string) {
-    const oldValue = this._version;
-    this._version = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.VERSION),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.VERSION,
-        merge: () => false
-      });
-    }
-  }
-
-  get contentHash(): string {
-    return this._contentHash!;
-  }
-
-  set contentHash(value: string) {
-    const oldValue = this._contentHash;
-    this._contentHash = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.CONTENT_HASH),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.CONTENT_HASH,
-        merge: () => false
-      });
-    }
-  }
-
   get uploadUser(): string {
     return this._uploadUser!;
   }
@@ -392,73 +157,49 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
     }
   }
 
-  get lastChangeUser(): string {
-    return this._lastChangeUser!;
+  get contentHash(): string {
+    return this._contentHash!;
   }
 
-  set lastChangeUser(value: string) {
-    const oldValue = this._lastChangeUser;
-    this._lastChangeUser = value;
+  set contentHash(value: string) {
+    const oldValue = this._contentHash;
+    this._contentHash = value;
     if (this.eDeliver()) {
       this.eNotify({
         getNotifier: () => this,
         getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.LAST_CHANGE_USER),
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.CONTENT_HASH),
         getOldValue: () => oldValue,
         getNewValue: () => value,
         getPosition: () => -1,
         wasSet: () => true,
         isTouch: () => false,
         isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.LAST_CHANGE_USER,
+        getFeatureID: () => ObjectMetadataImpl.CONTENT_HASH,
         merge: () => false
       });
     }
   }
 
-  get lastChangeTime(): string {
-    return this._lastChangeTime!;
+  get objectType(): string {
+    return this._objectType!;
   }
 
-  set lastChangeTime(value: string) {
-    const oldValue = this._lastChangeTime;
-    this._lastChangeTime = value;
+  set objectType(value: string) {
+    const oldValue = this._objectType;
+    this._objectType = value;
     if (this.eDeliver()) {
       this.eNotify({
         getNotifier: () => this,
         getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.LAST_CHANGE_TIME),
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.OBJECT_TYPE),
         getOldValue: () => oldValue,
         getNewValue: () => value,
         getPosition: () => -1,
         wasSet: () => true,
         isTouch: () => false,
         isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.LAST_CHANGE_TIME,
-        merge: () => false
-      });
-    }
-  }
-
-  get lastChangeReason(): string {
-    return this._lastChangeReason!;
-  }
-
-  set lastChangeReason(value: string) {
-    const oldValue = this._lastChangeReason;
-    this._lastChangeReason = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.LAST_CHANGE_REASON),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.LAST_CHANGE_REASON,
+        getFeatureID: () => ObjectMetadataImpl.OBJECT_TYPE,
         merge: () => false
       });
     }
@@ -536,6 +277,30 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
     }
   }
 
+  get generationTriggerFingerprint(): string {
+    return this._generationTriggerFingerprint!;
+  }
+
+  set generationTriggerFingerprint(value: string) {
+    const oldValue = this._generationTriggerFingerprint;
+    this._generationTriggerFingerprint = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.GENERATION_TRIGGER_FINGERPRINT),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.GENERATION_TRIGGER_FINGERPRINT,
+        merge: () => false
+      });
+    }
+  }
+
   get complianceCheckTime(): string {
     return this._complianceCheckTime!;
   }
@@ -608,76 +373,330 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
     }
   }
 
-  get generationTriggerFingerprint(): string {
-    return this._generationTriggerFingerprint!;
-  }
-
-  set generationTriggerFingerprint(value: string) {
-    const oldValue = this._generationTriggerFingerprint;
-    this._generationTriggerFingerprint = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.GENERATION_TRIGGER_FINGERPRINT),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.GENERATION_TRIGGER_FINGERPRINT,
-        merge: () => false
-      });
+  get properties(): EList<StringToObjectMapEntry> {
+    if (!this._properties) {
+      this._properties = createContainmentEList<any>(this, this.eClass().getEStructuralFeature('properties') as EReference);
     }
-  }
-
-  get properties(): StringToObjectMapEntry[] {
     return this._properties;
   }
 
-  set properties(value: StringToObjectMapEntry[]) {
-    const oldValue = this._properties;
-    this._properties = value;
+  get lastChangeUser(): string {
+    return this._lastChangeUser!;
+  }
+
+  set lastChangeUser(value: string) {
+    const oldValue = this._lastChangeUser;
+    this._lastChangeUser = value;
     if (this.eDeliver()) {
       this.eNotify({
         getNotifier: () => this,
         getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.PROPERTIES),
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.LAST_CHANGE_USER),
         getOldValue: () => oldValue,
         getNewValue: () => value,
         getPosition: () => -1,
         wasSet: () => true,
         isTouch: () => false,
         isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.PROPERTIES,
+        getFeatureID: () => ObjectMetadataImpl.LAST_CHANGE_USER,
         merge: () => false
       });
     }
   }
 
-  get diagnostics(): Diagnostic[] {
+  get lastChangeTime(): string {
+    return this._lastChangeTime!;
+  }
+
+  set lastChangeTime(value: string) {
+    const oldValue = this._lastChangeTime;
+    this._lastChangeTime = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.LAST_CHANGE_TIME),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.LAST_CHANGE_TIME,
+        merge: () => false
+      });
+    }
+  }
+
+  get status(): ObjectStatus {
+    return this._status!;
+  }
+
+  set status(value: ObjectStatus) {
+    const oldValue = this._status;
+    this._status = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.STATUS),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.STATUS,
+        merge: () => false
+      });
+    }
+  }
+
+  get version(): string {
+    return this._version!;
+  }
+
+  set version(value: string) {
+    const oldValue = this._version;
+    this._version = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.VERSION),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.VERSION,
+        merge: () => false
+      });
+    }
+  }
+
+  get objectRef(): EObject {
+    return this._objectRef!;
+  }
+
+  set objectRef(value: EObject) {
+    const oldValue = this._objectRef;
+    this._objectRef = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.OBJECT_REF),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.OBJECT_REF,
+        merge: () => false
+      });
+    }
+  }
+
+  get objectId(): string {
+    return this._objectId!;
+  }
+
+  set objectId(value: string) {
+    const oldValue = this._objectId;
+    this._objectId = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.OBJECT_ID),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.OBJECT_ID,
+        merge: () => false
+      });
+    }
+  }
+
+  get objectName(): string {
+    return this._objectName!;
+  }
+
+  set objectName(value: string) {
+    const oldValue = this._objectName;
+    this._objectName = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.OBJECT_NAME),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.OBJECT_NAME,
+        merge: () => false
+      });
+    }
+  }
+
+  get stage(): string {
+    return this._stage!;
+  }
+
+  set stage(value: string) {
+    const oldValue = this._stage;
+    this._stage = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.STAGE),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.STAGE,
+        merge: () => false
+      });
+    }
+  }
+
+  get lastChangeReason(): string {
+    return this._lastChangeReason!;
+  }
+
+  set lastChangeReason(value: string) {
+    const oldValue = this._lastChangeReason;
+    this._lastChangeReason = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.LAST_CHANGE_REASON),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.LAST_CHANGE_REASON,
+        merge: () => false
+      });
+    }
+  }
+
+  get scope(): string {
+    return this._scope!;
+  }
+
+  set scope(value: string) {
+    const oldValue = this._scope;
+    this._scope = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.SCOPE),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.SCOPE,
+        merge: () => false
+      });
+    }
+  }
+
+  get isReadOnly(): boolean {
+    return this._isReadOnly!;
+  }
+
+  set isReadOnly(value: boolean) {
+    const oldValue = this._isReadOnly;
+    this._isReadOnly = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.IS_READ_ONLY),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.IS_READ_ONLY,
+        merge: () => false
+      });
+    }
+  }
+
+  get registry(): string {
+    return this._registry!;
+  }
+
+  set registry(value: string) {
+    const oldValue = this._registry;
+    this._registry = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.REGISTRY),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.REGISTRY,
+        merge: () => false
+      });
+    }
+  }
+
+  get fingerprint(): string {
+    return this._fingerprint!;
+  }
+
+  set fingerprint(value: string) {
+    const oldValue = this._fingerprint;
+    this._fingerprint = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.FINGERPRINT),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => ObjectMetadataImpl.FINGERPRINT,
+        merge: () => false
+      });
+    }
+  }
+
+  get diagnostics(): EList<Diagnostic> {
+    if (!this._diagnostics) {
+      this._diagnostics = createContainmentEList<any>(this, this.eClass().getEStructuralFeature('diagnostics') as EReference);
+    }
     return this._diagnostics;
-  }
-
-  set diagnostics(value: Diagnostic[]) {
-    const oldValue = this._diagnostics;
-    this._diagnostics = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataImpl.DIAGNOSTICS),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataImpl.DIAGNOSTICS,
-        merge: () => false
-      });
-    }
   }
 
   // Reflective API
@@ -688,54 +707,58 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
   override eGet(feature: EStructuralFeature): unknown {
     const featureID = this.eClass().getFeatureID(feature);
     switch (featureID) {
-      case ObjectMetadataImpl.OBJECT_ID:
-        return this.objectId;
-      case ObjectMetadataImpl.OBJECT_NAME:
-        return this.objectName;
-      case ObjectMetadataImpl.OBJECT_TYPE:
-        return this.objectType;
-      case ObjectMetadataImpl.STAGE:
-        return this.stage;
-      case ObjectMetadataImpl.SCOPE:
-        return this.scope;
-      case ObjectMetadataImpl.REGISTRY:
-        return this.registry;
-      case ObjectMetadataImpl.STATUS:
-        return this.status;
-      case ObjectMetadataImpl.IS_READ_ONLY:
-        return this.isReadOnly;
-      case ObjectMetadataImpl.VERSION:
-        return this.version;
-      case ObjectMetadataImpl.CONTENT_HASH:
-        return this.contentHash;
       case ObjectMetadataImpl.UPLOAD_USER:
         return this.uploadUser;
       case ObjectMetadataImpl.UPLOAD_TIME:
         return this.uploadTime;
       case ObjectMetadataImpl.SOURCE_CHANNEL:
         return this.sourceChannel;
-      case ObjectMetadataImpl.LAST_CHANGE_USER:
-        return this.lastChangeUser;
-      case ObjectMetadataImpl.LAST_CHANGE_TIME:
-        return this.lastChangeTime;
-      case ObjectMetadataImpl.LAST_CHANGE_REASON:
-        return this.lastChangeReason;
+      case ObjectMetadataImpl.CONTENT_HASH:
+        return this.contentHash;
+      case ObjectMetadataImpl.OBJECT_TYPE:
+        return this.objectType;
       case ObjectMetadataImpl.REVIEW_USER:
         return this.reviewUser;
       case ObjectMetadataImpl.REVIEW_TIME:
         return this.reviewTime;
       case ObjectMetadataImpl.REVIEW_REASON:
         return this.reviewReason;
+      case ObjectMetadataImpl.GENERATION_TRIGGER_FINGERPRINT:
+        return this.generationTriggerFingerprint;
       case ObjectMetadataImpl.COMPLIANCE_CHECK_TIME:
         return this.complianceCheckTime;
       case ObjectMetadataImpl.COMPLIANCE_STATUS:
         return this.complianceStatus;
       case ObjectMetadataImpl.GOVERNANCE_DOCUMENTATION_ID:
         return this.governanceDocumentationId;
-      case ObjectMetadataImpl.GENERATION_TRIGGER_FINGERPRINT:
-        return this.generationTriggerFingerprint;
       case ObjectMetadataImpl.PROPERTIES:
         return this.properties;
+      case ObjectMetadataImpl.LAST_CHANGE_USER:
+        return this.lastChangeUser;
+      case ObjectMetadataImpl.LAST_CHANGE_TIME:
+        return this.lastChangeTime;
+      case ObjectMetadataImpl.STATUS:
+        return this.status;
+      case ObjectMetadataImpl.VERSION:
+        return this.version;
+      case ObjectMetadataImpl.OBJECT_REF:
+        return this.objectRef;
+      case ObjectMetadataImpl.OBJECT_ID:
+        return this.objectId;
+      case ObjectMetadataImpl.OBJECT_NAME:
+        return this.objectName;
+      case ObjectMetadataImpl.STAGE:
+        return this.stage;
+      case ObjectMetadataImpl.LAST_CHANGE_REASON:
+        return this.lastChangeReason;
+      case ObjectMetadataImpl.SCOPE:
+        return this.scope;
+      case ObjectMetadataImpl.IS_READ_ONLY:
+        return this.isReadOnly;
+      case ObjectMetadataImpl.REGISTRY:
+        return this.registry;
+      case ObjectMetadataImpl.FINGERPRINT:
+        return this.fingerprint;
       case ObjectMetadataImpl.DIAGNOSTICS:
         return this.diagnostics;
       default:
@@ -749,46 +772,6 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
   override eSet(feature: EStructuralFeature, newValue: unknown): void {
     const featureID = this.eClass().getFeatureID(feature);
     switch (featureID) {
-      case ObjectMetadataImpl.OBJECT_ID:
-        this.objectId = newValue as string;
-        super.eSet(feature, newValue);
-        break;
-      case ObjectMetadataImpl.OBJECT_NAME:
-        this.objectName = newValue as string;
-        super.eSet(feature, newValue);
-        break;
-      case ObjectMetadataImpl.OBJECT_TYPE:
-        this.objectType = newValue as string;
-        super.eSet(feature, newValue);
-        break;
-      case ObjectMetadataImpl.STAGE:
-        this.stage = newValue as string;
-        super.eSet(feature, newValue);
-        break;
-      case ObjectMetadataImpl.SCOPE:
-        this.scope = newValue as string;
-        super.eSet(feature, newValue);
-        break;
-      case ObjectMetadataImpl.REGISTRY:
-        this.registry = newValue as string;
-        super.eSet(feature, newValue);
-        break;
-      case ObjectMetadataImpl.STATUS:
-        this.status = newValue as ObjectStatus;
-        super.eSet(feature, newValue);
-        break;
-      case ObjectMetadataImpl.IS_READ_ONLY:
-        this.isReadOnly = newValue as boolean;
-        super.eSet(feature, newValue);
-        break;
-      case ObjectMetadataImpl.VERSION:
-        this.version = newValue as string;
-        super.eSet(feature, newValue);
-        break;
-      case ObjectMetadataImpl.CONTENT_HASH:
-        this.contentHash = newValue as string;
-        super.eSet(feature, newValue);
-        break;
       case ObjectMetadataImpl.UPLOAD_USER:
         this.uploadUser = newValue as string;
         super.eSet(feature, newValue);
@@ -801,16 +784,12 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
         this.sourceChannel = newValue as string;
         super.eSet(feature, newValue);
         break;
-      case ObjectMetadataImpl.LAST_CHANGE_USER:
-        this.lastChangeUser = newValue as string;
+      case ObjectMetadataImpl.CONTENT_HASH:
+        this.contentHash = newValue as string;
         super.eSet(feature, newValue);
         break;
-      case ObjectMetadataImpl.LAST_CHANGE_TIME:
-        this.lastChangeTime = newValue as string;
-        super.eSet(feature, newValue);
-        break;
-      case ObjectMetadataImpl.LAST_CHANGE_REASON:
-        this.lastChangeReason = newValue as string;
+      case ObjectMetadataImpl.OBJECT_TYPE:
+        this.objectType = newValue as string;
         super.eSet(feature, newValue);
         break;
       case ObjectMetadataImpl.REVIEW_USER:
@@ -825,6 +804,10 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
         this.reviewReason = newValue as string;
         super.eSet(feature, newValue);
         break;
+      case ObjectMetadataImpl.GENERATION_TRIGGER_FINGERPRINT:
+        this.generationTriggerFingerprint = newValue as string;
+        super.eSet(feature, newValue);
+        break;
       case ObjectMetadataImpl.COMPLIANCE_CHECK_TIME:
         this.complianceCheckTime = newValue as string;
         super.eSet(feature, newValue);
@@ -837,16 +820,66 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
         this.governanceDocumentationId = newValue as string;
         super.eSet(feature, newValue);
         break;
-      case ObjectMetadataImpl.GENERATION_TRIGGER_FINGERPRINT:
-        this.generationTriggerFingerprint = newValue as string;
+      case ObjectMetadataImpl.PROPERTIES:
+        this.properties.clear();
+        this.properties.addAll(newValue as any[]);
         super.eSet(feature, newValue);
         break;
-      case ObjectMetadataImpl.PROPERTIES:
-        this.properties = newValue as StringToObjectMapEntry[];
+      case ObjectMetadataImpl.LAST_CHANGE_USER:
+        this.lastChangeUser = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case ObjectMetadataImpl.LAST_CHANGE_TIME:
+        this.lastChangeTime = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case ObjectMetadataImpl.STATUS:
+        this.status = newValue as ObjectStatus;
+        super.eSet(feature, newValue);
+        break;
+      case ObjectMetadataImpl.VERSION:
+        this.version = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case ObjectMetadataImpl.OBJECT_REF:
+        this.objectRef = newValue as EObject;
+        super.eSet(feature, newValue);
+        break;
+      case ObjectMetadataImpl.OBJECT_ID:
+        this.objectId = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case ObjectMetadataImpl.OBJECT_NAME:
+        this.objectName = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case ObjectMetadataImpl.STAGE:
+        this.stage = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case ObjectMetadataImpl.LAST_CHANGE_REASON:
+        this.lastChangeReason = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case ObjectMetadataImpl.SCOPE:
+        this.scope = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case ObjectMetadataImpl.IS_READ_ONLY:
+        this.isReadOnly = newValue as boolean;
+        super.eSet(feature, newValue);
+        break;
+      case ObjectMetadataImpl.REGISTRY:
+        this.registry = newValue as string;
+        super.eSet(feature, newValue);
+        break;
+      case ObjectMetadataImpl.FINGERPRINT:
+        this.fingerprint = newValue as string;
         super.eSet(feature, newValue);
         break;
       case ObjectMetadataImpl.DIAGNOSTICS:
-        this.diagnostics = newValue as Diagnostic[];
+        this.diagnostics.clear();
+        this.diagnostics.addAll(newValue as any[]);
         super.eSet(feature, newValue);
         break;
       default:
@@ -860,56 +893,60 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
   override eIsSet(feature: EStructuralFeature): boolean {
     const featureID = this.eClass().getFeatureID(feature);
     switch (featureID) {
-      case ObjectMetadataImpl.OBJECT_ID:
-        return this._objectId !== "";
-      case ObjectMetadataImpl.OBJECT_NAME:
-        return this._objectName !== undefined;
-      case ObjectMetadataImpl.OBJECT_TYPE:
-        return this._objectType !== "";
-      case ObjectMetadataImpl.STAGE:
-        return this._stage !== "";
-      case ObjectMetadataImpl.SCOPE:
-        return this._scope !== "";
-      case ObjectMetadataImpl.REGISTRY:
-        return this._registry !== "";
-      case ObjectMetadataImpl.STATUS:
-        return this._status !== ObjectStatus.DRAFT;
-      case ObjectMetadataImpl.IS_READ_ONLY:
-        return this._isReadOnly !== undefined;
-      case ObjectMetadataImpl.VERSION:
-        return this._version !== undefined;
-      case ObjectMetadataImpl.CONTENT_HASH:
-        return this._contentHash !== "";
       case ObjectMetadataImpl.UPLOAD_USER:
         return this._uploadUser !== "";
       case ObjectMetadataImpl.UPLOAD_TIME:
         return this._uploadTime !== "";
       case ObjectMetadataImpl.SOURCE_CHANNEL:
         return this._sourceChannel !== "";
-      case ObjectMetadataImpl.LAST_CHANGE_USER:
-        return this._lastChangeUser !== undefined;
-      case ObjectMetadataImpl.LAST_CHANGE_TIME:
-        return this._lastChangeTime !== undefined;
-      case ObjectMetadataImpl.LAST_CHANGE_REASON:
-        return this._lastChangeReason !== undefined;
+      case ObjectMetadataImpl.CONTENT_HASH:
+        return this._contentHash !== "";
+      case ObjectMetadataImpl.OBJECT_TYPE:
+        return this._objectType !== "";
       case ObjectMetadataImpl.REVIEW_USER:
         return this._reviewUser !== undefined;
       case ObjectMetadataImpl.REVIEW_TIME:
         return this._reviewTime !== undefined;
       case ObjectMetadataImpl.REVIEW_REASON:
         return this._reviewReason !== undefined;
+      case ObjectMetadataImpl.GENERATION_TRIGGER_FINGERPRINT:
+        return this._generationTriggerFingerprint !== undefined;
       case ObjectMetadataImpl.COMPLIANCE_CHECK_TIME:
         return this._complianceCheckTime !== undefined;
       case ObjectMetadataImpl.COMPLIANCE_STATUS:
         return this._complianceStatus !== undefined;
       case ObjectMetadataImpl.GOVERNANCE_DOCUMENTATION_ID:
         return this._governanceDocumentationId !== undefined;
-      case ObjectMetadataImpl.GENERATION_TRIGGER_FINGERPRINT:
-        return this._generationTriggerFingerprint !== undefined;
       case ObjectMetadataImpl.PROPERTIES:
-        return this._properties !== undefined && this._properties.length > 0;
+        return this._properties !== undefined && !this._properties.isEmpty();
+      case ObjectMetadataImpl.LAST_CHANGE_USER:
+        return this._lastChangeUser !== undefined;
+      case ObjectMetadataImpl.LAST_CHANGE_TIME:
+        return this._lastChangeTime !== undefined;
+      case ObjectMetadataImpl.STATUS:
+        return this._status !== ObjectStatus.DRAFT;
+      case ObjectMetadataImpl.VERSION:
+        return this._version !== undefined;
+      case ObjectMetadataImpl.OBJECT_REF:
+        return this._objectRef !== undefined;
+      case ObjectMetadataImpl.OBJECT_ID:
+        return this._objectId !== "";
+      case ObjectMetadataImpl.OBJECT_NAME:
+        return this._objectName !== undefined;
+      case ObjectMetadataImpl.STAGE:
+        return this._stage !== "";
+      case ObjectMetadataImpl.LAST_CHANGE_REASON:
+        return this._lastChangeReason !== undefined;
+      case ObjectMetadataImpl.SCOPE:
+        return this._scope !== "";
+      case ObjectMetadataImpl.IS_READ_ONLY:
+        return this._isReadOnly !== undefined;
+      case ObjectMetadataImpl.REGISTRY:
+        return this._registry !== "";
+      case ObjectMetadataImpl.FINGERPRINT:
+        return this._fingerprint !== undefined;
       case ObjectMetadataImpl.DIAGNOSTICS:
-        return this._diagnostics !== undefined && this._diagnostics.length > 0;
+        return this._diagnostics !== undefined && !this._diagnostics.isEmpty();
       default:
         return super.eIsSet(feature);
     }
@@ -921,36 +958,6 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
   override eUnset(feature: EStructuralFeature): void {
     const featureID = this.eClass().getFeatureID(feature);
     switch (featureID) {
-      case ObjectMetadataImpl.OBJECT_ID:
-        this._objectId = "";
-        return;
-      case ObjectMetadataImpl.OBJECT_NAME:
-        this._objectName = undefined;
-        return;
-      case ObjectMetadataImpl.OBJECT_TYPE:
-        this._objectType = "";
-        return;
-      case ObjectMetadataImpl.STAGE:
-        this._stage = "";
-        return;
-      case ObjectMetadataImpl.SCOPE:
-        this._scope = "";
-        return;
-      case ObjectMetadataImpl.REGISTRY:
-        this._registry = "";
-        return;
-      case ObjectMetadataImpl.STATUS:
-        this._status = ObjectStatus.DRAFT;
-        return;
-      case ObjectMetadataImpl.IS_READ_ONLY:
-        this._isReadOnly = undefined;
-        return;
-      case ObjectMetadataImpl.VERSION:
-        this._version = undefined;
-        return;
-      case ObjectMetadataImpl.CONTENT_HASH:
-        this._contentHash = "";
-        return;
       case ObjectMetadataImpl.UPLOAD_USER:
         this._uploadUser = "";
         return;
@@ -960,14 +967,11 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
       case ObjectMetadataImpl.SOURCE_CHANNEL:
         this._sourceChannel = "";
         return;
-      case ObjectMetadataImpl.LAST_CHANGE_USER:
-        this._lastChangeUser = undefined;
+      case ObjectMetadataImpl.CONTENT_HASH:
+        this._contentHash = "";
         return;
-      case ObjectMetadataImpl.LAST_CHANGE_TIME:
-        this._lastChangeTime = undefined;
-        return;
-      case ObjectMetadataImpl.LAST_CHANGE_REASON:
-        this._lastChangeReason = undefined;
+      case ObjectMetadataImpl.OBJECT_TYPE:
+        this._objectType = "";
         return;
       case ObjectMetadataImpl.REVIEW_USER:
         this._reviewUser = undefined;
@@ -978,6 +982,9 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
       case ObjectMetadataImpl.REVIEW_REASON:
         this._reviewReason = undefined;
         return;
+      case ObjectMetadataImpl.GENERATION_TRIGGER_FINGERPRINT:
+        this._generationTriggerFingerprint = undefined;
+        return;
       case ObjectMetadataImpl.COMPLIANCE_CHECK_TIME:
         this._complianceCheckTime = undefined;
         return;
@@ -987,14 +994,50 @@ export class ObjectMetadataImpl extends BasicEObject implements ObjectMetadata {
       case ObjectMetadataImpl.GOVERNANCE_DOCUMENTATION_ID:
         this._governanceDocumentationId = undefined;
         return;
-      case ObjectMetadataImpl.GENERATION_TRIGGER_FINGERPRINT:
-        this._generationTriggerFingerprint = undefined;
-        return;
       case ObjectMetadataImpl.PROPERTIES:
-        this._properties = [];
+        if (this._properties) this._properties.clear();
+        return;
+      case ObjectMetadataImpl.LAST_CHANGE_USER:
+        this._lastChangeUser = undefined;
+        return;
+      case ObjectMetadataImpl.LAST_CHANGE_TIME:
+        this._lastChangeTime = undefined;
+        return;
+      case ObjectMetadataImpl.STATUS:
+        this._status = ObjectStatus.DRAFT;
+        return;
+      case ObjectMetadataImpl.VERSION:
+        this._version = undefined;
+        return;
+      case ObjectMetadataImpl.OBJECT_REF:
+        this._objectRef = undefined;
+        return;
+      case ObjectMetadataImpl.OBJECT_ID:
+        this._objectId = "";
+        return;
+      case ObjectMetadataImpl.OBJECT_NAME:
+        this._objectName = undefined;
+        return;
+      case ObjectMetadataImpl.STAGE:
+        this._stage = "";
+        return;
+      case ObjectMetadataImpl.LAST_CHANGE_REASON:
+        this._lastChangeReason = undefined;
+        return;
+      case ObjectMetadataImpl.SCOPE:
+        this._scope = "";
+        return;
+      case ObjectMetadataImpl.IS_READ_ONLY:
+        this._isReadOnly = undefined;
+        return;
+      case ObjectMetadataImpl.REGISTRY:
+        this._registry = "";
+        return;
+      case ObjectMetadataImpl.FINGERPRINT:
+        this._fingerprint = undefined;
         return;
       case ObjectMetadataImpl.DIAGNOSTICS:
-        this._diagnostics = [];
+        if (this._diagnostics) this._diagnostics.clear();
         return;
       default:
         super.eUnset(feature);

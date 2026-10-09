@@ -96,7 +96,7 @@ let lorawanXml: string;
 beforeAll(() => {
   registerEcorePackage();
   registerAtlasApiPackages(
-    readFileSync(path.join(ASSETS, 'atlas-management.ecore'), 'utf-8'),
+    readFileSync(path.join(__dirname, '..', '..', 'storage-model-atlas', 'src', 'model', 'management.ecore'), 'utf-8'),
     readFileSync(path.join(ASSETS, 'atlas-workflow-api.ecore'), 'utf-8'),
   );
   em310Xml = readFileSync(path.join(FIXTURES, 'em310udl-message.ecore'), 'utf-8')

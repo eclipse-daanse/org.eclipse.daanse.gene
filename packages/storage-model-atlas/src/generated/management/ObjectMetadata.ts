@@ -5,40 +5,42 @@
  * @generated
  */
 
-import type { EObject } from '@emfts/core';
-import type { ObjectStatus } from './ObjectStatus';
-import type { StringToObjectMapEntry } from './StringToObjectMapEntry';
-import type { Diagnostic } from './Diagnostic';
+import type { EObject, EList, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
+import type { StringToObjectMapEntry } from './StringToObjectMapEntry.js';
+import type { ObjectStatus } from './ObjectStatus.js';
+import type { Diagnostic } from './Diagnostic.js';
 
 /**
  * ObjectMetadata
  * @generated
  */
 export interface ObjectMetadata extends EObject {
-  objectId: string;
-  objectName?: string;
-  objectType: string;
-  stage: string;
-  scope: string;
-  registry: string;
-  status: ObjectStatus;
-  isReadOnly?: boolean;
-  version?: string;
-  contentHash: string;
   uploadUser: string;
   uploadTime: string;
   sourceChannel: string;
-  lastChangeUser?: string;
-  lastChangeTime?: string;
-  lastChangeReason?: string;
+  contentHash: string;
+  objectType: string;
   reviewUser?: string;
   reviewTime?: string;
   reviewReason?: string;
+  generationTriggerFingerprint?: string;
   complianceCheckTime?: string;
   complianceStatus?: string;
   governanceDocumentationId?: string;
-  generationTriggerFingerprint?: string;
-  properties: StringToObjectMapEntry[];
-  diagnostics: Diagnostic[];
+  properties: EList<StringToObjectMapEntry>;
+  lastChangeUser?: string;
+  lastChangeTime?: string;
+  status: ObjectStatus;
+  version?: string;
+  objectRef?: EObject;
+  objectId: string;
+  objectName?: string;
+  stage: string;
+  lastChangeReason?: string;
+  scope: string;
+  isReadOnly?: boolean;
+  registry: string;
+  fingerprint?: string;
+  diagnostics: EList<Diagnostic>;
 
 }

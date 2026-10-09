@@ -6,27 +6,31 @@
  */
 
 // Package and Factory
-export { ManagementPackage } from './ManagementPackage';
-export { ManagementFactory } from './ManagementFactory';
+export { ManagementPackage } from './ManagementPackage.js';
+export { ManagementFactory } from './ManagementFactory.js';
 
 // Interfaces
-export type { ObjectMetadata } from './ObjectMetadata';
-export type { StringToObjectMapEntry } from './StringToObjectMapEntry';
-export type { ObjectMetadataContainer } from './ObjectMetadataContainer';
-export type { Diagnostic } from './Diagnostic';
-export type { DiagnosticChange } from './DiagnosticChange';
+export type { ObjectMetadata } from './ObjectMetadata.js';
+export type { Diagnostic } from './Diagnostic.js';
+export type { DiagnosticChange } from './DiagnosticChange.js';
+export type { StringToObjectMapEntry } from './StringToObjectMapEntry.js';
+export type { ObjectQuery } from './ObjectQuery.js';
+export type { GenerationRequest } from './GenerationRequest.js';
+export type { ObjectMetadataContainer } from './ObjectMetadataContainer.js';
 
-// Implementations
-export { ObjectMetadataImpl } from './ObjectMetadataImpl';
-export { StringToObjectMapEntryImpl } from './StringToObjectMapEntryImpl';
-export { ObjectMetadataContainerImpl } from './ObjectMetadataContainerImpl';
-export { DiagnosticImpl } from './DiagnosticImpl';
-export { DiagnosticChangeImpl } from './DiagnosticChangeImpl';
+// Implementations (including abstract classes, as they're extended by subclasses)
+export { ObjectMetadataImpl } from './ObjectMetadataImpl.js';
+export { DiagnosticImpl } from './DiagnosticImpl.js';
+export { DiagnosticChangeImpl } from './DiagnosticChangeImpl.js';
+export { StringToObjectMapEntryImpl } from './StringToObjectMapEntryImpl.js';
+export { ObjectQueryImpl } from './ObjectQueryImpl.js';
+export { GenerationRequestImpl } from './GenerationRequestImpl.js';
+export { ObjectMetadataContainerImpl } from './ObjectMetadataContainerImpl.js';
 
 // Enums
-export { ObjectStatus, getObjectStatus, getObjectStatusByLiteral } from './ObjectStatus';
-export { PackageStatus, getPackageStatus, getPackageStatusByLiteral } from './PackageStatus';
-export { StorageBackendType, getStorageBackendType, getStorageBackendTypeByLiteral } from './StorageBackendType';
-export { GenerationStatus, getGenerationStatus, getGenerationStatusByLiteral } from './GenerationStatus';
-export { DiagnosticSeverity, getDiagnosticSeverity, getDiagnosticSeverityByLiteral } from './DiagnosticSeverity';
-export { DiagnosticStatus, getDiagnosticStatus, getDiagnosticStatusByLiteral } from './DiagnosticStatus';
+export { DiagnosticSeverity, getDiagnosticSeverity, getDiagnosticSeverityByLiteral } from './DiagnosticSeverity.js';
+export { DiagnosticStatus, getDiagnosticStatus, getDiagnosticStatusByLiteral } from './DiagnosticStatus.js';
+export { ObjectStatus, getObjectStatus, getObjectStatusByLiteral } from './ObjectStatus.js';
+export { PackageStatus, getPackageStatus, getPackageStatusByLiteral } from './PackageStatus.js';
+export { StorageBackendType, getStorageBackendType, getStorageBackendTypeByLiteral } from './StorageBackendType.js';
+export { GenerationStatus, getGenerationStatus, getGenerationStatusByLiteral } from './GenerationStatus.js';

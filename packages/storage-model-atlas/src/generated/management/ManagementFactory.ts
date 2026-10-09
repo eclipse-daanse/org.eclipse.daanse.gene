@@ -7,25 +7,36 @@
 
 import { BasicEFactory } from '@emfts/core';
 import type { EClass, EObject } from '@emfts/core';
-import { ManagementPackage } from './ManagementPackage';
-import type { ObjectMetadata } from './ObjectMetadata';
-import { ObjectMetadataImpl } from './ObjectMetadataImpl';
-import type { StringToObjectMapEntry } from './StringToObjectMapEntry';
-import { StringToObjectMapEntryImpl } from './StringToObjectMapEntryImpl';
-import type { ObjectMetadataContainer } from './ObjectMetadataContainer';
-import { ObjectMetadataContainerImpl } from './ObjectMetadataContainerImpl';
-import type { Diagnostic } from './Diagnostic';
-import { DiagnosticImpl } from './DiagnosticImpl';
-import type { DiagnosticChange } from './DiagnosticChange';
-import { DiagnosticChangeImpl } from './DiagnosticChangeImpl';
+import { ManagementPackage } from './ManagementPackage.js';
+import type { ObjectMetadata } from './ObjectMetadata.js';
+import { ObjectMetadataImpl } from './ObjectMetadataImpl.js';
+import type { Diagnostic } from './Diagnostic.js';
+import { DiagnosticImpl } from './DiagnosticImpl.js';
+import type { DiagnosticChange } from './DiagnosticChange.js';
+import { DiagnosticChangeImpl } from './DiagnosticChangeImpl.js';
+import type { StringToObjectMapEntry } from './StringToObjectMapEntry.js';
+import { StringToObjectMapEntryImpl } from './StringToObjectMapEntryImpl.js';
+import type { ObjectQuery } from './ObjectQuery.js';
+import { ObjectQueryImpl } from './ObjectQueryImpl.js';
+import type { GenerationRequest } from './GenerationRequest.js';
+import { GenerationRequestImpl } from './GenerationRequestImpl.js';
+import type { ObjectMetadataContainer } from './ObjectMetadataContainer.js';
+import { ObjectMetadataContainerImpl } from './ObjectMetadataContainerImpl.js';
 
 /**
  * Factory for creating Management model objects
  * @generated
  */
 export class ManagementFactory extends BasicEFactory {
-  // Singleton instance
-  static readonly eINSTANCE = new ManagementFactory();
+  // Lazy singleton instance
+  private static _instance: ManagementFactory;
+
+  static get eINSTANCE(): ManagementFactory {
+    if (!this._instance) {
+      this._instance = new ManagementFactory();
+    }
+    return this._instance;
+  }
 
   private constructor() {
     super();
@@ -37,20 +48,6 @@ export class ManagementFactory extends BasicEFactory {
    */
   createObjectMetadata(): ObjectMetadata {
     return new ObjectMetadataImpl();
-  }
-
-  /**
-   * Create a new StringToObjectMapEntry instance
-   */
-  createStringToObjectMapEntry(): StringToObjectMapEntry {
-    return new StringToObjectMapEntryImpl();
-  }
-
-  /**
-   * Create a new ObjectMetadataContainer instance
-   */
-  createObjectMetadataContainer(): ObjectMetadataContainer {
-    return new ObjectMetadataContainerImpl();
   }
 
   /**
@@ -68,20 +65,52 @@ export class ManagementFactory extends BasicEFactory {
   }
 
   /**
+   * Create a new StringToObjectMapEntry instance
+   */
+  createStringToObjectMapEntry(): StringToObjectMapEntry {
+    return new StringToObjectMapEntryImpl();
+  }
+
+  /**
+   * Create a new ObjectQuery instance
+   */
+  createObjectQuery(): ObjectQuery {
+    return new ObjectQueryImpl();
+  }
+
+  /**
+   * Create a new GenerationRequest instance
+   */
+  createGenerationRequest(): GenerationRequest {
+    return new GenerationRequestImpl();
+  }
+
+  /**
+   * Create a new ObjectMetadataContainer instance
+   */
+  createObjectMetadataContainer(): ObjectMetadataContainer {
+    return new ObjectMetadataContainerImpl();
+  }
+
+  /**
    * Create an instance of the given class
    */
   override create(eClass: EClass): EObject {
     switch (eClass.getName()) {
       case 'ObjectMetadata':
         return this.createObjectMetadata();
-      case 'StringToObjectMapEntry':
-        return this.createStringToObjectMapEntry();
-      case 'ObjectMetadataContainer':
-        return this.createObjectMetadataContainer();
       case 'Diagnostic':
         return this.createDiagnostic();
       case 'DiagnosticChange':
         return this.createDiagnosticChange();
+      case 'StringToObjectMapEntry':
+        return this.createStringToObjectMapEntry();
+      case 'ObjectQuery':
+        return this.createObjectQuery();
+      case 'GenerationRequest':
+        return this.createGenerationRequest();
+      case 'ObjectMetadataContainer':
+        return this.createObjectMetadataContainer();
       default:
         throw new Error(`Unknown class: ${eClass.getName()}`);
     }

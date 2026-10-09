@@ -6,12 +6,13 @@
  */
 
 import { BasicEObject } from '@emfts/core';
-import type { EClass, EStructuralFeature } from '@emfts/core';
-import type { DiagnosticSeverity } from './DiagnosticSeverity';
-import type { DiagnosticChange } from './DiagnosticChange';
-import { DiagnosticStatus } from './DiagnosticStatus';
-import type { Diagnostic } from './Diagnostic';
-import { ManagementPackage } from './ManagementPackage';
+import { createContainmentEList } from '@emfts/core';
+import type { EClass, EStructuralFeature, EList, EReference } from '@emfts/core';
+import type { DiagnosticChange } from './DiagnosticChange.js';
+import { DiagnosticSeverity } from './DiagnosticSeverity.js';
+import { DiagnosticStatus } from './DiagnosticStatus.js';
+import type { Diagnostic } from './Diagnostic.js';
+import { ManagementPackage } from './ManagementPackage.js';
 
 /**
  * Implementation of Diagnostic
@@ -39,7 +40,7 @@ export class DiagnosticImpl extends BasicEObject implements Diagnostic {
   private _producer: string = "";
   private _source?: string;
   private _code: string = "";
-  private _severity?: DiagnosticSeverity;
+  private _severity: DiagnosticSeverity = DiagnosticSeverity.INFO;
   private _message: string = "";
   private _category?: string;
   private _target?: string;
@@ -47,8 +48,8 @@ export class DiagnosticImpl extends BasicEObject implements Diagnostic {
   private _createdTime: string = "";
   private _lastChangeTime?: string;
   private _version: number = 0;
-  private _children: Diagnostic[] = [];
-  private _history: DiagnosticChange[] = [];
+  private _children!: EList<Diagnostic>;
+  private _history!: EList<DiagnosticChange>;
 
   /**
    * Returns the EClass of this object
@@ -346,52 +347,18 @@ export class DiagnosticImpl extends BasicEObject implements Diagnostic {
     }
   }
 
-  get children(): Diagnostic[] {
+  get children(): EList<Diagnostic> {
+    if (!this._children) {
+      this._children = createContainmentEList<any>(this, this.eClass().getEStructuralFeature('children') as EReference);
+    }
     return this._children;
   }
 
-  set children(value: Diagnostic[]) {
-    const oldValue = this._children;
-    this._children = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(DiagnosticImpl.CHILDREN),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => DiagnosticImpl.CHILDREN,
-        merge: () => false
-      });
+  get history(): EList<DiagnosticChange> {
+    if (!this._history) {
+      this._history = createContainmentEList<any>(this, this.eClass().getEStructuralFeature('history') as EReference);
     }
-  }
-
-  get history(): DiagnosticChange[] {
     return this._history;
-  }
-
-  set history(value: DiagnosticChange[]) {
-    const oldValue = this._history;
-    this._history = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(DiagnosticImpl.HISTORY),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => DiagnosticImpl.HISTORY,
-        merge: () => false
-      });
-    }
   }
 
   // Reflective API
@@ -490,11 +457,13 @@ export class DiagnosticImpl extends BasicEObject implements Diagnostic {
         super.eSet(feature, newValue);
         break;
       case DiagnosticImpl.CHILDREN:
-        this.children = newValue as Diagnostic[];
+        this.children.clear();
+        this.children.addAll(newValue as any[]);
         super.eSet(feature, newValue);
         break;
       case DiagnosticImpl.HISTORY:
-        this.history = newValue as DiagnosticChange[];
+        this.history.clear();
+        this.history.addAll(newValue as any[]);
         super.eSet(feature, newValue);
         break;
       default:
@@ -517,7 +486,7 @@ export class DiagnosticImpl extends BasicEObject implements Diagnostic {
       case DiagnosticImpl.CODE:
         return this._code !== "";
       case DiagnosticImpl.SEVERITY:
-        return this._severity !== undefined;
+        return this._severity !== DiagnosticSeverity.INFO;
       case DiagnosticImpl.MESSAGE:
         return this._message !== "";
       case DiagnosticImpl.CATEGORY:
@@ -533,9 +502,9 @@ export class DiagnosticImpl extends BasicEObject implements Diagnostic {
       case DiagnosticImpl.VERSION:
         return this._version !== 0;
       case DiagnosticImpl.CHILDREN:
-        return this._children !== undefined && this._children.length > 0;
+        return this._children !== undefined && !this._children.isEmpty();
       case DiagnosticImpl.HISTORY:
-        return this._history !== undefined && this._history.length > 0;
+        return this._history !== undefined && !this._history.isEmpty();
       default:
         return super.eIsSet(feature);
     }
@@ -560,7 +529,7 @@ export class DiagnosticImpl extends BasicEObject implements Diagnostic {
         this._code = "";
         return;
       case DiagnosticImpl.SEVERITY:
-        this._severity = undefined;
+        this._severity = DiagnosticSeverity.INFO;
         return;
       case DiagnosticImpl.MESSAGE:
         this._message = "";
@@ -584,10 +553,10 @@ export class DiagnosticImpl extends BasicEObject implements Diagnostic {
         this._version = 0;
         return;
       case DiagnosticImpl.CHILDREN:
-        this._children = [];
+        if (this._children) this._children.clear();
         return;
       case DiagnosticImpl.HISTORY:
-        this._history = [];
+        if (this._history) this._history.clear();
         return;
       default:
         super.eUnset(feature);

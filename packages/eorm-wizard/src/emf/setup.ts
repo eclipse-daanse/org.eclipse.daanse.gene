@@ -25,7 +25,9 @@ import { fixupWizardPackage } from './wizardPackageFixup';
 
 import eormXml from '../assets/eorm.ecore?raw';
 import epersistenceXml from '../assets/epersistence.ecore?raw';
-import atlasManagementXml from '../assets/atlas-management.ecore?raw';
+// The Atlas management model 1:1 from eclipse-fennec/model.atlas - one copy in
+// gene, kept by storage-model-atlas (see its src/model/SOURCE), read as text here
+import atlasManagementXml from '../../../storage-model-atlas/src/model/management.ecore?raw';
 import atlasWorkflowXml from '../assets/atlas-workflow-api.ecore?raw';
 
 /** nsURIs der Persistence-Metamodelle (müssen exakt stimmen). */

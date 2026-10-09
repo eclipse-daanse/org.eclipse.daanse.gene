@@ -6,10 +6,11 @@
  */
 
 import { BasicEObject } from '@emfts/core';
-import type { EClass, EStructuralFeature } from '@emfts/core';
-import type { ObjectMetadata } from './ObjectMetadata';
-import type { ObjectMetadataContainer } from './ObjectMetadataContainer';
-import { ManagementPackage } from './ManagementPackage';
+import { createContainmentEList } from '@emfts/core';
+import type { EClass, EStructuralFeature, EList, EReference } from '@emfts/core';
+import type { ObjectMetadata } from './ObjectMetadata.js';
+import type { ObjectMetadataContainer } from './ObjectMetadataContainer.js';
+import { ManagementPackage } from './ManagementPackage.js';
 
 /**
  * Implementation of ObjectMetadataContainer
@@ -22,7 +23,7 @@ export class ObjectMetadataContainerImpl extends BasicEObject implements ObjectM
 
   // Private fields
   private _containerId: string = "";
-  private _metadata: ObjectMetadata[] = [];
+  private _metadata!: EList<ObjectMetadata>;
 
   /**
    * Returns the EClass of this object
@@ -56,28 +57,11 @@ export class ObjectMetadataContainerImpl extends BasicEObject implements ObjectM
     }
   }
 
-  get metadata(): ObjectMetadata[] {
-    return this._metadata;
-  }
-
-  set metadata(value: ObjectMetadata[]) {
-    const oldValue = this._metadata;
-    this._metadata = value;
-    if (this.eDeliver()) {
-      this.eNotify({
-        getNotifier: () => this,
-        getEventType: () => 1, // SET
-        getFeature: () => this.eClass().getEStructuralFeature(ObjectMetadataContainerImpl.METADATA),
-        getOldValue: () => oldValue,
-        getNewValue: () => value,
-        getPosition: () => -1,
-        wasSet: () => true,
-        isTouch: () => false,
-        isReset: () => false,
-        getFeatureID: () => ObjectMetadataContainerImpl.METADATA,
-        merge: () => false
-      });
+  get metadata(): EList<ObjectMetadata> {
+    if (!this._metadata) {
+      this._metadata = createContainmentEList<any>(this, this.eClass().getEStructuralFeature('metadata') as EReference);
     }
+    return this._metadata;
   }
 
   // Reflective API
@@ -108,7 +92,8 @@ export class ObjectMetadataContainerImpl extends BasicEObject implements ObjectM
         super.eSet(feature, newValue);
         break;
       case ObjectMetadataContainerImpl.METADATA:
-        this.metadata = newValue as ObjectMetadata[];
+        this.metadata.clear();
+        this.metadata.addAll(newValue as any[]);
         super.eSet(feature, newValue);
         break;
       default:
@@ -125,7 +110,7 @@ export class ObjectMetadataContainerImpl extends BasicEObject implements ObjectM
       case ObjectMetadataContainerImpl.CONTAINER_ID:
         return this._containerId !== "";
       case ObjectMetadataContainerImpl.METADATA:
-        return this._metadata !== undefined && this._metadata.length > 0;
+        return this._metadata !== undefined && !this._metadata.isEmpty();
       default:
         return super.eIsSet(feature);
     }
@@ -141,7 +126,7 @@ export class ObjectMetadataContainerImpl extends BasicEObject implements ObjectM
         this._containerId = "";
         return;
       case ObjectMetadataContainerImpl.METADATA:
-        this._metadata = [];
+        if (this._metadata) this._metadata.clear();
         return;
       default:
         super.eUnset(feature);

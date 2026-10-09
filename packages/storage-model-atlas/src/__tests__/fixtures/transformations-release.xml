@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="ASCII"?>
+<mgmt:ObjectMetadataContainer xmlns:mgmt="http://eclipse.org/fennec/model/atlas/management/1.0.0">
+  <metadata uploadTime="2026-10-08T11:48:54.756071881Z" contentHash="5fa49434854e75e9de2b5f074634b5e02668c9a4d76bb42c39845b3fafbd779f" objectType="http://www.eclipse.org/fennec/m2x/compiled/1.0#//SourceUnit" lastChangeTime="2026-10-08T11:48:54.756163149Z" objectId="TagesbesucherToOpenData" objectName="TagesbesucherToOpenData" stage="release" scope="dimcity" registry="transformations">
+    <diagnostics id="d4eda70f7b34bf43112f671541a9e91d" producer="QvtCompile" code="qvto.compiles" message="Compiled to m2x1:19f246f8b02a4c41c25c5418bb9d5d2c49cd196ecfa1b5b915c0fe5cfc1247d1 (a startable transformation)" category="compile" createdTime="2026-10-08T11:48:54.823140769Z"/>
+  </metadata>
+  <metadata uploadTime="2026-10-08T11:48:54.066113071Z" contentHash="c70f4aadf85ba88d3443cecae9ba31795acf6ef5f913c52c7cd3f977d2f1b5fc" objectType="http://www.eclipse.org/fennec/m2x/compiled/1.0#//SourceUnit" lastChangeTime="2026-10-08T11:48:54.066206899Z" objectId="KarteninhaberToHistorie" objectName="KarteninhaberToHistorie" stage="release" scope="dimcity" registry="transformations">
+    <diagnostics id="d4eda70f7b34bf43112f671541a9e91d" producer="QvtCompile" code="qvto.compiles" message="Compiled to m2x1:6d80ea50fdfc4e27aca4961a4f58406d118041b19d88166a2c55d1f4d55ce1c8 (a startable transformation)" category="compile" createdTime="2026-10-08T11:48:54.146566053Z"/>
+  </metadata>
+</mgmt:ObjectMetadataContainer>

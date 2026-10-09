@@ -1,0 +1,6 @@
+# The Atlas management model, taken 1:1 - do not edit management.ecore by hand.
+# Update with scripts/sync-management-model.sh, then npm run generate:management.
+repository: https://github.com/eclipse-fennec/model.atlas
+path: org.eclipse.fennec.model.atlas.management/model/management.ecore
+ref: snapshot
+commit: fdc8d45843ec22f5af017d286ca54c1e00539152
