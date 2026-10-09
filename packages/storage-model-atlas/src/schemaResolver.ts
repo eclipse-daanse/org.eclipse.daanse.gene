@@ -126,7 +126,8 @@ export function describeProvider(p: AtlasProvider): string {
  *
  * A schema rarely sits in the same stage as the instance — the instance's
  * stage is still the most likely one, and after that the server's order
- * counts.
+ * counts. A preferred stage the scope does not have is left out: the server
+ * answers it with 400 (`atlas` has `released`, not `release`).
  */
 export function providersForScope(
   client: ModelAtlasClient,
@@ -135,7 +136,7 @@ export function providersForScope(
   preferred?: string,
   registryName?: string,
 ): AtlasProvider[] {
-  const ordered = preferred
+  const ordered = preferred && (stages.length === 0 || stages.includes(preferred))
     ? [preferred, ...stages.filter((s) => s !== preferred)]
     : [...stages]
   return ordered.map((stage) => ({ client, scopeName, stage, registryName }))

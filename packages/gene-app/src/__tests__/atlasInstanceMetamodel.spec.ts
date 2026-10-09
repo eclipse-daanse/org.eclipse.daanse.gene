@@ -121,10 +121,20 @@ function fakeAtlas(url: string): Response {
 }
 
 /** Installs the Atlas converter for this entry, the way the app does. */
-async function installConverter(entry: unknown) {
+async function installConverter(entry: unknown, editorConfig?: unknown) {
   return prepareAtlasResolution(entry, {
+    editorConfig,
     instanceTreeComposables: { setPackageURIConverter },
   })
+}
+
+/** Workspace settings with one Model Atlas resolver, as the settings dialog writes them. */
+function resolverSettings(resolver: Record<string, unknown>) {
+  return {
+    packageResolverChain: {
+      value: { resolvers: [{ kind: 'MODEL_ATLAS', enabled: true, baseUrl: '/atlas/rest', ...resolver }] },
+    },
+  }
 }
 
 /** The scope in the explorer, as after "Add Source → Model Atlas". */
@@ -216,6 +226,27 @@ describe('instance from the Model Atlas', () => {
     expect(setup.searched).toContain('platform/atlas-schema-registry/release')
 
     const result = await loadInstancesFromXMI(content, 'inherited.xmi')
+    expect(result.loadedCount).toBe(1)
+    expect(result.missingPackages).toEqual([])
+  })
+
+  it('a resolver from the workspace settings follows the scope chain too', async () => {
+    // A local file - no Atlas origin. Only the configured resolver points to
+    // the tenant scope, and the schema lives in its parent. Before, the
+    // resolver asked exactly the configured scope and stage and never got there.
+    inherited = true
+    const setup = await installConverter(
+      { name: 'local.xmi', path: 'instances/local.xmi' },
+      resolverSettings({ scopeName: 'jena', stage: 'release' }),
+    )
+    expect(setup.searched).toContain('platform/atlas-schema-registry/release')
+    // The configured stage only where the scope has it: jena knows no 'release'
+    expect(setup.searched.some((s) => s.startsWith('jena/') && s.endsWith('/release'))).toBe(false)
+
+    const result = await loadInstancesFromXMI(
+      PERSONS_XMI.replace(NS, NS_INHERITED),
+      'local.xmi',
+    )
     expect(result.loadedCount).toBe(1)
     expect(result.missingPackages).toEqual([])
   })
