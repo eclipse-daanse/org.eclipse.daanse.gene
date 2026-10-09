@@ -57,12 +57,36 @@ export class ManagementPackage extends BasicEPackage {
     OBJECT_METADATA__GOVERNANCE_DOCUMENTATION_ID: null as unknown as EAttribute | EReference,
     OBJECT_METADATA__GENERATION_TRIGGER_FINGERPRINT: null as unknown as EAttribute | EReference,
     OBJECT_METADATA__PROPERTIES: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__DIAGNOSTICS: null as unknown as EAttribute | EReference,
     STRING_TO_OBJECT_MAP_ENTRY: null as unknown as EClass,
     STRING_TO_OBJECT_MAP_ENTRY__KEY: null as unknown as EAttribute | EReference,
     STRING_TO_OBJECT_MAP_ENTRY__VALUE: null as unknown as EAttribute | EReference,
     OBJECT_METADATA_CONTAINER: null as unknown as EClass,
     OBJECT_METADATA_CONTAINER__CONTAINER_ID: null as unknown as EAttribute | EReference,
     OBJECT_METADATA_CONTAINER__METADATA: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC: null as unknown as EClass,
+    DIAGNOSTIC__ID: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC__PRODUCER: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC__SOURCE: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC__CODE: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC__SEVERITY: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC__MESSAGE: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC__CATEGORY: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC__TARGET: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC__STATUS: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC__CREATED_TIME: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC__LAST_CHANGE_TIME: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC__VERSION: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC__CHILDREN: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC__HISTORY: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC_CHANGE: null as unknown as EClass,
+    DIAGNOSTIC_CHANGE__CHANGE_TIME: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC_CHANGE__CHANGED_BY: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC_CHANGE__OLD_SEVERITY: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC_CHANGE__NEW_SEVERITY: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC_CHANGE__OLD_STATUS: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC_CHANGE__NEW_STATUS: null as unknown as EAttribute | EReference,
+    DIAGNOSTIC_CHANGE__REASON: null as unknown as EAttribute | EReference,
   };
 
   private constructor() {
@@ -278,6 +302,15 @@ export class ManagementPackage extends BasicEPackage {
     objectMetadataClass.getEStructuralFeatures().push(objectMetadata_properties);
     ManagementPackage.Literals.OBJECT_METADATA__PROPERTIES = objectMetadata_properties;
 
+    // Create diagnostics feature
+    const objectMetadata_diagnostics = new BasicEReference();
+    objectMetadata_diagnostics.setContainment(true);
+    objectMetadata_diagnostics.setName('diagnostics');
+    objectMetadata_diagnostics.setLowerBound(0);
+    objectMetadata_diagnostics.setUpperBound(-1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_diagnostics);
+    ManagementPackage.Literals.OBJECT_METADATA__DIAGNOSTICS = objectMetadata_diagnostics;
+
     // Create StringToObjectMapEntry class
     const stringToObjectMapEntryClass = new BasicEClass();
     stringToObjectMapEntryClass.setName('StringToObjectMapEntry');
@@ -329,6 +362,194 @@ export class ManagementPackage extends BasicEPackage {
     objectMetadataContainerClass.getEStructuralFeatures().push(objectMetadataContainer_metadata);
     ManagementPackage.Literals.OBJECT_METADATA_CONTAINER__METADATA = objectMetadataContainer_metadata;
 
+    // Create Diagnostic class
+    const diagnosticClass = new BasicEClass();
+    diagnosticClass.setName('Diagnostic');
+    diagnosticClass.setAbstract(false);
+    diagnosticClass.setInterface(false);
+    this.getEClassifiers().push(diagnosticClass);
+    diagnosticClass.setEPackage(this);
+    ManagementPackage.Literals.DIAGNOSTIC = diagnosticClass;
+
+    // Create id feature
+    const diagnostic_id = new BasicEAttribute();
+    diagnostic_id.setName('id');
+    diagnostic_id.setLowerBound(1);
+    diagnostic_id.setUpperBound(1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_id);
+    ManagementPackage.Literals.DIAGNOSTIC__ID = diagnostic_id;
+
+    // Create producer feature
+    const diagnostic_producer = new BasicEAttribute();
+    diagnostic_producer.setName('producer');
+    diagnostic_producer.setLowerBound(1);
+    diagnostic_producer.setUpperBound(1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_producer);
+    ManagementPackage.Literals.DIAGNOSTIC__PRODUCER = diagnostic_producer;
+
+    // Create source feature
+    const diagnostic_source = new BasicEAttribute();
+    diagnostic_source.setName('source');
+    diagnostic_source.setLowerBound(0);
+    diagnostic_source.setUpperBound(1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_source);
+    ManagementPackage.Literals.DIAGNOSTIC__SOURCE = diagnostic_source;
+
+    // Create code feature
+    const diagnostic_code = new BasicEAttribute();
+    diagnostic_code.setName('code');
+    diagnostic_code.setLowerBound(1);
+    diagnostic_code.setUpperBound(1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_code);
+    ManagementPackage.Literals.DIAGNOSTIC__CODE = diagnostic_code;
+
+    // Create severity feature
+    const diagnostic_severity = new BasicEAttribute();
+    diagnostic_severity.setName('severity');
+    diagnostic_severity.setLowerBound(1);
+    diagnostic_severity.setUpperBound(1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_severity);
+    ManagementPackage.Literals.DIAGNOSTIC__SEVERITY = diagnostic_severity;
+
+    // Create message feature
+    const diagnostic_message = new BasicEAttribute();
+    diagnostic_message.setName('message');
+    diagnostic_message.setLowerBound(1);
+    diagnostic_message.setUpperBound(1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_message);
+    ManagementPackage.Literals.DIAGNOSTIC__MESSAGE = diagnostic_message;
+
+    // Create category feature
+    const diagnostic_category = new BasicEAttribute();
+    diagnostic_category.setName('category');
+    diagnostic_category.setLowerBound(0);
+    diagnostic_category.setUpperBound(1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_category);
+    ManagementPackage.Literals.DIAGNOSTIC__CATEGORY = diagnostic_category;
+
+    // Create target feature
+    const diagnostic_target = new BasicEAttribute();
+    diagnostic_target.setName('target');
+    diagnostic_target.setLowerBound(0);
+    diagnostic_target.setUpperBound(1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_target);
+    ManagementPackage.Literals.DIAGNOSTIC__TARGET = diagnostic_target;
+
+    // Create status feature
+    const diagnostic_status = new BasicEAttribute();
+    diagnostic_status.setName('status');
+    diagnostic_status.setLowerBound(1);
+    diagnostic_status.setUpperBound(1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_status);
+    ManagementPackage.Literals.DIAGNOSTIC__STATUS = diagnostic_status;
+
+    // Create createdTime feature
+    const diagnostic_createdTime = new BasicEAttribute();
+    diagnostic_createdTime.setName('createdTime');
+    diagnostic_createdTime.setLowerBound(1);
+    diagnostic_createdTime.setUpperBound(1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_createdTime);
+    ManagementPackage.Literals.DIAGNOSTIC__CREATED_TIME = diagnostic_createdTime;
+
+    // Create lastChangeTime feature
+    const diagnostic_lastChangeTime = new BasicEAttribute();
+    diagnostic_lastChangeTime.setName('lastChangeTime');
+    diagnostic_lastChangeTime.setLowerBound(0);
+    diagnostic_lastChangeTime.setUpperBound(1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_lastChangeTime);
+    ManagementPackage.Literals.DIAGNOSTIC__LAST_CHANGE_TIME = diagnostic_lastChangeTime;
+
+    // Create version feature
+    const diagnostic_version = new BasicEAttribute();
+    diagnostic_version.setName('version');
+    diagnostic_version.setLowerBound(1);
+    diagnostic_version.setUpperBound(1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_version);
+    ManagementPackage.Literals.DIAGNOSTIC__VERSION = diagnostic_version;
+
+    // Create children feature
+    const diagnostic_children = new BasicEReference();
+    diagnostic_children.setContainment(true);
+    diagnostic_children.setName('children');
+    diagnostic_children.setLowerBound(0);
+    diagnostic_children.setUpperBound(-1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_children);
+    ManagementPackage.Literals.DIAGNOSTIC__CHILDREN = diagnostic_children;
+
+    // Create history feature
+    const diagnostic_history = new BasicEReference();
+    diagnostic_history.setContainment(true);
+    diagnostic_history.setName('history');
+    diagnostic_history.setLowerBound(0);
+    diagnostic_history.setUpperBound(-1);
+    diagnosticClass.getEStructuralFeatures().push(diagnostic_history);
+    ManagementPackage.Literals.DIAGNOSTIC__HISTORY = diagnostic_history;
+
+    // Create DiagnosticChange class
+    const diagnosticChangeClass = new BasicEClass();
+    diagnosticChangeClass.setName('DiagnosticChange');
+    diagnosticChangeClass.setAbstract(false);
+    diagnosticChangeClass.setInterface(false);
+    this.getEClassifiers().push(diagnosticChangeClass);
+    diagnosticChangeClass.setEPackage(this);
+    ManagementPackage.Literals.DIAGNOSTIC_CHANGE = diagnosticChangeClass;
+
+    // Create changeTime feature
+    const diagnosticChange_changeTime = new BasicEAttribute();
+    diagnosticChange_changeTime.setName('changeTime');
+    diagnosticChange_changeTime.setLowerBound(1);
+    diagnosticChange_changeTime.setUpperBound(1);
+    diagnosticChangeClass.getEStructuralFeatures().push(diagnosticChange_changeTime);
+    ManagementPackage.Literals.DIAGNOSTIC_CHANGE__CHANGE_TIME = diagnosticChange_changeTime;
+
+    // Create changedBy feature
+    const diagnosticChange_changedBy = new BasicEAttribute();
+    diagnosticChange_changedBy.setName('changedBy');
+    diagnosticChange_changedBy.setLowerBound(1);
+    diagnosticChange_changedBy.setUpperBound(1);
+    diagnosticChangeClass.getEStructuralFeatures().push(diagnosticChange_changedBy);
+    ManagementPackage.Literals.DIAGNOSTIC_CHANGE__CHANGED_BY = diagnosticChange_changedBy;
+
+    // Create oldSeverity feature
+    const diagnosticChange_oldSeverity = new BasicEAttribute();
+    diagnosticChange_oldSeverity.setName('oldSeverity');
+    diagnosticChange_oldSeverity.setLowerBound(0);
+    diagnosticChange_oldSeverity.setUpperBound(1);
+    diagnosticChangeClass.getEStructuralFeatures().push(diagnosticChange_oldSeverity);
+    ManagementPackage.Literals.DIAGNOSTIC_CHANGE__OLD_SEVERITY = diagnosticChange_oldSeverity;
+
+    // Create newSeverity feature
+    const diagnosticChange_newSeverity = new BasicEAttribute();
+    diagnosticChange_newSeverity.setName('newSeverity');
+    diagnosticChange_newSeverity.setLowerBound(0);
+    diagnosticChange_newSeverity.setUpperBound(1);
+    diagnosticChangeClass.getEStructuralFeatures().push(diagnosticChange_newSeverity);
+    ManagementPackage.Literals.DIAGNOSTIC_CHANGE__NEW_SEVERITY = diagnosticChange_newSeverity;
+
+    // Create oldStatus feature
+    const diagnosticChange_oldStatus = new BasicEAttribute();
+    diagnosticChange_oldStatus.setName('oldStatus');
+    diagnosticChange_oldStatus.setLowerBound(0);
+    diagnosticChange_oldStatus.setUpperBound(1);
+    diagnosticChangeClass.getEStructuralFeatures().push(diagnosticChange_oldStatus);
+    ManagementPackage.Literals.DIAGNOSTIC_CHANGE__OLD_STATUS = diagnosticChange_oldStatus;
+
+    // Create newStatus feature
+    const diagnosticChange_newStatus = new BasicEAttribute();
+    diagnosticChange_newStatus.setName('newStatus');
+    diagnosticChange_newStatus.setLowerBound(0);
+    diagnosticChange_newStatus.setUpperBound(1);
+    diagnosticChangeClass.getEStructuralFeatures().push(diagnosticChange_newStatus);
+    ManagementPackage.Literals.DIAGNOSTIC_CHANGE__NEW_STATUS = diagnosticChange_newStatus;
+
+    // Create reason feature
+    const diagnosticChange_reason = new BasicEAttribute();
+    diagnosticChange_reason.setName('reason');
+    diagnosticChange_reason.setLowerBound(0);
+    diagnosticChange_reason.setUpperBound(1);
+    diagnosticChangeClass.getEStructuralFeatures().push(diagnosticChange_reason);
+    ManagementPackage.Literals.DIAGNOSTIC_CHANGE__REASON = diagnosticChange_reason;
+
 
     // ============================================
     // Set ESuperTypes (must be done after all classes are created)
@@ -338,7 +559,10 @@ export class ManagementPackage extends BasicEPackage {
     // Set ETypes for EReferences (must be done after all classes are created)
     // ============================================
     (ManagementPackage.Literals.OBJECT_METADATA__PROPERTIES as BasicEReference).setEType(ManagementPackage.Literals.STRING_TO_OBJECT_MAP_ENTRY);
+    (ManagementPackage.Literals.OBJECT_METADATA__DIAGNOSTICS as BasicEReference).setEType(ManagementPackage.Literals.DIAGNOSTIC);
     (ManagementPackage.Literals.OBJECT_METADATA_CONTAINER__METADATA as BasicEReference).setEType(ManagementPackage.Literals.OBJECT_METADATA);
+    (ManagementPackage.Literals.DIAGNOSTIC__CHILDREN as BasicEReference).setEType(ManagementPackage.Literals.DIAGNOSTIC);
+    (ManagementPackage.Literals.DIAGNOSTIC__HISTORY as BasicEReference).setEType(ManagementPackage.Literals.DIAGNOSTIC_CHANGE);
 
     // ============================================
     // Register XML name mappings from ExtendedMetaData annotations

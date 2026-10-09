@@ -8,6 +8,7 @@
 import type { EObject } from '@emfts/core';
 import type { ObjectStatus } from './ObjectStatus';
 import type { StringToObjectMapEntry } from './StringToObjectMapEntry';
+import type { Diagnostic } from './Diagnostic';
 
 /**
  * ObjectMetadata
@@ -38,5 +39,6 @@ export interface ObjectMetadata extends EObject {
   governanceDocumentationId?: string;
   generationTriggerFingerprint?: string;
   properties: StringToObjectMapEntry[];
+  diagnostics: Diagnostic[];
 
 }

@@ -14,6 +14,10 @@ import type { StringToObjectMapEntry } from './StringToObjectMapEntry';
 import { StringToObjectMapEntryImpl } from './StringToObjectMapEntryImpl';
 import type { ObjectMetadataContainer } from './ObjectMetadataContainer';
 import { ObjectMetadataContainerImpl } from './ObjectMetadataContainerImpl';
+import type { Diagnostic } from './Diagnostic';
+import { DiagnosticImpl } from './DiagnosticImpl';
+import type { DiagnosticChange } from './DiagnosticChange';
+import { DiagnosticChangeImpl } from './DiagnosticChangeImpl';
 
 /**
  * Factory for creating Management model objects
@@ -50,6 +54,20 @@ export class ManagementFactory extends BasicEFactory {
   }
 
   /**
+   * Create a new Diagnostic instance
+   */
+  createDiagnostic(): Diagnostic {
+    return new DiagnosticImpl();
+  }
+
+  /**
+   * Create a new DiagnosticChange instance
+   */
+  createDiagnosticChange(): DiagnosticChange {
+    return new DiagnosticChangeImpl();
+  }
+
+  /**
    * Create an instance of the given class
    */
   override create(eClass: EClass): EObject {
@@ -60,6 +78,10 @@ export class ManagementFactory extends BasicEFactory {
         return this.createStringToObjectMapEntry();
       case 'ObjectMetadataContainer':
         return this.createObjectMetadataContainer();
+      case 'Diagnostic':
+        return this.createDiagnostic();
+      case 'DiagnosticChange':
+        return this.createDiagnosticChange();
       default:
         throw new Error(`Unknown class: ${eClass.getName()}`);
     }

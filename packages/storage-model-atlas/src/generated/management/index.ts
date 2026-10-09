@@ -13,14 +13,20 @@ export { ManagementFactory } from './ManagementFactory';
 export type { ObjectMetadata } from './ObjectMetadata';
 export type { StringToObjectMapEntry } from './StringToObjectMapEntry';
 export type { ObjectMetadataContainer } from './ObjectMetadataContainer';
+export type { Diagnostic } from './Diagnostic';
+export type { DiagnosticChange } from './DiagnosticChange';
 
 // Implementations
 export { ObjectMetadataImpl } from './ObjectMetadataImpl';
 export { StringToObjectMapEntryImpl } from './StringToObjectMapEntryImpl';
 export { ObjectMetadataContainerImpl } from './ObjectMetadataContainerImpl';
+export { DiagnosticImpl } from './DiagnosticImpl';
+export { DiagnosticChangeImpl } from './DiagnosticChangeImpl';
 
 // Enums
 export { ObjectStatus, getObjectStatus, getObjectStatusByLiteral } from './ObjectStatus';
 export { PackageStatus, getPackageStatus, getPackageStatusByLiteral } from './PackageStatus';
 export { StorageBackendType, getStorageBackendType, getStorageBackendTypeByLiteral } from './StorageBackendType';
 export { GenerationStatus, getGenerationStatus, getGenerationStatusByLiteral } from './GenerationStatus';
+export { DiagnosticSeverity, getDiagnosticSeverity, getDiagnosticSeverityByLiteral } from './DiagnosticSeverity';
+export { DiagnosticStatus, getDiagnosticStatus, getDiagnosticStatusByLiteral } from './DiagnosticStatus';
