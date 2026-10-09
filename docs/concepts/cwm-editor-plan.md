@@ -61,6 +61,33 @@ Test-IDs nach PH-C1: `cwm.Editor.ContextView.ObjectRow@<Klasse>-<Name>.Row.Body.
 je Zeile `….Row@<Spaltenname>`. Offen aus PH-8: Inline-Bearbeitung, Spalte
 anlegen und duplizieren über das Aktionsmenü der Table.
 
+## Kontextansicht nach Pflichtenheft, Schritt 1 (2026-10-09)
+
+Die Mitte des Tabs ist jetzt die Kontextansicht (`CwmContextView`), nicht mehr
+die Dokumentationsansicht:
+
+- **PH-1:** eine `ObjectRow` je Objekt unter dem Kontextobjekt, Tiefensuche
+  über `eContents()`. Columns einer Table und Descriptions, die die Table
+  schon zeigt (ihre eigene und die ihrer Spalten), bekommen keine eigene Zeile.
+  Das Kontextobjekt ist anfangs der Container des gewählten Objekts; liegt eine
+  Auswahl außerhalb, wandert der Kontext zu deren Container.
+- **PH-2:** links je Vorfahr eine Linie (`Line@<slug>`, `data-level`), außen
+  `Line@context` (`data-level -1`), außen kräftiger, innen heller; Hover nennt
+  Klasse, Name, Ebene, Eltern. `Toggle` (+/−, `aria-expanded`) klappt den
+  Teilbaum.
+- **PH-5:** `Row.Body` mit `Fields` (gesetzte Attribute, nur lesend) und
+  `TextView` (Text der Description bzw. der eigenen Description der Table),
+  bei Tables dazu `Columns` (PH-8).
+- **PH-6:** Kopfzeile mit hierarchischem Breadcrumb (setzt den Kontext),
+  Ablauf-Breadcrumb der gewählten Objekte, Sprüngen oben/zurück/vor
+  (Container bzw. Geschwister, auf oberster Ebene in der Resource) und
+  „Als Kontextobjekt setzen“.
+- **PH-4:** `Row.RightRail` mit `Validation` und `Actions` nur als Platzhalter.
+- Test-IDs nach PH-C1 an allen Boxen, dazu `data-wire-kind` wie im Wireframe.
+
+Noch offen: PH-3 (Tree folgt dem Scrollen, `TreeItem`-Test-IDs), PH-4,
+PH-7, PH-8 (bearbeiten), PH-9, PH-10.
+
 ## Offen / nächste Etappen
 
 - **Relational:** Katalog → Schema → Tabelle → Spalte als Domänenbaum und
