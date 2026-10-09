@@ -5,8 +5,9 @@
  * @generated
  */
 
-import { BasicEPackage, BasicEClass, BasicEAttribute, BasicEReference } from '@emfts/core';
+import { BasicEPackage, BasicEClass, BasicEAttribute, BasicEReference, EPackageRegistry, getEcorePackage } from '@emfts/core';
 import type { EClass, EAttribute, EReference, EEnum } from '@emfts/core';
+import { ManagementFactory } from './ManagementFactory.js';
 
 /**
  * Management Package
@@ -33,37 +34,33 @@ export class ManagementPackage extends BasicEPackage {
    */
   static readonly Literals = {
     OBJECT_METADATA: null as unknown as EClass,
-    OBJECT_METADATA__OBJECT_ID: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA__OBJECT_NAME: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA__OBJECT_TYPE: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA__STAGE: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA__SCOPE: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA__REGISTRY: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA__STATUS: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA__IS_READ_ONLY: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA__VERSION: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA__CONTENT_HASH: null as unknown as EAttribute | EReference,
     OBJECT_METADATA__UPLOAD_USER: null as unknown as EAttribute | EReference,
     OBJECT_METADATA__UPLOAD_TIME: null as unknown as EAttribute | EReference,
     OBJECT_METADATA__SOURCE_CHANNEL: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA__LAST_CHANGE_USER: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA__LAST_CHANGE_TIME: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA__LAST_CHANGE_REASON: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__CONTENT_HASH: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__OBJECT_TYPE: null as unknown as EAttribute | EReference,
     OBJECT_METADATA__REVIEW_USER: null as unknown as EAttribute | EReference,
     OBJECT_METADATA__REVIEW_TIME: null as unknown as EAttribute | EReference,
     OBJECT_METADATA__REVIEW_REASON: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__GENERATION_TRIGGER_FINGERPRINT: null as unknown as EAttribute | EReference,
     OBJECT_METADATA__COMPLIANCE_CHECK_TIME: null as unknown as EAttribute | EReference,
     OBJECT_METADATA__COMPLIANCE_STATUS: null as unknown as EAttribute | EReference,
     OBJECT_METADATA__GOVERNANCE_DOCUMENTATION_ID: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA__GENERATION_TRIGGER_FINGERPRINT: null as unknown as EAttribute | EReference,
     OBJECT_METADATA__PROPERTIES: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__LAST_CHANGE_USER: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__LAST_CHANGE_TIME: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__STATUS: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__VERSION: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__OBJECT_REF: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__OBJECT_ID: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__OBJECT_NAME: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__STAGE: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__LAST_CHANGE_REASON: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__SCOPE: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__IS_READ_ONLY: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__REGISTRY: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA__FINGERPRINT: null as unknown as EAttribute | EReference,
     OBJECT_METADATA__DIAGNOSTICS: null as unknown as EAttribute | EReference,
-    STRING_TO_OBJECT_MAP_ENTRY: null as unknown as EClass,
-    STRING_TO_OBJECT_MAP_ENTRY__KEY: null as unknown as EAttribute | EReference,
-    STRING_TO_OBJECT_MAP_ENTRY__VALUE: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA_CONTAINER: null as unknown as EClass,
-    OBJECT_METADATA_CONTAINER__CONTAINER_ID: null as unknown as EAttribute | EReference,
-    OBJECT_METADATA_CONTAINER__METADATA: null as unknown as EAttribute | EReference,
     DIAGNOSTIC: null as unknown as EClass,
     DIAGNOSTIC__ID: null as unknown as EAttribute | EReference,
     DIAGNOSTIC__PRODUCER: null as unknown as EAttribute | EReference,
@@ -87,6 +84,33 @@ export class ManagementPackage extends BasicEPackage {
     DIAGNOSTIC_CHANGE__OLD_STATUS: null as unknown as EAttribute | EReference,
     DIAGNOSTIC_CHANGE__NEW_STATUS: null as unknown as EAttribute | EReference,
     DIAGNOSTIC_CHANGE__REASON: null as unknown as EAttribute | EReference,
+    STRING_TO_OBJECT_MAP_ENTRY: null as unknown as EClass,
+    STRING_TO_OBJECT_MAP_ENTRY__KEY: null as unknown as EAttribute | EReference,
+    STRING_TO_OBJECT_MAP_ENTRY__VALUE: null as unknown as EAttribute | EReference,
+    OBJECT_QUERY: null as unknown as EClass,
+    OBJECT_QUERY__UPLOAD_USER: null as unknown as EAttribute | EReference,
+    OBJECT_QUERY__SOURCE_CHANNEL: null as unknown as EAttribute | EReference,
+    OBJECT_QUERY__OBJECT_TYPE: null as unknown as EAttribute | EReference,
+    OBJECT_QUERY__STATUS: null as unknown as EAttribute | EReference,
+    OBJECT_QUERY__STAGE: null as unknown as EAttribute | EReference,
+    OBJECT_QUERY__SCOPE: null as unknown as EAttribute | EReference,
+    OBJECT_QUERY__NAME: null as unknown as EAttribute | EReference,
+    OBJECT_QUERY__REGISTRY: null as unknown as EAttribute | EReference,
+    GENERATION_REQUEST: null as unknown as EClass,
+    GENERATION_REQUEST__REQUEST_ID: null as unknown as EAttribute | EReference,
+    GENERATION_REQUEST__JSON_SAMPLE: null as unknown as EAttribute | EReference,
+    GENERATION_REQUEST__JSON_FINGERPRINT: null as unknown as EAttribute | EReference,
+    GENERATION_REQUEST__SOURCE_CHANNEL: null as unknown as EAttribute | EReference,
+    GENERATION_REQUEST__REQUESTING_USER: null as unknown as EAttribute | EReference,
+    GENERATION_REQUEST__STATUS: null as unknown as EAttribute | EReference,
+    GENERATION_REQUEST__REQUEST_TIME: null as unknown as EAttribute | EReference,
+    GENERATION_REQUEST__START_TIME: null as unknown as EAttribute | EReference,
+    GENERATION_REQUEST__COMPLETION_TIME: null as unknown as EAttribute | EReference,
+    GENERATION_REQUEST__ERROR_MESSAGE: null as unknown as EAttribute | EReference,
+    GENERATION_REQUEST__RESULT_PACKAGE_ID: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA_CONTAINER: null as unknown as EClass,
+    OBJECT_METADATA_CONTAINER__CONTAINER_ID: null as unknown as EAttribute | EReference,
+    OBJECT_METADATA_CONTAINER__METADATA: null as unknown as EAttribute | EReference,
   };
 
   private constructor() {
@@ -100,6 +124,13 @@ export class ManagementPackage extends BasicEPackage {
    * Initialize package contents
    */
   private init(): void {
+    // Register this package under its nsURI so other generated packages can
+    // resolve their cross-package references from the registry (#36).
+    // eINSTANCE is already assigned at this point
+    EPackageRegistry.INSTANCE.set(ManagementPackage.eNS_URI, this);
+    // Wire the generated factory so loaded/created instances are typed Impls.
+    this.setEFactoryInstance(ManagementFactory.eINSTANCE);
+
     // Create ObjectMetadata class
     const objectMetadataClass = new BasicEClass();
     objectMetadataClass.setName('ObjectMetadata');
@@ -108,86 +139,6 @@ export class ManagementPackage extends BasicEPackage {
     this.getEClassifiers().push(objectMetadataClass);
     objectMetadataClass.setEPackage(this);
     ManagementPackage.Literals.OBJECT_METADATA = objectMetadataClass;
-
-    // Create objectId feature
-    const objectMetadata_objectId = new BasicEAttribute();
-    objectMetadata_objectId.setName('objectId');
-    objectMetadata_objectId.setLowerBound(1);
-    objectMetadata_objectId.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_objectId);
-    ManagementPackage.Literals.OBJECT_METADATA__OBJECT_ID = objectMetadata_objectId;
-
-    // Create objectName feature
-    const objectMetadata_objectName = new BasicEAttribute();
-    objectMetadata_objectName.setName('objectName');
-    objectMetadata_objectName.setLowerBound(0);
-    objectMetadata_objectName.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_objectName);
-    ManagementPackage.Literals.OBJECT_METADATA__OBJECT_NAME = objectMetadata_objectName;
-
-    // Create objectType feature
-    const objectMetadata_objectType = new BasicEAttribute();
-    objectMetadata_objectType.setName('objectType');
-    objectMetadata_objectType.setLowerBound(1);
-    objectMetadata_objectType.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_objectType);
-    ManagementPackage.Literals.OBJECT_METADATA__OBJECT_TYPE = objectMetadata_objectType;
-
-    // Create stage feature
-    const objectMetadata_stage = new BasicEAttribute();
-    objectMetadata_stage.setName('stage');
-    objectMetadata_stage.setLowerBound(1);
-    objectMetadata_stage.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_stage);
-    ManagementPackage.Literals.OBJECT_METADATA__STAGE = objectMetadata_stage;
-
-    // Create scope feature
-    const objectMetadata_scope = new BasicEAttribute();
-    objectMetadata_scope.setName('scope');
-    objectMetadata_scope.setLowerBound(1);
-    objectMetadata_scope.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_scope);
-    ManagementPackage.Literals.OBJECT_METADATA__SCOPE = objectMetadata_scope;
-
-    // Create registry feature
-    const objectMetadata_registry = new BasicEAttribute();
-    objectMetadata_registry.setName('registry');
-    objectMetadata_registry.setLowerBound(1);
-    objectMetadata_registry.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_registry);
-    ManagementPackage.Literals.OBJECT_METADATA__REGISTRY = objectMetadata_registry;
-
-    // Create status feature
-    const objectMetadata_status = new BasicEAttribute();
-    objectMetadata_status.setName('status');
-    objectMetadata_status.setLowerBound(1);
-    objectMetadata_status.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_status);
-    ManagementPackage.Literals.OBJECT_METADATA__STATUS = objectMetadata_status;
-
-    // Create isReadOnly feature
-    const objectMetadata_isReadOnly = new BasicEAttribute();
-    objectMetadata_isReadOnly.setName('isReadOnly');
-    objectMetadata_isReadOnly.setLowerBound(0);
-    objectMetadata_isReadOnly.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_isReadOnly);
-    ManagementPackage.Literals.OBJECT_METADATA__IS_READ_ONLY = objectMetadata_isReadOnly;
-
-    // Create version feature
-    const objectMetadata_version = new BasicEAttribute();
-    objectMetadata_version.setName('version');
-    objectMetadata_version.setLowerBound(0);
-    objectMetadata_version.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_version);
-    ManagementPackage.Literals.OBJECT_METADATA__VERSION = objectMetadata_version;
-
-    // Create contentHash feature
-    const objectMetadata_contentHash = new BasicEAttribute();
-    objectMetadata_contentHash.setName('contentHash');
-    objectMetadata_contentHash.setLowerBound(1);
-    objectMetadata_contentHash.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_contentHash);
-    ManagementPackage.Literals.OBJECT_METADATA__CONTENT_HASH = objectMetadata_contentHash;
 
     // Create uploadUser feature
     const objectMetadata_uploadUser = new BasicEAttribute();
@@ -213,29 +164,21 @@ export class ManagementPackage extends BasicEPackage {
     objectMetadataClass.getEStructuralFeatures().push(objectMetadata_sourceChannel);
     ManagementPackage.Literals.OBJECT_METADATA__SOURCE_CHANNEL = objectMetadata_sourceChannel;
 
-    // Create lastChangeUser feature
-    const objectMetadata_lastChangeUser = new BasicEAttribute();
-    objectMetadata_lastChangeUser.setName('lastChangeUser');
-    objectMetadata_lastChangeUser.setLowerBound(0);
-    objectMetadata_lastChangeUser.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_lastChangeUser);
-    ManagementPackage.Literals.OBJECT_METADATA__LAST_CHANGE_USER = objectMetadata_lastChangeUser;
+    // Create contentHash feature
+    const objectMetadata_contentHash = new BasicEAttribute();
+    objectMetadata_contentHash.setName('contentHash');
+    objectMetadata_contentHash.setLowerBound(1);
+    objectMetadata_contentHash.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_contentHash);
+    ManagementPackage.Literals.OBJECT_METADATA__CONTENT_HASH = objectMetadata_contentHash;
 
-    // Create lastChangeTime feature
-    const objectMetadata_lastChangeTime = new BasicEAttribute();
-    objectMetadata_lastChangeTime.setName('lastChangeTime');
-    objectMetadata_lastChangeTime.setLowerBound(0);
-    objectMetadata_lastChangeTime.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_lastChangeTime);
-    ManagementPackage.Literals.OBJECT_METADATA__LAST_CHANGE_TIME = objectMetadata_lastChangeTime;
-
-    // Create lastChangeReason feature
-    const objectMetadata_lastChangeReason = new BasicEAttribute();
-    objectMetadata_lastChangeReason.setName('lastChangeReason');
-    objectMetadata_lastChangeReason.setLowerBound(0);
-    objectMetadata_lastChangeReason.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_lastChangeReason);
-    ManagementPackage.Literals.OBJECT_METADATA__LAST_CHANGE_REASON = objectMetadata_lastChangeReason;
+    // Create objectType feature
+    const objectMetadata_objectType = new BasicEAttribute();
+    objectMetadata_objectType.setName('objectType');
+    objectMetadata_objectType.setLowerBound(1);
+    objectMetadata_objectType.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_objectType);
+    ManagementPackage.Literals.OBJECT_METADATA__OBJECT_TYPE = objectMetadata_objectType;
 
     // Create reviewUser feature
     const objectMetadata_reviewUser = new BasicEAttribute();
@@ -261,6 +204,14 @@ export class ManagementPackage extends BasicEPackage {
     objectMetadataClass.getEStructuralFeatures().push(objectMetadata_reviewReason);
     ManagementPackage.Literals.OBJECT_METADATA__REVIEW_REASON = objectMetadata_reviewReason;
 
+    // Create generationTriggerFingerprint feature
+    const objectMetadata_generationTriggerFingerprint = new BasicEAttribute();
+    objectMetadata_generationTriggerFingerprint.setName('generationTriggerFingerprint');
+    objectMetadata_generationTriggerFingerprint.setLowerBound(0);
+    objectMetadata_generationTriggerFingerprint.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_generationTriggerFingerprint);
+    ManagementPackage.Literals.OBJECT_METADATA__GENERATION_TRIGGER_FINGERPRINT = objectMetadata_generationTriggerFingerprint;
+
     // Create complianceCheckTime feature
     const objectMetadata_complianceCheckTime = new BasicEAttribute();
     objectMetadata_complianceCheckTime.setName('complianceCheckTime');
@@ -285,14 +236,6 @@ export class ManagementPackage extends BasicEPackage {
     objectMetadataClass.getEStructuralFeatures().push(objectMetadata_governanceDocumentationId);
     ManagementPackage.Literals.OBJECT_METADATA__GOVERNANCE_DOCUMENTATION_ID = objectMetadata_governanceDocumentationId;
 
-    // Create generationTriggerFingerprint feature
-    const objectMetadata_generationTriggerFingerprint = new BasicEAttribute();
-    objectMetadata_generationTriggerFingerprint.setName('generationTriggerFingerprint');
-    objectMetadata_generationTriggerFingerprint.setLowerBound(0);
-    objectMetadata_generationTriggerFingerprint.setUpperBound(1);
-    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_generationTriggerFingerprint);
-    ManagementPackage.Literals.OBJECT_METADATA__GENERATION_TRIGGER_FINGERPRINT = objectMetadata_generationTriggerFingerprint;
-
     // Create properties feature
     const objectMetadata_properties = new BasicEReference();
     objectMetadata_properties.setContainment(true);
@@ -302,6 +245,111 @@ export class ManagementPackage extends BasicEPackage {
     objectMetadataClass.getEStructuralFeatures().push(objectMetadata_properties);
     ManagementPackage.Literals.OBJECT_METADATA__PROPERTIES = objectMetadata_properties;
 
+    // Create lastChangeUser feature
+    const objectMetadata_lastChangeUser = new BasicEAttribute();
+    objectMetadata_lastChangeUser.setName('lastChangeUser');
+    objectMetadata_lastChangeUser.setLowerBound(0);
+    objectMetadata_lastChangeUser.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_lastChangeUser);
+    ManagementPackage.Literals.OBJECT_METADATA__LAST_CHANGE_USER = objectMetadata_lastChangeUser;
+
+    // Create lastChangeTime feature
+    const objectMetadata_lastChangeTime = new BasicEAttribute();
+    objectMetadata_lastChangeTime.setName('lastChangeTime');
+    objectMetadata_lastChangeTime.setLowerBound(0);
+    objectMetadata_lastChangeTime.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_lastChangeTime);
+    ManagementPackage.Literals.OBJECT_METADATA__LAST_CHANGE_TIME = objectMetadata_lastChangeTime;
+
+    // Create status feature
+    const objectMetadata_status = new BasicEAttribute();
+    objectMetadata_status.setName('status');
+    objectMetadata_status.setLowerBound(1);
+    objectMetadata_status.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_status);
+    ManagementPackage.Literals.OBJECT_METADATA__STATUS = objectMetadata_status;
+
+    // Create version feature
+    const objectMetadata_version = new BasicEAttribute();
+    objectMetadata_version.setName('version');
+    objectMetadata_version.setLowerBound(0);
+    objectMetadata_version.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_version);
+    ManagementPackage.Literals.OBJECT_METADATA__VERSION = objectMetadata_version;
+
+    // Create objectRef feature
+    const objectMetadata_objectRef = new BasicEReference();
+    objectMetadata_objectRef.setContainment(false);
+    objectMetadata_objectRef.setName('objectRef');
+    objectMetadata_objectRef.setLowerBound(0);
+    objectMetadata_objectRef.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_objectRef);
+    ManagementPackage.Literals.OBJECT_METADATA__OBJECT_REF = objectMetadata_objectRef;
+
+    // Create objectId feature
+    const objectMetadata_objectId = new BasicEAttribute();
+    objectMetadata_objectId.setName('objectId');
+    objectMetadata_objectId.setLowerBound(1);
+    objectMetadata_objectId.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_objectId);
+    ManagementPackage.Literals.OBJECT_METADATA__OBJECT_ID = objectMetadata_objectId;
+
+    // Create objectName feature
+    const objectMetadata_objectName = new BasicEAttribute();
+    objectMetadata_objectName.setName('objectName');
+    objectMetadata_objectName.setLowerBound(0);
+    objectMetadata_objectName.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_objectName);
+    ManagementPackage.Literals.OBJECT_METADATA__OBJECT_NAME = objectMetadata_objectName;
+
+    // Create stage feature
+    const objectMetadata_stage = new BasicEAttribute();
+    objectMetadata_stage.setName('stage');
+    objectMetadata_stage.setLowerBound(1);
+    objectMetadata_stage.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_stage);
+    ManagementPackage.Literals.OBJECT_METADATA__STAGE = objectMetadata_stage;
+
+    // Create lastChangeReason feature
+    const objectMetadata_lastChangeReason = new BasicEAttribute();
+    objectMetadata_lastChangeReason.setName('lastChangeReason');
+    objectMetadata_lastChangeReason.setLowerBound(0);
+    objectMetadata_lastChangeReason.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_lastChangeReason);
+    ManagementPackage.Literals.OBJECT_METADATA__LAST_CHANGE_REASON = objectMetadata_lastChangeReason;
+
+    // Create scope feature
+    const objectMetadata_scope = new BasicEAttribute();
+    objectMetadata_scope.setName('scope');
+    objectMetadata_scope.setLowerBound(1);
+    objectMetadata_scope.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_scope);
+    ManagementPackage.Literals.OBJECT_METADATA__SCOPE = objectMetadata_scope;
+
+    // Create isReadOnly feature
+    const objectMetadata_isReadOnly = new BasicEAttribute();
+    objectMetadata_isReadOnly.setName('isReadOnly');
+    objectMetadata_isReadOnly.setLowerBound(0);
+    objectMetadata_isReadOnly.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_isReadOnly);
+    ManagementPackage.Literals.OBJECT_METADATA__IS_READ_ONLY = objectMetadata_isReadOnly;
+
+    // Create registry feature
+    const objectMetadata_registry = new BasicEAttribute();
+    objectMetadata_registry.setName('registry');
+    objectMetadata_registry.setLowerBound(1);
+    objectMetadata_registry.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_registry);
+    ManagementPackage.Literals.OBJECT_METADATA__REGISTRY = objectMetadata_registry;
+
+    // Create fingerprint feature
+    const objectMetadata_fingerprint = new BasicEAttribute();
+    objectMetadata_fingerprint.setName('fingerprint');
+    objectMetadata_fingerprint.setLowerBound(0);
+    objectMetadata_fingerprint.setUpperBound(1);
+    objectMetadataClass.getEStructuralFeatures().push(objectMetadata_fingerprint);
+    ManagementPackage.Literals.OBJECT_METADATA__FINGERPRINT = objectMetadata_fingerprint;
+
     // Create diagnostics feature
     const objectMetadata_diagnostics = new BasicEReference();
     objectMetadata_diagnostics.setContainment(true);
@@ -310,57 +358,6 @@ export class ManagementPackage extends BasicEPackage {
     objectMetadata_diagnostics.setUpperBound(-1);
     objectMetadataClass.getEStructuralFeatures().push(objectMetadata_diagnostics);
     ManagementPackage.Literals.OBJECT_METADATA__DIAGNOSTICS = objectMetadata_diagnostics;
-
-    // Create StringToObjectMapEntry class
-    const stringToObjectMapEntryClass = new BasicEClass();
-    stringToObjectMapEntryClass.setName('StringToObjectMapEntry');
-    stringToObjectMapEntryClass.setAbstract(false);
-    stringToObjectMapEntryClass.setInterface(false);
-    this.getEClassifiers().push(stringToObjectMapEntryClass);
-    stringToObjectMapEntryClass.setEPackage(this);
-    ManagementPackage.Literals.STRING_TO_OBJECT_MAP_ENTRY = stringToObjectMapEntryClass;
-
-    // Create key feature
-    const stringToObjectMapEntry_key = new BasicEAttribute();
-    stringToObjectMapEntry_key.setName('key');
-    stringToObjectMapEntry_key.setLowerBound(1);
-    stringToObjectMapEntry_key.setUpperBound(1);
-    stringToObjectMapEntryClass.getEStructuralFeatures().push(stringToObjectMapEntry_key);
-    ManagementPackage.Literals.STRING_TO_OBJECT_MAP_ENTRY__KEY = stringToObjectMapEntry_key;
-
-    // Create value feature
-    const stringToObjectMapEntry_value = new BasicEAttribute();
-    stringToObjectMapEntry_value.setName('value');
-    stringToObjectMapEntry_value.setLowerBound(1);
-    stringToObjectMapEntry_value.setUpperBound(1);
-    stringToObjectMapEntryClass.getEStructuralFeatures().push(stringToObjectMapEntry_value);
-    ManagementPackage.Literals.STRING_TO_OBJECT_MAP_ENTRY__VALUE = stringToObjectMapEntry_value;
-
-    // Create ObjectMetadataContainer class
-    const objectMetadataContainerClass = new BasicEClass();
-    objectMetadataContainerClass.setName('ObjectMetadataContainer');
-    objectMetadataContainerClass.setAbstract(false);
-    objectMetadataContainerClass.setInterface(false);
-    this.getEClassifiers().push(objectMetadataContainerClass);
-    objectMetadataContainerClass.setEPackage(this);
-    ManagementPackage.Literals.OBJECT_METADATA_CONTAINER = objectMetadataContainerClass;
-
-    // Create containerId feature
-    const objectMetadataContainer_containerId = new BasicEAttribute();
-    objectMetadataContainer_containerId.setName('containerId');
-    objectMetadataContainer_containerId.setLowerBound(1);
-    objectMetadataContainer_containerId.setUpperBound(1);
-    objectMetadataContainerClass.getEStructuralFeatures().push(objectMetadataContainer_containerId);
-    ManagementPackage.Literals.OBJECT_METADATA_CONTAINER__CONTAINER_ID = objectMetadataContainer_containerId;
-
-    // Create metadata feature
-    const objectMetadataContainer_metadata = new BasicEReference();
-    objectMetadataContainer_metadata.setContainment(true);
-    objectMetadataContainer_metadata.setName('metadata');
-    objectMetadataContainer_metadata.setLowerBound(0);
-    objectMetadataContainer_metadata.setUpperBound(-1);
-    objectMetadataContainerClass.getEStructuralFeatures().push(objectMetadataContainer_metadata);
-    ManagementPackage.Literals.OBJECT_METADATA_CONTAINER__METADATA = objectMetadataContainer_metadata;
 
     // Create Diagnostic class
     const diagnosticClass = new BasicEClass();
@@ -550,19 +547,289 @@ export class ManagementPackage extends BasicEPackage {
     diagnosticChangeClass.getEStructuralFeatures().push(diagnosticChange_reason);
     ManagementPackage.Literals.DIAGNOSTIC_CHANGE__REASON = diagnosticChange_reason;
 
+    // Create StringToObjectMapEntry class
+    const stringToObjectMapEntryClass = new BasicEClass();
+    stringToObjectMapEntryClass.setName('StringToObjectMapEntry');
+    stringToObjectMapEntryClass.setAbstract(false);
+    stringToObjectMapEntryClass.setInterface(false);
+    this.getEClassifiers().push(stringToObjectMapEntryClass);
+    stringToObjectMapEntryClass.setEPackage(this);
+    ManagementPackage.Literals.STRING_TO_OBJECT_MAP_ENTRY = stringToObjectMapEntryClass;
+
+    // Create key feature
+    const stringToObjectMapEntry_key = new BasicEAttribute();
+    stringToObjectMapEntry_key.setName('key');
+    stringToObjectMapEntry_key.setLowerBound(1);
+    stringToObjectMapEntry_key.setUpperBound(1);
+    stringToObjectMapEntryClass.getEStructuralFeatures().push(stringToObjectMapEntry_key);
+    ManagementPackage.Literals.STRING_TO_OBJECT_MAP_ENTRY__KEY = stringToObjectMapEntry_key;
+
+    // Create value feature
+    const stringToObjectMapEntry_value = new BasicEAttribute();
+    stringToObjectMapEntry_value.setName('value');
+    stringToObjectMapEntry_value.setLowerBound(1);
+    stringToObjectMapEntry_value.setUpperBound(1);
+    stringToObjectMapEntryClass.getEStructuralFeatures().push(stringToObjectMapEntry_value);
+    ManagementPackage.Literals.STRING_TO_OBJECT_MAP_ENTRY__VALUE = stringToObjectMapEntry_value;
+
+    // Create ObjectQuery class
+    const objectQueryClass = new BasicEClass();
+    objectQueryClass.setName('ObjectQuery');
+    objectQueryClass.setAbstract(false);
+    objectQueryClass.setInterface(false);
+    this.getEClassifiers().push(objectQueryClass);
+    objectQueryClass.setEPackage(this);
+    ManagementPackage.Literals.OBJECT_QUERY = objectQueryClass;
+
+    // Create uploadUser feature
+    const objectQuery_uploadUser = new BasicEAttribute();
+    objectQuery_uploadUser.setName('uploadUser');
+    objectQuery_uploadUser.setLowerBound(0);
+    objectQuery_uploadUser.setUpperBound(1);
+    objectQueryClass.getEStructuralFeatures().push(objectQuery_uploadUser);
+    ManagementPackage.Literals.OBJECT_QUERY__UPLOAD_USER = objectQuery_uploadUser;
+
+    // Create sourceChannel feature
+    const objectQuery_sourceChannel = new BasicEAttribute();
+    objectQuery_sourceChannel.setName('sourceChannel');
+    objectQuery_sourceChannel.setLowerBound(0);
+    objectQuery_sourceChannel.setUpperBound(1);
+    objectQueryClass.getEStructuralFeatures().push(objectQuery_sourceChannel);
+    ManagementPackage.Literals.OBJECT_QUERY__SOURCE_CHANNEL = objectQuery_sourceChannel;
+
+    // Create objectType feature
+    const objectQuery_objectType = new BasicEAttribute();
+    objectQuery_objectType.setName('objectType');
+    objectQuery_objectType.setLowerBound(0);
+    objectQuery_objectType.setUpperBound(1);
+    objectQueryClass.getEStructuralFeatures().push(objectQuery_objectType);
+    ManagementPackage.Literals.OBJECT_QUERY__OBJECT_TYPE = objectQuery_objectType;
+
+    // Create status feature
+    const objectQuery_status = new BasicEAttribute();
+    objectQuery_status.setName('status');
+    objectQuery_status.setLowerBound(0);
+    objectQuery_status.setUpperBound(1);
+    objectQueryClass.getEStructuralFeatures().push(objectQuery_status);
+    ManagementPackage.Literals.OBJECT_QUERY__STATUS = objectQuery_status;
+
+    // Create stage feature
+    const objectQuery_stage = new BasicEAttribute();
+    objectQuery_stage.setName('stage');
+    objectQuery_stage.setLowerBound(0);
+    objectQuery_stage.setUpperBound(1);
+    objectQueryClass.getEStructuralFeatures().push(objectQuery_stage);
+    ManagementPackage.Literals.OBJECT_QUERY__STAGE = objectQuery_stage;
+
+    // Create scope feature
+    const objectQuery_scope = new BasicEAttribute();
+    objectQuery_scope.setName('scope');
+    objectQuery_scope.setLowerBound(0);
+    objectQuery_scope.setUpperBound(1);
+    objectQueryClass.getEStructuralFeatures().push(objectQuery_scope);
+    ManagementPackage.Literals.OBJECT_QUERY__SCOPE = objectQuery_scope;
+
+    // Create name feature
+    const objectQuery_name = new BasicEAttribute();
+    objectQuery_name.setName('name');
+    objectQuery_name.setLowerBound(0);
+    objectQuery_name.setUpperBound(1);
+    objectQueryClass.getEStructuralFeatures().push(objectQuery_name);
+    ManagementPackage.Literals.OBJECT_QUERY__NAME = objectQuery_name;
+
+    // Create registry feature
+    const objectQuery_registry = new BasicEAttribute();
+    objectQuery_registry.setName('registry');
+    objectQuery_registry.setLowerBound(0);
+    objectQuery_registry.setUpperBound(1);
+    objectQueryClass.getEStructuralFeatures().push(objectQuery_registry);
+    ManagementPackage.Literals.OBJECT_QUERY__REGISTRY = objectQuery_registry;
+
+    // Create GenerationRequest class
+    const generationRequestClass = new BasicEClass();
+    generationRequestClass.setName('GenerationRequest');
+    generationRequestClass.setAbstract(false);
+    generationRequestClass.setInterface(false);
+    this.getEClassifiers().push(generationRequestClass);
+    generationRequestClass.setEPackage(this);
+    ManagementPackage.Literals.GENERATION_REQUEST = generationRequestClass;
+
+    // Create requestId feature
+    const generationRequest_requestId = new BasicEAttribute();
+    generationRequest_requestId.setName('requestId');
+    generationRequest_requestId.setLowerBound(1);
+    generationRequest_requestId.setUpperBound(1);
+    generationRequestClass.getEStructuralFeatures().push(generationRequest_requestId);
+    ManagementPackage.Literals.GENERATION_REQUEST__REQUEST_ID = generationRequest_requestId;
+
+    // Create jsonSample feature
+    const generationRequest_jsonSample = new BasicEAttribute();
+    generationRequest_jsonSample.setName('jsonSample');
+    generationRequest_jsonSample.setLowerBound(1);
+    generationRequest_jsonSample.setUpperBound(1);
+    generationRequestClass.getEStructuralFeatures().push(generationRequest_jsonSample);
+    ManagementPackage.Literals.GENERATION_REQUEST__JSON_SAMPLE = generationRequest_jsonSample;
+
+    // Create jsonFingerprint feature
+    const generationRequest_jsonFingerprint = new BasicEAttribute();
+    generationRequest_jsonFingerprint.setName('jsonFingerprint');
+    generationRequest_jsonFingerprint.setLowerBound(1);
+    generationRequest_jsonFingerprint.setUpperBound(1);
+    generationRequestClass.getEStructuralFeatures().push(generationRequest_jsonFingerprint);
+    ManagementPackage.Literals.GENERATION_REQUEST__JSON_FINGERPRINT = generationRequest_jsonFingerprint;
+
+    // Create sourceChannel feature
+    const generationRequest_sourceChannel = new BasicEAttribute();
+    generationRequest_sourceChannel.setName('sourceChannel');
+    generationRequest_sourceChannel.setLowerBound(1);
+    generationRequest_sourceChannel.setUpperBound(1);
+    generationRequestClass.getEStructuralFeatures().push(generationRequest_sourceChannel);
+    ManagementPackage.Literals.GENERATION_REQUEST__SOURCE_CHANNEL = generationRequest_sourceChannel;
+
+    // Create requestingUser feature
+    const generationRequest_requestingUser = new BasicEAttribute();
+    generationRequest_requestingUser.setName('requestingUser');
+    generationRequest_requestingUser.setLowerBound(1);
+    generationRequest_requestingUser.setUpperBound(1);
+    generationRequestClass.getEStructuralFeatures().push(generationRequest_requestingUser);
+    ManagementPackage.Literals.GENERATION_REQUEST__REQUESTING_USER = generationRequest_requestingUser;
+
+    // Create status feature
+    const generationRequest_status = new BasicEAttribute();
+    generationRequest_status.setName('status');
+    generationRequest_status.setLowerBound(1);
+    generationRequest_status.setUpperBound(1);
+    generationRequestClass.getEStructuralFeatures().push(generationRequest_status);
+    ManagementPackage.Literals.GENERATION_REQUEST__STATUS = generationRequest_status;
+
+    // Create requestTime feature
+    const generationRequest_requestTime = new BasicEAttribute();
+    generationRequest_requestTime.setName('requestTime');
+    generationRequest_requestTime.setLowerBound(1);
+    generationRequest_requestTime.setUpperBound(1);
+    generationRequestClass.getEStructuralFeatures().push(generationRequest_requestTime);
+    ManagementPackage.Literals.GENERATION_REQUEST__REQUEST_TIME = generationRequest_requestTime;
+
+    // Create startTime feature
+    const generationRequest_startTime = new BasicEAttribute();
+    generationRequest_startTime.setName('startTime');
+    generationRequest_startTime.setLowerBound(0);
+    generationRequest_startTime.setUpperBound(1);
+    generationRequestClass.getEStructuralFeatures().push(generationRequest_startTime);
+    ManagementPackage.Literals.GENERATION_REQUEST__START_TIME = generationRequest_startTime;
+
+    // Create completionTime feature
+    const generationRequest_completionTime = new BasicEAttribute();
+    generationRequest_completionTime.setName('completionTime');
+    generationRequest_completionTime.setLowerBound(0);
+    generationRequest_completionTime.setUpperBound(1);
+    generationRequestClass.getEStructuralFeatures().push(generationRequest_completionTime);
+    ManagementPackage.Literals.GENERATION_REQUEST__COMPLETION_TIME = generationRequest_completionTime;
+
+    // Create errorMessage feature
+    const generationRequest_errorMessage = new BasicEAttribute();
+    generationRequest_errorMessage.setName('errorMessage');
+    generationRequest_errorMessage.setLowerBound(0);
+    generationRequest_errorMessage.setUpperBound(1);
+    generationRequestClass.getEStructuralFeatures().push(generationRequest_errorMessage);
+    ManagementPackage.Literals.GENERATION_REQUEST__ERROR_MESSAGE = generationRequest_errorMessage;
+
+    // Create resultPackageId feature
+    const generationRequest_resultPackageId = new BasicEAttribute();
+    generationRequest_resultPackageId.setName('resultPackageId');
+    generationRequest_resultPackageId.setLowerBound(0);
+    generationRequest_resultPackageId.setUpperBound(1);
+    generationRequestClass.getEStructuralFeatures().push(generationRequest_resultPackageId);
+    ManagementPackage.Literals.GENERATION_REQUEST__RESULT_PACKAGE_ID = generationRequest_resultPackageId;
+
+    // Create ObjectMetadataContainer class
+    const objectMetadataContainerClass = new BasicEClass();
+    objectMetadataContainerClass.setName('ObjectMetadataContainer');
+    objectMetadataContainerClass.setAbstract(false);
+    objectMetadataContainerClass.setInterface(false);
+    this.getEClassifiers().push(objectMetadataContainerClass);
+    objectMetadataContainerClass.setEPackage(this);
+    ManagementPackage.Literals.OBJECT_METADATA_CONTAINER = objectMetadataContainerClass;
+
+    // Create containerId feature
+    const objectMetadataContainer_containerId = new BasicEAttribute();
+    objectMetadataContainer_containerId.setName('containerId');
+    objectMetadataContainer_containerId.setLowerBound(1);
+    objectMetadataContainer_containerId.setUpperBound(1);
+    objectMetadataContainerClass.getEStructuralFeatures().push(objectMetadataContainer_containerId);
+    ManagementPackage.Literals.OBJECT_METADATA_CONTAINER__CONTAINER_ID = objectMetadataContainer_containerId;
+
+    // Create metadata feature
+    const objectMetadataContainer_metadata = new BasicEReference();
+    objectMetadataContainer_metadata.setContainment(true);
+    objectMetadataContainer_metadata.setName('metadata');
+    objectMetadataContainer_metadata.setLowerBound(0);
+    objectMetadataContainer_metadata.setUpperBound(-1);
+    objectMetadataContainerClass.getEStructuralFeatures().push(objectMetadataContainer_metadata);
+    ManagementPackage.Literals.OBJECT_METADATA_CONTAINER__METADATA = objectMetadataContainer_metadata;
+
 
     // ============================================
     // Set ESuperTypes (must be done after all classes are created)
     // ============================================
 
     // ============================================
-    // Set ETypes for EReferences (must be done after all classes are created)
+    // Set ETypes for all features (must be done after all classes are created).
+    // An EAttribute without eType leaves the XMI reader no EDataType to
+    // convert against - every value would arrive as a raw string (#37)
     // ============================================
+    (ManagementPackage.Literals.OBJECT_METADATA__UPLOAD_USER as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__SOURCE_CHANNEL as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__CONTENT_HASH as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__OBJECT_TYPE as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__REVIEW_USER as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__REVIEW_REASON as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__GENERATION_TRIGGER_FINGERPRINT as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__COMPLIANCE_STATUS as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__GOVERNANCE_DOCUMENTATION_ID as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
     (ManagementPackage.Literals.OBJECT_METADATA__PROPERTIES as BasicEReference).setEType(ManagementPackage.Literals.STRING_TO_OBJECT_MAP_ENTRY);
+    (ManagementPackage.Literals.OBJECT_METADATA__LAST_CHANGE_USER as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__VERSION as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__OBJECT_REF as BasicEReference).setEType(getEcorePackage().getEClassifier('EObject')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__OBJECT_ID as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__OBJECT_NAME as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__STAGE as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__LAST_CHANGE_REASON as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__SCOPE as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__IS_READ_ONLY as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EBoolean')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__REGISTRY as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA__FINGERPRINT as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
     (ManagementPackage.Literals.OBJECT_METADATA__DIAGNOSTICS as BasicEReference).setEType(ManagementPackage.Literals.DIAGNOSTIC);
-    (ManagementPackage.Literals.OBJECT_METADATA_CONTAINER__METADATA as BasicEReference).setEType(ManagementPackage.Literals.OBJECT_METADATA);
+    (ManagementPackage.Literals.DIAGNOSTIC__ID as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.DIAGNOSTIC__PRODUCER as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.DIAGNOSTIC__SOURCE as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.DIAGNOSTIC__CODE as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.DIAGNOSTIC__MESSAGE as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.DIAGNOSTIC__CATEGORY as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.DIAGNOSTIC__TARGET as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.DIAGNOSTIC__VERSION as BasicEAttribute).setEType(getEcorePackage().getEClassifier('ELong')!);
     (ManagementPackage.Literals.DIAGNOSTIC__CHILDREN as BasicEReference).setEType(ManagementPackage.Literals.DIAGNOSTIC);
     (ManagementPackage.Literals.DIAGNOSTIC__HISTORY as BasicEReference).setEType(ManagementPackage.Literals.DIAGNOSTIC_CHANGE);
+    (ManagementPackage.Literals.DIAGNOSTIC_CHANGE__CHANGED_BY as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.DIAGNOSTIC_CHANGE__REASON as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.STRING_TO_OBJECT_MAP_ENTRY__KEY as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.STRING_TO_OBJECT_MAP_ENTRY__VALUE as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_QUERY__UPLOAD_USER as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_QUERY__SOURCE_CHANNEL as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_QUERY__OBJECT_TYPE as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_QUERY__STAGE as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_QUERY__SCOPE as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_QUERY__NAME as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_QUERY__REGISTRY as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.GENERATION_REQUEST__REQUEST_ID as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.GENERATION_REQUEST__JSON_SAMPLE as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.GENERATION_REQUEST__JSON_FINGERPRINT as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.GENERATION_REQUEST__SOURCE_CHANNEL as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.GENERATION_REQUEST__REQUESTING_USER as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.GENERATION_REQUEST__ERROR_MESSAGE as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.GENERATION_REQUEST__RESULT_PACKAGE_ID as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA_CONTAINER__CONTAINER_ID as BasicEAttribute).setEType(getEcorePackage().getEClassifier('EString')!);
+    (ManagementPackage.Literals.OBJECT_METADATA_CONTAINER__METADATA as BasicEReference).setEType(ManagementPackage.Literals.OBJECT_METADATA);
 
     // ============================================
     // Register XML name mappings from ExtendedMetaData annotations

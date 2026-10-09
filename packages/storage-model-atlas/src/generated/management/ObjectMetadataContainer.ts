@@ -5,8 +5,8 @@
  * @generated
  */
 
-import type { EObject } from '@emfts/core';
-import type { ObjectMetadata } from './ObjectMetadata';
+import type { EObject, EList, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
+import type { ObjectMetadata } from './ObjectMetadata.js';
 
 /**
  * ObjectMetadataContainer
@@ -14,6 +14,6 @@ import type { ObjectMetadata } from './ObjectMetadata';
  */
 export interface ObjectMetadataContainer extends EObject {
   containerId: string;
-  metadata: ObjectMetadata[];
+  metadata: EList<ObjectMetadata>;
 
 }

@@ -2,140 +2,600 @@
 <ecore:EPackage xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" name="management" nsURI="http://eclipse.org/fennec/model/atlas/management/1.0.0"
     nsPrefix="mgmt">
+  <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+    <details key="modelName" value="Management"/>
+    <details key="complianceLevel" value="17.0"/>
+    <details key="copyrightText" value="Copyright (c) 2012 - 2025 Data In Motion and others.&#xA;All rights reserved.&#xA;&#xA;This program and the accompanying materials are made&#xA;available under the terms of the Eclipse Public License 2.0&#xA;which is available at https://www.eclipse.org/legal/epl-2.0/&#xA;&#xA;SPDX-License-Identifier: EPL-2.0&#xA;&#xA;Contributors:&#xA;     Data In Motion - initial API and implementation"/>
+    <details key="resource" value="XMI"/>
+    <details key="oSGiCompatible" value="true"/>
+    <details key="prefix" value="Management"/>
+    <details key="basePackage" value="org.eclipse.fennec.model.atlas.mgmt"/>
+  </eAnnotations>
   <eClassifiers xsi:type="ecore:EClass" name="ObjectMetadata">
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="objectId" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" iD="true"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="objectName"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="objectType" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="stage" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scope" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="registry" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="status" lowerBound="1"
-        eType="#//ObjectStatus" defaultValueLiteral="DRAFT"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="isReadOnly"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="version"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="contentHash" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Generic metadata associated with uploaded EObject"/>
+    </eAnnotations>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="uploadUser" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="User who uploaded the object"/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="uploadTime" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+        eType="#//Instant">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Timestamp when object was uploaded"/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="sourceChannel" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lastChangeUser"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lastChangeTime"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lastChangeReason"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="reviewUser"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="reviewTime"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="reviewReason"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="complianceCheckTime"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="complianceStatus"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="governanceDocumentationId"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Source channel (e.g., AI_GENERATOR, MANUAL_UPLOAD, SENSINACT)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="contentHash" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="SHA-256 hash of XMI content"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="objectType" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Type of the EObject (e.g., EPackage, Route, SensorModel)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="reviewUser" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="User who reviewed the object (for approve/reject)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="reviewTime" eType="#//Instant">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Timestamp when object was reviewed"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="reviewReason" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Reason for approval or rejection"/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="generationTriggerFingerprint"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="This is the fingerprint of the json which triggered the generation of this Object"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="complianceCheckTime" eType="#//Instant">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Timestamp when compliance checks were last performed"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="complianceStatus" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Overall compliance check result (uses governance.ComplianceStatus values as strings)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="governanceDocumentationId"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Reference to the governance documentation containing detailed compliance results"/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EReference" name="properties" upperBound="-1"
-        eType="#//StringToObjectMapEntry" containment="true"/>
+        eType="#//StringToObjectMapEntry" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Additional metadata properties"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lastChangeUser" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="User who last modified the object (only set when object is updated after initial upload)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lastChangeTime" eType="#//Instant">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Timestamp when object was last modified (only set when object is updated after initial upload)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="status" lowerBound="1"
+        eType="#//ObjectStatus" defaultValueLiteral="DRAFT">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Object lifecycle status"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="version" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Object version for optimistic locking"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="objectRef" eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EObject">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Reference to the actual managed EObject"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="objectId" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" iD="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Unique metadata identifier (distinct from storage objectId key) for cross-referencing and registry lookups"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="objectName" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable object name"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="stage" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="The stage to which this metadata belongs (e.g. draft, approved, released, etc.)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lastChangeReason" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Reason for approval or rejection"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scope" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="The scope to which this metadata belongs (it's the tenant that own the object)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="isReadOnly" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="This is to be set when an EObject is retrieved from a parent scope in its final stage and then cannot be modified."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="registry" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="The registry to which this metadata belongs (e.g. schema, configuration, script, etc.)"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="fingerprint" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Content-derived model fingerprint (`emf.fingerprint` format, scheme-prefixed &#xA;e.g. `fp1:&lt;digest>`). Set for EPackage objects; computed server-side, never &#xA;taken from the client.&#xA;Distinct from contentHash, which hashes the stored XMI bytes."/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EReference" name="diagnostics" upperBound="-1"
-        eType="#//Diagnostic" containment="true" resolveProxies="false" eKeys="#//Diagnostic/id"/>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="StringToObjectMapEntry">
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="key" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EClass" name="ObjectMetadataContainer">
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="containerId" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" iD="true"/>
-    <eStructuralFeatures xsi:type="ecore:EReference" name="metadata" upperBound="-1"
-        eType="#//ObjectMetadata" containment="true"/>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EEnum" name="ObjectStatus">
-    <eLiterals name="DRAFT" literal="DRAFT"/>
-    <eLiterals name="APPROVED" value="1" literal="APPROVED"/>
-    <eLiterals name="REJECTED" value="2" literal="REJECTED"/>
-    <eLiterals name="DEPLOYED" value="3" literal="DEPLOYED"/>
-    <eLiterals name="ARCHIVED" value="4" literal="ARCHIVED"/>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EEnum" name="PackageStatus">
-    <eLiterals name="DRAFT" literal="DRAFT"/>
-    <eLiterals name="APPROVED" value="1" literal="APPROVED"/>
-    <eLiterals name="DEPLOYED" value="2" literal="DEPLOYED"/>
-    <eLiterals name="ARCHIVED" value="3" literal="ARCHIVED"/>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EEnum" name="StorageBackendType">
-    <eLiterals name="FILE"/>
-    <eLiterals name="MINIO" value="1" literal="MINIO"/>
-    <eLiterals name="GIT" value="2" literal="GIT"/>
-    <eLiterals name="APICURIO" value="3" literal="APICURIO"/>
-  </eClassifiers>
-  <eClassifiers xsi:type="ecore:EEnum" name="GenerationStatus">
-    <eLiterals name="REQUESTED" literal="REQUESTED"/>
-    <eLiterals name="IN_PROGRESS" value="1" literal="IN_PROGRESS"/>
-    <eLiterals name="COMPLETED" value="2" literal="COMPLETED"/>
-    <eLiterals name="FAILED" value="3" literal="FAILED"/>
-    <eLiterals name="CANCELLED" value="4" literal="CANCELLED"/>
+        eType="#//Diagnostic" containment="true" eKeys="#//Diagnostic/id">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Findings about this object, produced by stage actions, stage gates and other&#xA;modules (issue #290). Diagnostics are metadata, not content: writing them changes&#xA;neither contentHash nor version, fires no stage action, and is allowed in stages&#xA;that are otherwise read-only, because a refused transition records its veto on&#xA;the object in its source stage.&#xA;&#xA;Each entry is a root of a diagnostic tree owned by one producer. A producer&#xA;replaces only its own roots and never touches those of another producer. Keyed&#xA;by id, which is stable across re-validation (see Diagnostic)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="Diagnostic">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="One finding about an object, modelled on org.eclipse.emf.common.util.Diagnostic:&#xA;a severity, a message, a source and code that identify the kind of finding, and&#xA;children that refine it. Unlike the EMF type it is persisted with the object's&#xA;metadata and lives on: it has a stable identity, a status that is decided&#xA;separately from its severity, a history of the changes made to it, and a version&#xA;for optimistic locking (issue #291).&#xA;&#xA;Stable id rule: the id is deterministic, derived from producer, code and target&#xA;(for a child: from the parent's id, code and target). The same finding about the&#xA;same element therefore gets the same id on every validation run, so references&#xA;from outside - a GDPR report item, a UI bookmark - survive re-validation without a&#xA;matching step, and a producer's replace operation is a plain replace by id. Two&#xA;findings of the same kind about the same element are one finding; a producer&#xA;that needs to tell them apart puts the distinction into the target or the code.&#xA;The API that mints ids is part of the diagnostic service (#293); the rule is&#xA;fixed here so every producer arrives at the same id."/>
+    </eAnnotations>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="id" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"
-        iD="true"/>
+        iD="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Unique and stable identifier of this diagnostic, derived from producer, code and&#xA;target (see the class documentation). Unique within the object's metadata; external&#xA;artifacts address a diagnostic by (scope, registry, stage, objectId, id)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="producer" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="source" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="code" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="The action, gate or module that created this diagnostic, for example&#xA;`QvtTransitionGate` or `gdpr.review`. Ownership: a producer's replace operation&#xA;replaces exactly the roots carrying its own producer value. Set on roots; children&#xA;inherit their parent's producer and carry the same value."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="source" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Identifies the origin of the finding within the producer, in the sense of&#xA;org.eclipse.emf.common.util.Diagnostic#getSource(): typically the validator, rule&#xA;set or compiler that raised it, for example `org.eclipse.fennec.m2x.qvto`. Optional;&#xA;a producer with a single source may leave it unset."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="code" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Producer-defined identifier of the kind of finding, stable across releases of the&#xA;producer, for example `unresolved-import` or `personal-data-without-purpose`. Part&#xA;of the id; a client may switch on it, the message is for people."/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="severity" lowerBound="1"
-        eType="#//DiagnosticSeverity"/>
+        eType="#//DiagnosticSeverity">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="How serious the finding is. Independent of status: a resolved error is still&#xA;recognisable as a former error. A module may raise or lower the severity later&#xA;(#293); every such change is recorded in the history."/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="message" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="category" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="target" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Human-readable description of the finding, written for whoever looks at the&#xA;object. It travels to clients unchanged, so it carries no internal detail such as&#xA;storage paths."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="category" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Coarse classification a UI can filter and group by, across producers, for&#xA;example `compile`, `reference`, `compliance`. Optional. Not part of the id, so a&#xA;producer may recategorise without minting new ids."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="target" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="The affected element inside the object, as a URI or URI fragment (for example&#xA;`//Person/birthDate` for an EStructuralFeature, or `line:12:col:4` for a text&#xA;position a producer defines). Optional; unset means the finding is about the object&#xA;as a whole. Part of the id, so the same finding about two elements yields two&#xA;diagnostics."/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="status" lowerBound="1"
-        eType="#//DiagnosticStatus" defaultValueLiteral="OPEN"/>
+        eType="#//DiagnosticStatus" defaultValueLiteral="OPEN">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Where the finding stands in its life: OPEN when produced, ACKNOWLEDGED when&#xA;someone has seen it and accepts it for now, RESOLVED when it no longer applies&#xA;or was dealt with. Kept separate from severity on purpose. A status set by a&#xA;person is not silently reverted by an automatic re-validation (#293); the history&#xA;tells who set it."/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="createdTime" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lastChangeTime" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+        eType="#//Instant">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="When the diagnostic was first produced. A re-validation that yields the same id&#xA;keeps this value; the history records that it was seen again."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lastChangeTime" eType="#//Instant">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="When severity, status or message last changed; equals the time of the newest&#xA;history entry. Unset while the diagnostic is untouched since creation."/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="version" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong" defaultValueLiteral="0"/>
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//ELong" defaultValueLiteral="0">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Optimistic-locking counter, incremented on every change to this diagnostic&#xA;(#293). A change that names an older version is refused as a conflict. Starts at 0."/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EReference" name="children" upperBound="-1"
-        eType="#//Diagnostic" containment="true" resolveProxies="false" eKeys="#//Diagnostic/id"/>
+        eType="#//Diagnostic" containment="true" eKeys="#//Diagnostic/id">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Findings that refine this one, as in an EMF diagnostic tree: a compile failure&#xA;with one child per error, a compliance finding with one child per affected&#xA;feature. Children share the parent's producer; their ids derive from the parent's&#xA;id."/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EReference" name="history" upperBound="-1"
-        eType="#//DiagnosticChange" containment="true" resolveProxies="false"/>
+        eType="#//DiagnosticChange" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Every change made to this diagnostic after it was produced, oldest first: who,&#xA;when, what changed and why. Appended by the diagnostic service (#293), never&#xA;edited."/>
+      </eAnnotations>
+    </eStructuralFeatures>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EClass" name="DiagnosticChange">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="One entry in a Diagnostic's history: a change of severity or status, or a&#xA;re-validation that confirmed the finding, with who made it, when and why. Old and&#xA;new values are recorded per field so a reader can follow the diagnostic's life&#xA;without diffing; an unchanged field carries the same value on both sides."/>
+    </eAnnotations>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="changeTime" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+        eType="#//Instant">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="When the change was made"/>
+      </eAnnotations>
+    </eStructuralFeatures>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="changedBy" lowerBound="1"
-        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="oldSeverity" eType="#//DiagnosticSeverity"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="newSeverity" eType="#//DiagnosticSeverity"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="oldStatus" eType="#//DiagnosticStatus"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="newStatus" eType="#//DiagnosticStatus"/>
-    <eStructuralFeatures xsi:type="ecore:EAttribute" name="reason" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Who made the change: a user name for a manual decision (acknowledge, resolve),&#xA;the producer or module name for an automatic one (re-validation, escalation).&#xA;Whether a change was manual matters, because a manual status is protected&#xA;against automatic reverts (#293)."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="oldSeverity" eType="#//DiagnosticSeverity">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Severity before the change"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="newSeverity" eType="#//DiagnosticSeverity">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Severity after the change"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="oldStatus" eType="#//DiagnosticStatus">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Status before the change"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="newStatus" eType="#//DiagnosticStatus">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Status after the change"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="reason" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Why the change was made, in the words of whoever made it: the GDPR officer's&#xA;note on a resolution, or the producer's explanation of an escalation. Optional."/>
+      </eAnnotations>
+    </eStructuralFeatures>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EEnum" name="DiagnosticSeverity">
-    <eLiterals name="INFO"/>
-    <eLiterals name="WARNING" value="1"/>
-    <eLiterals name="ERROR" value="2"/>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="How serious a finding is, in the order of org.eclipse.emf.common.util.Diagnostic.&#xA;There is no OK literal: a diagnostic exists because something was found; an object&#xA;without findings has no diagnostics."/>
+    </eAnnotations>
+    <eLiterals name="INFO" literal="INFO">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Worth knowing, nothing to do"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="WARNING" value="1" literal="WARNING">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Something to look at; the object remains usable"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="ERROR" value="2" literal="ERROR">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="The object does not hold up as it stands; a gate may refuse an operation on it"/>
+      </eAnnotations>
+    </eLiterals>
   </eClassifiers>
   <eClassifiers xsi:type="ecore:EEnum" name="DiagnosticStatus">
-    <eLiterals name="OPEN"/>
-    <eLiterals name="ACKNOWLEDGED" value="1"/>
-    <eLiterals name="RESOLVED" value="2"/>
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Where a finding stands in its life. Deliberately separate from severity: a&#xA;resolved warning is still a former warning."/>
+    </eAnnotations>
+    <eLiterals name="OPEN" literal="OPEN">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Produced and not yet dealt with; the default"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="ACKNOWLEDGED" value="1" literal="ACKNOWLEDGED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Seen and accepted for now by a person; still applies"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="RESOLVED" value="2" literal="RESOLVED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="No longer applies, or was dealt with; kept for its history"/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="StringToObjectMapEntry" instanceClassName="java.util.Map$Entry">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="String Key - Object value map entry"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="key" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Property key"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Property value, in its string form. It was an EJavaObject, which EMF converts to a string by Java-serializing the value and hex-encoding the bytes - so every property reached the stored metadata and the REST API as an opaque ACED0005... blob that no non-Java client could read and nobody could edit, and reading one back was Java deserialization of input that may come from outside the server (issue #354). A property whose value means something other than text - the dcat flag is the one today - is parsed from this string where it is used, by the code that knows what the key means."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="ObjectQuery">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Generic query criteria for searching objects"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="uploadUser" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Filter by upload user"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sourceChannel" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Filter by source channel"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="objectType" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Filter by object type"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="status" eType="#//ObjectStatus">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Filter by object status"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="stage" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Filter by object role"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="scope" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Filter by object scope"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Filter by object name"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="registry" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Filter by object scope"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="GenerationRequest">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Request for AI-based EPackage generation"/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="requestId" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Unique request identifier"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="jsonSample" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="JSON sample used for generation"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="jsonFingerprint" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Structural fingerprint of JSON sample"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sourceChannel" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Source channel that triggered generation"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="requestingUser" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="User who requested generation"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="status" lowerBound="1"
+        eType="#//GenerationStatus" defaultValueLiteral="REQUESTED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Current generation status"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="requestTime" lowerBound="1"
+        eType="#//Instant">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="When generation was requested"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="startTime" eType="#//Instant">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="When generation started"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="completionTime" eType="#//Instant">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="When generation completed"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="errorMessage" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Error message if generation failed"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="resultPackageId" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Package ID of generated EPackage"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="ObjectStatus">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Generic object lifecycle status"/>
+    </eAnnotations>
+    <eLiterals name="DRAFT" literal="DRAFT">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Object is in draft state"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="APPROVED" value="1" literal="APPROVED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Object has been approved for release"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="REJECTED" value="2" literal="REJECTED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Object has been rejected during review"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="DEPLOYED" value="3" literal="DEPLOYED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Object has been deployed to production"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="ARCHIVED" value="4" literal="ARCHIVED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Object has been archived"/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="PackageStatus">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Package lifecycle status"/>
+    </eAnnotations>
+    <eLiterals name="DRAFT" literal="DRAFT">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Package is in draft state"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="APPROVED" value="1" literal="APPROVED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Package has been approved"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="DEPLOYED" value="2" literal="DEPLOYED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Package has been deployed"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="ARCHIVED" value="3" literal="ARCHIVED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Package has been archived"/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="StorageBackendType">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Storage backend types"/>
+    </eAnnotations>
+    <eLiterals name="FILE">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="File object storage backend"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="MINIO" value="1" literal="MINIO">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="MinIO object storage backend"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="GIT" value="2" literal="GIT">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Git-based storage backend"/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EEnum" name="GenerationStatus">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Status of EPackage generation request"/>
+    </eAnnotations>
+    <eLiterals name="REQUESTED" literal="REQUESTED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Generation has been requested"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="IN_PROGRESS" value="1" literal="IN_PROGRESS">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="AI is actively generating the model"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="COMPLETED" value="2" literal="COMPLETED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Generation completed successfully"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="FAILED" value="3" literal="FAILED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Generation failed with error"/>
+      </eAnnotations>
+    </eLiterals>
+    <eLiterals name="CANCELLED" value="4" literal="CANCELLED">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Generation was cancelled"/>
+      </eAnnotations>
+    </eLiterals>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="Instant" instanceClassName="java.time.Instant">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Java 8 Instant for precise timestamps"/>
+    </eAnnotations>
+    <eAnnotations source="java.time.Instant"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="Promise" instanceClassName="org.osgi.util.promise.Promise"
+      serializable="false">
+    <eTypeParameters name="T"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="List" instanceClassName="java.util.List"
+      serializable="false">
+    <eTypeParameters name="T"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EDataType" name="Void" instanceClassName="java.lang.Void"
+      serializable="false"/>
+  <eClassifiers xsi:type="ecore:EDataType" name="Optional" instanceClassName="java.util.Optional"
+      serializable="false">
+    <eTypeParameters name="T"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="ObjectMetadataContainer">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="Container for managing collections of ObjectMetadata with efficient keyed access. Note: With Lucene indexing, this container may not be necessary as the index serves as the registry."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="containerId" lowerBound="1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString" iD="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Unique container identifier"/>
+      </eAnnotations>
+    </eStructuralFeatures>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="metadata" upperBound="-1"
+        eType="#//ObjectMetadata" containment="true" eKeys="#//ObjectMetadata/objectId">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Collection of metadata objects with automatic keying by objectId for efficient lookups"/>
+      </eAnnotations>
+    </eStructuralFeatures>
   </eClassifiers>
 </ecore:EPackage>

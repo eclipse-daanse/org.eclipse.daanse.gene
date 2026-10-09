@@ -5,9 +5,9 @@
  * @generated
  */
 
-import type { EObject } from '@emfts/core';
-import type { DiagnosticSeverity } from './DiagnosticSeverity';
-import type { DiagnosticStatus } from './DiagnosticStatus';
+import type { EObject, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
+import type { DiagnosticSeverity } from './DiagnosticSeverity.js';
+import type { DiagnosticStatus } from './DiagnosticStatus.js';
 
 /**
  * DiagnosticChange

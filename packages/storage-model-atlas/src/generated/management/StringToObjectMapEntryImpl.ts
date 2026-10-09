@@ -7,8 +7,8 @@
 
 import { BasicEObject } from '@emfts/core';
 import type { EClass, EStructuralFeature } from '@emfts/core';
-import type { StringToObjectMapEntry } from './StringToObjectMapEntry';
-import { ManagementPackage } from './ManagementPackage';
+import type { StringToObjectMapEntry } from './StringToObjectMapEntry.js';
+import { ManagementPackage } from './ManagementPackage.js';
 
 /**
  * Implementation of StringToObjectMapEntry

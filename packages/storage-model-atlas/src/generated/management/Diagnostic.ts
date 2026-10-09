@@ -5,10 +5,10 @@
  * @generated
  */
 
-import type { EObject } from '@emfts/core';
-import type { DiagnosticSeverity } from './DiagnosticSeverity';
-import type { DiagnosticStatus } from './DiagnosticStatus';
-import type { DiagnosticChange } from './DiagnosticChange';
+import type { EObject, EList, BasicEObject, EClass, EStructuralFeature } from '@emfts/core';
+import type { DiagnosticSeverity } from './DiagnosticSeverity.js';
+import type { DiagnosticStatus } from './DiagnosticStatus.js';
+import type { DiagnosticChange } from './DiagnosticChange.js';
 
 /**
  * Diagnostic
@@ -27,7 +27,7 @@ export interface Diagnostic extends EObject {
   createdTime: string;
   lastChangeTime?: string;
   version: number;
-  children: Diagnostic[];
-  history: DiagnosticChange[];
+  children: EList<Diagnostic>;
+  history: EList<DiagnosticChange>;
 
 }

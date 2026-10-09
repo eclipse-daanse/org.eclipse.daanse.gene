@@ -9,7 +9,11 @@
     "build:tsm": "vite build --config vite.tsm.config.ts",
     "watch:tsm": "vite build --config vite.tsm.config.ts --watch",
     "test": "vitest",
-    "generate": "emfts-codegen generate -m src/model/management.ecore -c src/model/management.genconfig -o src/generated && emfts-codegen generate -m src/model/workflow-api.ecore -c src/model/workflow-api.genconfig -o src/generated && emfts-codegen generate -m src/model/rest-response.ecore -c src/model/rest-response.genconfig -o src/generated"
+    "generate": "npm run generate:management && npm run generate:workflow-api && npm run generate:rest-response",
+    "generate:management": "emfts-codegen generate -m src/model/management.ecore -c src/model/management.genconfig -o src/generated",
+    "generate:workflow-api": "emfts-codegen generate -m src/model/workflow-api.ecore -c src/model/workflow-api.genconfig -o src/generated",
+    "generate:rest-response": "emfts-codegen generate -m src/model/rest-response.ecore -c src/model/rest-response.genconfig -o src/generated",
+    "sync:management": "scripts/sync-management-model.sh"
   },
   "dependencies": {
     "storage-model": "*",
@@ -20,7 +24,7 @@
     "vite": "^7.3.5",
     "vitest": "^4.1.0",
     "tsx": "^4.21.0",
-    "@emfts/codegen": "^0.0.1-next.1"
+    "@emfts/codegen": "^0.0.2-next.7"
   },
   "peerDependencies": {
     "@emfts/core": "*"

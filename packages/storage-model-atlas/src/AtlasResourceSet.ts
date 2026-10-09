@@ -122,7 +122,8 @@ export function parseMetadataListXmi(xmiString: string): ObjectMetadata[] {
 
   const first = objects[0]
   if ('metadata' in first) {
-    return (first as ObjectMetadataContainer).metadata
+    // The generated container holds an EList; callers get a plain array
+    return [...(first as ObjectMetadataContainer).metadata]
   }
 
   // Could be direct ObjectMetadata objects

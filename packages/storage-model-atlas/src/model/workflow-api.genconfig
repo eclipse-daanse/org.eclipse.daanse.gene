@@ -1,8 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ecorePackage points into the model file itself ("#/"), not at the nsURI:
+  @emfts/codegen 0.0.2 cannot resolve the nsURI and then generates an empty
+  package while reporting success (eclipse-fennec/emf.ts.codegen#47).
+-->
 <genconfig:GenConfig xmi:version="2.0"
     xmlns:xmi="http://www.omg.org/XMI"
     xmlns:genconfig="http://www.emfts.org/genconfig/1.0"
-    ecorePackage="http://eclipse.org/fennec/model/atlas/workflow/api/1.0.0#/">
+    ecorePackage="#/">
 
   <generation mode="emf" outputDir="src/generated"/>
 

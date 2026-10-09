@@ -7,10 +7,10 @@
 
 import { BasicEObject } from '@emfts/core';
 import type { EClass, EStructuralFeature } from '@emfts/core';
-import type { DiagnosticSeverity } from './DiagnosticSeverity';
-import type { DiagnosticStatus } from './DiagnosticStatus';
-import type { DiagnosticChange } from './DiagnosticChange';
-import { ManagementPackage } from './ManagementPackage';
+import { DiagnosticSeverity } from './DiagnosticSeverity.js';
+import { DiagnosticStatus } from './DiagnosticStatus.js';
+import type { DiagnosticChange } from './DiagnosticChange.js';
+import { ManagementPackage } from './ManagementPackage.js';
 
 /**
  * Implementation of DiagnosticChange
@@ -29,10 +29,10 @@ export class DiagnosticChangeImpl extends BasicEObject implements DiagnosticChan
   // Private fields
   private _changeTime: string = "";
   private _changedBy: string = "";
-  private _oldSeverity?: DiagnosticSeverity;
-  private _newSeverity?: DiagnosticSeverity;
-  private _oldStatus?: DiagnosticStatus;
-  private _newStatus?: DiagnosticStatus;
+  private _oldSeverity: DiagnosticSeverity = DiagnosticSeverity.INFO;
+  private _newSeverity: DiagnosticSeverity = DiagnosticSeverity.INFO;
+  private _oldStatus: DiagnosticStatus = DiagnosticStatus.OPEN;
+  private _newStatus: DiagnosticStatus = DiagnosticStatus.OPEN;
   private _reason?: string;
 
   /**
@@ -288,13 +288,13 @@ export class DiagnosticChangeImpl extends BasicEObject implements DiagnosticChan
       case DiagnosticChangeImpl.CHANGED_BY:
         return this._changedBy !== "";
       case DiagnosticChangeImpl.OLD_SEVERITY:
-        return this._oldSeverity !== undefined;
+        return this._oldSeverity !== DiagnosticSeverity.INFO;
       case DiagnosticChangeImpl.NEW_SEVERITY:
-        return this._newSeverity !== undefined;
+        return this._newSeverity !== DiagnosticSeverity.INFO;
       case DiagnosticChangeImpl.OLD_STATUS:
-        return this._oldStatus !== undefined;
+        return this._oldStatus !== DiagnosticStatus.OPEN;
       case DiagnosticChangeImpl.NEW_STATUS:
-        return this._newStatus !== undefined;
+        return this._newStatus !== DiagnosticStatus.OPEN;
       case DiagnosticChangeImpl.REASON:
         return this._reason !== undefined;
       default:
@@ -315,16 +315,16 @@ export class DiagnosticChangeImpl extends BasicEObject implements DiagnosticChan
         this._changedBy = "";
         return;
       case DiagnosticChangeImpl.OLD_SEVERITY:
-        this._oldSeverity = undefined;
+        this._oldSeverity = DiagnosticSeverity.INFO;
         return;
       case DiagnosticChangeImpl.NEW_SEVERITY:
-        this._newSeverity = undefined;
+        this._newSeverity = DiagnosticSeverity.INFO;
         return;
       case DiagnosticChangeImpl.OLD_STATUS:
-        this._oldStatus = undefined;
+        this._oldStatus = DiagnosticStatus.OPEN;
         return;
       case DiagnosticChangeImpl.NEW_STATUS:
-        this._newStatus = undefined;
+        this._newStatus = DiagnosticStatus.OPEN;
         return;
       case DiagnosticChangeImpl.REASON:
         this._reason = undefined;

@@ -12,8 +12,7 @@
 export const StorageBackendType = {
   FILE: 'FILE',
   MINIO: 'MINIO',
-  GIT: 'GIT',
-  APICURIO: 'APICURIO'
+  GIT: 'GIT'
 } as const;
 
 export type StorageBackendType = typeof StorageBackendType[keyof typeof StorageBackendType];
@@ -32,6 +31,5 @@ export function getStorageBackendTypeByLiteral(literal: string): StorageBackendT
   if (literal === 'FILE') return StorageBackendType.FILE;
   if (literal === 'MINIO') return StorageBackendType.MINIO;
   if (literal === 'GIT') return StorageBackendType.GIT;
-  if (literal === 'APICURIO') return StorageBackendType.APICURIO;
   return undefined;
 }
