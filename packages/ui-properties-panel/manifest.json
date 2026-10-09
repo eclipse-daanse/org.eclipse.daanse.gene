@@ -8,6 +8,10 @@
     {
       "id": "ui.properties-panel.components",
       "description": "Properties panel Vue components"
+    },
+    {
+      "id": "ui.instance.views",
+      "description": "Registry for class-specific views shown above the generic property sections"
     }
   ],
   "dependencies": [
