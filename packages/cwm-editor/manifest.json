@@ -21,6 +21,10 @@
     {
       "id": "ui.cwm-editor.actions",
       "description": "Registry of row actions per EClass"
+    },
+    {
+      "id": "ui.cwm-editor.fielddefaults",
+      "description": "Field defaults (suggested values, UI/backend defaults, hidden attributes) from *.fielddefaults.xmi"
     }
   ]
 }

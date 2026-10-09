@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Field defaults for the CWM editor (FR-1.1, FR-1.2, CON-1.2; replaces the
+  UIModelOverlay of PH-7, see CR-2 in the Pflichtenheft).
+
+  An own metamodel, orthogonal to the edited one: a FieldRule names an EClass
+  and one of its EAttributes by non-containment reference and says which
+  values to suggest, what to show while unset (UI default), what to write when
+  an object is created (backend default) and whether to hide the attribute.
+  The edited metamodel (CWM) stays untouched.
+-->
+<ecore:EPackage xmlns:xmi="http://www.omg.org/XMI" xmi:version="2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore"
+    name="fielddefaults" nsURI="http://gene/cwm/fielddefaults/1.0" nsPrefix="fd">
+
+  <!-- Root of a *.fielddefaults.xmi file -->
+  <eClassifiers xsi:type="ecore:EClass" name="FieldDefaults">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="rules" upperBound="-1"
+        eType="#//FieldRule" containment="true"/>
+  </eClassifiers>
+
+  <eClassifiers xsi:type="ecore:EClass" name="FieldRule">
+    <!-- Applies to this class and its subclasses -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="targetClass" lowerBound="1"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="attribute" lowerBound="1"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EAttribute"/>
+    <!-- Values offered while editing a text field; free input stays possible (FR-1.1) -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="suggestions" upperBound="-1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Shown while the attribute is unset, never written to the model (FR-1.2) -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="uiDefault"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Written into every newly created object (FR-1.2) -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="backendDefault"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Not shown until the row shows all attributes (FR-1.2) -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="hidden"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+  </eClassifiers>
+</ecore:EPackage>

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Example field defaults for CWM (FR-1.1, FR-1.2, CR-2). Put a file like this
+  anywhere in the workspace as *.fielddefaults.xmi; the CWM editor picks it up
+  when the workspace is loaded.
+-->
+<fd:FieldDefaults xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:fd="http://gene/cwm/fielddefaults/1.0"
+    name="CWM">
+
+  <!-- PH-7.b: visibility is not relevant for namespaces - hide it, show a UI default -->
+  <rules hidden="true" uiDefault="nicht relevant">
+    <targetClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace"/>
+    <attribute href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
+  </rules>
+
+  <!-- FR-1.1: language is an EString, but offers maintained values; new descriptions start in German -->
+  <rules backendDefault="deutsch">
+    <targetClass href="http://www.omg.org/spec/CWM/1.1/foundation/businessinformation#//Description"/>
+    <attribute href="http://www.omg.org/spec/CWM/1.1/foundation/businessinformation#//Description/language"/>
+    <suggestions>deutsch</suggestions>
+    <suggestions>englisch</suggestions>
+  </rules>
+
+  <rules uiDefault="doc">
+    <targetClass href="http://www.omg.org/spec/CWM/1.1/foundation/businessinformation#//Description"/>
+    <attribute href="http://www.omg.org/spec/CWM/1.1/foundation/businessinformation#//Description/type"/>
+    <suggestions>doc</suggestions>
+    <suggestions>inline</suggestions>
+  </rules>
+</fd:FieldDefaults>

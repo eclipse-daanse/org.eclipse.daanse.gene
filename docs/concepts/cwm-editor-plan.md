@@ -162,8 +162,30 @@ Beschreibung“) bekommen nach PH-C1 dieselbe Test-ID.
 Hinweis: Welche Typen der Tree zeigt, bestimmt weiterhin der Ansichtsfilter
 des Workspace; PH-3.b (alle Objekttypen) gilt nur ohne Filter.
 
-Offen: PH-7 Overlay (Vorschlagswerte, UI-Defaults, Ausblendungen),
-Mermaid-Rendering, Daanse-Validierungen im Menü (sobald Daanse sie anbietet).
+
+## Feldvorgaben als eigenes Modell (CR-2, 2026-10-09)
+
+PH-7 nimmt Vorschlagswerte, UI-Defaults, Backend-Defaults und Ausblendungen
+nicht aus einem UIModelOverlay, sondern aus einem eigenen, zum CWM
+orthogonalen Metamodell (ChangeRequest CR-2 im Pflichtenheft):
+
+- `packages/cwm-editor/model/fielddefaults.ecore`, nsURI
+  `http://gene/cwm/fielddefaults/1.0`: `FieldDefaults` mit `FieldRule`s –
+  `targetClass` (EClass, gilt auch für Unterklassen), `attribute` (EAttribute),
+  `suggestions`, `uiDefault`, `backendDefault`, `hidden`. Registriert beim
+  Aktivieren in der zentralen `EPackageRegistry`.
+- Instanzen: alle `*.fielddefaults.xmi` des Workspace, geladen beim Aktivieren
+  und bei `gene:workspace-loaded`; zusätzlich über den Service
+  `ui.cwm-editor.fielddefaults` (`addFieldDefaultsFromXmi`). Abgleich über
+  nsURI und Namen, auch bei nicht aufgelösten Proxys; die spezifischste Klasse
+  gewinnt. Beispiel: `packages/cwm-editor/examples/cwm.fielddefaults.xmi`.
+- Wirkung: `Fields` blendet `hidden`-Attribute bis „alle anzeigen“ aus (Marke ◌),
+  zeigt ungesetzte Attribute mit `uiDefault` als Platzhalter (nie geschrieben)
+  und bietet `suggestions` als Auswahlliste bei freier Eingabe. `createIn`
+  schreibt die `backendDefault`s in jedes neue Objekt.
+
+Offen: Mermaid-Rendering, Daanse-Validierungen im Menü (sobald Daanse sie
+anbietet), ein Editor für Feldregeln (bis dahin Instanz-Editor oder XMI).
 
 ## Offen / nächste Etappen
 

@@ -19,6 +19,8 @@ import { CWM_EDITING } from '../composables/editing'
 import { allObjects, buildReferenceIndex, referenceCandidates } from '../composables/references'
 import { dataTypes } from '../composables/columnsEdit'
 import { setCreatedHook } from '../composables/creation'
+import { backendDefaults } from '../composables/fieldDefaults'
+import { applyBackendDefaults } from '../composables/rowContent'
 
 const props = defineProps<{ context: any }>()
 
@@ -48,8 +50,12 @@ const gutter = computed(() => rows.value.reduce((m, r) => Math.max(m, r.depth), 
 
 const tsm = inject<any>('tsm', null)
 const treeComposables = tsm?.getService?.('ui.instance-tree.composables')
-// New objects get their xmi:id by the instance tree's rules
-setCreatedHook(o => { treeComposables?.assignXmiId?.(o) })
+// New objects get their xmi:id by the instance tree's rules and the backend
+// defaults of the field rules (FR-1.2)
+setCreatedHook(o => {
+  treeComposables?.assignXmiId?.(o)
+  applyBackendDefaults(o, backendDefaults(o))
+})
 
 // OCL results (PH-4): the problems service's issues per object; a fresh
 // validation of one object replaces them for that object
