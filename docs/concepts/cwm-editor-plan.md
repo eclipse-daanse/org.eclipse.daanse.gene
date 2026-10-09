@@ -85,8 +85,40 @@ die Dokumentationsansicht:
 - **PH-4:** `Row.RightRail` mit `Validation` und `Actions` nur als Platzhalter.
 - Test-IDs nach PH-C1 an allen Boxen, dazu `data-wire-kind` wie im Wireframe.
 
-Noch offen: PH-3 (Tree folgt dem Scrollen, `TreeItem`-Test-IDs), PH-4,
-PH-7, PH-8 (bearbeiten), PH-9, PH-10.
+
+## Kontextansicht, Schritt 2: Zeileninhalt (2026-10-09)
+
+`Row.Body` enthält jetzt in dieser Reihenfolge: `Diagram`, `Fields`,
+`TextView`, `Columns` (nur Table), `References`.
+
+- **PH-10 Diagram:** für Klassen aus der Registry `ui.cwm-editor.diagrams`
+  (`composables/diagrams.ts`; Catalog, Schema, Table, View, Column, Index,
+  Trigger, SQL-Datentypen, PrimaryKey, ForeignKey, Class, Association,
+  Generalization). Erste Stufe nur der Name; `Diagram.Expand` vergrößert auf
+  das ganze Fenster mit Werkzeugleiste.
+- **PH-7 Fields (Teil 1):** alle einwertigen Attribute inline bearbeitbar –
+  Text, Zahl, Ja/Nein, Enum-Literale. Ungesetzte erst nach „alle anzeigen“.
+  Noch nicht: Vorschlagswerte, UI-Defaults und Ausblendungen aus einer
+  Overlay-Resource.
+- **FR-2.5/CON-2.5 TextView:** Text der Description (bzw. der eigenen
+  Description einer Table), gerendert nach Typ – Markdown (marked +
+  DOMPurify), README als Absätze, Mermaid vorerst als Quelltext. „Bearbeiten“
+  schaltet auf den Editor mit Typauswahl. Der Typ wird beim Speichern als
+  TaggedValue `textType` an der Description abgelegt (CWM hat kein Attribut
+  dafür; `type` ist schon mit doc/inline belegt).
+- **PH-8 Columns:** Name, Typ (SQL-Datentypen des ResourceSets), PK (legt den
+  PrimaryKey bei Bedarf an), Null, Description (legt eine Column-Description
+  an, wenn keine da ist) inline bearbeitbar.
+- **PH-9 References:** letzter Block mit Trennlinie, kleinere Schrift; je
+  Description, Document, ResponsibleParty, Measurement, ChangeRequest, die per
+  `modelElement` auf das Objekt zeigen, eine Zeile (Name, Pfad, Description,
+  Typ), Tooltip mit den Daten, Klick wählt das Objekt. „+ Referenz“ öffnet ein
+  Auswahlfenster (Filter, Mehrfachauswahl) und trägt das Objekt in
+  `modelElement` ein. Der Rückwärtsindex wird je Modellversion einmal gebaut.
+- Die alte Dokumentationsansicht (`CwmDocumentation`, `DocSection`) ist entfernt.
+
+Offen: PH-3 (Tree folgt dem Scrollen, `TreeItem`-Test-IDs), PH-4 (Validierung,
+Aktionsmenü), PH-7 Overlay, Mermaid-Rendering, Spalten anlegen/duplizieren.
 
 ## Offen / nächste Etappen
 

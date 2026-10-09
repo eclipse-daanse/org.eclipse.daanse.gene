@@ -2,7 +2,7 @@
   "id": "cwm-editor",
   "name": "CWM Editor",
   "version": "0.1.0",
-  "description": "Editor for CWM models - documentation view on descriptions and tables",
+  "description": "Editor for CWM models - context view with object rows, columns, references and diagram areas",
   "entry": "src/index.ts",
   "dependencies": [
     "gene-app",
@@ -13,6 +13,10 @@
     {
       "id": "ui.cwm-editor.components",
       "description": "CWM editor UI components"
+    },
+    {
+      "id": "ui.cwm-editor.diagrams",
+      "description": "Registry of EClasses that get a diagram area"
     }
   ]
 }
