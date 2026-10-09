@@ -2,14 +2,15 @@
 /**
  * One CWM file as a tab: its instance tree on the left, the context view in
  * the middle (one row per object below the context object), the models on
- * the right.
+ * the right. The tree marks the object on top of the context view (PH-3).
  *
  * The document is the same kind the instance editor uses - loaded by the same
  * loader into the tab's own document - so saving, validation and the model
  * browser work unchanged. Only the middle differs.
  */
-import { inject, provide } from 'tsm:vue'
+import { inject, provide, shallowRef } from 'tsm:vue'
 import CwmContextView from './CwmContextView.vue'
+import { objectSlug } from '../composables/documentation'
 
 const props = defineProps<{ tabId: string }>()
 
@@ -24,6 +25,14 @@ if (ctx && contexts?.EDITOR_CONTEXT_KEY) provide(contexts.EDITOR_CONTEXT_KEY, ct
 const TabLayout = tsm?.getService('ui.layout.components')?.EditorTabLayout ?? null
 const InstanceTree = tsm?.getService('ui.instance-tree.components')?.InstanceTree ?? null
 const ModelBrowser = tsm?.getService('ui.model-browser.components')?.ModelBrowser ?? null
+
+/** The object on top of the context view; the tree marks it (PH-3) */
+const topObject = shallowRef<any>(null)
+
+/** Test id of a tree entry (PH-C1) */
+function treeItemTestId(object: any): string {
+  return `cwm.Editor.Tree.TreeItem@${objectSlug(object)}`
+}
 </script>
 
 <template>
@@ -40,11 +49,17 @@ const ModelBrowser = tsm?.getService('ui.model-browser.components')?.ModelBrowse
     >
       <template #left>
         <div class="tree" data-testid="cwm.Editor.Tree" data-wire-kind="REGION">
-          <component :is="InstanceTree" v-if="InstanceTree" :context="ctx" />
+          <component
+            :is="InstanceTree"
+            v-if="InstanceTree"
+            :context="ctx"
+            :node-test-id="treeItemTestId"
+            :current-object="topObject"
+          />
         </div>
       </template>
       <template #center>
-        <CwmContextView :context="ctx" />
+        <CwmContextView :context="ctx" @top-object="topObject = $event" />
       </template>
       <template v-if="ModelBrowser" #right>
         <component :is="ModelBrowser" :context="ctx" />

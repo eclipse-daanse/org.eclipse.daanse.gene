@@ -144,7 +144,25 @@ Referenzen stehen seit CR-1 im Body, PH-9).
 Bekannt: Gleichnamige Objekte derselben Klasse (z. B. zwei „Neue
 Beschreibung“) bekommen nach PH-C1 dieselbe Test-ID.
 
-Offen: PH-3 (Tree folgt dem Scrollen, `TreeItem`-Test-IDs), PH-7 Overlay,
+
+## Kontextansicht, Schritt 4: Tree folgt dem Hauptbereich (2026-10-09)
+
+- **PH-3:** Die Kontextansicht meldet beim Scrollen (je Frame höchstens
+  einmal) das Objekt der obersten Zeile unterhalb der Kopfzeile
+  (`top-object`). Der Tab reicht es an den Instanzbaum weiter.
+- `InstanceTree` (ui-instance-tree) hat dafür zwei optionale Props, ohne
+  CWM-Wissen: `nodeTestId(object)` setzt `data-testid` und `data-depth`
+  (Containment-Tiefe) je Eintrag; `currentObject` markiert einen Eintrag
+  ohne ihn zu wählen (`aria-current="true"`), klappt seine Vorfahren auf und
+  scrollt ihn in Sicht. Blendet ein Ansichtsfilter das Objekt aus, wird der
+  nächste sichtbare Vorfahr markiert.
+- Test-IDs `cwm.Editor.Tree.TreeItem@<Klasse>-<Name>`; der Tree hat keine
+  `.Line@`-Elemente.
+
+Hinweis: Welche Typen der Tree zeigt, bestimmt weiterhin der Ansichtsfilter
+des Workspace; PH-3.b (alle Objekttypen) gilt nur ohne Filter.
+
+Offen: PH-7 Overlay (Vorschlagswerte, UI-Defaults, Ausblendungen),
 Mermaid-Rendering, Daanse-Validierungen im Menü (sobald Daanse sie anbietet).
 
 ## Offen / nächste Etappen

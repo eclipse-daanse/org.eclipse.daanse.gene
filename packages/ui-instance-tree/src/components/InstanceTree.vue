@@ -28,6 +28,14 @@ import ViewsEditorDialog from './ViewsEditorDialog.vue'
 // Props - context can be provided by parent (for different perspectives)
 const props = defineProps<{
   context?: EditorContext
+  /** Test id per object entry; entries then also carry data-depth (containment depth) */
+  nodeTestId?: (object: EObject) => string | undefined
+  /**
+   * An object to mark without selecting it - e.g. what another view is
+   * showing. Its entry (or, if filtered out, its nearest shown ancestor's)
+   * gets aria-current, its ancestors are expanded and it is scrolled into view.
+   */
+  currentObject?: EObject | null
 }>()
 
 const emit = defineEmits<{
@@ -123,6 +131,49 @@ const ctxExpandedKeys = computed({
 const ctxSelectedObject = computed(() => ctx.selectedObject.value)
 const ctxSelectedNode = computed(() => ctx.selectedNode.value)
 const ctxAllPackages = computed(() => ctx.allPackages.value)
+
+/** Containment depth of an object: 0 for a root */
+function depthOf(object: EObject): number {
+  let depth = 0
+  for (let c = toRaw(object).eContainer?.(); c; c = c.eContainer?.()) depth++
+  return depth
+}
+
+function findNode(nodes: InstanceTreeNode[], object: EObject): InstanceTreeNode | null {
+  for (const node of nodes) {
+    if (node.data === object) return node
+    const hit = node.children ? findNode(node.children as InstanceTreeNode[], object) : null
+    if (hit) return hit
+  }
+  return null
+}
+
+/** The entry of the object - or, when a view filter hides it, of its nearest shown ancestor */
+function entryFor(object: EObject | null | undefined): InstanceTreeNode | null {
+  for (let o = object ? toRaw(object) : null; o; o = o.eContainer?.() ?? null) {
+    const node = findNode(ctxTreeNodes.value as InstanceTreeNode[], o)
+    if (node) return node
+  }
+  return null
+}
+
+const currentKey = computed(() => entryFor(props.currentObject)?.key ?? null)
+
+// Mark the current object: expand its ancestors, scroll its entry into view
+watch(() => props.currentObject, async (object) => {
+  const node = entryFor(object)
+  if (!node) return
+  const expanded = { ...ctxExpandedKeys.value }
+  let changed = false
+  for (let p = node.parent; p; p = p.parent) {
+    if (!expanded[p.key]) { expanded[p.key] = true; changed = true }
+  }
+  if (changed) ctxExpandedKeys.value = expanded
+  await nextTick()
+  treeContainerRef.value
+    ?.querySelector(`[data-node-key="${CSS.escape(String(node.key))}"]`)
+    ?.scrollIntoView({ block: 'nearest' })
+})
 
 // Context menu ref
 const contextMenu = ref<InstanceType<typeof ContextMenu> | null>(null)
@@ -1379,9 +1430,13 @@ watch(ctxSelectedObject, (obj) => {
             class="tree-node"
             :class="{
               'tree-node--resource': node.kind === 'resource',
-              'tree-node--invalid-drop': node.key === invalidDropKey
+              'tree-node--invalid-drop': node.key === invalidDropKey,
+              'tree-node--current': node.key === currentKey
             }"
             :data-node-key="node.key"
+            :data-testid="node.kind !== 'resource' && nodeTestId ? nodeTestId(node.data) : undefined"
+            :data-depth="node.kind !== 'resource' && nodeTestId ? depthOf(node.data) : undefined"
+            :aria-current="node.key === currentKey ? 'true' : undefined"
             @contextmenu.prevent="onNodeContextMenu(node, $event)"
           >
             <template v-if="node.kind === 'resource'">
@@ -1669,6 +1724,11 @@ watch(ctxSelectedObject, (obj) => {
   gap: 0.5rem;
   width: 100%;
   min-width: 0;
+}
+
+.tree-node--current {
+  box-shadow: inset 2px 0 0 var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
 }
 
 .node-actions {
