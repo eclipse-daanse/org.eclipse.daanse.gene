@@ -34,6 +34,8 @@ export interface MetamodelResolverDeps {
   workspaceSourceId: () => string | undefined
   modelBrowser: () => any
   editorConfig: () => any
+  /** The Atlas browser (`gene.atlas.browser`); its connections are asked last */
+  atlasBrowser?: () => any
 }
 
 /** A package the registry can actually use - it may hold descriptors too */
@@ -98,7 +100,7 @@ export function createMetamodelResolver(deps: MetamodelResolverDeps): MetamodelR
   async function fromAtlas(wanted: Set<string>, searched: string[], resolved: string[], entry: unknown): Promise<void> {
     const mb = deps.modelBrowser()
     if (!mb?.loadEcoreFile || wanted.size === 0) return
-    const { providers, searched: where } = await collectAtlasProviders(entry, deps.editorConfig())
+    const { providers, searched: where } = await collectAtlasProviders(entry, deps.editorConfig(), deps.atlasBrowser?.())
     if (providers.length === 0) return
     searched.push(...where)
     const { fetchSchemas } = await import('storage-model-atlas')

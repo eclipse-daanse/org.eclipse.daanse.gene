@@ -62,9 +62,16 @@ export interface AtlasResolutionSetup {
  * inherited parents, plus the resolver chain of the workspace settings. Shared
  * by the instance loader's converter and the metamodel resolver.
  */
+/** What the Atlas browser offers about its connections (service `gene.atlas.browser`) */
+export interface AtlasConnectionsLike {
+  connections?: { value?: Array<{ id: string; baseUrl: string; scopeName: string; status?: string }> }
+  getClient?(connectionId: string): unknown
+}
+
 export async function collectAtlasProviders(
   entry: any,
   editorConfig: any,
+  atlasBrowser?: AtlasConnectionsLike | null,
 ): Promise<{ providers: unknown[]; searched: string[] }> {
   const { ModelAtlasClient, providersForScopeChain, describeProvider } = await import('storage-model-atlas')
   const providers: any[] = []
@@ -104,6 +111,20 @@ export async function collectAtlasProviders(
     const client = new ModelAtlasClient({ baseUrl, token: featureValue(resolver, 'token') })
     add(baseUrl, await providersForScopeChain(client, scopeName, featureValue(resolver, 'stage') || undefined))
   }
+
+  /*
+   * 3. Last: every Atlas the browser is connected to, with its scope chain.
+   * A file downloaded from the Atlas is a local file afterwards - it carries
+   * no origin, and without a resolver in the settings its metamodels were
+   * nowhere to be found. The browser's own client is taken, so its sign-in
+   * counts here too.
+   */
+  for (const connection of atlasBrowser?.connections?.value ?? []) {
+    if (connection.status && connection.status !== 'connected') continue
+    const client = atlasBrowser?.getClient?.(connection.id)
+    if (!client || !connection.scopeName) continue
+    add(connection.baseUrl, await providersForScopeChain(client as never, connection.scopeName))
+  }
   return { providers, searched: providers.map((p) => describeProvider(p)) }
 }
 
@@ -111,6 +132,8 @@ export async function prepareAtlasResolution(
   entry: any,
   deps: {
     editorConfig?: any
+    /** The Atlas browser - its connections are asked last */
+    atlasBrowser?: AtlasConnectionsLike | null
     /** The instance tree's hook; the converter type comes from @emfts/core */
     instanceTreeComposables?: { setPackageURIConverter?: (c: never) => void }
   },
@@ -121,13 +144,13 @@ export async function prepareAtlasResolution(
   }
 
   const { createAtlasURIConverter } = await import('storage-model-atlas')
-  const { providers, searched } = await collectAtlasProviders(entry, deps.editorConfig)
+  const { providers, searched } = await collectAtlasProviders(entry, deps.editorConfig, deps.atlasBrowser)
 
   if (providers.length === 0) {
     return {
       searched: [],
       providers: [],
-      note: 'keine Fundstelle — die Datei nennt keine Atlas-Herkunft, und es ist keine Resolver-Kette konfiguriert',
+      note: 'keine Fundstelle — die Datei nennt keine Atlas-Herkunft, es ist keine Resolver-Kette konfiguriert und kein Atlas verbunden',
     }
   }
 
