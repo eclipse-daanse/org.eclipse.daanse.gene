@@ -74,7 +74,7 @@ describe('Dokumentation aus CWM-Beschreibungen', () => {
 
     const view = tableView(tabelle)
     expect(view.name).toBe('gemschluessel')
-    expect(view.columns).toEqual([
+    expect(view.columns).toMatchObject([
       { name: 'gkz', type: 'varchar', nullable: 'columnNoNulls', primaryKey: true, foreignKey: null, description: 'Amtlicher Gemeindeschlüssel' },
       { name: 'lkrcode', type: 'varchar', nullable: 'columnNullable', primaryKey: false, foreignKey: 'landkreis (code)', description: '' }
     ])

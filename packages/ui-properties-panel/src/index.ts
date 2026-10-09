@@ -15,10 +15,6 @@ export { PropertiesPanel } from './components'
 
 // Import for service registration
 import * as components from './components'
-import { instanceViewRegistry } from './instanceViewRegistry'
-
-export { instanceViewRegistry } from './instanceViewRegistry'
-export type { InstanceViewContribution, InstanceViewRegistry } from './instanceViewRegistry'
 
 /**
  * TSM lifecycle: activate
@@ -29,9 +25,6 @@ export async function activate(context: ModuleContext): Promise<void> {
 
   // Register components as service (legacy)
   context.services.register('ui.properties-panel.components', components)
-
-  // Extension point for class-specific views above the generic sections
-  context.services.register('ui.instance.views', instanceViewRegistry)
 
   // Register with panel registry
   const panelRegistry = context.services.get<PanelRegistry>('ui.registry.panels')
@@ -60,7 +53,6 @@ export async function deactivate(context: ModuleContext): Promise<void> {
   context.log.info('Deactivating Properties Panel module...')
 
   context.services.unregister('ui.properties-panel.components')
-  context.services.unregister('ui.instance.views')
 
   context.log.info('Properties Panel module deactivated')
 }

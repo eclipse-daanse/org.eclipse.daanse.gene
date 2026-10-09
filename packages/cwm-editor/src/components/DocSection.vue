@@ -1,12 +1,14 @@
 <script setup lang="ts">
 /**
- * One section of the documentation: title, text, table.
+ * One section of the documentation: title, text, columns table.
  *
  * All sections stand in one column - every text starts at the same left edge.
  * How deep a section sits is said by the stripes in the gutter to its left:
  * one per level, side by side, not by an indent.
  */
 import type { DocSection } from '../composables/documentation'
+import { objectSlug } from '../composables/documentation'
+import ColumnsTable from './ColumnsTable.vue'
 
 const props = defineProps<{
   section: DocSection
@@ -21,6 +23,7 @@ const SLOT = 7
 
 const emit = defineEmits<{
   edit: [field: 'name' | 'body', value: string]
+  navigate: [object: any]
 }>()
 
 function paragraphs(body: string): string[] {
@@ -70,29 +73,12 @@ function onInput(field: 'name' | 'body', event: Event): void {
         <p v-for="(p, i) in paragraphs(section.body)" :key="i" class="doc-paragraph">{{ p }}</p>
       </template>
 
-      <table v-if="section.table && section.table.columns.length > 0" class="doc-table">
-        <thead>
-          <tr>
-            <th>Spalte</th>
-            <th>Typ</th>
-            <th>Null</th>
-            <th>Schlüssel</th>
-            <th>Beschreibung</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="col in section.table.columns" :key="col.name">
-            <td class="col-name">{{ col.name }}</td>
-            <td>{{ col.type }}</td>
-            <td>{{ col.nullable === 'columnNoNulls' ? 'nein' : col.nullable === 'columnNullable' ? 'ja' : col.nullable }}</td>
-            <td>
-              <span v-if="col.primaryKey" class="key pk" title="Primärschlüssel">PK</span>
-              <span v-if="col.foreignKey" class="key fk" :title="'Fremdschlüssel → ' + col.foreignKey">FK → {{ col.foreignKey }}</span>
-            </td>
-            <td class="col-desc">{{ col.description }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <ColumnsTable
+        v-if="section.table && section.table.columns.length > 0"
+        :table="section.table"
+        :test-id="`cwm.Editor.ContextView.ObjectRow@${objectSlug(section.table.object)}.Row.Body.Columns`"
+        @navigate="emit('navigate', $event)"
+      />
 
     </div>
   </section>
@@ -179,56 +165,5 @@ h4.doc-title { font-size: 0.95rem; }
   margin-top: 0.5rem;
   line-height: 1.5;
   resize: vertical;
-}
-
-.doc-table {
-  margin-top: 0.6rem;
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 0.85rem;
-}
-
-.doc-table th,
-.doc-table td {
-  text-align: left;
-  vertical-align: top;
-  padding: 0.3rem 0.5rem;
-  border-bottom: 1px solid var(--surface-border);
-}
-
-.doc-table th {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-color-secondary);
-}
-
-.col-name {
-  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-  white-space: nowrap;
-}
-
-.col-desc {
-  color: var(--text-color-secondary);
-}
-
-.key {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 0 0.3rem;
-  border-radius: 3px;
-  margin-right: 0.3rem;
-  white-space: nowrap;
-}
-
-.key.pk {
-  background: var(--primary-color);
-  color: var(--primary-color-text, #fff);
-}
-
-.key.fk {
-  border: 1px solid var(--primary-color);
-  color: var(--primary-color);
 }
 </style>

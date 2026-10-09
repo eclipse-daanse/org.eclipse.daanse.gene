@@ -51,6 +51,16 @@ Code: `composables/documentation.ts` (Sektionen bauen, Tabellenansicht),
 `components/DocSection.vue` (rekursiv, Streifen), `CwmDocumentation.vue`,
 `CwmEditorTab.vue`. Test: `__tests__/documentation.spec.ts`.
 
+## Spaltentabelle nach PH-8 (2026-10-09)
+
+Die Spalten einer Table zeigt `components/ColumnsTable.vue` nach dem
+Pflichtenheft (`spec-driven/gene-cwm/cwm-editor.pflichtenheft.xmi`, PH-8):
+Kopfspalten Name, Typ, PK, Null, Description; Fremdschlüssel als „→ Ziel“
+hinter dem Namen. Spaltenname und FK-Ziel wählen das Objekt im Baum.
+Test-IDs nach PH-C1: `cwm.Editor.ContextView.ObjectRow@<Klasse>-<Name>.Row.Body.Columns`,
+je Zeile `….Row@<Spaltenname>`. Offen aus PH-8: Inline-Bearbeitung, Spalte
+anlegen und duplizieren über das Aktionsmenü der Table.
+
 ## Offen / nächste Etappen
 
 - **Relational:** Katalog → Schema → Tabelle → Spalte als Domänenbaum und

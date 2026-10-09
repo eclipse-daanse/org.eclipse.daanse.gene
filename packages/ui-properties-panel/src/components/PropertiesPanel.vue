@@ -17,7 +17,6 @@ import { InputText } from 'tsm:primevue'
 import { Select } from 'tsm:primevue'
 import { Textarea } from 'tsm:primevue'
 import type { EObject, EStructuralFeature, EClass, EReference, EOperation, Resource } from '@emfts/core'
-import { instanceViewRegistry } from '../instanceViewRegistry'
 
 const OCL_SOURCES = ['http://www.eclipse.org/fennec/m2x/ocl/1.0', 'http://www.eclipse.org/emf/2002/Ecore/OCL', 'http://www.eclipse.org/OCL/Pivot']
 function isOclSource(s: string | null | undefined): boolean { return !!s && OCL_SOURCES.includes(s) }
@@ -1214,14 +1213,6 @@ const useUimodelRendering = computed(() =>
   !!(uimodelFlag.value?.enabled?.value && UimodelPropertiesView.value && (ctx.value?.mode ?? 'instance') === 'instance')
 )
 
-// Class-specific views from plugins (ui.instance.views), shown above the
-// generic sections; instance mode only
-const instanceViews = computed(() => {
-  const obj = selectedObject.value
-  if (!obj || (ctx.value?.mode ?? 'instance') !== 'instance') return []
-  return instanceViewRegistry.findViews(obj)
-})
-
 /**
  * Handle OCL blocked assignment attempt
  */
@@ -1405,16 +1396,6 @@ function handleCancelParameterDialog() {
         </div>
 
         <template v-if="!selectedConstraint">
-        <!-- Class-specific views registered by plugins -->
-        <component
-          v-for="view in instanceViews"
-          :key="view.id"
-          :is="view.component"
-          :eObject="selectedObject"
-          :version="modelVersion"
-          :navigate="handleNavigate"
-        />
-
         <!-- No features -->
         <div v-if="!hasFeatures" class="empty-features">
           <i class="pi pi-info-circle"></i>

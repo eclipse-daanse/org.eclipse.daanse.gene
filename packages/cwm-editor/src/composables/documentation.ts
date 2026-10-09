@@ -24,11 +24,17 @@ export interface TableColumnView {
   /** "table(column, ...)" the foreign key points at, or null */
   foreignKey: string | null
   description: string
+  /** The Column object, for navigation */
+  column: any
+  /** The table the foreign key points at, or null */
+  foreignKeyTable: any
 }
 
 export interface TableView {
   name: string
   columns: TableColumnView[]
+  /** The Table object */
+  object: any
 }
 
 export interface DocSection {
@@ -129,6 +135,7 @@ export function tableView(table: any): TableView {
 
   return {
     name: text(attr(table, 'name')),
+    object: table,
     columns: columns.map(column => {
       const foreignKey = foreignKeys.find(k => inKey(k, column))
       const target = foreignKey ? toRaw(attr(foreignKey, 'uniqueKey')) : null
@@ -144,10 +151,22 @@ export function tableView(table: any): TableView {
           .filter(d => many(attr(d, 'modelElement')).includes(column))
           .map(d => text(attr(d, 'body')))
           .filter(Boolean)
-          .join(' ')
+          .join(' '),
+        column,
+        foreignKeyTable: targetTable
       }
     })
   }
+}
+
+/** A name as it appears in test ids: anything but letters and digits becomes '-' */
+export function slug(value: string): string {
+  return value.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
+
+/** Test-id slug of an object: "<Class>-<name>", e.g. "Table-customer" (PH-C1) */
+export function objectSlug(o: any): string {
+  return `${className(o)}-${slug(text(attr(o, 'name')))}`
 }
 
 /** The table a description belongs to: the one it describes, or the one that owns it */
