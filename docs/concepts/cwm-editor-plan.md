@@ -117,8 +117,35 @@ die Dokumentationsansicht:
   `modelElement` ein. Der Rückwärtsindex wird je Modellversion einmal gebaut.
 - Die alte Dokumentationsansicht (`CwmDocumentation`, `DocSection`) ist entfernt.
 
-Offen: PH-3 (Tree folgt dem Scrollen, `TreeItem`-Test-IDs), PH-4 (Validierung,
-Aktionsmenü), PH-7 Overlay, Mermaid-Rendering, Spalten anlegen/duplizieren.
+
+## Kontextansicht, Schritt 3: rechte Spalte (2026-10-09)
+
+`Row.RightRail` hat genau zwei Kinder, `Validation` und `Actions` (PH-4; die
+Referenzen stehen seit CR-1 im Body, PH-9).
+
+- **Validation:** Badge „OCL ✓“, „OCL ! n“ (Warnungen) oder „OCL ✗ n“
+  (Fehler) aus den Befunden des Dienstes `gene.problems` für dieses Objekt;
+  Tooltip mit den Meldungen. Klick validiert das Objekt neu
+  (`validateObject`); das Ergebnis ersetzt für dieses Objekt die Befunde.
+- **Actions:** Menü aus der Registry `ui.cwm-editor.actions`
+  (`composables/actions.ts`), je Aktion `appliesTo`, optional `enabled` und
+  `confirm`. Eingebaut: Table – „Spalte hinzufügen“, „Spalte duplizieren“
+  (die gewählte Spalte der Table, sonst die letzte; Werte und Typ werden
+  kopiert, Name `<name>_kopie`); Description – „Sub-Description anlegen“,
+  „Geschwister-Description anlegen“ (direkt dahinter); alle – „Validieren“,
+  „Als Kontextobjekt setzen“ (mit Kindern), „Löschen“ (mit Rückfrage im Menü).
+  Neue Objekte werden gewählt.
+- **Anlegen:** `composables/creation.ts` – Fabrik des definierenden Pakets,
+  Einfügen in die Containment-Liste (optional an Position), danach xmi:id
+  über `assignXmiId` des Instanzbaums (keine für Klassen mit ID-Attribut).
+  Auch PrimaryKey, Column-Description und TaggedValue aus Schritt 2 laufen
+  jetzt darüber.
+
+Bekannt: Gleichnamige Objekte derselben Klasse (z. B. zwei „Neue
+Beschreibung“) bekommen nach PH-C1 dieselbe Test-ID.
+
+Offen: PH-3 (Tree folgt dem Scrollen, `TreeItem`-Test-IDs), PH-7 Overlay,
+Mermaid-Rendering, Daanse-Validierungen im Menü (sobald Daanse sie anbietet).
 
 ## Offen / nächste Etappen
 

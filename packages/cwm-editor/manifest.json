@@ -17,6 +17,10 @@
     {
       "id": "ui.cwm-editor.diagrams",
       "description": "Registry of EClasses that get a diagram area"
+    },
+    {
+      "id": "ui.cwm-editor.actions",
+      "description": "Registry of row actions per EClass"
     }
   ]
 }

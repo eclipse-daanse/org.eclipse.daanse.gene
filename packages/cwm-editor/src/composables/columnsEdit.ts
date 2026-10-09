@@ -3,21 +3,17 @@
  * primary key membership and the column's description.
  *
  * Writes go straight into the model through the generic EMF API; new objects
- * (a primary key, a column description) come from the factory of the package
- * that defines their class.
+ * (a primary key, a column description) are made by createIn.
  */
 import { toRaw } from 'tsm:vue'
 import { attr, className, isDescription, many } from './documentation'
 import { children } from './contextView'
+import { createIn, setByName } from './creation'
 
 const DATA_TYPE_CLASSES = new Set(['SQLSimpleType', 'SQLDistinctType', 'SQLStructuredType'])
 
 function feature(o: any, name: string): any {
   return o.eClass().getEStructuralFeature(name)
-}
-
-function create(eClass: any): any | null {
-  return eClass?.getEPackage?.()?.getEFactoryInstance?.()?.create?.(eClass) ?? null
 }
 
 /** The SQL data types among the given objects, by name */
@@ -57,10 +53,9 @@ export function setPrimaryKey(table: any, column: any, member: boolean): void {
   let key = primaryKeyOf(t)
   if (!key) {
     if (!member) return
-    key = create(t.eClass().getEPackage().getEClassifier('PrimaryKey'))
+    key = createIn(t, 'ownedElement', t.eClass().getEPackage().getEClassifier('PrimaryKey'))
     if (!key) return
-    key.eSet(feature(key, 'name'), `${attr(t, 'name') ?? 'table'}_pkey`)
-    t.eGet(feature(t, 'ownedElement')).add(key)
+    setByName(key, 'name', `${attr(t, 'name') ?? 'table'}_pkey`)
   }
   const columns = key.eGet(feature(key, 'feature'))
   const has = many(columns).includes(c)
@@ -88,12 +83,11 @@ export function setColumnDescription(table: any, column: any, body: string, desc
   }
   if (body === '') return
   const eClass = descriptionClass ?? children(t).find(isDescription)?.eClass?.()
-  const d = create(eClass)
+  const d = createIn(t, 'ownedElement', eClass)
   if (!d) return
-  d.eSet(feature(d, 'name'), `Column ${attr(t, 'name') ?? ''}.${attr(c, 'name') ?? ''}`)
-  d.eSet(feature(d, 'body'), body)
+  setByName(d, 'name', `Column ${attr(t, 'name') ?? ''}.${attr(c, 'name') ?? ''}`)
+  setByName(d, 'body', body)
   d.eGet(feature(d, 'modelElement')).add(c)
-  t.eGet(feature(t, 'ownedElement')).add(d)
 }
 
 /** Literal strings of the column's NullableType */

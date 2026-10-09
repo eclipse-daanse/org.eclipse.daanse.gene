@@ -18,6 +18,7 @@ import ColumnsTable from './ColumnsTable.vue'
 import DiagramArea from './DiagramArea.vue'
 import ReferencesTable from './ReferencesTable.vue'
 import RowFields from './RowFields.vue'
+import RowRightRail from './RowRightRail.vue'
 import RowTextView from './RowTextView.vue'
 
 const props = defineProps<{
@@ -130,18 +131,7 @@ const shown = computed(() => {
         </div>
       </div>
 
-      <div class="right-rail" :data-testid="`${id}.Row.RightRail`">
-        <!-- Filled in step 3 (PH-4): OCL result and the actions registry per EClass -->
-        <span class="badge" :data-testid="`${id}.Row.RightRail.Validation`" data-wire-kind="BADGE" title="Noch nicht geprüft">OCL –</span>
-        <button
-          class="actions"
-          type="button"
-          disabled
-          :data-testid="`${id}.Row.RightRail.Actions`"
-          data-wire-kind="CONTROL"
-          title="Aktionen folgen"
-        >Aktionen ▾</button>
-      </div>
+      <RowRightRail :object="row.object" :test-id="`${id}.Row.RightRail`" :version="version" />
     </div>
   </div>
 </template>
@@ -219,29 +209,5 @@ const shown = computed(() => {
 .row-title .name {
   font-weight: 600;
   color: var(--text-color);
-}
-
-.right-rail {
-  flex: 0 0 7rem;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.3rem;
-}
-
-.badge,
-.actions {
-  font-size: 0.7rem;
-  padding: 0.15rem 0.4rem;
-  border-radius: 3px;
-  border: 1px solid var(--surface-border);
-  color: var(--text-color-secondary);
-  background: transparent;
-  text-align: center;
-}
-
-.actions:disabled {
-  opacity: 0.6;
-  cursor: default;
 }
 </style>

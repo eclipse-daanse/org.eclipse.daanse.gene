@@ -11,13 +11,14 @@
  * tree. Selecting an object outside of it moves the context to that object's
  * container, so the selection always has its row.
  */
-import { computed, nextTick, provide, reactive, ref, shallowRef, toRaw, watch } from 'tsm:vue'
+import { computed, inject, nextTick, provide, reactive, ref, shallowReactive, shallowRef, toRaw, watch } from 'tsm:vue'
 import ContextObjectRow from './ContextObjectRow.vue'
 import { contextRows, displayName, isInside, parentOf, pathTo, siblingOf, visibleRows } from '../composables/contextView'
 import { className, isDescription } from '../composables/documentation'
 import { CWM_EDITING } from '../composables/editing'
 import { allObjects, buildReferenceIndex, referenceCandidates } from '../composables/references'
 import { dataTypes } from '../composables/columnsEdit'
+import { setCreatedHook } from '../composables/creation'
 
 const props = defineProps<{ context: any }>()
 
@@ -40,6 +41,46 @@ const shownRows = computed(() => visibleRows(rows.value, collapsed))
 /** Context line plus one slot per level, plus one for the deepest row's toggle */
 const gutter = computed(() => rows.value.reduce((m, r) => Math.max(m, r.depth), 0) + 2)
 
+const tsm = inject<any>('tsm', null)
+const treeComposables = tsm?.getService?.('ui.instance-tree.composables')
+// New objects get their xmi:id by the instance tree's rules
+setCreatedHook(o => { treeComposables?.assignXmiId?.(o) })
+
+// OCL results (PH-4): the problems service's issues per object; a fresh
+// validation of one object replaces them for that object
+const problems = tsm?.getService?.('gene.problems') ?? null
+const revalidated = shallowReactive(new Map<any, any[]>())
+const issuesByObject = computed(() => {
+  const map = new Map<any, any[]>()
+  for (const issue of problems?.issues?.value ?? []) {
+    const o = issue.object ? toRaw(issue.object) : null
+    if (!o) continue
+    const list = map.get(o) ?? []
+    list.push(issue)
+    map.set(o, list)
+  }
+  return map
+})
+
+async function validate(o: any): Promise<void> {
+  if (!problems?.validateObject) return
+  const raw = toRaw(o)
+  try {
+    revalidated.set(raw, await problems.validateObject(raw))
+  } catch (e) {
+    revalidated.set(raw, [{ severity: 'error', message: `Validierung fehlgeschlagen: ${e}` }])
+  }
+}
+
+function deleteObject(o: any): void {
+  const raw = toRaw(o)
+  // Deleting the context object, or what holds it, moves the context up
+  if (contextObject.value && isInside(contextObject.value, raw)) setContext(parentOf(raw))
+  props.context.deleteObject?.(raw)
+  props.context.markDirty?.()
+  props.context.triggerUpdate?.()
+}
+
 // Indexes over the whole resource set, once per model version - not once per row
 const everything = computed(() => {
   void version.value
@@ -53,6 +94,14 @@ provide(CWM_EDITING, {
     props.context.triggerUpdate?.()
   },
   select: (o: any) => select(o),
+  selected,
+  setContext: (o: any) => setContext(o),
+  validate: (o: any) => { void validate(o) },
+  issuesFor: (o: any) => {
+    const raw = toRaw(o)
+    return revalidated.get(raw) ?? issuesByObject.value.get(raw) ?? []
+  },
+  deleteObject,
   dataTypes: computed(() => dataTypes(everything.value)),
   descriptionClass: computed(() => everything.value.find(isDescription)?.eClass?.() ?? null),
   references: computed(() => {

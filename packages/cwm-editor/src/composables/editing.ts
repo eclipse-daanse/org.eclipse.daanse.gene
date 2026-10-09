@@ -11,6 +11,14 @@ export interface CwmEditing {
   change: (write: () => void) => void
   /** Selects an object like a click in the tree */
   select: (object: any) => void
+  /** The object selected in the tree */
+  selected: ComputedRef<any>
+  setContext: (object: any) => void
+  /** Validates one object anew with the problems service */
+  validate: (object: any) => void
+  /** Issues the problems service holds for the object */
+  issuesFor: (object: any) => { severity: string; message: string }[]
+  deleteObject: (object: any) => void
   /** SQL data types of the resource set, for the columns table */
   dataTypes: ComputedRef<any[]>
   /** Class for new descriptions, taken from an existing one */

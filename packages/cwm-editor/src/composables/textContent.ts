@@ -11,6 +11,7 @@
 import { toRaw } from 'tsm:vue'
 import { attr, isDescription, isTable, many } from './documentation'
 import { children } from './contextView'
+import { createIn, setByName } from './creation'
 
 export type TextType = 'markdown' | 'mermaid' | 'readme'
 
@@ -66,24 +67,12 @@ export function textOf(object: any): RowText | null {
   return { owner, body, type: stored ?? detectTextType(body), stored: !!stored }
 }
 
-/** A new TaggedValue, created by the factory of the package that defines it */
-function createTaggedValue(owner: any): any | null {
-  const feature = owner.eClass().getEStructuralFeature('taggedValue')
-  const eClass = feature?.getEType?.()
-  const factory = eClass?.getEPackage?.()?.getEFactoryInstance?.()
-  return eClass && factory ? factory.create(eClass) : null
-}
-
 function setTextType(owner: any, type: TextType): void {
   const existing = taggedValues(owner).find(t => attr(t, 'tag') === TEXT_TYPE_TAG)
-  const tv = existing ?? createTaggedValue(owner)
+  const tv = existing ?? createIn(owner, 'taggedValue', owner.eClass().getEStructuralFeature('taggedValue')?.getEType?.())
   if (!tv) return
-  tv.eSet(tv.eClass().getEStructuralFeature('tag'), TEXT_TYPE_TAG)
-  tv.eSet(tv.eClass().getEStructuralFeature('value'), type)
-  if (!existing) {
-    const list = owner.eGet(owner.eClass().getEStructuralFeature('taggedValue'))
-    list.add(tv)
-  }
+  setByName(tv, 'tag', TEXT_TYPE_TAG)
+  setByName(tv, 'value', type)
 }
 
 /** Writes text and type; the type goes into the model with every edit (CON-2.5) */
