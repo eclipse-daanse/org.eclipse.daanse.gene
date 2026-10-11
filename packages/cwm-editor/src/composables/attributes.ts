@@ -9,7 +9,7 @@
  * their columns table instead (columns are features too).
  */
 import { toRaw } from 'tsm:vue'
-import { attr, isDescription, isTable, many } from './documentation'
+import { attr, isRemark, isTable, many, remarks } from './documentation'
 import { children } from './contextView'
 import { createIn, setByName } from './creation'
 
@@ -98,9 +98,9 @@ export function rangeBounds(attribute: any): { lower: string; upper: string } {
   }
 }
 
-/** The descriptions the class owns about the given element */
+/** The remarks the class owns about the given element */
 function descriptionsOf(cls: any, element: any): any[] {
-  return children(cls).filter(d => isDescription(d) && many(attr(d, 'modelElement')).includes(element))
+  return children(cls).filter(d => remarks(d, element))
 }
 
 export function attributeRows(cls: any): AttributeRow[] {
@@ -128,13 +128,13 @@ export function hasAssociationEnds(cls: any): boolean {
   return features(cls).some(isAssociationEnd)
 }
 
-/** What the class row shows itself: its features and the descriptions about them */
+/** What the class row shows itself: its features and the remarks about them */
 export function shownByClass(cls: any): Set<any> {
   const c = toRaw(cls)
   const shown = new Set<any>()
   const attributes = features(c).filter(isAttribute)
   attributes.forEach(a => shown.add(a))
-  for (const d of children(c).filter(isDescription)) {
+  for (const d of children(c).filter(isRemark)) {
     if (many(attr(d, 'modelElement')).some(m => attributes.includes(m))) shown.add(d)
   }
   return shown

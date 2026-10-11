@@ -26,8 +26,9 @@
     <!-- Applies to this class; to its subclasses too with includeSubclasses -->
     <eStructuralFeatures xsi:type="ecore:EReference" name="targetClass" lowerBound="1"
         eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+    <!-- An EAttribute, or an EReference (then only "hidden" applies) -->
     <eStructuralFeatures xsi:type="ecore:EReference" name="attribute" lowerBound="1"
-        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EAttribute"/>
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature"/>
     <!-- The rule also applies to every class inheriting from targetClass -->
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="includeSubclasses"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>

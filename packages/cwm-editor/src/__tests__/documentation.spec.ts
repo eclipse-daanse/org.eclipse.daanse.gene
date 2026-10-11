@@ -38,6 +38,10 @@ function own(parent: any, ...children: any[]): any {
 const description = (name: string, body: string, modelElement: any[] = []) =>
   obj('Description', BI, { name, body, modelElement })
 
+/** A description field: a Description of type "remark" */
+const remark = (name: string, body: string, modelElement: any[] = []) =>
+  obj('Description', BI, { name, body, modelElement, type: 'remark' })
+
 describe('Dokumentation aus CWM-Beschreibungen', () => {
   it('eine Beschreibung mit Kindern und Kindeskindern, jede Ebene tiefer', () => {
     const handbuch = description('Handbuch', 'Wiki')
@@ -68,8 +72,8 @@ describe('Dokumentation aus CWM-Beschreibungen', () => {
 
     const pk = obj('PrimaryKey', REL, { name: 'gemschluessel_pkey', feature: [gkz] })
     const fk = obj('ForeignKey', REL, { name: 'lkrcode_fk1', feature: [lkr], uniqueKey: lkrKey })
-    const tabellenText = description('Table gemschluessel', 'Amtliche Gemeindeschlüssel', [tabelle])
-    const spaltenText = description('Column gkz', 'Amtlicher Gemeindeschlüssel', [gkz])
+    const tabellenText = remark('Table gemschluessel', 'Amtliche Gemeindeschlüssel', [tabelle])
+    const spaltenText = remark('Column gkz', 'Amtlicher Gemeindeschlüssel', [gkz])
     own(tabelle, pk, fk, tabellenText, spaltenText)
 
     const view = tableView(tabelle)

@@ -6,7 +6,7 @@
  * (a primary key, a column description) are made by createIn.
  */
 import { toRaw } from 'tsm:vue'
-import { attr, className, isDescription, many } from './documentation'
+import { attr, className, isDescription, many, remarks, REMARK_TYPE } from './documentation'
 import { children } from './contextView'
 import { createIn, setByName } from './creation'
 
@@ -63,15 +63,15 @@ export function setPrimaryKey(table: any, column: any, member: boolean): void {
   if (!member && has) columns.remove(c)
 }
 
-/** The description the table owns about this column, or null */
+/** The remark the table (or class) owns about this column (or attribute), or null */
 function columnDescription(table: any, column: any): any | null {
-  return children(table).find(d => isDescription(d) && many(attr(d, 'modelElement')).includes(column)) ?? null
+  return children(table).find(d => remarks(d, column)) ?? null
 }
 
 /**
- * Sets the column's description text. Without one, a Description is created
- * in the table - of the same class as the table's other descriptions, or
- * taken from `descriptionClass`.
+ * Sets the column's description text. Without one, a remark is created in
+ * the table: a Description of type "remark" - of the same class as the
+ * table's other descriptions, or taken from `descriptionClass`.
  */
 export function setColumnDescription(table: any, column: any, body: string, descriptionClass?: any): void {
   const t = toRaw(table)
@@ -87,6 +87,7 @@ export function setColumnDescription(table: any, column: any, body: string, desc
   if (!d) return
   setByName(d, 'name', `Column ${attr(t, 'name') ?? ''}.${attr(c, 'name') ?? ''}`)
   setByName(d, 'body', body)
+  setByName(d, 'type', REMARK_TYPE)
   d.eGet(feature(d, 'modelElement')).add(c)
 }
 

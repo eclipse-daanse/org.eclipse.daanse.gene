@@ -3,14 +3,14 @@
  * The text of an ObjectRow (FR-2.5, CON-2.5): rendered by its type, with a
  * switch to the editor and back.
  *
- * Markdown is rendered and sanitized; plain text shows as paragraphs; Mermaid
+ * Markdown and HTML are rendered and sanitized; plain text shows as paragraphs; Mermaid
  * is drawn as a diagram, or - with an error in the text - shows its source
  * and the error. Saving stores the type in the model next to the text.
  */
 import { computed, inject, ref, watch } from 'tsm:vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
-import { detectTextType, setText, textOf, TEXT_TYPES, type TextType } from '../composables/textContent'
+import { canCreateText, createTextOwner, detectTextType, setText, textOf, TEXT_TYPES, type TextType } from '../composables/textContent'
 import { CWM_EDITING } from '../composables/editing'
 import { renderMermaid } from '../composables/mermaid'
 
@@ -39,8 +39,9 @@ watch(draft, body => {
 
 const html = computed(() => {
   const t = text.value
-  if (!t || t.type !== 'markdown') return ''
-  return DOMPurify.sanitize(marked.parse(t.body, { async: false }) as string, { USE_PROFILES: { html: true } })
+  if (!t || (t.type !== 'markdown' && t.type !== 'html')) return ''
+  const source = t.type === 'html' ? t.body : (marked.parse(t.body, { async: false }) as string)
+  return DOMPurify.sanitize(source, { USE_PROFILES: { html: true } })
 })
 
 /* Mermaid renders asynchronously; a newer text wins over a slower older one */
@@ -67,8 +68,24 @@ watch(
 
 const paragraphs = computed(() => (text.value?.body ?? '').split(/\n\s*\n|\n/).map(p => p.trim()).filter(Boolean))
 
+/** A table without its own description offers to write one */
+const canCreate = computed(() => {
+  void props.version
+  return canCreateText(props.object)
+})
+
+/** A remark - the table's description field - is plain text; no type to pick */
+const isRemarkText = computed(() => !text.value || text.value.remark)
+
 function startEdit(): void {
-  if (!text.value) return
+  if (!text.value) {
+    if (!canCreate.value) return
+    draft.value = ''
+    draftType.value = 'plaintext'
+    typeChosen.value = false
+    editMode.value = true
+    return
+  }
   draft.value = text.value.body
   draftType.value = text.value.type
   // A stored type that differs from the detected one was picked on purpose;
@@ -94,12 +111,20 @@ async function copyDraft(): Promise<void> {
 
 function save(): void {
   const t = text.value
-  if (t) editing.change(() => setText(t.owner, draft.value, draftType.value))
+  if (t) {
+    editing.change(() => setText(t.owner, draft.value, draftType.value))
+  } else if (draft.value.trim() !== '') {
+    // The table's description is created with its first text
+    editing.change(() => {
+      const owner = createTextOwner(props.object, editing.descriptionClass.value)
+      if (owner) setText(owner, draft.value, draftType.value)
+    })
+  }
   editMode.value = false
 }
 
 /** The attribute that holds the text, as the label above it */
-const fieldName = 'body'
+const fieldName = computed(() => (isRemarkText.value ? 'Remark' : 'body'))
 
 function typeLabel(type: TextType): string {
   return TEXT_TYPES.find(t => t.value === type)?.label ?? type
@@ -108,8 +133,15 @@ function typeLabel(type: TextType): string {
 
 <template>
   <div class="text-view" :data-testid="testId" data-wire-kind="TEXT">
-    <template v-if="text">
-      <div v-if="!editMode" class="rendered">
+    <button
+      v-if="!text && canCreate && !editMode"
+      type="button"
+      class="create"
+      :data-testid="`${testId}.Create`"
+      @click="startEdit"
+    >+ Beschreibung</button>
+    <template v-if="text || editMode">
+      <div v-if="!editMode && text" class="rendered" :class="{ remark: text.remark }">
         <div class="text-bar">
           <span class="type" :title="`Texttyp: ${typeLabel(text.type)}${text.stored ? '' : ' (erkannt, noch nicht gespeichert)'}`">
             {{ fieldName }}
@@ -118,7 +150,7 @@ function typeLabel(type: TextType): string {
             <i class="pi pi-pencil"></i>
           </button>
         </div>
-        <div v-if="text.type === 'markdown'" class="markdown" v-html="html"></div>
+        <div v-if="text.type === 'markdown' || text.type === 'html'" class="markdown" v-html="html"></div>
         <template v-else-if="text.type === 'mermaid'">
           <div v-if="mermaidSvg" class="mermaid-diagram" v-html="mermaidSvg"></div>
           <template v-else>
@@ -132,7 +164,8 @@ function typeLabel(type: TextType): string {
       </div>
       <div v-else class="editor">
         <div class="text-bar">
-          <select v-model="draftType" aria-label="Texttyp" @change="typeChosen = true">
+          <span v-if="isRemarkText" class="type" title="Beschreibungsfeld: Description vom Typ remark, nur Plain Text">remark</span>
+          <select v-else v-model="draftType" aria-label="Texttyp" @change="typeChosen = true">
             <option v-for="t in TEXT_TYPES" :key="t.value" :value="t.value">{{ t.label }}</option>
           </select>
           <button type="button" class="link" @click="save">Fertig</button>
@@ -179,7 +212,18 @@ function typeLabel(type: TextType): string {
   cursor: pointer;
 }
 
-/* Grey pencil, only while the text is hovered (or the pencil has the keyboard focus) */
+/* Like "+ Referenz": a quiet link to start the table's description */
+.create {
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary-color);
+  cursor: pointer;
+}
+
+/* Grey pencil, primary on hover, only while the text is hovered (or the pencil has the keyboard focus) */
 .edit {
   visibility: hidden;
   padding: 0;
@@ -194,7 +238,7 @@ function typeLabel(type: TextType): string {
 }
 
 .edit:hover {
-  color: var(--text-color);
+  color: var(--primary-color);
 }
 
 .text-view:hover .edit,
@@ -204,6 +248,11 @@ function typeLabel(type: TextType): string {
 
 .link.muted {
   color: var(--text-color-secondary);
+}
+
+/* A remark is a short plain note - set like the tables below it */
+.rendered.remark p {
+  font-size: 0.85rem;
 }
 
 .rendered p {

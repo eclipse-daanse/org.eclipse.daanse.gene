@@ -69,6 +69,23 @@ export function isDescription(o: any): boolean {
   return className(o) === 'Description' && nsUri(o).includes(BUSINESS_INFORMATION)
 }
 
+/** The Description type of a description field: plain text about one element, fit for a database comment */
+export const REMARK_TYPE = 'remark'
+
+/**
+ * A remark: a Description with type "remark". Only remarks fill the
+ * description fields of a table, its columns and a class's attributes; any
+ * other Description stays a description of its own.
+ */
+export function isRemark(o: any): boolean {
+  return isDescription(o) && String(attr(o, 'type') ?? '').trim().toLowerCase() === REMARK_TYPE
+}
+
+/** Whether the remark is about the element */
+export function remarks(description: any, element: any): boolean {
+  return isRemark(description) && many(attr(description, 'modelElement')).includes(element)
+}
+
 export function isTable(o: any): boolean {
   return className(o) === 'Table' && nsUri(o).includes(RELATIONAL)
 }
@@ -123,7 +140,7 @@ function keyOf(o: any): string {
 /** The descriptions among a table's own elements that describe one of its columns */
 function describesColumnOf(description: any, table: any): boolean {
   const columns = many(attr(table, 'feature')).filter(isColumn)
-  return many(attr(description, 'modelElement')).some(m => columns.includes(m))
+  return isRemark(description) && many(attr(description, 'modelElement')).some(m => columns.includes(m))
 }
 
 /** A relational table as rows: columns with type, nullability, keys and description */
@@ -132,7 +149,7 @@ export function tableView(table: any): TableView {
   const ownedAll = owned(table)
   const uniqueKeys = ownedAll.filter(e => className(e) === 'PrimaryKey' || className(e) === 'UniqueConstraint')
   const foreignKeys = ownedAll.filter(e => className(e) === 'ForeignKey')
-  const descriptions = ownedAll.filter(isDescription)
+  const descriptions = ownedAll.filter(isRemark)
   const inKey = (key: any, column: any) => many(attr(key, 'feature')).includes(column)
 
   return {
@@ -214,11 +231,11 @@ export function sectionFor(object: any, depth = 0): DocSection | null {
 
   if (isTable(o)) {
     const children = owned(o)
-      .filter(e => isDescription(e) && !describesColumnOf(e, o) && !many(attr(e, 'modelElement')).includes(o))
+      .filter(e => isDescription(e) && !describesColumnOf(e, o) && !remarks(e, o))
       .map(child => sectionFor(child, depth + 1))
       .filter((s): s is DocSection => !!s)
     // The table's own description, if it has one, is its text
-    const own = owned(o).find(e => isDescription(e) && many(attr(e, 'modelElement')).includes(o))
+    const own = owned(o).find(e => remarks(e, o))
     return { ...base, body: own ? text(attr(own, 'body')) : '', isDescription: false, table: tableView(o), children }
   }
 

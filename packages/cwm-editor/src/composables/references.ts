@@ -4,10 +4,15 @@
  * `modelElement`. CWM keeps that reference on the documenting side only, so
  * the view needs the inverse: an index over the whole resource set, rebuilt
  * when the model changes.
+ *
+ * A classifier also shows what points at its features - a class's
+ * structural features, a table's columns, a record's fields - but not what it
+ * contains itself (those it shows as its own text or in its tables).
  */
 import { toRaw } from 'tsm:vue'
 import { attr, className, many } from './documentation'
-import { children, displayName, pathTo } from './contextView'
+import { children, displayName, isInside, pathTo } from './contextView'
+import { fieldRule } from './fieldDefaults'
 
 /** The classes shown as references, in the order of FR-2.9 */
 export const REFERENCE_CLASSES = ['Description', 'Document', 'ResponsibleParty', 'Measurement', 'ChangeRequest']
@@ -17,15 +22,30 @@ export interface ReferenceRow {
   name: string
   /** Breadcrumb from the root down to the referencing object's container */
   path: string
+  /** The same breadcrumb as objects, to click */
+  crumbs: Crumb[]
   description: string
   type: string
   /** Set attributes, for the tooltip */
   details: string
+  /** Names of the features it points at, when not at the object itself */
+  via: string[]
 }
 
 export type ReferenceIndex = Map<any, any[]>
 
-function isReferenceObject(o: any): boolean {
+/** One step of a breadcrumb */
+export interface Crumb {
+  object: any
+  name: string
+}
+
+/** The containers from the root down to the object's container, to click */
+export function crumbsOf(o: any): Crumb[] {
+  return pathTo(o).map(object => ({ object, name: displayName(object) }))
+}
+
+export function isReferenceObject(o: any): boolean {
   return REFERENCE_CLASSES.includes(className(o)) && !!o.eClass().getEStructuralFeature('modelElement')
 }
 
@@ -33,10 +53,13 @@ function isReferenceObject(o: any): boolean {
 export function allObjects(context: any): any[] {
   const o = toRaw(context)
   const resource = o?.eResource?.()
+  const uri = (r: any) => String(r?.getURI?.() ?? '')
+  // The object's own resource always counts, even when its set does not list
+  // it; older copies of the same file in the set do not
   const resources = many(resource?.getResourceSet?.()?.getResources?.())
-  const roots = resources.length > 0
-    ? resources.flatMap(r => many(r.getContents?.()))
-    : many(resource?.getContents?.())
+    .filter(r => r === resource || !resource || uri(r) !== uri(resource))
+  if (resource && !resources.includes(resource)) resources.unshift(resource)
+  const roots = resources.flatMap(r => many(r.getContents?.()))
   const out: any[] = []
   const walk = (x: any) => { out.push(x); children(x).forEach(walk) }
   roots.forEach(walk)
@@ -86,21 +109,172 @@ function details(o: any): string {
 }
 
 /**
- * The reference rows of an object; `shown` holds objects the row already
- * shows elsewhere (a table's own description, its column descriptions).
+ * The reference rows of an object: what points at it or at one of its
+ * features (`feature`, not `ownedElement`), without what the object contains
+ * itself and without `shown` - objects the row already shows elsewhere.
  */
 export function referenceRows(index: ReferenceIndex, target: any, shown: Set<any> = new Set()): ReferenceRow[] {
-  return (index.get(toRaw(target)) ?? [])
-    .filter(o => !shown.has(o))
-    .sort((a, b) => REFERENCE_CLASSES.indexOf(className(a)) - REFERENCE_CLASSES.indexOf(className(b)))
-    .map(o => ({
+  const t = toRaw(target)
+  // referrer -> names of the features it points at; empty when it points at the object
+  const found = new Map<any, string[]>()
+  const collect = (on: any, via: string | null) => {
+    for (const o of index.get(on) ?? []) {
+      if (shown.has(o) || isInside(o, t)) continue
+      const list = found.get(o) ?? []
+      if (via != null && !list.includes(via)) list.push(via)
+      found.set(o, list)
+    }
+  }
+  collect(t, null)
+  for (const f of many(attr(t, 'feature')).map(x => toRaw(x))) collect(f, displayName(f))
+  // Pointing at the object itself counts more than pointing at a feature
+  for (const o of index.get(t) ?? []) if (found.has(o)) found.set(o, [])
+  return [...found.entries()]
+    .sort(([a], [b]) => REFERENCE_CLASSES.indexOf(className(a)) - REFERENCE_CLASSES.indexOf(className(b)))
+    .map(([o, via]) => ({
       object: o,
       name: displayName(o),
       path: pathTo(o).map(displayName).join(' › '),
+      crumbs: crumbsOf(o),
       description: describe(o),
       type: className(o),
-      details: details(o)
+      details: details(o),
+      via
     }))
+}
+
+export interface ReferenceFieldTarget {
+  object: any
+  name: string
+  /** Class of the target */
+  type: string
+  /** Breadcrumb from the root down to the target's container */
+  path: string
+  /** The same breadcrumb as objects, to click */
+  crumbs: Crumb[]
+}
+
+export interface ReferenceField {
+  feature: any
+  name: string
+  containment: boolean
+  many: boolean
+  /** Name of the referenced class */
+  typeName: string
+  /** A field rule hides it until the row shows all */
+  hidden: boolean
+  targets: ReferenceFieldTarget[]
+}
+
+/**
+ * The class a reference points at. getEReferenceType() throws while the
+ * eType is not (yet) an EClass - e.g. an unresolved cross-package proxy -
+ * so fall back to the eType itself.
+ */
+export function referenceType(f: any): any | null {
+  try {
+    return f.getEReferenceType?.() ?? null
+  } catch {
+    return f.getEType?.() ?? null
+  }
+}
+
+function referenceList(o: any, f: any): any[] {
+  const value = o.eGet(f)
+  return (f.isMany?.() ? many(value) : value ? [value] : []).map((x: any) => toRaw(x)).filter(Boolean)
+}
+
+/**
+ * All non-containment reference fields of the object's class, set or empty,
+ * with what they point at, like the attributes above them. Left out:
+ * containments (their objects are the row's children), the reference to the
+ * container, derived and transient references, and targets in `shown` (a table's columns, a
+ * class's attributes - shown in their tables; a field with only such targets
+ * is left out entirely). Without `all`, fields a field rule hides stay out
+ * too.
+ */
+export function referenceFields(object: any, shown: Set<any> = new Set(), all = true): ReferenceField[] {
+  const o = toRaw(object)
+  const out: ReferenceField[] = []
+  for (const f of many(o?.eClass?.()?.getEAllReferences?.())) {
+    // Contained objects are the row's children - they get rows of their own
+    if (f.isContainment?.() || f.isContainer?.() || f.isDerived?.() || f.isTransient?.()) continue
+    const hidden = !!fieldRule(o, f.getName())?.hidden
+    if (hidden && !all) continue
+    const values = referenceList(o, f)
+    const list = values.filter(x => !shown.has(x))
+    if (values.length > 0 && list.length === 0) continue
+    out.push({
+      hidden,
+      feature: f,
+      name: f.getName(),
+      containment: !!f.isContainment?.(),
+      many: !!f.isMany?.(),
+      typeName: referenceType(f)?.getName?.() ?? '',
+      targets: list.map((t: any) => ({
+        object: t,
+        name: displayName(t),
+        type: className(t),
+        path: pathTo(t).map(displayName).join(' › '),
+        crumbs: crumbsOf(t)
+      }))
+    })
+  }
+  return out
+}
+
+function conforms(eClass: any, type: any): boolean {
+  return !!eClass && (eClass === type || many(eClass.getEAllSuperTypes?.()).includes(type))
+}
+
+/** How many reference fields a field rule hides until the row shows all */
+export function hiddenReferenceCount(object: any, shown: Set<any> = new Set()): number {
+  return referenceFields(object, shown, true).length - referenceFields(object, shown, false).length
+}
+
+/** Objects a non-containment reference can still point at: of its type, not yet in it */
+export function referenceTargetCandidates(objects: any[], object: any, feature: any): any[] {
+  const o = toRaw(object)
+  const type = referenceType(feature)
+  const current = referenceList(o, feature)
+  return objects.filter(x => x !== o && conforms(x.eClass?.(), type) && !current.includes(x))
+}
+
+/**
+ * Classes a containment reference can create: its type and the concrete
+ * subclasses in the packages the model uses.
+ */
+export function creatableClasses(objects: any[], feature: any): any[] {
+  const type = referenceType(feature)
+  if (!type) return []
+  const packages = new Set<any>([type.getEPackage?.()])
+  for (const x of objects) packages.add(x.eClass?.()?.getEPackage?.())
+  const out = new Set<any>()
+  for (const p of packages) {
+    for (const c of many(p?.getEClassifiers?.())) {
+      if (typeof c.isAbstract !== 'function' || c.isAbstract() || c.isInterface?.()) continue
+      if (conforms(c, type)) out.add(c)
+    }
+  }
+  return [...out].sort((a, b) => String(a.getName()).localeCompare(String(b.getName())))
+}
+
+/** Points the reference at the target - added to a list, set on a single reference */
+export function addToReference(object: any, feature: any, target: any): void {
+  const o = toRaw(object)
+  if (feature.isMany?.()) {
+    const list = o.eGet(feature)
+    if (!many(list).includes(toRaw(target))) list.add(toRaw(target))
+  } else {
+    o.eSet(feature, toRaw(target))
+  }
+}
+
+/** Takes the target out of a non-containment reference */
+export function removeFromReference(object: any, feature: any, target: any): void {
+  const o = toRaw(object)
+  if (feature.isMany?.()) o.eGet(feature).remove(toRaw(target))
+  else o.eUnset?.(feature)
 }
 
 /** Adds the target to the `modelElement` of each chosen reference object */

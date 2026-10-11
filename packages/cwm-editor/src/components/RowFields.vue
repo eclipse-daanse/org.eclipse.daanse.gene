@@ -37,6 +37,7 @@ function onInput(field: RowField, event: Event): void {
 
 <template>
   <div class="fields" :data-testid="testId" data-wire-kind="INPUT">
+    <div v-if="fields.length" class="section-title">Attribute</div>
     <table v-if="fields.length" class="fields-table">
       <thead>
         <tr>
@@ -100,6 +101,23 @@ function onInput(field: RowField, event: Event): void {
 </template>
 
 <style scoped>
+/* Native checkboxes in the primary colour */
+input[type='checkbox'] {
+  accent-color: var(--primary-color);
+}
+
+/* Category heading of the row body: Attribute, Referenzen, Siehe auch - centred between two lines */
+.section-title {
+  margin: 1rem 0 0.5rem;
+  padding: 0.25rem 0;
+  border-top: 1px solid var(--surface-border);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-color);
+  border-bottom: 1px solid var(--surface-border);
+}
+
 .fields {
   margin: 0.35rem 0 0;
   font-size: 0.8rem;

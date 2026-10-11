@@ -2,7 +2,7 @@
 /**
  * The features of a classifier as a table, edited in place - the class
  * counterpart of the columns table. Attributes: Name, Typ, Multiplizität,
- * Description. Association ends add Aggregation and Navigierbar.
+ * Remark. Association ends add Aggregation and Navigierbar.
  *
  * Test ids: the table carries `<testId>`, each row `<testId>.Row@<slug(name)>`.
  */
@@ -81,7 +81,7 @@ function onDescription(row: AttributeRow, event: Event): void {
         <th>Multiplizität</th>
         <th v-if="ends">Aggregation</th>
         <th v-if="ends" class="col-nav" title="Navigierbar">Navigierbar</th>
-        <th>Description</th>
+        <th>Remark</th>
       </tr>
     </thead>
     <tbody>
@@ -141,7 +141,7 @@ function onDescription(row: AttributeRow, event: Event): void {
           />
         </td>
         <td class="col-desc">
-          <input :value="row.description" aria-label="Description" placeholder="–" @change="onDescription(row, $event)" />
+          <input :value="row.description" aria-label="Remark" placeholder="–" @change="onDescription(row, $event)" />
         </td>
       </tr>
     </tbody>
@@ -149,6 +149,11 @@ function onDescription(row: AttributeRow, event: Event): void {
 </template>
 
 <style scoped>
+/* Native checkboxes in the primary colour */
+input[type='checkbox'] {
+  accent-color: var(--primary-color);
+}
+
 .attributes-table {
   margin-top: 0.6rem;
   border-collapse: collapse;
