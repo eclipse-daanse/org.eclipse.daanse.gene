@@ -3,31 +3,26 @@
  * The attributes of an ObjectRow, edited in place (PH-7 after CR-2).
  *
  * Set attributes show by default, unset ones with a UI default too;
- * "alle anzeigen" reveals the rest, including those a field rule hides.
+ * `showAll` reveals the rest, including those a field rule hides - the
+ * row offers that switch in its title line.
  * Text fields offer the rule's suggested values; a UI default shows as
  * placeholder and is never written.
  */
-import { computed, inject, ref } from 'tsm:vue'
-import { fieldsOf, hiddenFieldCount, setField, type RowField } from '../composables/rowContent'
+import { computed, inject } from 'tsm:vue'
+import { fieldsOf, setField, type RowField } from '../composables/rowContent'
 import { CWM_EDITING } from '../composables/editing'
 
 const props = defineProps<{
   object: any
   testId: string
   version?: number
+  showAll?: boolean
 }>()
 
 const editing = inject(CWM_EDITING)!
-const showAll = ref(false)
-
 const fields = computed(() => {
   void props.version
-  return fieldsOf(props.object, showAll.value)
-})
-
-const hidden = computed(() => {
-  void props.version
-  return hiddenFieldCount(props.object)
+  return fieldsOf(props.object, !!props.showAll)
 })
 
 function write(field: RowField, value: string | boolean): void {
@@ -42,52 +37,65 @@ function onInput(field: RowField, event: Event): void {
 
 <template>
   <div class="fields" :data-testid="testId" data-wire-kind="INPUT">
-    <div v-if="fields.length" class="grid">
-      <template v-for="f in fields" :key="f.name">
-        <label
-          :for="`${testId}.${f.name}`"
-          :class="{ unset: !f.isSet }"
-          :title="f.hidden ? 'Durch eine Feldregel ausgeblendet' : undefined"
-        >{{ f.label }}<span v-if="f.hidden" class="hidden-mark"> ◌</span></label>
-        <input
-          v-if="f.kind === 'boolean'"
-          :id="`${testId}.${f.name}`"
-          type="checkbox"
-          :class="{ 'ui-default': !f.isSet && f.uiDefault != null }"
-          :checked="f.isSet ? !!f.value : f.uiDefault === 'true'"
-          :title="!f.isSet && f.uiDefault != null ? 'UI-Default, nicht im Modell' : undefined"
-          @change="onInput(f, $event)"
-        />
-        <select
-          v-else-if="f.kind === 'enum'"
-          :id="`${testId}.${f.name}`"
-          :value="f.value ?? ''"
-          @change="onInput(f, $event)"
-        >
-          <option v-if="!f.isSet" value="" disabled>{{ f.uiDefault ?? '–' }}</option>
-          <option v-for="o in f.options" :key="o" :value="o">{{ o }}</option>
-        </select>
-        <input
-          v-else
-          :id="`${testId}.${f.name}`"
-          :type="f.kind === 'number' ? 'number' : 'text'"
-          :value="f.value ?? ''"
-          :placeholder="f.uiDefault ?? undefined"
-          :title="!f.isSet && f.uiDefault != null ? 'UI-Default, nicht im Modell' : undefined"
-          :list="f.suggestions.length ? `${testId}.${f.name}.suggestions` : undefined"
-          @change="onInput(f, $event)"
-        />
-        <datalist v-if="f.suggestions.length" :id="`${testId}.${f.name}.suggestions`">
-          <option v-for="s in f.suggestions" :key="s" :value="s"></option>
-        </datalist>
-      </template>
-    </div>
-    <button
-      v-if="hidden > 0 || showAll"
-      type="button"
-      class="show-all"
-      @click="showAll = !showAll"
-    >{{ showAll ? 'weniger anzeigen' : `alle anzeigen (+${hidden})` }}</button>
+    <table v-if="fields.length" class="fields-table">
+      <thead>
+        <tr>
+          <th>Attribut</th>
+          <th>Wert</th>
+          <th>Typ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="f in fields" :key="f.name" :class="{ unset: !f.isSet }">
+          <td class="col-name">
+            <label
+              :for="`${testId}.${f.name}`"
+              :title="f.hidden ? 'Durch eine Feldregel ausgeblendet' : undefined"
+            >{{ f.label }}<span v-if="f.hidden" class="hidden-mark"> ◌</span></label>
+            <button
+              type="button"
+              class="rule"
+              title="Feldregel bearbeiten"
+              @click="editing.openFieldRules(object, f.name)"
+            >⚙</button>
+          </td>
+          <td class="col-value">
+            <input
+              v-if="f.kind === 'boolean'"
+              :id="`${testId}.${f.name}`"
+              type="checkbox"
+              :class="{ 'ui-default': !f.isSet && f.uiDefault != null }"
+              :checked="f.isSet ? !!f.value : f.uiDefault === 'true'"
+              :title="!f.isSet && f.uiDefault != null ? 'UI-Default, nicht im Modell' : undefined"
+              @change="onInput(f, $event)"
+            />
+            <select
+              v-else-if="f.kind === 'enum'"
+              :id="`${testId}.${f.name}`"
+              :value="f.value ?? ''"
+              @change="onInput(f, $event)"
+            >
+              <option v-if="!f.isSet" value="" disabled>{{ f.uiDefault ?? '–' }}</option>
+              <option v-for="o in f.options" :key="o" :value="o">{{ o }}</option>
+            </select>
+            <input
+              v-else
+              :id="`${testId}.${f.name}`"
+              :type="f.kind === 'number' ? 'number' : 'text'"
+              :value="f.value ?? ''"
+              :placeholder="f.uiDefault ?? undefined"
+              :title="!f.isSet && f.uiDefault != null ? 'UI-Default, nicht im Modell' : undefined"
+              :list="f.suggestions.length ? `${testId}.${f.name}.suggestions` : undefined"
+              @change="onInput(f, $event)"
+            />
+            <datalist v-if="f.suggestions.length" :id="`${testId}.${f.name}.suggestions`">
+              <option v-for="s in f.suggestions" :key="s" :value="s"></option>
+            </datalist>
+          </td>
+          <td class="col-type">{{ f.typeName }}</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 </template>
 
@@ -97,19 +105,72 @@ function onInput(field: RowField, event: Event): void {
   font-size: 0.8rem;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: max-content minmax(8rem, 24rem);
-  gap: 0.2rem 0.75rem;
-  align-items: center;
+.fields-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-label {
+.fields-table th {
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-color-secondary);
+  padding: 0.3rem;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.fields-table td {
+  padding: 0.1rem 0.3rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--surface-border);
+}
+
+.fields-table tbody tr:hover {
+  background: var(--surface-hover);
+}
+
+.col-name {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.col-name label {
   color: var(--text-color-secondary);
 }
 
-label.unset {
+tr.unset .col-name label {
   opacity: 0.7;
+}
+
+.col-value input:not([type='checkbox']),
+.col-value select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.col-type {
+  width: 1%;
+  white-space: nowrap;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+}
+
+.rule {
+  visibility: hidden;
+  margin-left: 0.2rem;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+}
+
+tr:hover .rule {
+  visibility: visible;
 }
 
 .hidden-mark {
@@ -148,16 +209,5 @@ select:focus {
 
 input[type='checkbox'] {
   justify-self: start;
-}
-
-.show-all {
-  margin-top: 0.2rem;
-  font: inherit;
-  font-size: 0.7rem;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--primary-color);
-  cursor: pointer;
 }
 </style>

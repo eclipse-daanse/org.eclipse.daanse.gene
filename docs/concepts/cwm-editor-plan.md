@@ -102,10 +102,11 @@ die Dokumentationsansicht:
   Overlay-Resource.
 - **FR-2.5/CON-2.5 TextView:** Text der Description (bzw. der eigenen
   Description einer Table), gerendert nach Typ – Markdown (marked +
-  DOMPurify), README als Absätze, Mermaid als Diagramm (siehe unten).
-  „Bearbeiten“ schaltet auf den Editor mit Typauswahl. Der Typ wird beim Speichern als
-  TaggedValue `textType` an der Description abgelegt (CWM hat kein Attribut
-  dafür; `type` ist schon mit doc/inline belegt).
+  DOMPurify), Plain Text als Absätze, Mermaid als Diagramm (siehe unten).
+  „Bearbeiten“ schaltet auf den Editor mit Typauswahl. Die Darstellung hängt
+  am Attribut `type` der Description (`markdown`, `mermaid`, `plaintext`);
+  andere Werte (ältere Daten: doc/inline) oder keiner heißen: am Text
+  erkennen. Beim Speichern wird der Typ in `type` geschrieben.
 - **PH-8 Columns:** Name, Typ (SQL-Datentypen des ResourceSets), PK (legt den
   PrimaryKey bei Bedarf an), Null, Description (legt eine Column-Description
   an, wenn keine da ist) inline bearbeitbar.
@@ -138,8 +139,8 @@ Referenzen stehen seit CR-1 im Body, PH-9).
 - **Anlegen:** `composables/creation.ts` – Fabrik des definierenden Pakets,
   Einfügen in die Containment-Liste (optional an Position), danach xmi:id
   über `assignXmiId` des Instanzbaums (keine für Klassen mit ID-Attribut).
-  Auch PrimaryKey, Column-Description und TaggedValue aus Schritt 2 laufen
-  jetzt darüber.
+  Auch PrimaryKey und Column-Description aus Schritt 2 laufen jetzt
+  darüber.
 
 Bekannt: Gleichnamige Objekte derselben Klasse (z. B. zwei „Neue
 Beschreibung“) bekommen nach PH-C1 dieselbe Test-ID.
@@ -171,8 +172,9 @@ orthogonalen Metamodell (ChangeRequest CR-2 im Pflichtenheft):
 
 - `packages/cwm-editor/model/fielddefaults.ecore`, nsURI
   `http://gene/cwm/fielddefaults/1.0`: `FieldDefaults` mit `FieldRule`s –
-  `targetClass` (EClass, gilt auch für Unterklassen), `attribute` (EAttribute),
-  `suggestions`, `uiDefault`, `backendDefault`, `hidden`. Registriert beim
+  `targetClass` (EClass), `includeSubclasses` (gilt dann auch für alle
+  erbenden Klassen), `attribute` (EAttribute), `suggestions`, `uiDefault`,
+  `backendDefault`, `hidden`. Registriert beim
   Aktivieren in der zentralen `EPackageRegistry`.
 - Instanzen: alle `*.fielddefaults.xmi` des Workspace, geladen beim Aktivieren
   und bei `gene:workspace-loaded`; zusätzlich über den Service

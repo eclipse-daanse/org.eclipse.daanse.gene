@@ -3,7 +3,7 @@
  * The text of an ObjectRow (FR-2.5, CON-2.5): rendered by its type, with a
  * switch to the editor and back.
  *
- * Markdown is rendered and sanitized; README shows as paragraphs; Mermaid
+ * Markdown is rendered and sanitized; plain text shows as paragraphs; Mermaid
  * is drawn as a diagram, or - with an error in the text - shows its source
  * and the error. Saving stores the type in the model next to the text.
  */
@@ -29,7 +29,7 @@ const text = computed(() => {
 
 const editMode = ref(false)
 const draft = ref('')
-const draftType = ref<TextType>('readme')
+const draftType = ref<TextType>('plaintext')
 /** The user picked the type; until then it follows the text (CON-2.5) */
 const typeChosen = ref(false)
 
@@ -77,11 +77,29 @@ function startEdit(): void {
   editMode.value = true
 }
 
+/* Copy button over the editor, shown on hover */
+const copied = ref(false)
+let copiedTimer: ReturnType<typeof setTimeout> | undefined
+
+async function copyDraft(): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(draft.value)
+    copied.value = true
+    clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => { copied.value = false }, 1500)
+  } catch (e) {
+    console.warn('[RowTextView] Copy failed:', e)
+  }
+}
+
 function save(): void {
   const t = text.value
   if (t) editing.change(() => setText(t.owner, draft.value, draftType.value))
   editMode.value = false
 }
+
+/** The attribute that holds the text, as the label above it */
+const fieldName = 'body'
 
 function typeLabel(type: TextType): string {
   return TEXT_TYPES.find(t => t.value === type)?.label ?? type
@@ -93,10 +111,12 @@ function typeLabel(type: TextType): string {
     <template v-if="text">
       <div v-if="!editMode" class="rendered">
         <div class="text-bar">
-          <span class="type" :title="text.stored ? 'Texttyp im Modell gespeichert' : 'Texttyp erkannt, noch nicht gespeichert'">
-            {{ typeLabel(text.type) }}{{ text.stored ? '' : ' (erkannt)' }}
+          <span class="type" :title="`Texttyp: ${typeLabel(text.type)}${text.stored ? '' : ' (erkannt, noch nicht gespeichert)'}`">
+            {{ fieldName }}
           </span>
-          <button type="button" class="link" @click="startEdit">Bearbeiten</button>
+          <button type="button" class="edit" title="Text bearbeiten" aria-label="Text bearbeiten" @click="startEdit">
+            <i class="pi pi-pencil"></i>
+          </button>
         </div>
         <div v-if="text.type === 'markdown'" class="markdown" v-html="html"></div>
         <template v-else-if="text.type === 'mermaid'">
@@ -118,7 +138,16 @@ function typeLabel(type: TextType): string {
           <button type="button" class="link" @click="save">Fertig</button>
           <button type="button" class="link muted" @click="editMode = false">Abbrechen</button>
         </div>
-        <textarea v-model="draft" rows="8" placeholder="Text"></textarea>
+        <div class="text-area">
+          <textarea v-model="draft" rows="8" placeholder="Text"></textarea>
+          <button
+            type="button"
+            class="copy"
+            :title="copied ? 'Kopiert' : 'Text kopieren'"
+            :aria-label="copied ? 'Kopiert' : 'Text kopieren'"
+            @click="copyDraft"
+          ><i :class="copied ? 'pi pi-check' : 'pi pi-copy'"></i></button>
+        </div>
       </div>
     </template>
   </div>
@@ -137,8 +166,7 @@ function typeLabel(type: TextType): string {
 }
 
 .type {
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 0.8rem;
   color: var(--text-color-secondary);
 }
 
@@ -149,6 +177,29 @@ function typeLabel(type: TextType): string {
   background: none;
   color: var(--primary-color);
   cursor: pointer;
+}
+
+/* Grey pencil, only while the text is hovered (or the pencil has the keyboard focus) */
+.edit {
+  visibility: hidden;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+}
+
+.edit .pi {
+  font-size: 0.6rem;
+}
+
+.edit:hover {
+  color: var(--text-color);
+}
+
+.text-view:hover .edit,
+.edit:focus-visible {
+  visibility: visible;
 }
 
 .link.muted {
@@ -209,6 +260,35 @@ function typeLabel(type: TextType): string {
   background: var(--surface-ground);
   border: 1px solid var(--surface-border);
   border-radius: 3px;
+}
+
+.text-area {
+  position: relative;
+}
+
+.copy {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.4rem;
+  padding: 0.15rem 0.3rem;
+  font-size: 0.75rem;
+  line-height: 1;
+  border: 1px solid var(--surface-border);
+  border-radius: 3px;
+  background: var(--surface-card, var(--surface-ground));
+  color: var(--text-color-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.text-area:hover .copy,
+.copy:focus-visible {
+  opacity: 1;
+}
+
+.copy:hover {
+  color: var(--primary-color);
 }
 
 .editor textarea {

@@ -2,18 +2,23 @@
 /**
  * One ObjectRow of the context view (PH-1, PH-2, PH-5).
  *
- * Left the gutter with one line per ancestor - the outermost for the context
- * object - and the +/- of the row's own subtree. Right of it the Row: Body
+ * Left the gutter with a bracket per element: it opens at the element's
+ * title and closes after its last descendant, so a row carries the brackets
+ * of its ancestors and its own; then the +/- of the row's own subtree. Right of it the Row: Body
  * (diagram, fields, text, columns table, references) and RightRail
  * (validation, actions).
  * Rows stand one below the other, never inside each other; only the lines
  * tell the hierarchy.
  */
-import { computed } from 'tsm:vue'
+import { computed, inject, nextTick, ref } from 'tsm:vue'
 import type { ContextRow } from '../composables/contextView'
 import { displayName, parentOf, shownByTable } from '../composables/contextView'
-import { className, isTable, objectSlug, tableView } from '../composables/documentation'
+import { attr, className, isTable, objectSlug, tableView } from '../composables/documentation'
 import { hasDiagram } from '../composables/diagrams'
+import { CWM_EDITING } from '../composables/editing'
+import { hasAssociationEnds, isAttributeContainer, shownByClass } from '../composables/attributes'
+import { hiddenFieldCount, setAttributeFromText } from '../composables/rowContent'
+import AttributesTable from './AttributesTable.vue'
 import ColumnsTable from './ColumnsTable.vue'
 import DiagramArea from './DiagramArea.vue'
 import ReferencesTable from './ReferencesTable.vue'
@@ -23,6 +28,10 @@ import RowTextView from './RowTextView.vue'
 
 const props = defineProps<{
   row: ContextRow
+  /** Depth of the row shown above, -1 for none */
+  prevDepth: number
+  /** Depth of the row shown below, -1 for none */
+  nextDepth: number
   /** The context object, owner of the outermost line */
   context: any
   /** Stripe slots in the gutter - the deepest row on the page plus the context line */
@@ -38,16 +47,132 @@ const emit = defineEmits<{
   select: [object: any]
 }>()
 
+const editing = inject(CWM_EDITING)!
+
+/* The name as the title; "Bearbeiten" turns it into an input. An empty name unsets it. */
+const nameFeature = computed(() => props.row.object.eClass?.()?.getEStructuralFeature?.('name') ?? null)
+const nameValue = computed(() => {
+  void props.version
+  return String(attr(props.row.object, 'name') ?? '')
+})
+/** The fields table shows all attributes, also unset and hidden ones */
+const showAllFields = ref(false)
+
+const hiddenFields = computed(() => {
+  void props.version
+  return hiddenFieldCount(props.row.object)
+})
+
+const renaming = ref(false)
+const nameDraft = ref('')
+const nameInput = ref<HTMLInputElement | null>(null)
+
+async function startRename(): Promise<void> {
+  nameDraft.value = nameValue.value
+  renaming.value = true
+  await nextTick()
+  nameInput.value?.focus()
+  nameInput.value?.select()
+}
+
+function finishRename(): void {
+  if (!renaming.value) return
+  renaming.value = false
+  const value = nameDraft.value.trim()
+  if (!nameFeature.value || value === nameValue.value) return
+  editing.change(() => setAttributeFromText(props.row.object, nameFeature.value, value))
+}
+
+function cancelRename(): void {
+  renaming.value = false
+}
+
+/** The class icon, in its own column at the far left, before the lines */
+const icon = computed(() => editing.iconFor(props.row.object))
+
 /** Width of one line slot in the gutter */
 const SLOT = 12
 
 const id = computed(() => `cwm.Editor.ContextView.ObjectRow@${props.row.slug}`)
 
-/** Lines from outside in: the context object (level -1), then each ancestor */
-const lines = computed(() => [
-  { level: -1, testId: `${id.value}.Line@context`, owner: props.context },
-  ...props.row.ancestors.map((a, i) => ({ level: i, testId: `${id.value}.Line@${objectSlug(a)}`, owner: a }))
-])
+/** Gap above a row whose sibling (or a sibling's descendant) comes before it */
+const GAP = 8
+
+const gap = computed(() => (props.row.depth > 0 && props.prevDepth >= props.row.depth ? GAP : 0))
+
+/**
+ * Brackets from outside in: the context object's (level 0), each
+ * ancestor's, then the row's own. The own one opens here; a bracket closes
+ * in the last row of its element's subtree.
+ */
+const lines = computed(() =>
+  [...props.row.ancestors, props.row.object].map((owner, level) => ({
+    level,
+    testId: `${id.value}.Line@${level === 0 ? 'context' : objectSlug(owner)}`,
+    owner,
+    opens: level === props.row.depth,
+    closes: props.nextDepth <= level
+  }))
+)
+
+function lineStyle(line: { level: number; opens: boolean; closes: boolean }): Record<string, string> {
+  return {
+    // On the card's left edge; the ticks lie on its top and bottom edge
+    left: `${line.level * SLOT + SLOT / 2}px`,
+    top: line.opens ? `${gap.value}px` : '0',
+    bottom: '0',
+    color: lineColor(line.level - 1)
+  }
+}
+
+/**
+ * Every element below the context object is a card lying on its parent's:
+ * it starts at its own bracket and runs on through all its descendants'
+ * rows, so each row paints the cards of all its ancestors and its own.
+ * Each card is shaded from the text colour (lighter in dark mode, darker in
+ * light mode) - stacked, the deepest lies on top. A card casts its shadow
+ * left onto its parent's, and where it ends down onto what follows.
+ * Siblings are separate cards with a gap between them.
+ */
+/** Width of a shadow's soft end, in px */
+const SOFT = 10
+
+function layerX(level: number): string {
+  return `calc(1.25rem + ${level * SLOT + SLOT / 2}px)`
+}
+
+function shadowColor(level: number): string {
+  return `rgba(0, 0, 0, ${Math.min(0.15 + level * 0.04, 0.3).toFixed(2)})`
+}
+
+const layerStyle = computed(() => {
+  const depth = props.row.depth
+  const g = gap.value
+  const layers: string[] = []
+  // Cards ending in the row above cast their shadow down onto this one,
+  // rounded off at the corner left of the bracket
+  for (let level = props.prevDepth; level >= Math.max(depth, 1); level--) {
+    const x = layerX(level)
+    const c = shadowColor(level)
+    layers.push(`radial-gradient(farthest-side at 100% 0, ${c}, transparent) calc(${x} - ${SOFT}px) 0 / ${SOFT}px ${SOFT}px no-repeat`)
+    layers.push(`linear-gradient(${c}, transparent) ${x} 0 / 100% ${SOFT}px no-repeat`)
+  }
+  for (let level = depth; level > 0; level--) {
+    const x = layerX(level)
+    const c = shadowColor(level)
+    const shade = `linear-gradient(to right, transparent ${x}, color-mix(in srgb, var(--text-color) var(--layer-shade-step), transparent) ${x})`
+    const leftShadow = `linear-gradient(to right, transparent calc(${x} - ${SOFT}px), ${c} ${x}, transparent ${x})`
+    if (level < depth) {
+      layers.push(leftShadow, shade)
+      continue
+    }
+    // The row's own card starts below the gap; its left shadow fades in at the top corner
+    layers.push(`radial-gradient(farthest-side at 100% 100%, ${c}, transparent) calc(${x} - ${SOFT}px) ${g}px / ${SOFT}px ${SOFT}px no-repeat`)
+    layers.push(`${leftShadow} 0 ${g + SOFT}px / 100% calc(100% - ${g + SOFT}px) no-repeat`)
+    layers.push(`${shade} 0 ${g}px / 100% calc(100% - ${g}px) no-repeat`)
+  }
+  return layers.length ? { background: layers.join(', ') } : {}
+})
 
 /** Darker outside, lighter inside */
 function lineColor(level: number): string {
@@ -66,10 +191,18 @@ const table = computed(() => {
   return isTable(props.row.object) ? tableView(props.row.object) : null
 })
 
-/** What the row shows in its text and columns table stays out of its references */
+/** A class (not a table) shows its attributes as a table */
+const attributeTable = computed(() => {
+  void props.version
+  return isAttributeContainer(props.row.object)
+})
+
+/** What the row shows in its text, columns or attributes table stays out of its references */
 const shown = computed(() => {
   void props.version
-  return isTable(props.row.object) ? shownByTable(props.row.object) : new Set<any>()
+  if (isTable(props.row.object)) return shownByTable(props.row.object)
+  if (attributeTable.value) return shownByClass(props.row.object)
+  return new Set<any>()
 })
 </script>
 
@@ -77,10 +210,15 @@ const shown = computed(() => {
   <div
     class="object-row"
     :class="{ selected }"
+    :style="layerStyle"
     :data-testid="id"
     data-wire-kind="LIST"
     :data-depth="row.depth"
   >
+    <div class="row-icon" :style="{ marginTop: `${gap}px` }" :title="row.kind">
+      <img v-if="icon?.iconDataUrl" :src="icon.iconDataUrl" alt="" />
+      <i v-else-if="icon?.iconClass" :class="icon.iconClass"></i>
+    </div>
     <div class="gutter" :style="{ width: `${gutter * SLOT}px` }" :data-testid="`${id}.Lines`">
       <span
         v-for="line in lines"
@@ -88,8 +226,9 @@ const shown = computed(() => {
         class="line"
         :data-testid="line.testId"
         :data-level="line.level"
+        :class="{ opens: line.opens, closes: line.closes }"
         :title="lineTitle(line.owner, line.level)"
-        :style="{ left: `${(line.level + 1) * SLOT + SLOT / 2 - 1}px`, background: lineColor(line.level) }"
+        :style="lineStyle(line)"
       ></span>
       <button
         v-if="row.hasChildren"
@@ -98,16 +237,46 @@ const shown = computed(() => {
         :data-testid="`${id}.Toggle`"
         :aria-expanded="expanded"
         :title="expanded ? 'Teilbaum einklappen' : 'Teilbaum ausklappen'"
-        :style="{ left: `${(row.depth + 1) * SLOT}px` }"
+        :style="{ left: `${(row.depth + 1) * SLOT}px`, marginTop: `${gap}px` }"
         @click="emit('toggle')"
       >{{ expanded ? '−' : '+' }}</button>
     </div>
 
-    <div class="row" :data-testid="`${id}.Row`">
+    <div class="row" :style="{ marginTop: `${gap}px` }" :data-testid="`${id}.Row`">
       <div class="main">
-        <header class="row-title" @click="emit('select', row.object)">
-          <span class="kind">{{ row.kind }}</span>
-          <span class="name">{{ row.name }}</span>
+        <header class="row-title" :title="row.kind">
+          <template v-if="renaming">
+            <input
+              ref="nameInput"
+              v-model="nameDraft"
+              class="name-input"
+              placeholder="(ohne Namen)"
+              aria-label="Name"
+              @keydown.enter.prevent="finishRename"
+              @keydown.esc.prevent="cancelRename"
+            />
+            <button type="button" class="title-action" @click="finishRename">Fertig</button>
+            <button type="button" class="title-action muted" @click="cancelRename">Abbrechen</button>
+          </template>
+          <template v-else>
+            <span class="name" @click="emit('select', row.object)">{{ row.name }}</span>
+            <button
+              v-if="nameFeature"
+              type="button"
+              class="rename"
+              title="Namen bearbeiten"
+              aria-label="Namen bearbeiten"
+              @click="startRename"
+            ><i class="pi pi-pencil"></i></button>
+            <span class="kind">{{ row.kind }}</span>
+          </template>
+          <button
+            v-if="hiddenFields > 0 || showAllFields"
+            type="button"
+            class="show-all"
+            :data-testid="`${id}.Row.Body.Fields.ShowAll`"
+            @click="showAllFields = !showAllFields"
+          >{{ showAllFields ? 'weniger anzeigen' : `alle anzeigen (+${hiddenFields})` }}</button>
         </header>
         <div class="body" :data-testid="`${id}.Row.Body`">
           <DiagramArea
@@ -115,12 +284,18 @@ const shown = computed(() => {
             :title="`${row.kind} ${row.name}`"
             :test-id="`${id}.Row.Body.Diagram`"
           />
-          <RowFields :object="row.object" :test-id="`${id}.Row.Body.Fields`" :version="version" />
+          <RowFields :object="row.object" :test-id="`${id}.Row.Body.Fields`" :version="version" :show-all="showAllFields" />
           <RowTextView :object="row.object" :test-id="`${id}.Row.Body.TextView`" :version="version" />
           <ColumnsTable
             v-if="table && table.columns.length > 0"
             :table="table"
             :test-id="`${id}.Row.Body.Columns`"
+          />
+          <AttributesTable
+            v-if="attributeTable"
+            :object="row.object"
+            :test-id="`${id}.Row.Body.${hasAssociationEnds(row.object) ? 'Ends' : 'Attributes'}`"
+            :version="version"
           />
           <ReferencesTable
             :object="row.object"
@@ -138,6 +313,8 @@ const shown = computed(() => {
 
 <style scoped>
 .object-row {
+  /* Light mode takes finer steps - stronger grey looks dull */
+  --layer-shade-step: 2%;
   display: flex;
   align-items: stretch;
   /* Keeps the row title clear of the sticky header when scrolled to */
@@ -149,13 +326,58 @@ const shown = computed(() => {
   flex: 0 0 auto;
 }
 
-/* Lines run the full row height; adjacent rows join them into one line */
+/*
+ * Brackets run the full row height; adjacent rows join them into one. A
+ * tick to the right opens one at its element's title and closes it after
+ * the element's last descendant.
+ */
 .line {
   position: absolute;
-  top: 0;
-  bottom: 0;
   width: 2px;
+  background: currentColor;
   cursor: help;
+}
+
+.line.opens::before,
+.line.closes::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 6px;
+  height: 2px;
+  background: currentColor;
+}
+
+.line.opens::before {
+  top: 0;
+}
+
+.line.closes::after {
+  bottom: 0;
+}
+
+.row-icon {
+  flex: 0 0 1.25rem;
+  display: flex;
+  justify-content: center;
+  padding-top: 0.55rem;
+}
+
+.row-icon img,
+.row-icon i {
+  width: 16px;
+  height: 16px;
+  font-size: 14px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.object-row:hover .row-icon {
+  background: color-mix(in srgb, var(--primary-color) 3%, transparent);
+}
+
+.object-row.selected .row-icon {
+  background: color-mix(in srgb, var(--primary-color) 7%, transparent);
 }
 
 .toggle {
@@ -180,11 +402,25 @@ const shown = computed(() => {
   display: flex;
   gap: 0.75rem;
   padding: 0.5rem 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--surface-border);
+}
+
+:global(.dark-theme) .object-row {
+  --layer-shade-step: 3.5%;
+}
+
+/* Hover and selection lie over the layer */
+.object-row:hover .row {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--primary-color) 3%, transparent),
+    color-mix(in srgb, var(--primary-color) 3%, transparent)
+  );
 }
 
 .object-row.selected .row {
-  background: color-mix(in srgb, var(--primary-color) 7%, transparent);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--primary-color) 7%, transparent),
+    color-mix(in srgb, var(--primary-color) 7%, transparent)
+  );
 }
 
 .main {
@@ -196,18 +432,90 @@ const shown = computed(() => {
   display: flex;
   align-items: baseline;
   gap: 0.5rem;
+}
+
+/* The fields' "alle anzeigen", on the name's line at the right */
+.show-all {
+  margin-left: auto;
+  font: inherit;
+  font-size: 0.7rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+
+.row-title .name,
+.row-title .name-input {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.name-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 40rem;
+  font: inherit;
+  font-weight: 600;
+  padding: 0.05rem 0.25rem;
+  margin-left: -0.25rem;
+  border: 1px solid;
+  border-radius: 3px;
+}
+
+.name-input {
+  border-color: var(--surface-border);
+  background: var(--surface-ground);
+}
+
+.row-title .name {
   cursor: pointer;
 }
 
 .row-title .kind {
   font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-style: italic;
   color: var(--text-color-secondary);
 }
 
-.row-title .name {
-  font-weight: 600;
+.title-action {
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: normal;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary-color);
+  cursor: pointer;
+}
+
+/* Only while the row is hovered (or the pencil has the keyboard focus) */
+.rename {
+  visibility: hidden;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+}
+
+.rename .pi {
+  font-size: 0.6rem;
+}
+
+.rename:hover {
   color: var(--text-color);
+}
+
+.object-row:hover .rename,
+.rename:focus-visible {
+  visibility: visible;
+}
+
+.title-action.muted {
+  color: var(--text-color-secondary);
 }
 </style>

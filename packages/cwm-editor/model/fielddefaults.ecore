@@ -23,11 +23,14 @@
   </eClassifiers>
 
   <eClassifiers xsi:type="ecore:EClass" name="FieldRule">
-    <!-- Applies to this class and its subclasses -->
+    <!-- Applies to this class; to its subclasses too with includeSubclasses -->
     <eStructuralFeatures xsi:type="ecore:EReference" name="targetClass" lowerBound="1"
         eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="attribute" lowerBound="1"
         eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EAttribute"/>
+    <!-- The rule also applies to every class inheriting from targetClass -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="includeSubclasses"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
     <!-- Values offered while editing a text field; free input stays possible (FR-1.1) -->
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="suggestions" upperBound="-1"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>

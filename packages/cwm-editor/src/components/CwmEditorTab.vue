@@ -8,7 +8,7 @@
  * loader into the tab's own document - so saving, validation and the model
  * browser work unchanged. Only the middle differs.
  */
-import { inject, provide, shallowRef } from 'tsm:vue'
+import { inject, provide, ref, shallowRef } from 'tsm:vue'
 import CwmContextView from './CwmContextView.vue'
 import { objectSlug } from '../composables/documentation'
 
@@ -28,6 +28,17 @@ const ModelBrowser = tsm?.getService('ui.model-browser.components')?.ModelBrowse
 
 /** The object on top of the context view; the tree marks it (PH-3) */
 const topObject = shallowRef<any>(null)
+
+const contextView = ref<{ setContext: (object: any) => void } | null>(null)
+
+/** The tree's context menu offers to show an object as context object */
+function treeMenuExtras(object: any) {
+  return [{
+    label: 'Als Kontextobjekt setzen',
+    icon: 'pi pi-sitemap',
+    command: () => contextView.value?.setContext(object)
+  }]
+}
 
 /** Test id of a tree entry (PH-C1) */
 function treeItemTestId(object: any): string {
@@ -55,11 +66,12 @@ function treeItemTestId(object: any): string {
             :context="ctx"
             :node-test-id="treeItemTestId"
             :current-object="topObject"
+            :context-menu-extras="treeMenuExtras"
           />
         </div>
       </template>
       <template #center>
-        <CwmContextView :context="ctx" @top-object="topObject = $event" />
+        <CwmContextView ref="contextView" :context="ctx" @top-object="topObject = $event" />
       </template>
       <template v-if="ModelBrowser" #right>
         <component :is="ModelBrowser" :context="ctx" />

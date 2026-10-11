@@ -19,8 +19,14 @@ export interface CwmEditing {
   /** Issues the problems service holds for the object */
   issuesFor: (object: any) => { severity: string; message: string }[]
   deleteObject: (object: any) => void
+  /** The object's icon as the tree shows it: a CSS class or an image */
+  iconFor: (object: any) => { iconClass?: string; iconDataUrl?: string } | null
+  /** Opens the field rule editor, optionally at an object's attribute */
+  openFieldRules: (object?: any, attributeName?: string) => void
   /** SQL data types of the resource set, for the columns table */
   dataTypes: ComputedRef<any[]>
+  /** Classifiers of the resource set, as attribute types */
+  classifiers: ComputedRef<any[]>
   /** Class for new descriptions, taken from an existing one */
   descriptionClass: ComputedRef<any | null>
   /** target -> reference objects pointing at it */

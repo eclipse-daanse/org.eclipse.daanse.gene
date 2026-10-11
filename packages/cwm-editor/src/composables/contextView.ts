@@ -2,16 +2,22 @@
  * The context view (PH-1, PH-2, PH-6): one row per object below the context
  * object, in depth-first order of the containment.
  *
- * Depth is relative to the context object: its direct children have depth 0.
- * A row knows its ancestors between the context object and itself - one
- * hierarchy line each (PH-2), plus the outermost line for the context object.
+ * Depth is relative to the context object: its own row has depth 0, its
+ * direct children 1. A row knows its ancestors from the context object down
+ * to itself - one hierarchy line each (PH-2), plus the outermost line.
  *
  * Columns of a table are no rows of their own; they are rows of the table's
  * columns table (PH-8). The same holds for descriptions the table already
- * shows: its own and those of its columns.
+ * shows: its own and those of its columns. Likewise a class shows its
+ * attributes as a table (attributes.ts). Outside of a table or class, a
+ * column or attribute keeps its own row.
+ *
+ * The context object itself comes first, as a row of its own; everything
+ * below it follows one level deeper.
  */
 import { toRaw } from 'tsm:vue'
 import { attr, className, isDescription, isTable, many, objectSlug } from './documentation'
+import { isAttributeContainer, shownByClass } from './attributes'
 
 export interface ContextRow {
   key: string
@@ -81,24 +87,35 @@ function keyOf(o: any): string {
   return `r${k}`
 }
 
+/** Objects a table or class shows in its own row, or null */
+function shownBy(o: any): Set<any> | null {
+  if (isTable(o)) return shownByTable(o)
+  if (isAttributeContainer(o)) return shownByClass(o)
+  return null
+}
+
+function rowFor(object: any, ancestors: any[]): ContextRow {
+  return {
+    key: keyOf(object),
+    object,
+    slug: objectSlug(object),
+    kind: className(object),
+    name: displayName(object),
+    depth: ancestors.length,
+    ancestors,
+    hasChildren: false
+  }
+}
+
 /** The rows below the context object, depth first */
 export function contextRows(context: any): ContextRow[] {
   const rows: ContextRow[] = []
   const walk = (parent: any, ancestors: any[]) => {
     if (ancestors.length > MAX_DEPTH) return
-    const hidden = isTable(parent) ? shownByTable(parent) : null
+    const hidden = shownBy(parent)
     for (const child of children(parent)) {
       if (hidden?.has(child)) continue
-      const row: ContextRow = {
-        key: keyOf(child),
-        object: child,
-        slug: objectSlug(child),
-        kind: className(child),
-        name: displayName(child),
-        depth: ancestors.length,
-        ancestors,
-        hasChildren: false
-      }
+      const row = rowFor(child, ancestors)
       rows.push(row)
       const before = rows.length
       walk(child, [...ancestors, child])
@@ -106,7 +123,12 @@ export function contextRows(context: any): ContextRow[] {
     }
   }
   const root = toRaw(context)
-  if (root) walk(root, [])
+  if (!root) return rows
+  // The context object first; everything else below it
+  const own = rowFor(root, [])
+  rows.push(own)
+  walk(root, [root])
+  own.hasChildren = rows.length > 1
   return rows
 }
 

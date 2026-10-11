@@ -13,11 +13,13 @@
  */
 import { computed, inject, nextTick, onBeforeUnmount, provide, reactive, ref, shallowReactive, shallowRef, toRaw, watch } from 'tsm:vue'
 import ContextObjectRow from './ContextObjectRow.vue'
+import FieldRulesDialog from './FieldRulesDialog.vue'
 import { contextRows, displayName, isInside, parentOf, pathTo, siblingOf, visibleRows } from '../composables/contextView'
-import { className, isDescription } from '../composables/documentation'
+import { attr, className, isDescription, slug } from '../composables/documentation'
 import { CWM_EDITING } from '../composables/editing'
 import { allObjects, buildReferenceIndex, referenceCandidates } from '../composables/references'
 import { dataTypes } from '../composables/columnsEdit'
+import { classifiers } from '../composables/attributes'
 import { setCreatedHook } from '../composables/creation'
 import { backendDefaults } from '../composables/fieldDefaults'
 import { applyBackendDefaults } from '../composables/rowContent'
@@ -83,6 +85,28 @@ async function validate(o: any): Promise<void> {
   }
 }
 
+/* ── field rule editor ─────────────────────────────────────────── */
+
+const fieldRulesOpen = ref(false)
+const fieldRulesFocus = shallowRef<{ eClass: any; attributeName: string } | null>(null)
+
+function openFieldRules(o?: any, attributeName?: string): void {
+  fieldRulesFocus.value = o && attributeName ? { eClass: toRaw(o).eClass(), attributeName } : null
+  fieldRulesOpen.value = true
+}
+
+/** Classes of the loaded objects and their supertypes - what a rule can name */
+const modelClasses = computed(() => {
+  const classes = new Set<any>()
+  for (const o of everything.value) {
+    const c = o.eClass?.()
+    if (!c || classes.has(c)) continue
+    classes.add(c)
+    for (const s of c.getEAllSuperTypes?.() ?? []) classes.add(s)
+  }
+  return [...classes]
+})
+
 function deleteObject(o: any): void {
   const raw = toRaw(o)
   // Deleting the context object, or what holds it, moves the context up
@@ -113,7 +137,10 @@ provide(CWM_EDITING, {
     return revalidated.get(raw) ?? issuesByObject.value.get(raw) ?? []
   },
   deleteObject,
+  openFieldRules,
+  iconFor: (o: any) => treeComposables?.getObjectIconInfo?.(toRaw(o)) ?? null,
   dataTypes: computed(() => dataTypes(everything.value)),
+  classifiers: computed(() => classifiers(everything.value)),
   descriptionClass: computed(() => everything.value.find(isDescription)?.eClass?.() ?? null),
   references: computed(() => {
     void version.value
@@ -138,8 +165,13 @@ function setContext(o: any): void {
   collapsed.clear()
 }
 
+/** A selection made inside this view: keep the view where it is, only bring the row into sight */
+let selectingFromView = false
+
 function select(o: any): void {
-  if (o) props.context.selectObject?.(toRaw(o))
+  if (!o) return
+  selectingFromView = true
+  props.context.selectObject?.(toRaw(o))
 }
 
 function toggle(o: any): void {
@@ -196,16 +228,55 @@ watch(selected, async (o) => {
   if (!contextObject.value || (o !== contextObject.value && !isInside(o, contextObject.value))) {
     setContext(parentOf(o) ?? o)
   }
+  const fromView = selectingFromView
+  selectingFromView = false
   // Rows of collapsed ancestors would hide the selection
   for (const a of pathTo(o)) collapsed.delete(a)
   await nextTick()
-  const target = selectedRowObject.value
-  const index = target ? shownRows.value.findIndex(r => r.object === target) : -1
-  if (index >= 0) {
-    const el = rootEl.value?.querySelector(`[data-testid="cwm.Editor.ContextView.ObjectRow@${shownRows.value[index]!.slug}"]`)
-    el?.scrollIntoView({ block: 'nearest' })
-  }
+  jumpTo(o, fromView)
 }, { immediate: true })
+
+/**
+ * Brings the object into view. Picked in the tree, its row moves to the top;
+ * a column or attribute shown inside its table's or class's row is scrolled
+ * to and flashed. Picked inside the view, the row only comes into sight.
+ */
+function jumpTo(o: any, gently: boolean): void {
+  const target = selectedRowObject.value
+  const row = target ? shownRows.value.find(r => r.object === target) : null
+  if (!row) {
+    if (!gently && o === contextObject.value) rootEl.value?.scrollTo({ top: 0 })
+    return
+  }
+  const rowId = `cwm.Editor.ContextView.ObjectRow@${row.slug}`
+  const rowEl = rootEl.value?.querySelector<HTMLElement>(`[data-testid="${rowId}"]`)
+  if (!rowEl) return
+  // A column or attribute inside the row's table
+  const name = slug(String(attr(o, 'name') ?? ''))
+  const inner = target !== o && parentOf(o) === target
+    ? rowEl.querySelector<HTMLElement>(`[data-testid="${rowId}.Row.Body.Columns.Row@${name}"], [data-testid="${rowId}.Row.Body.Attributes.Row@${name}"], [data-testid="${rowId}.Row.Body.Ends.Row@${name}"]`)
+    : null
+  if (gently) {
+    (inner ?? rowEl).scrollIntoView({ block: 'nearest' })
+    return
+  }
+  if (inner) {
+    inner.scrollIntoView({ block: 'center' })
+    inner.classList.remove('cwm-flash')
+    void inner.offsetWidth // restart the animation
+    inner.classList.add('cwm-flash')
+  } else {
+    rowEl.scrollIntoView({ block: 'start' })
+  }
+}
+
+/** For the tab: make an object the context and start at the top */
+function showAsContext(o: any): void {
+  setContext(o)
+  void nextTick(() => rootEl.value?.scrollTo({ top: 0 }))
+}
+
+defineExpose({ setContext: showAsContext })
 </script>
 
 <template>
@@ -231,6 +302,13 @@ watch(selected, async (o) => {
       </div>
       <button
         type="button"
+        class="field-rules"
+        data-testid="cwm.Editor.ContextView.Header.FieldRules"
+        title="Vorschlagswerte, Defaults und ausgeblendete Attribute"
+        @click="openFieldRules()"
+      >Feldregeln</button>
+      <button
+        type="button"
         class="set-context"
         data-testid="cwm.Editor.ContextView.Header.SetContext"
         data-wire-kind="CONTROL"
@@ -239,19 +317,24 @@ watch(selected, async (o) => {
       >Als Kontextobjekt setzen</button>
     </div>
 
+    <FieldRulesDialog
+      v-if="fieldRulesOpen"
+      :classes="modelClasses"
+      :focus="fieldRulesFocus"
+      @close="fieldRulesOpen = false"
+    />
+
     <div v-if="!contextObject" class="empty">
       <i class="pi pi-sitemap"></i>
       <p>Ein Element im Baum wählen — die Ansicht zeigt dann alles in seiner Umgebung.</p>
     </div>
-    <div v-else-if="rows.length === 0" class="empty">
-      <i class="pi pi-info-circle"></i>
-      <p>Unter {{ label(contextObject) }} liegt nichts.</p>
-    </div>
     <div v-else class="rows">
       <ContextObjectRow
-        v-for="row in shownRows"
+        v-for="(row, i) in shownRows"
         :key="row.key"
         :row="row"
+        :prev-depth="shownRows[i - 1]?.depth ?? -1"
+        :next-depth="shownRows[i + 1]?.depth ?? -1"
         :context="contextObject"
         :gutter="gutter"
         :expanded="!collapsed.has(row.object)"
@@ -263,6 +346,18 @@ watch(selected, async (o) => {
     </div>
   </div>
 </template>
+
+<style>
+/* A column or attribute row jumped to from the tree; not scoped - it lives in a child table */
+@keyframes cwm-flash {
+  from { background: color-mix(in srgb, var(--primary-color) 30%, transparent); }
+  to { background: transparent; }
+}
+
+.cwm-flash {
+  animation: cwm-flash 1.5s ease-out;
+}
+</style>
 
 <style scoped>
 .context-view {
