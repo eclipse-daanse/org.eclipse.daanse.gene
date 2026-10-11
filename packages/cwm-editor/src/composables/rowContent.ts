@@ -20,6 +20,8 @@ export interface RowField {
   /** The value as the input shows it: string, number, boolean, or the literal string */
   value: string | number | boolean | null
   isSet: boolean
+  /** Name of the attribute's data type or enum */
+  typeName: string
   /** Literal strings for an enum */
   options: string[]
   /** Suggested values for a text field (FR-1.1) */
@@ -74,6 +76,7 @@ export function fieldsOf(object: any, all = false): RowField[] {
       kind,
       value: kind === 'enum' ? literalString(raw) : kind === 'boolean' ? !!raw : raw == null ? null : kind === 'number' ? Number(raw) : String(raw),
       isSet,
+      typeName: String(feature.getEType?.()?.getName?.() ?? ''),
       options: kind === 'enum' ? many(feature.getEType().getELiterals()).map((l: any) => String(l.getLiteral?.() ?? l.getName?.())) : [],
       suggestions: rule?.suggestions ?? [],
       uiDefault: rule?.uiDefault ?? null,

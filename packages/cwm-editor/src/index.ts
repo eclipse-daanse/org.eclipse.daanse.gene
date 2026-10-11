@@ -18,7 +18,7 @@ import {
   setFieldDefaultsFileSystem
 } from './composables/fieldDefaults'
 
-export { CwmEditorTab, CwmContextView, ContextObjectRow, ColumnsTable, ReferencesTable, DiagramArea } from './components'
+export { CwmEditorTab, CwmContextView, ContextObjectRow, ColumnsTable, ReferencesTable, DiagramArea, FieldRulesDialog } from './components'
 export { sectionFor, tableView, isDescription, isTable, slug, objectSlug, type DocSection as DocSectionModel, type TableView } from './composables/documentation'
 export { diagramRegistry } from './composables/diagrams'
 export { actionRegistry, type CwmAction, type ActionApi } from './composables/actions'

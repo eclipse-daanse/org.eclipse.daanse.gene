@@ -178,7 +178,8 @@ tbody tr:hover {
 }
 
 .add {
-  margin-top: 0.3rem;
+  display: block;
+  margin: 0.3rem 0 0 auto;
   font: inherit;
   padding: 0.1rem 0.4rem;
   border: 1px dashed var(--surface-border);

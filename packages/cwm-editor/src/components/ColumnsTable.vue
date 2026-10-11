@@ -185,7 +185,8 @@ select:focus {
 }
 
 .col-name {
-  min-width: 9rem;
+  width: 22%;
+  min-width: 12rem;
 }
 
 .name-cell {
@@ -206,8 +207,18 @@ select:focus {
   text-align: center;
 }
 
+/* The type takes what its name needs, the description gets the rest */
+.col-type {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.col-type select {
+  max-width: 11rem;
+}
+
 .col-desc {
-  width: 45%;
+  width: 50%;
 }
 
 .col-desc input {

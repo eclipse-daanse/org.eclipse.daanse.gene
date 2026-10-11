@@ -10,7 +10,7 @@
     name="CWM">
 
   <!-- PH-7.b: visibility is not relevant for namespaces - hide it, show a UI default -->
-  <rules hidden="true" uiDefault="nicht relevant">
+  <rules hidden="true" uiDefault="nicht relevant" includeSubclasses="true">
     <targetClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace"/>
     <attribute href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
   </rules>
@@ -23,10 +23,12 @@
     <suggestions>englisch</suggestions>
   </rules>
 
-  <rules uiDefault="doc">
+  <!-- type decides how the CWM editor shows the text -->
+  <rules>
     <targetClass href="http://www.omg.org/spec/CWM/1.1/foundation/businessinformation#//Description"/>
     <attribute href="http://www.omg.org/spec/CWM/1.1/foundation/businessinformation#//Description/type"/>
-    <suggestions>doc</suggestions>
-    <suggestions>inline</suggestions>
+    <suggestions>markdown</suggestions>
+    <suggestions>mermaid</suggestions>
+    <suggestions>plaintext</suggestions>
   </rules>
 </fd:FieldDefaults>
