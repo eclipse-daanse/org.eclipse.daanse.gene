@@ -44,6 +44,12 @@ Descriptions; eine Tabelle hat eine Description für sich und eine je Spalte.
   Absätze.
 - **Tabelle gewählt:** ihr eigener Text, die Tabelle, ihre weiteren
   Descriptions.
+- **Beschreibungsfelder (Remark):** Die Beschreibung einer Tabelle, ihrer
+  Spalten und der Attribute einer Klasse ist eine Description vom Typ
+  `remark` – nur Plain Text, geeignet z. B. als Kommentar in der Datenbank.
+  „+ Beschreibung“ und die Beschreibungsspalten legen sie so an. Beim Laden
+  füllen nur Remarks diese Felder; jede andere Description erscheint als
+  eigenes Kind mit eigenem Typ.
 - **Paket/Schema/Klasse gewählt:** Überschrift und alles darunter, was
   Dokumentation hat; Leeres fällt weg.
 
@@ -102,9 +108,9 @@ die Dokumentationsansicht:
   Overlay-Resource.
 - **FR-2.5/CON-2.5 TextView:** Text der Description (bzw. der eigenen
   Description einer Table), gerendert nach Typ – Markdown (marked +
-  DOMPurify), Plain Text als Absätze, Mermaid als Diagramm (siehe unten).
+  DOMPurify), HTML (DOMPurify), Plain Text als Absätze, Mermaid als Diagramm (siehe unten).
   „Bearbeiten“ schaltet auf den Editor mit Typauswahl. Die Darstellung hängt
-  am Attribut `type` der Description (`markdown`, `mermaid`, `plaintext`);
+  am Attribut `type` der Description (`markdown`, `html`, `mermaid`, `plaintext`);
   andere Werte (ältere Daten: doc/inline) oder keiner heißen: am Text
   erkennen. Beim Speichern wird der Typ in `type` geschrieben.
 - **PH-8 Columns:** Name, Typ (SQL-Datentypen des ResourceSets), PK (legt den
@@ -173,7 +179,7 @@ orthogonalen Metamodell (ChangeRequest CR-2 im Pflichtenheft):
 - `packages/cwm-editor/model/fielddefaults.ecore`, nsURI
   `http://gene/cwm/fielddefaults/1.0`: `FieldDefaults` mit `FieldRule`s –
   `targetClass` (EClass), `includeSubclasses` (gilt dann auch für alle
-  erbenden Klassen), `attribute` (EAttribute), `suggestions`, `uiDefault`,
+  erbenden Klassen), `attribute` (EAttribute oder EReference – bei Referenzen wirkt nur `hidden`), `suggestions`, `uiDefault`,
   `backendDefault`, `hidden`. Registriert beim
   Aktivieren in der zentralen `EPackageRegistry`.
 - Instanzen: alle `*.fielddefaults.xmi` des Workspace, geladen beim Aktivieren

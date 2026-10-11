@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * The columns of a relational table as a table (PH-8): Name, Typ, PK, Null,
- * Description, edited in place. Columns are rows here, not ObjectRows.
+ * Remark, edited in place. Columns are rows here, not ObjectRows.
  *
  * Test ids follow PH-C1: the table carries `<testId>`, each row
  * `<testId>.Row@<slug(column name)>`.
@@ -18,6 +18,7 @@ import {
   setPrimaryKey
 } from '../composables/columnsEdit'
 import { CWM_EDITING } from '../composables/editing'
+import { addColumn } from '../composables/actions'
 
 const props = defineProps<{
   table: TableView
@@ -80,54 +81,87 @@ function onDescription(col: TableColumnView, event: Event): void {
 </script>
 
 <template>
-  <table class="columns-table" :data-testid="testId" data-wire-kind="TABLE">
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Typ</th>
-        <th class="col-pk">PK</th>
-        <th class="col-null">Null</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr
-        v-for="col in table.columns"
-        :key="col.name"
-        :data-testid="testId ? `${testId}.Row@${slug(col.name)}` : undefined"
-      >
-        <td class="col-name">
-          <span class="name-cell">
-            <a class="go" title="Spalte wählen" @click="editing.select(col.column)">›</a>
-            <input class="mono" :value="col.name" aria-label="Name" @change="onName(col, $event)" />
-          </span>
-          <span v-if="col.foreignKey" class="fk" :title="'Fremdschlüssel → ' + col.foreignKey">
-            → <a class="link" @click="editing.select(col.foreignKeyTable)">{{ col.foreignKey }}</a>
-          </span>
-        </td>
-        <td class="col-type">
-          <select class="mono" :value="typeIndex(col)" aria-label="Typ" @change="onType(col, $event)">
-            <option :value="-1">{{ col.type || '–' }}{{ typeIndex(col) < 0 && col.type ? ' (fremd)' : '' }}</option>
-            <option v-for="(t, i) in editing.dataTypes.value" :key="i" :value="i">{{ typeLabel(t) }}</option>
-          </select>
-        </td>
-        <td class="col-pk">
-          <input type="checkbox" :checked="col.primaryKey" aria-label="Primärschlüssel" @change="onPrimaryKey(col, $event)" />
-        </td>
-        <td class="col-null">
-          <select :value="col.nullable" aria-label="Null" @change="onNullable(col, $event)">
-            <option v-for="l in nullableLiterals(col.column)" :key="l" :value="l">{{ NULL_LABELS[l] ?? l }}</option>
-          </select>
-        </td>
-        <td class="col-desc">
-          <input :value="col.description" aria-label="Description" placeholder="–" @change="onDescription(col, $event)" />
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <div class="columns">
+    <table v-if="table.columns.length" class="columns-table" :data-testid="testId" data-wire-kind="TABLE">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Typ</th>
+          <th class="col-pk">PK</th>
+          <th class="col-null">Null</th>
+          <th>Remark</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          v-for="col in table.columns"
+          :key="col.name"
+          :data-testid="testId ? `${testId}.Row@${slug(col.name)}` : undefined"
+        >
+          <td class="col-name">
+            <span class="name-cell">
+              <a class="go" title="Spalte wählen" @click="editing.select(col.column)">›</a>
+              <input class="mono" :value="col.name" aria-label="Name" @change="onName(col, $event)" />
+            </span>
+            <span v-if="col.foreignKey" class="fk" :title="'Fremdschlüssel → ' + col.foreignKey">
+              → <a class="link" @click="editing.select(col.foreignKeyTable)">{{ col.foreignKey }}</a>
+            </span>
+          </td>
+          <td class="col-type">
+            <select class="mono" :value="typeIndex(col)" aria-label="Typ" @change="onType(col, $event)">
+              <option :value="-1">{{ col.type || '–' }}{{ typeIndex(col) < 0 && col.type ? ' (fremd)' : '' }}</option>
+              <option v-for="(t, i) in editing.dataTypes.value" :key="i" :value="i">{{ typeLabel(t) }}</option>
+            </select>
+          </td>
+          <td class="col-pk">
+            <input type="checkbox" :checked="col.primaryKey" aria-label="Primärschlüssel" @change="onPrimaryKey(col, $event)" />
+          </td>
+          <td class="col-null">
+            <select :value="col.nullable" aria-label="Null" @change="onNullable(col, $event)">
+              <option v-for="l in nullableLiterals(col.column)" :key="l" :value="l">{{ NULL_LABELS[l] ?? l }}</option>
+            </select>
+          </td>
+          <td class="col-desc">
+            <input :value="col.description" aria-label="Remark" placeholder="–" @change="onDescription(col, $event)" />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <button
+      type="button"
+      class="add-column"
+      :data-testid="testId ? `${testId}.Add` : undefined"
+      @click="addColumn(table.object, editing)"
+    >+ Spalte</button>
+  </div>
 </template>
 
 <style scoped>
+/* Native checkboxes in the primary colour */
+input[type='checkbox'] {
+  accent-color: var(--primary-color);
+}
+
+/* A quiet link below the columns, shown while they are hovered; its place stays */
+.add-column {
+  visibility: hidden;
+  display: block;
+  /* Left edge in line with the columns' "›" */
+  margin: 0.3rem 0 0 0.3rem;
+  font: inherit;
+  font-size: 0.75rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--primary-color);
+  cursor: pointer;
+}
+
+.columns:hover .add-column,
+.add-column:focus-visible {
+  visibility: visible;
+}
+
 .columns-table {
   margin-top: 0.6rem;
   border-collapse: collapse;

@@ -23,6 +23,8 @@ import ColumnsTable from './ColumnsTable.vue'
 import DiagramArea from './DiagramArea.vue'
 import ReferencesTable from './ReferencesTable.vue'
 import RowFields from './RowFields.vue'
+import RowReferenceFields from './RowReferenceFields.vue'
+import { hiddenReferenceCount } from '../composables/references'
 import RowRightRail from './RowRightRail.vue'
 import RowTextView from './RowTextView.vue'
 
@@ -60,7 +62,7 @@ const showAllFields = ref(false)
 
 const hiddenFields = computed(() => {
   void props.version
-  return hiddenFieldCount(props.row.object)
+  return hiddenFieldCount(props.row.object) + hiddenReferenceCount(props.row.object, shown.value)
 })
 
 const renaming = ref(false)
@@ -87,7 +89,7 @@ function cancelRename(): void {
   renaming.value = false
 }
 
-/** The class icon, in its own column at the far left, before the lines */
+/** The class icon, in its own column inside the card, right of the lines */
 const icon = computed(() => editing.iconFor(props.row.object))
 
 /** Width of one line slot in the gutter */
@@ -115,13 +117,16 @@ const lines = computed(() =>
   }))
 )
 
-function lineStyle(line: { level: number; opens: boolean; closes: boolean }): Record<string, string> {
+function lineStyle(line: { level: number; opens: boolean; closes: boolean; owner: any }): Record<string, string> {
   return {
     // On the card's left edge; the ticks lie on its top and bottom edge
     left: `${line.level * SLOT + SLOT / 2}px`,
     top: line.opens ? `${gap.value}px` : '0',
     bottom: '0',
-    color: lineColor(line.level - 1)
+    // The bracket of the row under the pointer, through all its rows
+    color: line.owner === editing.hovered.value
+      ? 'color-mix(in srgb, var(--primary-color) 55%, transparent)'
+      : lineColor(line.level - 1)
   }
 }
 
@@ -138,7 +143,7 @@ function lineStyle(line: { level: number; opens: boolean; closes: boolean }): Re
 const SOFT = 10
 
 function layerX(level: number): string {
-  return `calc(1.25rem + ${level * SLOT + SLOT / 2}px)`
+  return `${level * SLOT + SLOT / 2}px`
 }
 
 function shadowColor(level: number): string {
@@ -214,12 +219,10 @@ const shown = computed(() => {
     :data-testid="id"
     data-wire-kind="LIST"
     :data-depth="row.depth"
+    @mouseenter="editing.hovered.value = row.object"
+    @mouseleave="editing.hovered.value === row.object && (editing.hovered.value = null)"
   >
-    <div class="row-icon" :style="{ marginTop: `${gap}px` }" :title="row.kind">
-      <img v-if="icon?.iconDataUrl" :src="icon.iconDataUrl" alt="" />
-      <i v-else-if="icon?.iconClass" :class="icon.iconClass"></i>
-    </div>
-    <div class="gutter" :style="{ width: `${gutter * SLOT}px` }" :data-testid="`${id}.Lines`">
+    <div class="gutter" :style="{ width: `${(row.depth + 2) * SLOT}px` }" :data-testid="`${id}.Lines`">
       <span
         v-for="line in lines"
         :key="line.level"
@@ -242,6 +245,10 @@ const shown = computed(() => {
       >{{ expanded ? '−' : '+' }}</button>
     </div>
 
+    <div class="row-icon" :style="{ marginTop: `${gap}px` }" :title="row.kind">
+      <img v-if="icon?.iconDataUrl" :src="icon.iconDataUrl" alt="" />
+      <i v-else-if="icon?.iconClass" :class="icon.iconClass"></i>
+    </div>
     <div class="row" :style="{ marginTop: `${gap}px` }" :data-testid="`${id}.Row`">
       <div class="main">
         <header class="row-title" :title="row.kind">
@@ -284,10 +291,19 @@ const shown = computed(() => {
             :title="`${row.kind} ${row.name}`"
             :test-id="`${id}.Row.Body.Diagram`"
           />
+          <!-- A table's remark leads the body, a description's text follows its fields -->
+          <RowTextView v-if="table" :object="row.object" :test-id="`${id}.Row.Body.TextView`" :version="version" />
           <RowFields :object="row.object" :test-id="`${id}.Row.Body.Fields`" :version="version" :show-all="showAllFields" />
-          <RowTextView :object="row.object" :test-id="`${id}.Row.Body.TextView`" :version="version" />
+          <RowReferenceFields
+            :object="row.object"
+            :shown="shown"
+            :show-all="showAllFields"
+            :test-id="`${id}.Row.Body.ReferenceFields`"
+            :version="version"
+          />
+          <RowTextView v-if="!table" :object="row.object" :test-id="`${id}.Row.Body.TextView`" :version="version" />
           <ColumnsTable
-            v-if="table && table.columns.length > 0"
+            v-if="table"
             :table="table"
             :test-id="`${id}.Row.Body.Columns`"
           />
@@ -372,10 +388,6 @@ const shown = computed(() => {
   text-align: center;
 }
 
-.object-row:hover .row-icon {
-  background: color-mix(in srgb, var(--primary-color) 3%, transparent);
-}
-
 .object-row.selected .row-icon {
   background: color-mix(in srgb, var(--primary-color) 7%, transparent);
 }
@@ -408,14 +420,7 @@ const shown = computed(() => {
   --layer-shade-step: 3.5%;
 }
 
-/* Hover and selection lie over the layer */
-.object-row:hover .row {
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--primary-color) 3%, transparent),
-    color-mix(in srgb, var(--primary-color) 3%, transparent)
-  );
-}
-
+/* The selection lies over the layer */
 .object-row.selected .row {
   background-image: linear-gradient(
     color-mix(in srgb, var(--primary-color) 7%, transparent),
@@ -507,7 +512,7 @@ const shown = computed(() => {
 }
 
 .rename:hover {
-  color: var(--text-color);
+  color: var(--primary-color);
 }
 
 .object-row:hover .rename,

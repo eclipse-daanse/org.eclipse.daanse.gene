@@ -4,7 +4,7 @@
  * divider above and a smaller font. One row per Description, Document,
  * Responsible Party, Measurement or Change Request pointing at the object -
  * Name, Pfad, Description, Typ; hovering shows the referenced object's data,
- * a click goes there. "+ Referenz" opens a window to add one or several.
+ * a click goes there. "+ Siehe auch" opens a window to add one or several.
  */
 import { computed, inject, ref } from 'tsm:vue'
 import { addReferences, referenceRows } from '../composables/references'
@@ -60,6 +60,7 @@ function confirm(): void {
 
 <template>
   <div class="references" :data-testid="testId" data-wire-kind="TABLE">
+    <div v-if="rows.length" class="section-title">Siehe auch</div>
     <table v-if="rows.length">
       <thead>
         <tr>
@@ -77,14 +78,15 @@ function confirm(): void {
           :title="r.details"
           @click="editing.select(r.object)"
         >
-          <td class="name">{{ r.name }}</td>
-          <td class="path">{{ r.path }}</td>
+          <td class="name">
+            {{ r.name }}<span v-if="r.via.length" class="via" :title="`Verweist auf ${r.via.join(', ')}`"> → {{ r.via.join(', ') }}</span>
+          </td>
+          <td class="path"><template v-for="(c, ci) in r.crumbs" :key="ci"><span v-if="ci > 0" class="sep"> › </span><a class="crumb" :title="`${c.name} wählen`" @click.stop="editing.select(c.object)">{{ c.name }}</a></template></td>
           <td class="desc">{{ r.description }}</td>
           <td class="type">{{ r.type }}</td>
         </tr>
       </tbody>
     </table>
-    <div v-else class="none">Keine Referenzen</div>
 
     <button
       type="button"
@@ -92,12 +94,12 @@ function confirm(): void {
       :data-testid="`${testId}.Add`"
       data-wire-kind="CONTROL"
       @click="openPicker"
-    >+ Referenz</button>
+    >+ Siehe auch</button>
 
     <div v-if="picking" class="picker-backdrop" @click.self="picking = false">
-      <div class="picker" role="dialog" aria-label="Referenzen hinzufügen">
+      <div class="picker" role="dialog" aria-label="Siehe auch hinzufügen">
         <header>
-          <strong>Referenzen hinzufügen</strong>
+          <strong>Siehe auch hinzufügen</strong>
           <input v-model="filter" placeholder="Filtern …" aria-label="Filtern" />
         </header>
         <ul>
@@ -123,10 +125,20 @@ function confirm(): void {
 </template>
 
 <style scoped>
+/* Category heading of the row body: Attribute, Referenzen, Siehe auch - centred between two lines */
+.section-title {
+  margin: 1rem 0 0.5rem;
+  padding: 0.25rem 0;
+  border-top: 1px solid var(--surface-border);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-color);
+  border-bottom: 1px solid var(--surface-border);
+}
+
 .references {
   margin-top: 0.6rem;
-  padding-top: 0.4rem;
-  border-top: 1px solid var(--surface-border);
   font-size: 0.72rem;
 }
 
@@ -135,11 +147,15 @@ table {
   border-collapse: collapse;
 }
 
+/* Headed like the attribute and reference tables above */
 th {
   text-align: left;
+  font-size: 0.7rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--text-color-secondary);
-  padding: 0.15rem 0.3rem;
+  padding: 0.3rem;
   white-space: nowrap;
 }
 
@@ -170,6 +186,20 @@ tbody tr:hover {
 
 .desc {
   color: var(--text-color-secondary);
+}
+
+.crumb {
+  cursor: pointer;
+}
+
+.crumb:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
+}
+
+.via {
+  color: var(--text-color-secondary);
+  font-style: italic;
 }
 
 .none {

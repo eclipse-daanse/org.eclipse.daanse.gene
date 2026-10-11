@@ -80,7 +80,8 @@ function duplicateSource(table: any, api: ActionApi): any | null {
   return columns.includes(selected) ? selected : columns[columns.length - 1] ?? null
 }
 
-function addColumn(table: any, api: ActionApi): void {
+/** Appends a column named "neue_spalte" (or the next free variant) and selects it */
+export function addColumn(table: any, api: Pick<ActionApi, 'change' | 'select'>): void {
   const t = toRaw(table)
   const columnClass = t.eClass().getEPackage().getEClassifier('Column')
   let created: any = null

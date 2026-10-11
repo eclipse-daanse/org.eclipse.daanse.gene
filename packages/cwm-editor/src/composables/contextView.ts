@@ -16,7 +16,7 @@
  * below it follows one level deeper.
  */
 import { toRaw } from 'tsm:vue'
-import { attr, className, isDescription, isTable, many, objectSlug } from './documentation'
+import { attr, className, isRemark, isTable, many, objectSlug } from './documentation'
 import { isAttributeContainer, shownByClass } from './attributes'
 
 export interface ContextRow {
@@ -71,7 +71,8 @@ export function shownByTable(table: any): Set<any> {
   const shown = new Set<any>()
   const columns = many(attr(table, 'feature')).filter(c => className(c) === 'Column')
   columns.forEach(c => shown.add(c))
-  for (const d of children(table).filter(isDescription)) {
+  // Only remarks fill the description fields; other descriptions keep their rows
+  for (const d of children(table).filter(isRemark)) {
     const described = many(attr(d, 'modelElement'))
     if (described.some(m => m === table || columns.includes(m))) shown.add(d)
   }

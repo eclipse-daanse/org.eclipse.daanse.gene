@@ -47,6 +47,40 @@ const rows = computed(() => {
   return contextObject.value ? contextRows(contextObject.value) : []
 })
 const shownRows = computed(() => visibleRows(rows.value, collapsed))
+
+/*
+ * Rendering many rows blocks the page for a moment. Before that the view
+ * shows a loading animation for a frame: when the editor opens, and when the
+ * context moves to an object with many descendants.
+ */
+const BIG_CONTEXT = 60
+const rowsReady = ref(false)
+let firstContext = true
+
+function descendantsExceed(o: any, limit: number): boolean {
+  let n = 0
+  const stack = [toRaw(o)]
+  while (stack.length) {
+    const x = stack.pop()
+    for (const c of x?.eContents?.() ?? []) {
+      if (++n > limit) return true
+      stack.push(c)
+    }
+  }
+  return false
+}
+
+watch(contextObject, o => {
+  if (!o) return
+  if (!firstContext && !descendantsExceed(o, BIG_CONTEXT)) {
+    rowsReady.value = true
+    return
+  }
+  firstContext = false
+  rowsReady.value = false
+  // Two frames: the animation gets painted before the rows block the page
+  requestAnimationFrame(() => requestAnimationFrame(() => { rowsReady.value = true }))
+}, { immediate: true })
 /** Context line plus one slot per level, plus one for the deepest row's toggle */
 const gutter = computed(() => rows.value.reduce((m, r) => Math.max(m, r.depth), 0) + 2)
 
@@ -122,6 +156,9 @@ const everything = computed(() => {
   return contextObject.value ? allObjects(contextObject.value) : []
 })
 
+/** The row under the pointer, for its bracket */
+const hovered = shallowRef<any>(null)
+
 provide(CWM_EDITING, {
   change(write: () => void) {
     write()
@@ -130,6 +167,7 @@ provide(CWM_EDITING, {
   },
   select: (o: any) => select(o),
   selected,
+  hovered,
   setContext: (o: any) => setContext(o),
   validate: (o: any) => { void validate(o) },
   issuesFor: (o: any) => {
@@ -139,6 +177,7 @@ provide(CWM_EDITING, {
   deleteObject,
   openFieldRules,
   iconFor: (o: any) => treeComposables?.getObjectIconInfo?.(toRaw(o)) ?? null,
+  objects: everything,
   dataTypes: computed(() => dataTypes(everything.value)),
   classifiers: computed(() => classifiers(everything.value)),
   descriptionClass: computed(() => everything.value.find(isDescription)?.eClass?.() ?? null),
@@ -328,6 +367,10 @@ defineExpose({ setContext: showAsContext })
       <i class="pi pi-sitemap"></i>
       <p>Ein Element im Baum wählen — die Ansicht zeigt dann alles in seiner Umgebung.</p>
     </div>
+    <div v-else-if="!rowsReady" class="empty loading" data-testid="cwm.Editor.ContextView.Loading">
+      <i class="pi pi-spin pi-spinner"></i>
+      <p>Editor wird geladen …</p>
+    </div>
     <div v-else class="rows">
       <ContextObjectRow
         v-for="(row, i) in shownRows"
@@ -451,5 +494,9 @@ defineExpose({ setContext: showAsContext })
 
 .empty i {
   font-size: 2rem;
+}
+
+.loading i {
+  color: var(--primary-color);
 }
 </style>

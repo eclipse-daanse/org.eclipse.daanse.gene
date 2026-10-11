@@ -28,6 +28,7 @@
     <targetClass href="http://www.omg.org/spec/CWM/1.1/foundation/businessinformation#//Description"/>
     <attribute href="http://www.omg.org/spec/CWM/1.1/foundation/businessinformation#//Description/type"/>
     <suggestions>markdown</suggestions>
+    <suggestions>html</suggestions>
     <suggestions>mermaid</suggestions>
     <suggestions>plaintext</suggestions>
   </rules>

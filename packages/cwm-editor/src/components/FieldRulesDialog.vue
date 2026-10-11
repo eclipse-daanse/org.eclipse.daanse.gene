@@ -73,11 +73,20 @@ const filteredClasses = computed(() => {
   const f = classFilter.value.trim().toLowerCase()
   return f ? sortedClasses.value.filter(c => String(c.getName?.()).toLowerCase().includes(f)) : sortedClasses.value
 })
-const attributes = computed(() =>
-  newClass.value
-    ? many(newClass.value.getEAllAttributes?.()).filter((a: any) => !a.isMany?.()).sort((a: any, b: any) => a.getName().localeCompare(b.getName()))
-    : []
-)
+/** Single-valued attributes, then the references the row shows (not containments) */
+const attributes = computed(() => {
+  if (!newClass.value) return []
+  const byName = (a: any, b: any) => a.getName().localeCompare(b.getName())
+  const attrs = many(newClass.value.getEAllAttributes?.()).filter((a: any) => !a.isMany?.()).sort(byName)
+  const refs = many(newClass.value.getEAllReferences?.())
+    .filter((r: any) => !r.isContainment?.() && !r.isContainer?.() && !r.isDerived?.() && !r.isTransient?.())
+    .sort(byName)
+  return [...attrs, ...refs]
+})
+
+function featureLabel(f: any): string {
+  return typeof f.isContainment === 'function' ? `${f.getName()} (Referenz)` : f.getName()
+}
 
 function classLabel(c: any): string {
   const ns = c.getEPackage?.()?.getName?.()
@@ -226,7 +235,7 @@ const fileCount = computed(() => fieldDefaultsFiles.size)
         </label>
         <select v-model="newAttribute" aria-label="Attribut" :disabled="!newClass">
           <option value="" disabled>Attribut wählen</option>
-          <option v-for="a in attributes" :key="a.getName()" :value="a.getName()">{{ a.getName() }}</option>
+          <option v-for="a in attributes" :key="a.getName()" :value="a.getName()">{{ featureLabel(a) }}</option>
         </select>
         <button type="button" :disabled="!newClass || !newAttribute" @click="add">Regel hinzufügen</button>
       </div>
@@ -242,6 +251,11 @@ const fileCount = computed(() => fieldDefaultsFiles.size)
 </template>
 
 <style scoped>
+/* Native checkboxes in the primary colour */
+input[type='checkbox'] {
+  accent-color: var(--primary-color);
+}
+
 .subclasses {
   display: inline-flex;
   align-items: center;
