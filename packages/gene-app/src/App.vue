@@ -495,9 +495,13 @@ const loadingModelName = ref('')
 const isLoadingInstance = ref(false)
 const loadingInstanceName = ref('')
 
+// Workspace loading state: from opening the .wsp until its models and instances are in
+const isLoadingWorkspace = ref(false)
+const loadingWorkspaceName = ref('')
+
 // Combined loading state (for central overlay)
 const isLoading = computed(() => {
-  const loading = isLoadingModel.value || isLoadingInstance.value
+  const loading = isLoadingWorkspace.value || isLoadingModel.value || isLoadingInstance.value
   if (loading) {
     console.log('[App] isLoading computed:', loading, 'model:', isLoadingModel.value, 'instance:', isLoadingInstance.value)
   }
@@ -510,6 +514,9 @@ const loadingText = computed(() => {
   }
   if (isLoadingInstance.value) {
     return { title: 'Loading Instances', name: loadingInstanceName.value }
+  }
+  if (isLoadingWorkspace.value) {
+    return { title: 'Loading Workspace', name: loadingWorkspaceName.value }
   }
   return { title: 'Loading...', name: '' }
 })
@@ -581,6 +588,8 @@ async function handleOpenWorkspace(entry: any, content: string) {
     return
   }
 
+  loadingWorkspaceName.value = entry.name
+  isLoadingWorkspace.value = true
   try {
     console.log('XMI Content preview:', content?.substring(0, 200))
 
@@ -682,6 +691,8 @@ async function handleOpenWorkspace(entry: any, content: string) {
     await loadInstancesFromEditorConfig(entry)
   } catch (e: any) {
     console.error('Failed to open workspace:', e)
+  } finally {
+    isLoadingWorkspace.value = false
   }
 }
 
