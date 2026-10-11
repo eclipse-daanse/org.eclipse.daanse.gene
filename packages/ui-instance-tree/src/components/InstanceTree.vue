@@ -36,6 +36,11 @@ const props = defineProps<{
    * gets aria-current, its ancestors are expanded and it is scrolled into view.
    */
   currentObject?: EObject | null
+  /**
+   * Extra entries at the top of an object's context menu, from the view that
+   * hosts the tree - e.g. "set as context object" in the CWM editor.
+   */
+  contextMenuExtras?: (object: EObject) => { label: string; icon?: string; disabled?: boolean; command: () => void }[]
 }>()
 
 const emit = defineEmits<{
@@ -936,6 +941,14 @@ const contextMenuItems = computed(() => {
   if (!ctxSelectedNode.value) return []
 
   const items = []
+
+  // Entries of the hosting view first
+  const selectedObject = ctxSelectedObject.value
+  const extras = selectedObject && props.contextMenuExtras ? props.contextMenuExtras(toRaw(selectedObject)) : []
+  if (extras.length > 0) {
+    items.push(...extras)
+    items.push({ separator: true })
+  }
 
   // Add child submenu
   const containmentRefs = ctx.getAvailableContainmentRefs()

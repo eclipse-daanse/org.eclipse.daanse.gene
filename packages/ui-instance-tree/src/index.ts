@@ -12,6 +12,7 @@ import instanceCommandsEcore from '../model/instance-commands.ecore?raw'
 
 // Re-export types
 export * from './types'
+import { getObjectIconInfo } from './types'
 
 // Re-export editor context (for perspective switching)
 export {
@@ -353,6 +354,8 @@ export async function activate(context: ModuleContext): Promise<void> {
 
   // Register composables as service
   context.services.register('ui.instance-tree.composables', {
+    // Icon of an object as the tree shows it (class icon, custom mappings)
+    getObjectIconInfo,
     useInstanceTree,
     useSharedInstanceTree,
     setSharedResource,
