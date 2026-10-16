@@ -223,8 +223,36 @@ export function referenceFields(object: any, shown: Set<any> = new Set(), all = 
   return out
 }
 
-function conforms(eClass: any, type: any): boolean {
-  return !!eClass && (eClass === type || many(eClass.getEAllSuperTypes?.()).includes(type))
+/**
+ * A class's identity by package nsURI and name - also for an unresolved
+ * proxy (its URI). Cross-package supertypes can be other objects for the same
+ * class, so identity of the objects is not enough.
+ */
+export function classKey(c: any): string {
+  if (!c) return ''
+  const proxy = c.eIsProxy?.() ? String(c.eProxyURI?.() ?? '') : ''
+  if (proxy) {
+    const [uri, fragment = ''] = proxy.split('#')
+    return `${uri.replace(/\.ecore$/, '')}#${fragment.split('/').pop()}`
+  }
+  return `${c.getEPackage?.()?.getNsURI?.() ?? ''}#${c.getName?.() ?? ''}`
+}
+
+/** The class is the type or inherits from it */
+export function conforms(eClass: any, type: any): boolean {
+  if (!eClass || !type) return false
+  if (eClass === type) return true
+  const key = classKey(type)
+  const same = (c: any) => {
+    if (c === type) return true
+    const k = classKey(c)
+    if (k === key) return true
+    // A relative proxy (core.ecore#//X) has no nsURI to compare - the name decides
+    const [ns, name] = k.split('#')
+    const [tns, tname] = key.split('#')
+    return name === tname && (!ns.includes('://') || !tns.includes('://'))
+  }
+  return same(eClass) || many(eClass.getEAllSuperTypes?.()).some(same)
 }
 
 /** How many reference fields a field rule hides until the row shows all */

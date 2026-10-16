@@ -19,10 +19,13 @@ import { CWM_EDITING } from '../composables/editing'
 import { hasAssociationEnds, isAttributeContainer, shownByClass } from '../composables/attributes'
 import { hiddenFieldCount, setAttributeFromText } from '../composables/rowContent'
 import AttributesTable from './AttributesTable.vue'
+import CreateChildDialog from './CreateChildDialog.vue'
+import { containmentFeatures } from '../composables/childCreation'
 import ColumnsTable from './ColumnsTable.vue'
 import DiagramArea from './DiagramArea.vue'
 import ReferencesTable from './ReferencesTable.vue'
 import RowFields from './RowFields.vue'
+import RowDocumentView from './RowDocumentView.vue'
 import RowReferenceFields from './RowReferenceFields.vue'
 import { hiddenReferenceCount } from '../composables/references'
 import RowRightRail from './RowRightRail.vue'
@@ -57,6 +60,33 @@ const nameValue = computed(() => {
   void props.version
   return String(attr(props.row.object, 'name') ?? '')
 })
+/* ── creating children and siblings ──────────────────────────────── */
+
+/** The dialog's target: a child of the row's object, or a sibling at the row's place */
+const creating = ref<{ parent: any; feature?: any; index?: number } | null>(null)
+
+const canHaveChildren = computed(() => {
+  void props.version
+  return containmentFeatures(props.row.object).length > 0
+})
+
+/** A new sibling goes into the same list, right before this row's object */
+function createSibling(): void {
+  const o = props.row.object
+  const parent = parentOf(o)
+  const feature = o?.eContainingFeature?.()
+  if (!parent || !feature?.isMany?.()) return
+  const list = parent.eGet(feature)
+  creating.value = { parent, feature, index: list.indexOf(o) }
+}
+
+function createChildOf(): void {
+  creating.value = { parent: props.row.object }
+}
+
+/** Objects that document others show their references (modelElement) below their text */
+const referencesBelowText = computed(() => ['Description', 'Document', 'ResponsibleParty'].includes(props.row.kind))
+
 /** The fields table shows all attributes, also unset and hidden ones */
 const showAllFields = ref(false)
 
@@ -222,6 +252,17 @@ const shown = computed(() => {
     @mouseenter="editing.hovered.value = row.object"
     @mouseleave="editing.hovered.value === row.object && (editing.hovered.value = null)"
   >
+    <!-- The gap before a sibling, across the whole row: hovering it offers a new element at this place, on the parent's line -->
+    <div v-if="gap" class="gap-add" :style="{ height: `${gap + 6}px` }">
+      <button
+        type="button"
+        class="add-button"
+        title="Neues Element hier einfügen"
+        :data-testid="`${id}.InsertBefore`"
+        :style="{ left: `${(row.depth - 1) * SLOT + SLOT / 2 - 5}px` }"
+        @click="createSibling"
+      >+</button>
+    </div>
     <div class="gutter" :style="{ width: `${(row.depth + 2) * SLOT}px` }" :data-testid="`${id}.Lines`">
       <span
         v-for="line in lines"
@@ -233,6 +274,23 @@ const shown = computed(() => {
         :title="lineTitle(line.owner, line.level)"
         :style="lineStyle(line)"
       ></span>
+      <span
+        v-if="selected"
+        class="selected-marker"
+        :data-testid="`${id}.Selected`"
+        :style="{ left: `${row.depth * SLOT + SLOT / 2 + 1}px`, top: `calc(${gap}px + 0.9rem)` }"
+        title="Ausgewähltes Objekt"
+      ></span>
+      <!-- Beside the own bracket: a new child -->
+      <button
+        v-if="canHaveChildren"
+        type="button"
+        class="add-button add-child"
+        title="Neues Kind anlegen"
+        :data-testid="`${id}.AddChild`"
+        :style="{ left: `${row.depth * SLOT + SLOT / 2 - 5}px`, top: `calc(${gap}px + 2.1rem)` }"
+        @click="createChildOf"
+      >+</button>
       <button
         v-if="row.hasChildren"
         class="toggle"
@@ -289,12 +347,21 @@ const shown = computed(() => {
           <DiagramArea
             v-if="hasDiagram(row.object)"
             :title="`${row.kind} ${row.name}`"
+            :object="row.object"
             :test-id="`${id}.Row.Body.Diagram`"
           />
           <!-- A table's remark leads the body, a description's text follows its fields -->
           <RowTextView v-if="table" :object="row.object" :test-id="`${id}.Row.Body.TextView`" :version="version" />
+          <!-- A document's file leads the body: the image, or a link to open it -->
+          <RowDocumentView
+            v-if="row.kind === 'Document'"
+            :object="row.object"
+            :test-id="`${id}.Row.Body.Document`"
+            :version="version"
+          />
           <RowFields :object="row.object" :test-id="`${id}.Row.Body.Fields`" :version="version" :show-all="showAllFields" />
           <RowReferenceFields
+            v-if="!referencesBelowText"
             :object="row.object"
             :shown="shown"
             :show-all="showAllFields"
@@ -302,6 +369,15 @@ const shown = computed(() => {
             :version="version"
           />
           <RowTextView v-if="!table" :object="row.object" :test-id="`${id}.Row.Body.TextView`" :version="version" />
+          <!-- Descriptions, documents, responsible parties: what they are about (modelElement) follows their text -->
+          <RowReferenceFields
+            v-if="referencesBelowText"
+            :object="row.object"
+            :shown="shown"
+            :show-all="showAllFields"
+            :test-id="`${id}.Row.Body.ReferenceFields`"
+            :version="version"
+          />
           <ColumnsTable
             v-if="table"
             :table="table"
@@ -322,6 +398,13 @@ const shown = computed(() => {
         </div>
       </div>
 
+      <CreateChildDialog
+        v-if="creating"
+        :parent="creating.parent"
+        :feature="creating.feature"
+        :index="creating.index"
+        @close="creating = null"
+      />
       <RowRightRail :object="row.object" :test-id="`${id}.Row.RightRail`" :version="version" />
     </div>
   </div>
@@ -331,6 +414,7 @@ const shown = computed(() => {
 .object-row {
   /* Light mode takes finer steps - stronger grey looks dull */
   --layer-shade-step: 2%;
+  position: relative;
   display: flex;
   align-items: stretch;
   /* Keeps the row title clear of the sticky header when scrolled to */
@@ -388,10 +472,6 @@ const shown = computed(() => {
   text-align: center;
 }
 
-.object-row.selected .row-icon {
-  background: color-mix(in srgb, var(--primary-color) 7%, transparent);
-}
-
 .toggle {
   position: absolute;
   top: 0.55rem;
@@ -420,12 +500,61 @@ const shown = computed(() => {
   --layer-shade-step: 3.5%;
 }
 
-/* The selection lies over the layer */
-.object-row.selected .row {
-  background-image: linear-gradient(
-    color-mix(in srgb, var(--primary-color) 7%, transparent),
-    color-mix(in srgb, var(--primary-color) 7%, transparent)
-  );
+/* "+" for new elements: a small round button on a bracket line, shown on hover */
+.add-button {
+  position: absolute;
+  width: 11px;
+  height: 11px;
+  padding: 0;
+  font-size: 10px;
+  line-height: 9px;
+  text-align: center;
+  border: 1px solid var(--primary-color);
+  border-radius: 50%;
+  background: var(--surface-card, var(--surface-ground));
+  color: var(--primary-color);
+  cursor: pointer;
+  visibility: hidden;
+  z-index: 2;
+}
+
+.add-button:hover {
+  background: var(--primary-color);
+  color: var(--primary-color-text, #fff);
+}
+
+/* The gap between siblings (a little beyond, to be easy to hit): hovering it offers the insert button */
+.gap-add {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  z-index: 3;
+}
+
+.gap-add .add-button {
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.gap-add:hover .add-button,
+.object-row:hover .add-child,
+.add-button:focus-visible {
+  visibility: visible;
+}
+
+/* The selected object: a marker on its own bracket, level with the title - no background */
+.selected-marker {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin-left: -3px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--surface-ground);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .main {

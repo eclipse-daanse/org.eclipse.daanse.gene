@@ -315,11 +315,11 @@ function showAsContext(o: any): void {
   void nextTick(() => rootEl.value?.scrollTo({ top: 0 }))
 }
 
-defineExpose({ setContext: showAsContext })
+defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
 </script>
 
 <template>
-  <div ref="rootEl" class="context-view" data-testid="cwm.Editor.ContextView" @scroll.passive="onScroll">
+  <div ref="rootEl" class="cwm-context-view" data-testid="cwm.Editor.ContextView" @scroll.passive="onScroll">
     <div class="header" data-testid="cwm.Editor.ContextView.Header">
       <nav class="crumbs" data-testid="cwm.Editor.ContextView.Header.HierarchyBreadcrumb" data-wire-kind="NAV">
         <template v-for="(o, i) in hierarchy" :key="i">
@@ -354,6 +354,8 @@ defineExpose({ setContext: showAsContext })
         :disabled="!canSetContext"
         @click="setContext(selected)"
       >Als Kontextobjekt setzen</button>
+      <!-- Switches the tab adds, such as the glossary -->
+      <slot name="tools" />
     </div>
 
     <FieldRulesDialog
@@ -403,7 +405,8 @@ defineExpose({ setContext: showAsContext })
 </style>
 
 <style scoped>
-.context-view {
+/* Not "context-view": Monaco styles that class globally (position: absolute) */
+.cwm-context-view {
   height: 100%;
   overflow: auto;
   box-sizing: border-box;

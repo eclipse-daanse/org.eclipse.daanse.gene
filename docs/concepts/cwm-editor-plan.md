@@ -208,6 +208,18 @@ orthogonalen Metamodell (ChangeRequest CR-2 im Pflichtenheft):
 Offen: Daanse-Validierungen im Menü (sobald Daanse sie anbietet), ein Editor
 für Feldregeln (bis dahin Instanz-Editor oder XMI).
 
+## Glossar-Ansicht (2026-10-15)
+
+Anforderung: `Glossar-Ansicht.md` (Stand 13.10.2026).
+
+- Schalter **Glossar** im Kopf der Kontextansicht blendet die Glossar-Ansicht als Splitscreen ein (`GlossaryView.vue`, `composables/glossary.ts`).
+- Classifier-Filter: mehrere Classifier als Chips; „mit erbenden Klassen" nimmt die Unterklassen dazu.
+- Tabelle: Spalte „Klasse", dann eine Spalte je einwertigem Attribut (je definierender Klasse einmal), allgemeinste Klasse zuerst (`name` vorn). Durch Feldregeln ausgeblendete Attribute erscheinen zunächst nicht; im Menü „Spalten“ stehen sie grau mit ◌ und lassen sich einschalten. `body` bleibt draußen.
+- Zellen von Attributen, die das Objekt nicht hat, sind grau hinterlegt; leere Werte bleiben weiß.
+- Sortierung per Klick auf den Spaltenkopf (auf-/absteigend, leere Zellen immer am Ende, Zahlen numerisch).
+- Sprung über das Pfeil-Icon am Zeilenanfang (wie Auswahl im Baum); das ausgewählte Objekt ist markiert.
+- Teilung nebeneinander/untereinander umschaltbar, Trenner verschiebbar; offen/Teilung/Anteil im `localStorage`.
+
 ## Offen / nächste Etappen
 
 - **Relational:** Katalog → Schema → Tabelle → Spalte als Domänenbaum und
