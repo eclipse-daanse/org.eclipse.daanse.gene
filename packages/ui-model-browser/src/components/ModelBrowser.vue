@@ -86,6 +86,45 @@ const treeNodes = computed(() => {
   return modelRegistry.treeNodes.value
 })
 
+/*
+ * Search: keeps the entries whose label matches, with the packages and
+ * classes above them; while searching, everything shown is expanded.
+ */
+const search = ref('')
+
+function matchingNodes(nodes: any[], q: string): any[] {
+  const out: any[] = []
+  for (const n of nodes) {
+    if (String(n.label ?? '').toLowerCase().includes(q)) {
+      out.push(n)
+      continue
+    }
+    const children = matchingNodes(n.children ?? [], q)
+    if (children.length) out.push({ ...n, children })
+  }
+  return out
+}
+
+const shownNodes = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  return q ? matchingNodes(treeNodes.value, q) : treeNodes.value
+})
+
+/** Expansion while searching: every entry that has children shown */
+const searchExpandedKeys = computed(() => {
+  const keys: Record<string, boolean> = {}
+  const walk = (nodes: any[]) => {
+    for (const n of nodes) {
+      if (n.children?.length && !String(n.label ?? '').toLowerCase().includes(search.value.trim().toLowerCase())) {
+        keys[n.key] = true
+        walk(n.children)
+      }
+    }
+  }
+  walk(shownNodes.value)
+  return keys
+})
+
 // Tree state
 const selectedKey = ref<Record<string, boolean>>({})
 const expandedKeys = ref<Record<string, boolean>>({})
@@ -263,10 +302,23 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
 
     <!-- Model tree -->
     <div v-else class="tree-container">
+      <div class="search">
+        <i class="pi pi-search"></i>
+        <input
+          v-model="search"
+          type="search"
+          placeholder="Suchen …"
+          aria-label="Modelle durchsuchen"
+          data-testid="ModelBrowser.Search"
+          @keydown.escape="search = ''"
+        />
+      </div>
+      <div v-if="search.trim() && shownNodes.length === 0" class="no-match">Nichts gefunden für „{{ search.trim() }}“</div>
       <Tree
-        :value="treeNodes"
+        :value="shownNodes"
         v-model:selectionKeys="selectedKey"
-        v-model:expandedKeys="expandedKeys"
+        :expandedKeys="search.trim() ? searchExpandedKeys : expandedKeys"
+        @update:expandedKeys="(k: any) => { if (!search.trim()) expandedKeys = k }"
         selectionMode="single"
         @node-select="handleNodeSelect"
         class="model-tree"
@@ -415,6 +467,42 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
   overflow: auto;
 }
 
+.search {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0.5rem 0;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius, 4px);
+  background: var(--surface-ground);
+  color: var(--text-color-secondary);
+  font-size: 0.8rem;
+}
+
+.search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  color: var(--text-color);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.search:focus-within {
+  border-color: var(--primary-color);
+}
+
+.no-match {
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
+}
+
 .model-tree {
   padding: 0.5rem;
   background: transparent;
@@ -425,7 +513,6 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.25rem 0;
   cursor: default;
   width: 100%;
   min-width: 0;
@@ -620,7 +707,7 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
 :deep(.p-tree-node-content) {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.25rem;
   padding: 0.25rem 0.5rem;
   border-radius: var(--border-radius);
   cursor: pointer;
@@ -635,9 +722,10 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
 }
 
 :deep(.p-tree-node-toggle-button) {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1rem;
+  height: 1rem;
   margin-right: 0;
+  padding: 0;
   border: none;
   background: transparent;
   color: var(--text-color-secondary);
@@ -647,6 +735,11 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
   justify-content: center;
 }
 
+:deep(.p-tree-node-toggle-button .p-icon) {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
 :deep(.p-tree-node-toggle-button:hover) {
   background: var(--surface-hover);
   border-radius: var(--border-radius);
@@ -654,7 +747,7 @@ function getSuperTypes(classInfo: ClassInfo): string[] {
 
 :deep(.p-tree-node-icon) {
   color: var(--text-color-secondary);
-  margin-right: 0.5rem;
+  margin-right: 0.25rem;
 }
 
 /* Hide PrimeVue's auto-rendered icon for custom icons */

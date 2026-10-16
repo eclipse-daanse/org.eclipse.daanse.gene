@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tsrouter - Example</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #1a1a2e; color: #eee; }
+    canvas { display: block; margin: 20px auto; border: 1px solid #333; background: #16213e; }
+    .controls { text-align: center; padding: 16px; }
+    .controls label { margin-right: 16px; font-size: 14px; }
+    .controls input[type="checkbox"] { margin-right: 4px; }
+    .controls input[type="range"] { width: 80px; vertical-align: middle; }
+    .controls span { font-size: 12px; color: #aaa; }
+    h1 { text-align: center; padding: 20px 0 0; font-weight: 400; font-size: 20px; }
+  </style>
+</head>
+<body>
+  <h1>tsrouter - Orthogonal Router Demo</h1>
+  <div class="controls">
+    <label>
+      <input type="checkbox" id="allowCrossings" checked> Allow Crossings
+    </label>
+    <label>
+      <input type="checkbox" id="allowOverlap"> Allow Overlap
+    </label>
+    <label>
+      Margin: <input type="range" id="margin" min="5" max="40" value="20">
+      <span id="marginVal">20</span>
+    </label>
+    <label>
+      Bend Penalty: <input type="range" id="bendPenalty" min="0" max="200" value="50">
+      <span id="bendPenaltyVal">50</span>
+    </label>
+  </div>
+  <canvas id="canvas" width="900" height="600"></canvas>
+  <script type="module" src="/example/dist/main.js"></script>
+</body>
+</html>
