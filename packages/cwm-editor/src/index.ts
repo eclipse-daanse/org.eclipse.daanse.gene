@@ -17,6 +17,7 @@ import {
   reloadWorkspaceFieldDefaults,
   setFieldDefaultsFileSystem
 } from './composables/fieldDefaults'
+import { setDocumentFileSystem } from './composables/documentFiles'
 
 export { CwmEditorTab, CwmContextView, ContextObjectRow, ColumnsTable, ReferencesTable, DiagramArea, FieldRulesDialog } from './components'
 export { sectionFor, tableView, isDescription, isTable, slug, objectSlug, type DocSection as DocSectionModel, type TableView } from './composables/documentation'
@@ -39,6 +40,7 @@ export async function activate(context: ModuleContext): Promise<void> {
   // Field defaults (CR-2): own metamodel, rules from *.fielddefaults.xmi of the workspace
   await registerFieldDefaultsPackage()
   setFieldDefaultsFileSystem(context.services.get('gene.filesystem') ?? null)
+  setDocumentFileSystem(context.services.get('gene.filesystem') ?? null)
   window.addEventListener(WORKSPACE_LOADED, onWorkspaceLoaded)
   void reloadWorkspaceFieldDefaults()
   context.services.register('ui.cwm-editor.fielddefaults', { addFieldDefaultsFromXmi, reloadWorkspaceFieldDefaults })
