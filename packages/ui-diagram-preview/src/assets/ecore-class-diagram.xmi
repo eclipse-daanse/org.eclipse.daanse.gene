@@ -1,0 +1,502 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Maps an Ecore model (EPackage) to a UML-ish class diagram, mirroring daanse's
+  ecore-class showcase. Node types are discriminated by metaclass (sourceClass) +
+  OCL condition (abstract/interface). All feature refs point into the Ecore
+  metamodel (http://www.eclipse.org/emf/2002/Ecore).
+
+  Visual conventions copied from the showcase: light kind-tinted header with a
+  type icon + plain kind text + bold name (no «guillemets»); named compartment
+  sections (ATTRIBUTES / REFERENCES / OPERATIONS / LITERALS / INSTANCE CLASS /
+  DEFAULTS); flag badges (/ T V) right-aligned; iD key icon; reference end
+  markers (◆ containment / › navigable); datatypes & enums grouped into
+  DATATYPES / ENUMERATIONS buckets.
+-->
+<diagrammodel:DiagramModel xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:diagrammodel="http://diagrammodel/1.0"
+    name="Ecore Class Diagram">
+  <targetClass href="http://www.eclipse.org/emf/2002/Ecore#//EPackage"/>
+  <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+  <layoutOptions key="elk.direction" value="DOWN"/>
+  <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+  <layoutOptions key="elk.hierarchyHandling" value="INCLUDE_CHILDREN"/>
+  <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="100"/>
+  <layoutOptions key="elk.spacing.nodeNode" value="80"/>
+  <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+  <layoutOptions key="elk.layered.spacing.edgeNodeBetweenLayers" value="30"/>
+  <layoutOptions key="elk.padding" value="[top=50,left=20,bottom=20,right=20]"/>
+
+  <styles xmi:id="pkgStyle" headerColor="#7c3aed"/>
+  <styles xmi:id="classStyle" headerColor="#2563eb"/>
+  <styles xmi:id="abstractStyle" headerColor="#7c3aed"/>
+  <styles xmi:id="interfaceStyle" headerColor="#9333ea"/>
+  <styles xmi:id="enumStyle" headerColor="#be185d"/>
+  <styles xmi:id="datatypeStyle" headerColor="#0891b2"/>
+
+  <!-- Root package container (no `from` → the EPackage root itself) -->
+  <nodes name="PackageNode" stereotype="Package" icon="▣">
+    <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EPackage"/>
+    <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+    <subtitleFeature href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/nsURI"/>
+    <style href="#pkgStyle"/>
+
+    <!-- ===== classifier mappings (root) ===== -->
+    <children name="ConcreteClass" stereotype="Class" icon="▭">
+      <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+      <condition language="OCL" body="self.abstract = false"/>
+      <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+      <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+      <style href="#classStyle"/>
+      <compartments separator="false" title="ATTRIBUTES">
+        <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EAttribute"/>
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+        <lowerBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/lowerBound"/>
+        <upperBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/upperBound"/>
+        <keyFeature href="http://www.eclipse.org/emf/2002/Ecore#//EAttribute/iD"/>
+        <badges icon="/"><whenFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/derived"/></badges>
+        <badges icon="T"><whenFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/transient"/></badges>
+        <badges icon="V"><whenFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/volatile"/></badges>
+      </compartments>
+      <compartments separator="true" title="REFERENCES">
+        <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EReference"/>
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+        <lowerBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/lowerBound"/>
+        <upperBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/upperBound"/>
+        <markerFeature href="http://www.eclipse.org/emf/2002/Ecore#//EReference/containment"/>
+      </compartments>
+      <compartments separator="true" title="OPERATIONS">
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eOperations"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+        <lowerBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/lowerBound"/>
+        <upperBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/upperBound"/>
+        <subFrom href="http://www.eclipse.org/emf/2002/Ecore#//EOperation/eParameters"/>
+        <subLabelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <subDetailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+      </compartments>
+      <compartments separator="true" title="DEFAULTS">
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/defaultValueLiteral"/>
+        <rowCondition language="JS" body="!!self.defaultValueLiteral"/>
+        <badges icon="D"/>
+      </compartments>
+    </children>
+
+    <children name="AbstractClass" stereotype="abstract Class" icon="▭">
+      <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+      <condition language="OCL" body="self.abstract = true and self.interface &lt;&gt; true"/>
+      <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+      <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+      <style href="#abstractStyle"/>
+      <compartments separator="false" title="ATTRIBUTES">
+        <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EAttribute"/>
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+        <lowerBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/lowerBound"/>
+        <upperBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/upperBound"/>
+        <keyFeature href="http://www.eclipse.org/emf/2002/Ecore#//EAttribute/iD"/>
+        <badges icon="/"><whenFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/derived"/></badges>
+        <badges icon="T"><whenFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/transient"/></badges>
+        <badges icon="V"><whenFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/volatile"/></badges>
+      </compartments>
+      <compartments separator="true" title="REFERENCES">
+        <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EReference"/>
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+        <lowerBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/lowerBound"/>
+        <upperBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/upperBound"/>
+        <markerFeature href="http://www.eclipse.org/emf/2002/Ecore#//EReference/containment"/>
+      </compartments>
+      <compartments separator="true" title="OPERATIONS">
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eOperations"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+        <lowerBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/lowerBound"/>
+        <upperBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/upperBound"/>
+        <subFrom href="http://www.eclipse.org/emf/2002/Ecore#//EOperation/eParameters"/>
+        <subLabelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <subDetailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+      </compartments>
+    </children>
+
+    <children name="Interface" stereotype="Interface" icon="◯">
+      <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+      <condition language="OCL" body="self.interface = true"/>
+      <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+      <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+      <style href="#interfaceStyle"/>
+      <compartments separator="true" title="OPERATIONS">
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eOperations"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+        <lowerBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/lowerBound"/>
+        <upperBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/upperBound"/>
+        <subFrom href="http://www.eclipse.org/emf/2002/Ecore#//EOperation/eParameters"/>
+        <subLabelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <subDetailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+      </compartments>
+    </children>
+
+    <!-- ===== grouped classifiers: datatypes & enumerations buckets ===== -->
+    <children name="DatatypesGroup" group="true" groupLabel="DATATYPES">
+      <children name="Datatype" stereotype="Datatype" icon="◈">
+        <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EDataType"/>
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <style href="#datatypeStyle"/>
+        <compartments separator="false" title="INSTANCE CLASS">
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//EClassifier/instanceClassName"/>
+        </compartments>
+      </children>
+    </children>
+
+    <children name="EnumsGroup" group="true" groupLabel="ENUMERATIONS">
+      <children name="Enumeration" stereotype="Enumeration" icon="☰">
+        <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EEnum"/>
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <style href="#enumStyle"/>
+        <compartments separator="false" title="LITERALS">
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EEnum/eLiterals"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//EEnumLiteral/value"/>
+        </compartments>
+      </children>
+    </children>
+
+    <!-- ===== sub-package container (recursive, 3 levels deep) ===== -->
+    <children name="SubPackageNode" stereotype="Package" icon="▣">
+      <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eSubpackages"/>
+      <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+      <subtitleFeature href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/nsURI"/>
+      <style href="#pkgStyle"/>
+
+      <children name="Sub1ConcreteClass" stereotype="Class" icon="▭">
+        <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+        <condition language="OCL" body="self.abstract = false"/>
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <style href="#classStyle"/>
+        <compartments separator="false" title="ATTRIBUTES">
+          <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EAttribute"/>
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+          <lowerBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/lowerBound"/>
+          <upperBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/upperBound"/>
+          <keyFeature href="http://www.eclipse.org/emf/2002/Ecore#//EAttribute/iD"/>
+          <badges icon="/"><whenFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/derived"/></badges>
+          <badges icon="T"><whenFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/transient"/></badges>
+          <badges icon="V"><whenFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/volatile"/></badges>
+        </compartments>
+        <compartments separator="true" title="REFERENCES">
+          <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EReference"/>
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+          <lowerBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/lowerBound"/>
+          <upperBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/upperBound"/>
+          <markerFeature href="http://www.eclipse.org/emf/2002/Ecore#//EReference/containment"/>
+        </compartments>
+        <compartments separator="true" title="OPERATIONS">
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eOperations"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+          <subFrom href="http://www.eclipse.org/emf/2002/Ecore#//EOperation/eParameters"/>
+          <subLabelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <subDetailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+        </compartments>
+        <compartments separator="true" title="DEFAULTS">
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/defaultValueLiteral"/>
+          <rowCondition language="JS" body="!!self.defaultValueLiteral"/>
+          <badges icon="D"/>
+        </compartments>
+      </children>
+
+      <children name="Sub1AbstractClass" stereotype="abstract Class" icon="▭">
+        <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+        <condition language="OCL" body="self.abstract = true and self.interface &lt;&gt; true"/>
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <style href="#abstractStyle"/>
+        <compartments separator="false" title="ATTRIBUTES">
+          <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EAttribute"/>
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+          <lowerBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/lowerBound"/>
+          <upperBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/upperBound"/>
+          <keyFeature href="http://www.eclipse.org/emf/2002/Ecore#//EAttribute/iD"/>
+        </compartments>
+        <compartments separator="true" title="REFERENCES">
+          <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EReference"/>
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+          <lowerBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/lowerBound"/>
+          <upperBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/upperBound"/>
+          <markerFeature href="http://www.eclipse.org/emf/2002/Ecore#//EReference/containment"/>
+        </compartments>
+        <compartments separator="true" title="OPERATIONS">
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eOperations"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+          <subFrom href="http://www.eclipse.org/emf/2002/Ecore#//EOperation/eParameters"/>
+          <subLabelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <subDetailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+        </compartments>
+      </children>
+
+      <children name="Sub1Interface" stereotype="Interface" icon="◯">
+        <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+        <condition language="OCL" body="self.interface = true"/>
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <style href="#interfaceStyle"/>
+        <compartments separator="true" title="OPERATIONS">
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eOperations"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+          <subFrom href="http://www.eclipse.org/emf/2002/Ecore#//EOperation/eParameters"/>
+          <subLabelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <subDetailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+        </compartments>
+      </children>
+
+      <children name="Sub1DatatypesGroup" group="true" groupLabel="DATATYPES">
+        <children name="Sub1Datatype" stereotype="Datatype" icon="◈">
+          <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EDataType"/>
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <style href="#datatypeStyle"/>
+          <compartments separator="false" title="INSTANCE CLASS">
+            <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//EClassifier/instanceClassName"/>
+          </compartments>
+        </children>
+      </children>
+
+      <children name="Sub1EnumsGroup" group="true" groupLabel="ENUMERATIONS">
+        <children name="Sub1Enumeration" stereotype="Enumeration" icon="☰">
+          <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EEnum"/>
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <style href="#enumStyle"/>
+          <compartments separator="false" title="LITERALS">
+            <from href="http://www.eclipse.org/emf/2002/Ecore#//EEnum/eLiterals"/>
+            <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+            <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//EEnumLiteral/value"/>
+          </compartments>
+        </children>
+      </children>
+
+      <!-- Sub-subpackage (level 2) -->
+      <children name="Sub2PackageNode" stereotype="Package" icon="▣">
+        <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eSubpackages"/>
+        <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+        <subtitleFeature href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/nsURI"/>
+        <style href="#pkgStyle"/>
+        <children name="Sub2ConcreteClass" stereotype="Class" icon="▭">
+          <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+          <condition language="OCL" body="self.abstract = false"/>
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <style href="#classStyle"/>
+          <compartments separator="false" title="ATTRIBUTES">
+            <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EAttribute"/>
+            <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+            <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+            <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+          </compartments>
+          <compartments separator="true" title="REFERENCES">
+            <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EReference"/>
+            <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+            <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+            <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+            <markerFeature href="http://www.eclipse.org/emf/2002/Ecore#//EReference/containment"/>
+          </compartments>
+        </children>
+        <children name="Sub2AbstractClass" stereotype="abstract Class" icon="▭">
+          <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+          <condition language="OCL" body="self.abstract = true and self.interface &lt;&gt; true"/>
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <style href="#abstractStyle"/>
+          <compartments separator="false" title="ATTRIBUTES">
+            <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EAttribute"/>
+            <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+            <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+            <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+          </compartments>
+          <compartments separator="true" title="REFERENCES">
+            <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EReference"/>
+            <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+            <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+            <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+            <markerFeature href="http://www.eclipse.org/emf/2002/Ecore#//EReference/containment"/>
+          </compartments>
+        </children>
+        <children name="Sub2Enumeration" stereotype="Enumeration" icon="☰">
+          <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EEnum"/>
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <style href="#enumStyle"/>
+          <compartments separator="false" title="LITERALS">
+            <from href="http://www.eclipse.org/emf/2002/Ecore#//EEnum/eLiterals"/>
+            <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+            <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//EEnumLiteral/value"/>
+          </compartments>
+        </children>
+        <children name="Sub2Datatype" stereotype="Datatype" icon="◈">
+          <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EDataType"/>
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <style href="#datatypeStyle"/>
+        </children>
+
+        <!-- Sub-sub-subpackage (level 3) -->
+        <children name="Sub3PackageNode" stereotype="Package" icon="▣">
+          <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eSubpackages"/>
+          <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+          <style href="#pkgStyle"/>
+          <children name="Sub3ConcreteClass" stereotype="Class" icon="▭">
+            <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+            <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+            <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+            <style href="#classStyle"/>
+            <compartments separator="false" title="ATTRIBUTES">
+              <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EAttribute"/>
+              <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+              <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+              <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+            </compartments>
+            <compartments separator="true" title="REFERENCES">
+              <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EReference"/>
+              <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+              <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+              <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+              <markerFeature href="http://www.eclipse.org/emf/2002/Ecore#//EReference/containment"/>
+            </compartments>
+          </children>
+          <children name="Sub3Enumeration" stereotype="Enumeration" icon="☰">
+            <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EEnum"/>
+            <from href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+            <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+            <style href="#enumStyle"/>
+          </children>
+        </children>
+      </children>
+    </children>
+  </nodes>
+
+  <!-- Inheritance (root classifiers) -->
+  <edges name="Inheritance" kind="INHERITANCE">
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+    <targetPath href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eSuperTypes"/>
+  </edges>
+  <!-- Inheritance (subpackage level 1) -->
+  <edges name="InheritanceSub1" kind="INHERITANCE">
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eSubpackages"/>
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+    <targetPath href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eSuperTypes"/>
+  </edges>
+  <!-- Inheritance (subpackage level 2) -->
+  <edges name="InheritanceSub2" kind="INHERITANCE">
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eSubpackages"/>
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eSubpackages"/>
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+    <targetPath href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eSuperTypes"/>
+  </edges>
+
+  <!-- Reference associations (root classifiers) -->
+  <edges name="References" kind="ASSOCIATION" targetDecoration="OPEN_ARROW">
+    <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EReference"/>
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+    <targetPath href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+    <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+  </edges>
+  <!-- Reference associations (subpackage level 1) -->
+  <edges name="ReferencesSub1" kind="ASSOCIATION" targetDecoration="OPEN_ARROW">
+    <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EReference"/>
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eSubpackages"/>
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+    <targetPath href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+    <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+  </edges>
+  <!-- Reference associations (subpackage level 2) -->
+  <edges name="ReferencesSub2" kind="ASSOCIATION" targetDecoration="OPEN_ARROW">
+    <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EReference"/>
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eSubpackages"/>
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eSubpackages"/>
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EPackage/eClassifiers"/>
+    <fromPath href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+    <targetPath href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+    <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+  </edges>
+  <!-- ===== Single-class root (no `from` → root IS the class) ===== -->
+  <nodes name="ClassRoot" stereotype="Class" icon="▭">
+    <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+    <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+    <style href="#classStyle"/>
+    <compartments separator="false" title="ATTRIBUTES">
+      <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EAttribute"/>
+      <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+      <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+      <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+      <lowerBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/lowerBound"/>
+      <upperBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/upperBound"/>
+      <keyFeature href="http://www.eclipse.org/emf/2002/Ecore#//EAttribute/iD"/>
+      <badges icon="/"><whenFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/derived"/></badges>
+      <badges icon="T"><whenFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/transient"/></badges>
+      <badges icon="V"><whenFeature href="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature/volatile"/></badges>
+    </compartments>
+    <compartments separator="true" title="REFERENCES">
+      <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EReference"/>
+      <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eStructuralFeatures"/>
+      <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+      <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+      <lowerBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/lowerBound"/>
+      <upperBoundFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/upperBound"/>
+      <markerFeature href="http://www.eclipse.org/emf/2002/Ecore#//EReference/containment"/>
+    </compartments>
+    <compartments separator="true" title="OPERATIONS">
+      <from href="http://www.eclipse.org/emf/2002/Ecore#//EClass/eOperations"/>
+      <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+      <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+      <subFrom href="http://www.eclipse.org/emf/2002/Ecore#//EOperation/eParameters"/>
+      <subLabelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+      <subDetailFeature href="http://www.eclipse.org/emf/2002/Ecore#//ETypedElement/eType"/>
+    </compartments>
+  </nodes>
+
+  <!-- Single enum root -->
+  <nodes name="EnumRoot" stereotype="Enumeration" icon="☰">
+    <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EEnum"/>
+    <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+    <style href="#enumStyle"/>
+    <compartments separator="false" title="LITERALS">
+      <from href="http://www.eclipse.org/emf/2002/Ecore#//EEnum/eLiterals"/>
+      <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+      <detailFeature href="http://www.eclipse.org/emf/2002/Ecore#//EEnumLiteral/value"/>
+    </compartments>
+  </nodes>
+
+  <!-- Single datatype root -->
+  <nodes name="DatatypeRoot" stereotype="Datatype" icon="◈">
+    <sourceClass href="http://www.eclipse.org/emf/2002/Ecore#//EDataType"/>
+    <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//ENamedElement/name"/>
+    <style href="#datatypeStyle"/>
+    <compartments separator="false" title="INSTANCE CLASS">
+      <labelFeature href="http://www.eclipse.org/emf/2002/Ecore#//EClassifier/instanceClassName"/>
+    </compartments>
+  </nodes>
+</diagrammodel:DiagramModel>
