@@ -1,2 +1,6 @@
 export { default as EcoreDiagramPreview } from './components/EcoreDiagramPreview.vue'
 export { default as DiagramRenderer } from './components/DiagramRenderer.vue'
+export { useElkLayout, type ElkLayout } from './diagram/useElkLayout'
+export { nodeId } from './diagram/interpret'
+export { bindingFor, presetsOf } from './diagram/query'
+export { default as diagrammodelEcore } from './assets/diagrammodel.ecore?raw'

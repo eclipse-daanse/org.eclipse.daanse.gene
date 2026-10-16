@@ -215,6 +215,9 @@ export default defineConfig({
       // Direct module aliases (without manifest.json)
       { find: 'ui-problems-panel', replacement: fileURLToPath(new URL('./packages/ui-problems-panel/src/index.ts', import.meta.url)) },
       { find: 'ui-search', replacement: fileURLToPath(new URL('./packages/ui-search/src/index.ts', import.meta.url)) },
+      // Diagram rendering (model-driven ELK graphs) and its orthogonal edge router
+      { find: 'ui-diagram-preview', replacement: fileURLToPath(new URL('./packages/ui-diagram-preview/src/index.ts', import.meta.url)) },
+      { find: 'tsrouter', replacement: fileURLToPath(new URL('./packages/tsrouter/src/index.ts', import.meta.url)) },
       // Service contracts: names and types only, shared by every module without
       // any of them depending on another
       { find: 'gene-contracts', replacement: fileURLToPath(new URL('./packages/gene-contracts/src/index.ts', import.meta.url)) },

@@ -1,0 +1,1270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Database diagram of a CWM relational schema (PH-10, FR-4.2), for the generic
+  diagram interpreter of ui-diagram-preview - modelled on the database diagram
+  of the daanse project (DatabaseDiagram.Features, variants minimal,
+  keys-and-relations, columns-only, full, with-objects).
+
+  Root is a relational Schema, drawn as the container. Switches mirror the
+  feature record; presets are its variants. Everything CWM keeps on the other
+  side (key membership, indexes and triggers of a table) is reached with
+  inverse query steps - no script.
+-->
+<diagrammodel:DiagramModel xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:diagrammodel="http://diagrammodel/1.0"
+    name="CWM Database Diagram">
+  <targetClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Schema"/>
+  <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+  <layoutOptions key="elk.direction" value="RIGHT"/>
+  <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+  <layoutOptions key="elk.separateConnectedComponents" value="true"/>
+  <layoutOptions key="elk.aspectRatio" value="3.0"/>
+  <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+  <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="60"/>
+  <layoutOptions key="elk.spacing.nodeNode" value="25"/>
+  <layoutOptions key="elk.spacing.edgeNode" value="20"/>
+  <layoutOptions key="elk.padding" value="[top=20,left=20,bottom=20,right=20]"/>
+
+  <switches name="columns" label="Spalten" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="columnTypes" label="Spaltentypen" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="onlyKeyColumns" label="Nur Schlüsselspalten" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="pkIcons" label="PK-Symbole" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="fkIcons" label="FK-Symbole" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="nullableMarker" label="NOT-NULL-Marker" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="defaultMarker" label="Default-Marker" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="indexes" label="Indizes" kind="CHOICE" defaultValue="HIDDEN"/>
+  <switches name="uniques" label="Unique-Constraints" kind="CHOICE" defaultValue="HIDDEN"/>
+  <switches name="checks" label="Check-Constraints" kind="CHOICE" defaultValue="HIDDEN"/>
+  <switches name="triggers" label="Trigger" kind="CHOICE" defaultValue="HIDDEN"/>
+  <switches name="defaults" label="Defaults" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="fkEdges" label="Fremdschlüssel-Kanten" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="cardinalities" label="Kardinalitäten" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="procedures" label="Prozeduren und Funktionen" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="dataTypes" label="Datentypen" kind="BOOLEAN" defaultValue="false"/>
+
+  <presets name="full" label="Voll">
+    <settings switch="columns" value="true"/>
+    <settings switch="columnTypes" value="true"/>
+    <settings switch="onlyKeyColumns" value="false"/>
+    <settings switch="pkIcons" value="true"/>
+    <settings switch="fkIcons" value="true"/>
+    <settings switch="nullableMarker" value="true"/>
+    <settings switch="defaultMarker" value="true"/>
+    <settings switch="indexes" value="INLINE"/>
+    <settings switch="uniques" value="INLINE"/>
+    <settings switch="checks" value="INLINE"/>
+    <settings switch="triggers" value="INLINE"/>
+    <settings switch="defaults" value="true"/>
+    <settings switch="fkEdges" value="true"/>
+    <settings switch="cardinalities" value="true"/>
+    <settings switch="procedures" value="true"/>
+    <settings switch="dataTypes" value="true"/>
+  </presets>
+  <presets name="minimal" label="Minimal">
+    <settings switch="columns" value="false"/>
+    <settings switch="columnTypes" value="false"/>
+    <settings switch="onlyKeyColumns" value="false"/>
+    <settings switch="pkIcons" value="false"/>
+    <settings switch="fkIcons" value="false"/>
+    <settings switch="nullableMarker" value="false"/>
+    <settings switch="defaultMarker" value="false"/>
+    <settings switch="indexes" value="HIDDEN"/>
+    <settings switch="uniques" value="HIDDEN"/>
+    <settings switch="checks" value="HIDDEN"/>
+    <settings switch="triggers" value="HIDDEN"/>
+    <settings switch="defaults" value="false"/>
+    <settings switch="fkEdges" value="true"/>
+    <settings switch="cardinalities" value="true"/>
+    <settings switch="procedures" value="false"/>
+    <settings switch="dataTypes" value="false"/>
+  </presets>
+  <presets name="keys" label="Schlüssel &amp; Beziehungen">
+    <settings switch="columns" value="true"/>
+    <settings switch="columnTypes" value="false"/>
+    <settings switch="onlyKeyColumns" value="true"/>
+    <settings switch="pkIcons" value="true"/>
+    <settings switch="fkIcons" value="true"/>
+    <settings switch="nullableMarker" value="false"/>
+    <settings switch="defaultMarker" value="false"/>
+    <settings switch="indexes" value="HIDDEN"/>
+    <settings switch="uniques" value="HIDDEN"/>
+    <settings switch="checks" value="HIDDEN"/>
+    <settings switch="triggers" value="HIDDEN"/>
+    <settings switch="defaults" value="false"/>
+    <settings switch="fkEdges" value="true"/>
+    <settings switch="cardinalities" value="true"/>
+    <settings switch="procedures" value="false"/>
+    <settings switch="dataTypes" value="false"/>
+  </presets>
+  <presets name="columns" label="Spalten">
+    <settings switch="columns" value="true"/>
+    <settings switch="columnTypes" value="true"/>
+    <settings switch="onlyKeyColumns" value="false"/>
+    <settings switch="pkIcons" value="true"/>
+    <settings switch="fkIcons" value="true"/>
+    <settings switch="nullableMarker" value="true"/>
+    <settings switch="defaultMarker" value="true"/>
+    <settings switch="indexes" value="HIDDEN"/>
+    <settings switch="uniques" value="HIDDEN"/>
+    <settings switch="checks" value="HIDDEN"/>
+    <settings switch="triggers" value="HIDDEN"/>
+    <settings switch="defaults" value="false"/>
+    <settings switch="fkEdges" value="true"/>
+    <settings switch="cardinalities" value="true"/>
+    <settings switch="procedures" value="false"/>
+    <settings switch="dataTypes" value="true"/>
+  </presets>
+  <presets name="objects" label="Mit Objekten">
+    <settings switch="columns" value="true"/>
+    <settings switch="columnTypes" value="true"/>
+    <settings switch="onlyKeyColumns" value="false"/>
+    <settings switch="pkIcons" value="true"/>
+    <settings switch="fkIcons" value="true"/>
+    <settings switch="nullableMarker" value="true"/>
+    <settings switch="defaultMarker" value="true"/>
+    <settings switch="indexes" value="BOTH"/>
+    <settings switch="uniques" value="BOTH"/>
+    <settings switch="checks" value="BOTH"/>
+    <settings switch="triggers" value="BOTH"/>
+    <settings switch="defaults" value="true"/>
+    <settings switch="fkEdges" value="true"/>
+    <settings switch="cardinalities" value="true"/>
+    <settings switch="procedures" value="true"/>
+    <settings switch="dataTypes" value="true"/>
+  </presets>
+
+  <styles xmi:id="catalogStyle" name="catalog" headerColor="#1f2937"/>
+  <styles xmi:id="schemaStyle" name="schema" headerColor="#334155"/>
+  <styles xmi:id="tableStyle" name="table" headerColor="#1e40af"/>
+  <styles xmi:id="viewStyle" name="view" headerColor="#166534"/>
+  <styles xmi:id="triggerStyle" name="trigger" headerColor="#15803d"/>
+  <styles xmi:id="indexStyle" name="index" headerColor="#c2410c"/>
+  <styles xmi:id="procedureStyle" name="procedure" headerColor="#6d28d9"/>
+  <styles xmi:id="functionStyle" name="function" headerColor="#0f766e"/>
+  <styles xmi:id="typeStyle" name="type" headerColor="#be185d"/>
+  <styles xmi:id="uniqueStyle" name="unique" headerColor="#7c3aed"/>
+  <styles xmi:id="checkStyle" name="check" headerColor="#be123c"/>
+
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Catalog"/>
+  </bindings>
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Schema"/>
+  </bindings>
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Table"/>
+    <root>
+      <steps ancestor="outermost">
+        <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+      </steps>
+    </root>
+    <focus>
+      <union/>
+      <union>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//ForeignKey"/>
+        </steps>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/uniqueKey"/>
+        </steps>
+        <steps container="true"/>
+      </union>
+      <union>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <filterClass href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey"/>
+        </steps>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/uniqueKey"/>
+        </steps>
+        <steps container="true"/>
+      </union>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index/spannedClass"/>
+        </steps>
+      </union>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/table"/>
+        </steps>
+      </union>
+    </focus>
+  </bindings>
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//View"/>
+    <root>
+      <steps ancestor="outermost">
+        <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+      </steps>
+    </root>
+    <focus>
+      <union/>
+    </focus>
+  </bindings>
+
+  <nodes name="SchemaNode" stereotype="Schema" icon="▣">
+    <style href="#schemaStyle"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Schema"/>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+    <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+    <layoutOptions key="elk.direction" value="RIGHT"/>
+    <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+    <layoutOptions key="elk.separateConnectedComponents" value="true"/>
+    <layoutOptions key="elk.aspectRatio" value="2.5"/>
+    <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+    <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="60"/>
+    <layoutOptions key="elk.spacing.nodeNode" value="25"/>
+    <layoutOptions key="elk.spacing.edgeNode" value="20"/>
+    <children name="TableNode" stereotype="Table" icon="▦">
+      <style href="#tableStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Table"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <headerBadges icon="TMP" color="#3b82f6">
+        <when kind="EQUALS" value="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Table/isTemporary"/>
+        </when>
+      </headerBadges>
+      <headerBadges icon="SYS" color="#eab308">
+        <when kind="EQUALS" value="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Table/isSystem"/>
+        </when>
+      </headerBadges>
+      <compartments title="COLUMNS">
+        <when kind="SWITCH" switch="columns"/>
+        <rowsFrom>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+            <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Column"/>
+          </steps>
+        </rowsFrom>
+        <rowWhen kind="OR">
+          <operands kind="NOT">
+            <operands kind="SWITCH" switch="onlyKeyColumns"/>
+          </operands>
+          <operands kind="EXISTS">
+            <query>
+              <steps inverse="true">
+                <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+                <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//PrimaryKey"/>
+              </steps>
+            </query>
+          </operands>
+          <operands kind="EXISTS">
+            <query>
+              <steps inverse="true">
+                <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/feature"/>
+                <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//ForeignKey"/>
+              </steps>
+            </query>
+          </operands>
+        </rowWhen>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <detail>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+          <when kind="SWITCH" switch="columnTypes"/>
+        </detail>
+        <icons kind="PRIMARY_KEY">
+          <when kind="AND">
+            <operands kind="SWITCH" switch="pkIcons"/>
+            <operands kind="EXISTS">
+              <query>
+                <steps inverse="true">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+                  <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//PrimaryKey"/>
+                </steps>
+              </query>
+            </operands>
+          </when>
+        </icons>
+        <icons kind="FOREIGN_KEY">
+          <when kind="AND">
+            <operands kind="SWITCH" switch="fkIcons"/>
+            <operands kind="EXISTS">
+              <query>
+                <steps inverse="true">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/feature"/>
+                  <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//ForeignKey"/>
+                </steps>
+              </query>
+            </operands>
+          </when>
+        </icons>
+        <badges icon="N" color="#0891b2">
+          <when kind="AND">
+            <operands kind="SWITCH" switch="nullableMarker"/>
+            <operands kind="NOT">
+              <operands kind="EQUALS" value="columnNullable">
+                <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Column/isNullable"/>
+              </operands>
+            </operands>
+          </when>
+        </badges>
+        <badges icon="D" color="#64748b">
+          <when kind="AND">
+            <operands kind="SWITCH" switch="defaultMarker"/>
+            <operands kind="SET">
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+            </operands>
+          </when>
+        </badges>
+      </compartments>
+      <compartments title="INDEXES" color="#eab308">
+        <when kind="SWITCH" switch="indexes" value="INLINE,BOTH"/>
+        <rowsFrom>
+          <steps inverse="true">
+            <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index/spannedClass"/>
+          </steps>
+        </rowsFrom>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <detail>
+          <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index/isUnique"/>
+          <literalMap literal="true" text="unique"/>
+          <literalMap literal="false" text=""/>
+        </detail>
+        <links>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index/indexedFeature"/>
+          </steps>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//IndexedFeature/feature"/>
+          </steps>
+        </links>
+      </compartments>
+      <compartments title="UNIQUE" color="#a855f7">
+        <when kind="SWITCH" switch="uniques" value="INLINE,BOTH"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//UniqueConstraint"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <detail>
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+            </steps>
+          </query>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        </detail>
+        <links>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+          </steps>
+        </links>
+      </compartments>
+      <compartments title="CHECK" color="#ec4899">
+        <when kind="SWITCH" switch="checks" value="INLINE,BOTH"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//CheckConstraint"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <detail>
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Constraint/body"/>
+            </steps>
+          </query>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+        </detail>
+        <links>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Constraint/constrainedElement"/>
+          </steps>
+        </links>
+      </compartments>
+      <compartments title="TRIGGERS" color="#22c55e">
+        <when kind="SWITCH" switch="triggers" value="INLINE,BOTH"/>
+        <rowsFrom>
+          <steps inverse="true">
+            <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/table"/>
+          </steps>
+        </rowsFrom>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <detail upperCase="true">
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/conditionTiming"/>
+          </parts>
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/eventManipulation"/>
+          </parts>
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/actionOrientation"/>
+          </parts>
+        </detail>
+      </compartments>
+      <compartments title="DEFAULTS" color="#94a3b8">
+        <when kind="SWITCH" switch="defaults"/>
+        <rowsFrom>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+            <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Column"/>
+          </steps>
+        </rowsFrom>
+        <rowWhen kind="SET">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+        </rowWhen>
+        <label>
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+            </steps>
+          </query>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+        </label>
+        <detailFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      </compartments>
+    </children>
+    <children name="ViewNode" stereotype="View" icon="◫">
+      <style href="#viewStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//View"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <compartments title="COLUMNS">
+        <when kind="SWITCH" switch="columns"/>
+        <rowsFrom>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+            <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Column"/>
+          </steps>
+        </rowsFrom>
+        <rowWhen kind="OR">
+          <operands kind="NOT">
+            <operands kind="SWITCH" switch="onlyKeyColumns"/>
+          </operands>
+          <operands kind="EXISTS">
+            <query>
+              <steps inverse="true">
+                <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+                <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//PrimaryKey"/>
+              </steps>
+            </query>
+          </operands>
+          <operands kind="EXISTS">
+            <query>
+              <steps inverse="true">
+                <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/feature"/>
+                <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//ForeignKey"/>
+              </steps>
+            </query>
+          </operands>
+        </rowWhen>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <detail>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+          <when kind="SWITCH" switch="columnTypes"/>
+        </detail>
+        <icons kind="PRIMARY_KEY">
+          <when kind="AND">
+            <operands kind="SWITCH" switch="pkIcons"/>
+            <operands kind="EXISTS">
+              <query>
+                <steps inverse="true">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+                  <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//PrimaryKey"/>
+                </steps>
+              </query>
+            </operands>
+          </when>
+        </icons>
+        <icons kind="FOREIGN_KEY">
+          <when kind="AND">
+            <operands kind="SWITCH" switch="fkIcons"/>
+            <operands kind="EXISTS">
+              <query>
+                <steps inverse="true">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/feature"/>
+                  <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//ForeignKey"/>
+                </steps>
+              </query>
+            </operands>
+          </when>
+        </icons>
+        <badges icon="N" color="#0891b2">
+          <when kind="AND">
+            <operands kind="SWITCH" switch="nullableMarker"/>
+            <operands kind="NOT">
+              <operands kind="EQUALS" value="columnNullable">
+                <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Column/isNullable"/>
+              </operands>
+            </operands>
+          </when>
+        </badges>
+        <badges icon="D" color="#64748b">
+          <when kind="AND">
+            <operands kind="SWITCH" switch="defaultMarker"/>
+            <operands kind="SET">
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+            </operands>
+          </when>
+        </badges>
+      </compartments>
+    </children>
+    <children name="ProceduresGroup" group="true" groupLabel="PROCEDURES">
+      <when kind="SWITCH" switch="procedures"/>
+      <children name="ProcedureNode" stereotype="Procedure" icon="ƒ">
+        <style href="#procedureStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Procedure"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <when kind="NOT">
+          <operands kind="EQUALS" value="function">
+            <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Procedure/type"/>
+          </operands>
+        </when>
+        <compartments title="PARAMETERS">
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+          <label>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+              <literalMap literal="pdk_in" text="→"/>
+              <literalMap literal="pdk_out" text="←"/>
+              <literalMap literal="pdk_inout" text="↔"/>
+              <literalMap literal="pdk_return" text="⏎"/>
+            </parts>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+            </parts>
+          </label>
+          <detail>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+            </parts>
+            <parts prefix="= ">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/defaultValue"/>
+                </steps>
+              </query>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+            </parts>
+          </detail>
+        </compartments>
+      </children>
+    </children>
+    <children name="FunctionsGroup" group="true" groupLabel="FUNCTIONS">
+      <when kind="SWITCH" switch="procedures"/>
+      <children name="FunctionNode" stereotype="Function" icon="ƒ">
+        <style href="#functionStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Procedure"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <when kind="EQUALS" value="function">
+          <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Procedure/type"/>
+        </when>
+        <compartments title="PARAMETERS">
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+          <label>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+              <literalMap literal="pdk_in" text="→"/>
+              <literalMap literal="pdk_out" text="←"/>
+              <literalMap literal="pdk_inout" text="↔"/>
+              <literalMap literal="pdk_return" text="⏎"/>
+            </parts>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+            </parts>
+          </label>
+          <detail>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+            </parts>
+            <parts prefix="= ">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/defaultValue"/>
+                </steps>
+              </query>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+            </parts>
+          </detail>
+        </compartments>
+      </children>
+    </children>
+    <children name="TypesGroup" group="true" groupLabel="DATENTYPEN">
+      <when kind="SWITCH" switch="dataTypes"/>
+      <children name="SQLSimpleTypeNode" stereotype="SQLSimpleType" icon="◈">
+        <style href="#typeStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//SQLSimpleType"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      </children>
+      <children name="SQLDistinctTypeNode" stereotype="SQLDistinctType" icon="◈">
+        <style href="#typeStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//SQLDistinctType"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      </children>
+      <children name="SQLStructuredTypeNode" stereotype="SQLStructuredType" icon="◈">
+        <style href="#typeStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//SQLStructuredType"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      </children>
+    </children>
+    <children name="IndexNode" stereotype="Index" icon="⇅">
+      <style href="#indexStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="indexes" value="OBJECT,BOTH"/>
+      <compartments title="COLUMNS" color="#eab308">
+        <from href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index/indexedFeature"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//IndexedFeature/feature"/>
+      </compartments>
+      <compartments title="FEATURES" color="#94a3b8">
+        <rowsFrom/>
+        <label text="unique"/>
+        <detail>
+          <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index/isUnique"/>
+        </detail>
+      </compartments>
+    </children>
+    <children name="TriggerNode" stereotype="Trigger" icon="⚡">
+      <style href="#triggerStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="triggers" value="OBJECT,BOTH"/>
+      <compartments title="FEATURES" color="#22c55e">
+        <rowsFrom/>
+        <label text="timing · event"/>
+        <detail upperCase="true">
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/conditionTiming"/>
+          </parts>
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/eventManipulation"/>
+          </parts>
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/actionOrientation"/>
+          </parts>
+        </detail>
+      </compartments>
+    </children>
+    <children name="UniqueNode" stereotype="Unique" icon="◇">
+      <style href="#uniqueStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//UniqueConstraint"/>
+      <rowsFrom>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        </steps>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        </steps>
+      </rowsFrom>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="uniques" value="OBJECT,BOTH"/>
+      <compartments title="COLUMNS" color="#a855f7">
+        <from href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      </compartments>
+    </children>
+    <children name="CheckNode" stereotype="Check" icon="✓">
+      <style href="#checkStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//CheckConstraint"/>
+      <rowsFrom>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        </steps>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        </steps>
+      </rowsFrom>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="checks" value="OBJECT,BOTH"/>
+      <compartments title="CONDITION" color="#ec4899">
+        <rowsFrom/>
+        <label>
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Constraint/body"/>
+            </steps>
+          </query>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+        </label>
+      </compartments>
+    </children>
+  </nodes>
+  <nodes name="CatalogNode" stereotype="Catalog" icon="▤">
+    <style href="#catalogStyle"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Catalog"/>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+    <layoutOptions key="elk.direction" value="RIGHT"/>
+    <layoutOptions key="elk.spacing.nodeNode" value="40"/>
+    <children name="CatalogSchemaNode" stereotype="Schema" icon="▣">
+      <style href="#schemaStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Schema"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+      <layoutOptions key="elk.direction" value="RIGHT"/>
+      <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+      <layoutOptions key="elk.separateConnectedComponents" value="true"/>
+      <layoutOptions key="elk.aspectRatio" value="2.5"/>
+      <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+      <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="60"/>
+      <layoutOptions key="elk.spacing.nodeNode" value="25"/>
+      <layoutOptions key="elk.spacing.edgeNode" value="20"/>
+      <children name="TableNode" stereotype="Table" icon="▦">
+        <style href="#tableStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Table"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <headerBadges icon="TMP" color="#3b82f6">
+          <when kind="EQUALS" value="true">
+            <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Table/isTemporary"/>
+          </when>
+        </headerBadges>
+        <headerBadges icon="SYS" color="#eab308">
+          <when kind="EQUALS" value="true">
+            <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Table/isSystem"/>
+          </when>
+        </headerBadges>
+        <compartments title="COLUMNS">
+          <when kind="SWITCH" switch="columns"/>
+          <rowsFrom>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+              <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Column"/>
+            </steps>
+          </rowsFrom>
+          <rowWhen kind="OR">
+            <operands kind="NOT">
+              <operands kind="SWITCH" switch="onlyKeyColumns"/>
+            </operands>
+            <operands kind="EXISTS">
+              <query>
+                <steps inverse="true">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+                  <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//PrimaryKey"/>
+                </steps>
+              </query>
+            </operands>
+            <operands kind="EXISTS">
+              <query>
+                <steps inverse="true">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/feature"/>
+                  <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//ForeignKey"/>
+                </steps>
+              </query>
+            </operands>
+          </rowWhen>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <detail>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+            <when kind="SWITCH" switch="columnTypes"/>
+          </detail>
+          <icons kind="PRIMARY_KEY">
+            <when kind="AND">
+              <operands kind="SWITCH" switch="pkIcons"/>
+              <operands kind="EXISTS">
+                <query>
+                  <steps inverse="true">
+                    <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+                    <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//PrimaryKey"/>
+                  </steps>
+                </query>
+              </operands>
+            </when>
+          </icons>
+          <icons kind="FOREIGN_KEY">
+            <when kind="AND">
+              <operands kind="SWITCH" switch="fkIcons"/>
+              <operands kind="EXISTS">
+                <query>
+                  <steps inverse="true">
+                    <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/feature"/>
+                    <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//ForeignKey"/>
+                  </steps>
+                </query>
+              </operands>
+            </when>
+          </icons>
+          <badges icon="N" color="#0891b2">
+            <when kind="AND">
+              <operands kind="SWITCH" switch="nullableMarker"/>
+              <operands kind="NOT">
+                <operands kind="EQUALS" value="columnNullable">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Column/isNullable"/>
+                </operands>
+              </operands>
+            </when>
+          </badges>
+          <badges icon="D" color="#64748b">
+            <when kind="AND">
+              <operands kind="SWITCH" switch="defaultMarker"/>
+              <operands kind="SET">
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+              </operands>
+            </when>
+          </badges>
+        </compartments>
+        <compartments title="INDEXES" color="#eab308">
+          <when kind="SWITCH" switch="indexes" value="INLINE,BOTH"/>
+          <rowsFrom>
+            <steps inverse="true">
+              <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index/spannedClass"/>
+            </steps>
+          </rowsFrom>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <detail>
+            <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index/isUnique"/>
+            <literalMap literal="true" text="unique"/>
+            <literalMap literal="false" text=""/>
+          </detail>
+          <links>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index/indexedFeature"/>
+            </steps>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//IndexedFeature/feature"/>
+            </steps>
+          </links>
+        </compartments>
+        <compartments title="UNIQUE" color="#a855f7">
+          <when kind="SWITCH" switch="uniques" value="INLINE,BOTH"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//UniqueConstraint"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <detail>
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+              </steps>
+            </query>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          </detail>
+          <links>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+            </steps>
+          </links>
+        </compartments>
+        <compartments title="CHECK" color="#ec4899">
+          <when kind="SWITCH" switch="checks" value="INLINE,BOTH"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//CheckConstraint"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <detail>
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Constraint/body"/>
+              </steps>
+            </query>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+          </detail>
+          <links>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Constraint/constrainedElement"/>
+            </steps>
+          </links>
+        </compartments>
+        <compartments title="TRIGGERS" color="#22c55e">
+          <when kind="SWITCH" switch="triggers" value="INLINE,BOTH"/>
+          <rowsFrom>
+            <steps inverse="true">
+              <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/table"/>
+            </steps>
+          </rowsFrom>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <detail upperCase="true">
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/conditionTiming"/>
+            </parts>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/eventManipulation"/>
+            </parts>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/actionOrientation"/>
+            </parts>
+          </detail>
+        </compartments>
+        <compartments title="DEFAULTS" color="#94a3b8">
+          <when kind="SWITCH" switch="defaults"/>
+          <rowsFrom>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+              <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Column"/>
+            </steps>
+          </rowsFrom>
+          <rowWhen kind="SET">
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+          </rowWhen>
+          <label>
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+              </steps>
+            </query>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+          </label>
+          <detailFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        </compartments>
+      </children>
+      <children name="ViewNode" stereotype="View" icon="◫">
+        <style href="#viewStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//View"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <compartments title="COLUMNS">
+          <when kind="SWITCH" switch="columns"/>
+          <rowsFrom>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+              <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Column"/>
+            </steps>
+          </rowsFrom>
+          <rowWhen kind="OR">
+            <operands kind="NOT">
+              <operands kind="SWITCH" switch="onlyKeyColumns"/>
+            </operands>
+            <operands kind="EXISTS">
+              <query>
+                <steps inverse="true">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+                  <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//PrimaryKey"/>
+                </steps>
+              </query>
+            </operands>
+            <operands kind="EXISTS">
+              <query>
+                <steps inverse="true">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/feature"/>
+                  <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//ForeignKey"/>
+                </steps>
+              </query>
+            </operands>
+          </rowWhen>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <detail>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+            <when kind="SWITCH" switch="columnTypes"/>
+          </detail>
+          <icons kind="PRIMARY_KEY">
+            <when kind="AND">
+              <operands kind="SWITCH" switch="pkIcons"/>
+              <operands kind="EXISTS">
+                <query>
+                  <steps inverse="true">
+                    <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+                    <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//PrimaryKey"/>
+                  </steps>
+                </query>
+              </operands>
+            </when>
+          </icons>
+          <icons kind="FOREIGN_KEY">
+            <when kind="AND">
+              <operands kind="SWITCH" switch="fkIcons"/>
+              <operands kind="EXISTS">
+                <query>
+                  <steps inverse="true">
+                    <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/feature"/>
+                    <filterClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//ForeignKey"/>
+                  </steps>
+                </query>
+              </operands>
+            </when>
+          </icons>
+          <badges icon="N" color="#0891b2">
+            <when kind="AND">
+              <operands kind="SWITCH" switch="nullableMarker"/>
+              <operands kind="NOT">
+                <operands kind="EQUALS" value="columnNullable">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Column/isNullable"/>
+                </operands>
+              </operands>
+            </when>
+          </badges>
+          <badges icon="D" color="#64748b">
+            <when kind="AND">
+              <operands kind="SWITCH" switch="defaultMarker"/>
+              <operands kind="SET">
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+              </operands>
+            </when>
+          </badges>
+        </compartments>
+      </children>
+      <children name="ProceduresGroup" group="true" groupLabel="PROCEDURES">
+        <when kind="SWITCH" switch="procedures"/>
+        <children name="ProcedureNode" stereotype="Procedure" icon="ƒ">
+          <style href="#procedureStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Procedure"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <when kind="NOT">
+            <operands kind="EQUALS" value="function">
+              <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Procedure/type"/>
+            </operands>
+          </when>
+          <compartments title="PARAMETERS">
+            <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+            <label>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+                <literalMap literal="pdk_in" text="→"/>
+                <literalMap literal="pdk_out" text="←"/>
+                <literalMap literal="pdk_inout" text="↔"/>
+                <literalMap literal="pdk_return" text="⏎"/>
+              </parts>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+              </parts>
+            </label>
+            <detail>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+              </parts>
+              <parts prefix="= ">
+                <query>
+                  <steps>
+                    <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/defaultValue"/>
+                  </steps>
+                </query>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+              </parts>
+            </detail>
+          </compartments>
+        </children>
+      </children>
+      <children name="FunctionsGroup" group="true" groupLabel="FUNCTIONS">
+        <when kind="SWITCH" switch="procedures"/>
+        <children name="FunctionNode" stereotype="Function" icon="ƒ">
+          <style href="#functionStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Procedure"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <when kind="EQUALS" value="function">
+            <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Procedure/type"/>
+          </when>
+          <compartments title="PARAMETERS">
+            <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+            <label>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+                <literalMap literal="pdk_in" text="→"/>
+                <literalMap literal="pdk_out" text="←"/>
+                <literalMap literal="pdk_inout" text="↔"/>
+                <literalMap literal="pdk_return" text="⏎"/>
+              </parts>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+              </parts>
+            </label>
+            <detail>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+              </parts>
+              <parts prefix="= ">
+                <query>
+                  <steps>
+                    <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/defaultValue"/>
+                  </steps>
+                </query>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+              </parts>
+            </detail>
+          </compartments>
+        </children>
+      </children>
+      <children name="TypesGroup" group="true" groupLabel="DATENTYPEN">
+        <when kind="SWITCH" switch="dataTypes"/>
+        <children name="SQLSimpleTypeNode" stereotype="SQLSimpleType" icon="◈">
+          <style href="#typeStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//SQLSimpleType"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        </children>
+        <children name="SQLDistinctTypeNode" stereotype="SQLDistinctType" icon="◈">
+          <style href="#typeStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//SQLDistinctType"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        </children>
+        <children name="SQLStructuredTypeNode" stereotype="SQLStructuredType" icon="◈">
+          <style href="#typeStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//SQLStructuredType"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        </children>
+      </children>
+      <children name="IndexNode" stereotype="Index" icon="⇅">
+        <style href="#indexStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <when kind="SWITCH" switch="indexes" value="OBJECT,BOTH"/>
+        <compartments title="COLUMNS" color="#eab308">
+          <from href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index/indexedFeature"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//IndexedFeature/feature"/>
+        </compartments>
+        <compartments title="FEATURES" color="#94a3b8">
+          <rowsFrom/>
+          <label text="unique"/>
+          <detail>
+            <feature href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index/isUnique"/>
+          </detail>
+        </compartments>
+      </children>
+      <children name="TriggerNode" stereotype="Trigger" icon="⚡">
+        <style href="#triggerStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <when kind="SWITCH" switch="triggers" value="OBJECT,BOTH"/>
+        <compartments title="FEATURES" color="#22c55e">
+          <rowsFrom/>
+          <label text="timing · event"/>
+          <detail upperCase="true">
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/conditionTiming"/>
+            </parts>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/eventManipulation"/>
+            </parts>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/actionOrientation"/>
+            </parts>
+          </detail>
+        </compartments>
+      </children>
+      <children name="UniqueNode" stereotype="Unique" icon="◇">
+        <style href="#uniqueStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//UniqueConstraint"/>
+        <rowsFrom>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          </steps>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          </steps>
+        </rowsFrom>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <when kind="SWITCH" switch="uniques" value="OBJECT,BOTH"/>
+        <compartments title="COLUMNS" color="#a855f7">
+          <from href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        </compartments>
+      </children>
+      <children name="CheckNode" stereotype="Check" icon="✓">
+        <style href="#checkStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//CheckConstraint"/>
+        <rowsFrom>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          </steps>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          </steps>
+        </rowsFrom>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <when kind="SWITCH" switch="checks" value="OBJECT,BOTH"/>
+        <compartments title="CONDITION" color="#ec4899">
+          <rowsFrom/>
+          <label>
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Constraint/body"/>
+              </steps>
+            </query>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+          </label>
+        </compartments>
+      </children>
+    </children>
+  </nodes>
+
+  <edges name="ForeignKey">
+    <when kind="SWITCH" switch="fkEdges"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//ForeignKey"/>
+    <sourcePath href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/feature"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/uniqueKey"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+    <sourceCardinalityValue text="0..*">
+      <when kind="SWITCH" switch="cardinalities"/>
+    </sourceCardinalityValue>
+    <targetCardinalityValue text="1">
+      <when kind="SWITCH" switch="cardinalities"/>
+    </targetCardinalityValue>
+  </edges>
+  <edges name="IndexColumns" kind="DEPENDENCY" lineStyle="DASHED" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="indexes" value="OBJECT,BOTH"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index/indexedFeature"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//IndexedFeature/feature"/>
+  </edges>
+  <edges name="TriggerTable" kind="DEPENDENCY" lineStyle="DASHED" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="triggers" value="OBJECT,BOTH"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/table"/>
+  </edges>
+  <edges name="UniqueColumns" kind="DEPENDENCY" lineStyle="DASHED" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="uniques" value="OBJECT,BOTH"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//UniqueConstraint"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+  </edges>
+  <edges name="CheckColumns" kind="DEPENDENCY" lineStyle="DASHED" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="checks" value="OBJECT,BOTH"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//CheckConstraint"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Constraint/constrainedElement"/>
+  </edges>
+  <edges name="ForeignKeyInCatalog">
+    <when kind="SWITCH" switch="fkEdges"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//ForeignKey"/>
+    <sourcePath href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/feature"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//KeyRelationship/uniqueKey"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+    <sourceCardinalityValue text="0..*">
+      <when kind="SWITCH" switch="cardinalities"/>
+    </sourceCardinalityValue>
+    <targetCardinalityValue text="1">
+      <when kind="SWITCH" switch="cardinalities"/>
+    </targetCardinalityValue>
+  </edges>
+  <edges name="IndexColumnsInCatalog" kind="DEPENDENCY" lineStyle="DASHED" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="indexes" value="OBJECT,BOTH"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//Index/indexedFeature"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//IndexedFeature/feature"/>
+  </edges>
+  <edges name="TriggerTableInCatalog" kind="DEPENDENCY" lineStyle="DASHED" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="triggers" value="OBJECT,BOTH"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/resource/relational#//Trigger/table"/>
+  </edges>
+  <edges name="UniqueColumnsInCatalog" kind="DEPENDENCY" lineStyle="DASHED" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="uniques" value="OBJECT,BOTH"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//UniqueConstraint"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/foundation/keysindexes#//UniqueKey/feature"/>
+  </edges>
+  <edges name="CheckColumnsInCatalog" kind="DEPENDENCY" lineStyle="DASHED" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="checks" value="OBJECT,BOTH"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/resource/relational#//CheckConstraint"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Constraint/constrainedElement"/>
+  </edges>
+</diagrammodel:DiagramModel>

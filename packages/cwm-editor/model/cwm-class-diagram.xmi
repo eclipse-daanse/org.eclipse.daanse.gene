@@ -1,0 +1,1600 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Class diagram of a CWM objectmodel package (PH-10, FR-4.2), for the generic
+  diagram interpreter of ui-diagram-preview - modelled on the class diagram of
+  the daanse project (ClassDiagramFeatures; variants minimal, only
+  associations, full).
+
+  Root is a Package, drawn as the container; nested packages are containers
+  too (three levels). Classes show attributes (visibility, type,
+  multiplicity, initial value, static/frozen), the association roles they
+  take part in and operations with parameters; interfaces, enumerations and
+  data types sit directly in their package. Associations are edges between
+  the classes their two ends type, with role names, cardinalities and
+  aggregation diamonds - or, switched, nodes with their ends.
+-->
+<diagrammodel:DiagramModel xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:diagrammodel="http://diagrammodel/1.0"
+    name="CWM Class Diagram">
+  <targetClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+  <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+  <layoutOptions key="elk.direction" value="DOWN"/>
+  <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+  <layoutOptions key="elk.padding" value="[top=20,left=20,bottom=20,right=20]"/>
+
+  <switches name="attributes" label="Attribute" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="operations" label="Operationen" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="literals" label="Literale" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="attributeTypes" label="Typen" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="multiplicities" label="Multiplizitäten" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="initialValues" label="Initialwerte" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="visibilityMarkers" label="Sichtbarkeit" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="scopeMarkers" label="Static-Marker" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="changeabilityMarkers" label="Frozen-Marker" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="enumerations" label="Enumerationen" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="dataTypes" label="Datentypen" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="interfaces" label="Interfaces" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="generalizations" label="Vererbung" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="associations" label="Assoziationen" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="associationCompartment" label="Assoziationen in der Klasse" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="associationEndLabels" label="Rollennamen" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="cardinalities" label="Kardinalitäten" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="aggregationDecorations" label="Aggregation/Komposition" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="navigabilityArrows" label="Navigierbarkeit" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="dependencies" label="Abhängigkeiten" kind="BOOLEAN" defaultValue="false"/>
+  <switches name="associationNodes" label="Assoziationen als Knoten" kind="BOOLEAN" defaultValue="false"/>
+
+  <presets name="full" label="Voll">
+    <settings switch="attributes" value="true"/>
+    <settings switch="operations" value="true"/>
+    <settings switch="literals" value="true"/>
+    <settings switch="attributeTypes" value="true"/>
+    <settings switch="multiplicities" value="true"/>
+    <settings switch="initialValues" value="true"/>
+    <settings switch="visibilityMarkers" value="true"/>
+    <settings switch="scopeMarkers" value="true"/>
+    <settings switch="changeabilityMarkers" value="true"/>
+    <settings switch="enumerations" value="true"/>
+    <settings switch="dataTypes" value="true"/>
+    <settings switch="interfaces" value="true"/>
+    <settings switch="generalizations" value="true"/>
+    <settings switch="associations" value="true"/>
+    <settings switch="associationCompartment" value="true"/>
+    <settings switch="associationEndLabels" value="true"/>
+    <settings switch="cardinalities" value="true"/>
+    <settings switch="aggregationDecorations" value="true"/>
+    <settings switch="navigabilityArrows" value="false"/>
+    <settings switch="dependencies" value="true"/>
+    <settings switch="associationNodes" value="false"/>
+  </presets>
+  <presets name="minimal" label="Minimal">
+    <settings switch="attributes" value="false"/>
+    <settings switch="operations" value="false"/>
+    <settings switch="literals" value="false"/>
+    <settings switch="attributeTypes" value="false"/>
+    <settings switch="multiplicities" value="false"/>
+    <settings switch="initialValues" value="false"/>
+    <settings switch="visibilityMarkers" value="false"/>
+    <settings switch="scopeMarkers" value="false"/>
+    <settings switch="changeabilityMarkers" value="false"/>
+    <settings switch="enumerations" value="false"/>
+    <settings switch="dataTypes" value="false"/>
+    <settings switch="interfaces" value="false"/>
+    <settings switch="generalizations" value="true"/>
+    <settings switch="associations" value="true"/>
+    <settings switch="associationCompartment" value="false"/>
+    <settings switch="associationEndLabels" value="false"/>
+    <settings switch="cardinalities" value="false"/>
+    <settings switch="aggregationDecorations" value="false"/>
+    <settings switch="navigabilityArrows" value="false"/>
+    <settings switch="dependencies" value="false"/>
+    <settings switch="associationNodes" value="false"/>
+  </presets>
+  <presets name="associations" label="Nur Assoziationen">
+    <settings switch="attributes" value="false"/>
+    <settings switch="operations" value="false"/>
+    <settings switch="literals" value="false"/>
+    <settings switch="attributeTypes" value="false"/>
+    <settings switch="multiplicities" value="false"/>
+    <settings switch="initialValues" value="false"/>
+    <settings switch="visibilityMarkers" value="false"/>
+    <settings switch="scopeMarkers" value="false"/>
+    <settings switch="changeabilityMarkers" value="false"/>
+    <settings switch="enumerations" value="true"/>
+    <settings switch="dataTypes" value="true"/>
+    <settings switch="interfaces" value="false"/>
+    <settings switch="generalizations" value="true"/>
+    <settings switch="associations" value="true"/>
+    <settings switch="associationCompartment" value="true"/>
+    <settings switch="associationEndLabels" value="true"/>
+    <settings switch="cardinalities" value="true"/>
+    <settings switch="aggregationDecorations" value="true"/>
+    <settings switch="navigabilityArrows" value="false"/>
+    <settings switch="dependencies" value="false"/>
+    <settings switch="associationNodes" value="false"/>
+  </presets>
+  <presets name="nodes" label="Assoziationen als Knoten">
+    <settings switch="attributes" value="true"/>
+    <settings switch="operations" value="true"/>
+    <settings switch="literals" value="true"/>
+    <settings switch="attributeTypes" value="true"/>
+    <settings switch="multiplicities" value="true"/>
+    <settings switch="initialValues" value="true"/>
+    <settings switch="visibilityMarkers" value="true"/>
+    <settings switch="scopeMarkers" value="true"/>
+    <settings switch="changeabilityMarkers" value="true"/>
+    <settings switch="enumerations" value="true"/>
+    <settings switch="dataTypes" value="true"/>
+    <settings switch="interfaces" value="true"/>
+    <settings switch="generalizations" value="true"/>
+    <settings switch="associations" value="true"/>
+    <settings switch="associationCompartment" value="true"/>
+    <settings switch="associationEndLabels" value="true"/>
+    <settings switch="cardinalities" value="true"/>
+    <settings switch="aggregationDecorations" value="true"/>
+    <settings switch="navigabilityArrows" value="false"/>
+    <settings switch="dependencies" value="true"/>
+    <settings switch="associationNodes" value="true"/>
+  </presets>
+
+  <styles xmi:id="packageStyle" name="package" headerColor="#334155"/>
+  <styles xmi:id="classStyle" name="class" headerColor="#1e40af"/>
+  <styles xmi:id="interfaceStyle" name="interface" headerColor="#0f766e"/>
+  <styles xmi:id="enumStyle" name="enum" headerColor="#7c3aed"/>
+  <styles xmi:id="datatypeStyle" name="datatype" headerColor="#166534"/>
+  <styles xmi:id="associationStyle" name="association" headerColor="#0e7490"/>
+
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+  </bindings>
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Class"/>
+    <root>
+      <steps ancestor="outermost">
+        <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+      </steps>
+    </root>
+    <focus>
+      <union/>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+          <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd"/>
+        </steps>
+        <steps siblings="true"/>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+        </steps>
+      </union>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/child"/>
+        </steps>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/parent"/>
+        </steps>
+      </union>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/parent"/>
+        </steps>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/child"/>
+        </steps>
+      </union>
+    </focus>
+  </bindings>
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Interface"/>
+    <root>
+      <steps ancestor="outermost">
+        <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+      </steps>
+    </root>
+    <focus>
+      <union/>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+          <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd"/>
+        </steps>
+        <steps siblings="true"/>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+        </steps>
+      </union>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/child"/>
+        </steps>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/parent"/>
+        </steps>
+      </union>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/parent"/>
+        </steps>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/child"/>
+        </steps>
+      </union>
+    </focus>
+  </bindings>
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Association"/>
+    <root>
+      <steps ancestor="outermost">
+        <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+      </steps>
+    </root>
+    <focus>
+      <union/>
+      <union>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+          <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd"/>
+        </steps>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+        </steps>
+      </union>
+    </focus>
+  </bindings>
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//DataType"/>
+    <root>
+      <steps ancestor="outermost">
+        <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+      </steps>
+    </root>
+    <focus>
+      <union/>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+        </steps>
+        <steps container="true"/>
+      </union>
+    </focus>
+  </bindings>
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/foundation/datatypes#//Enumeration"/>
+    <root>
+      <steps ancestor="outermost">
+        <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+      </steps>
+    </root>
+    <focus>
+      <union/>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+        </steps>
+        <steps container="true"/>
+      </union>
+    </focus>
+  </bindings>
+
+  <nodes name="PackageNode" stereotype="Package" icon="▣">
+    <style href="#packageStyle"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+    <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+    <layoutOptions key="elk.direction" value="DOWN"/>
+    <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+    <layoutOptions key="elk.separateConnectedComponents" value="true"/>
+    <layoutOptions key="elk.aspectRatio" value="2.5"/>
+    <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+    <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="60"/>
+    <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+    <layoutOptions key="elk.spacing.edgeNode" value="20"/>
+    <children name="ClassNode1" stereotype="Class" icon="◼">
+      <style href="#classStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Class"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <italicWhen kind="EQUALS" value="true">
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/isAbstract"/>
+      </italicWhen>
+      <headerBadges icon="abstract" color="#94a3b8">
+        <when kind="EQUALS" value="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/isAbstract"/>
+        </when>
+      </headerBadges>
+      <compartments title="ATTRIBUTES">
+        <when kind="SWITCH" switch="attributes"/>
+        <rowsFrom>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+            <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute"/>
+          </steps>
+        </rowsFrom>
+        <label separator="">
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
+            <literalMap literal="vk_public" text="+"/>
+            <literalMap literal="vk_protected" text="#"/>
+            <literalMap literal="vk_private" text="-"/>
+            <literalMap literal="vk_package" text="~"/>
+            <literalMap literal="vk_notapplicable" text=""/>
+            <when kind="SWITCH" switch="visibilityMarkers"/>
+          </parts>
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          </parts>
+          <parts prefix=" = ">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+              </steps>
+            </query>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+            <when kind="SWITCH" switch="initialValues"/>
+          </parts>
+        </label>
+        <detail>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+          <when kind="SWITCH" switch="attributeTypes"/>
+        </detail>
+        <multiplicityValue multiplicity="true">
+          <when kind="SWITCH" switch="multiplicities"/>
+        </multiplicityValue>
+        <badges icon="S" color="#0891b2">
+          <when kind="AND">
+            <operands kind="SWITCH" switch="scopeMarkers"/>
+            <operands kind="EQUALS" value="sk_classifier">
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Feature/ownerScope"/>
+            </operands>
+          </when>
+        </badges>
+        <badges icon="F" color="#dc2626">
+          <when kind="AND">
+            <operands kind="SWITCH" switch="changeabilityMarkers"/>
+            <operands kind="EQUALS" value="ck_frozen">
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/changeability"/>
+            </operands>
+          </when>
+        </badges>
+      </compartments>
+      <compartments title="ASSOCIATIONS" color="#22c55e">
+        <when kind="SWITCH" switch="associationCompartment"/>
+        <rowsFrom>
+          <steps inverse="true">
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+            <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd"/>
+          </steps>
+          <steps siblings="true"/>
+        </rowsFrom>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <detail>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+          <when kind="SWITCH" switch="attributeTypes"/>
+        </detail>
+        <multiplicityValue multiplicity="true">
+          <when kind="SWITCH" switch="multiplicities"/>
+        </multiplicityValue>
+      </compartments>
+      <compartments title="OPERATIONS" color="#eab308">
+        <when kind="SWITCH" switch="operations"/>
+        <rowsFrom>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+            <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Operation"/>
+          </steps>
+        </rowsFrom>
+        <label separator="">
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
+            <literalMap literal="vk_public" text="+"/>
+            <literalMap literal="vk_protected" text="#"/>
+            <literalMap literal="vk_private" text="-"/>
+            <literalMap literal="vk_package" text="~"/>
+            <literalMap literal="vk_notapplicable" text=""/>
+            <when kind="SWITCH" switch="visibilityMarkers"/>
+          </parts>
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          </parts>
+        </label>
+        <detail>
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+              <where kind="EQUALS" value="pdk_return">
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+              </where>
+            </steps>
+          </query>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+        </detail>
+        <subRowsFrom>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+            <where kind="NOT">
+              <operands kind="EQUALS" value="pdk_return">
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+              </operands>
+            </where>
+          </steps>
+        </subRowsFrom>
+        <subLabel>
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+            <literalMap literal="pdk_in" text="→"/>
+            <literalMap literal="pdk_out" text="←"/>
+            <literalMap literal="pdk_inout" text="↔"/>
+            <literalMap literal="pdk_return" text="⏎"/>
+          </parts>
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          </parts>
+        </subLabel>
+        <subDetail>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+        </subDetail>
+      </compartments>
+    </children>
+    <children name="InterfaceNode1" stereotype="Interface" icon="◉">
+      <style href="#interfaceStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Interface"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="interfaces"/>
+      <italicWhen kind="EQUALS" value="true">
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/isAbstract"/>
+      </italicWhen>
+      <headerBadges icon="abstract" color="#94a3b8">
+        <when kind="EQUALS" value="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/isAbstract"/>
+        </when>
+      </headerBadges>
+      <compartments title="ATTRIBUTES">
+        <when kind="SWITCH" switch="attributes"/>
+        <rowsFrom>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+            <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute"/>
+          </steps>
+        </rowsFrom>
+        <label separator="">
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
+            <literalMap literal="vk_public" text="+"/>
+            <literalMap literal="vk_protected" text="#"/>
+            <literalMap literal="vk_private" text="-"/>
+            <literalMap literal="vk_package" text="~"/>
+            <literalMap literal="vk_notapplicable" text=""/>
+            <when kind="SWITCH" switch="visibilityMarkers"/>
+          </parts>
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          </parts>
+          <parts prefix=" = ">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+              </steps>
+            </query>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+            <when kind="SWITCH" switch="initialValues"/>
+          </parts>
+        </label>
+        <detail>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+          <when kind="SWITCH" switch="attributeTypes"/>
+        </detail>
+        <multiplicityValue multiplicity="true">
+          <when kind="SWITCH" switch="multiplicities"/>
+        </multiplicityValue>
+        <badges icon="S" color="#0891b2">
+          <when kind="AND">
+            <operands kind="SWITCH" switch="scopeMarkers"/>
+            <operands kind="EQUALS" value="sk_classifier">
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Feature/ownerScope"/>
+            </operands>
+          </when>
+        </badges>
+        <badges icon="F" color="#dc2626">
+          <when kind="AND">
+            <operands kind="SWITCH" switch="changeabilityMarkers"/>
+            <operands kind="EQUALS" value="ck_frozen">
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/changeability"/>
+            </operands>
+          </when>
+        </badges>
+      </compartments>
+      <compartments title="OPERATIONS" color="#eab308">
+        <when kind="SWITCH" switch="operations"/>
+        <rowsFrom>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+            <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Operation"/>
+          </steps>
+        </rowsFrom>
+        <label separator="">
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
+            <literalMap literal="vk_public" text="+"/>
+            <literalMap literal="vk_protected" text="#"/>
+            <literalMap literal="vk_private" text="-"/>
+            <literalMap literal="vk_package" text="~"/>
+            <literalMap literal="vk_notapplicable" text=""/>
+            <when kind="SWITCH" switch="visibilityMarkers"/>
+          </parts>
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          </parts>
+        </label>
+        <detail>
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+              <where kind="EQUALS" value="pdk_return">
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+              </where>
+            </steps>
+          </query>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+        </detail>
+        <subRowsFrom>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+            <where kind="NOT">
+              <operands kind="EQUALS" value="pdk_return">
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+              </operands>
+            </where>
+          </steps>
+        </subRowsFrom>
+        <subLabel>
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+            <literalMap literal="pdk_in" text="→"/>
+            <literalMap literal="pdk_out" text="←"/>
+            <literalMap literal="pdk_inout" text="↔"/>
+            <literalMap literal="pdk_return" text="⏎"/>
+          </parts>
+          <parts>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          </parts>
+        </subLabel>
+        <subDetail>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+        </subDetail>
+      </compartments>
+    </children>
+    <children name="EnumerationNode1" stereotype="Enumeration" icon="☰">
+      <style href="#enumStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/foundation/datatypes#//Enumeration"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="enumerations"/>
+      <compartments title="LITERALS">
+        <when kind="SWITCH" switch="literals"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/foundation/datatypes#//Enumeration/literal"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      </compartments>
+    </children>
+    <children name="DataTypeNode1" stereotype="DataType" icon="◈">
+      <style href="#datatypeStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//DataType"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="dataTypes"/>
+    </children>
+    <children name="AssociationNode1" stereotype="Association" icon="◇">
+      <style href="#associationStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Association"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="associationNodes"/>
+      <compartments title="ENDS">
+        <rowsFrom>
+          <steps>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+            <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd"/>
+          </steps>
+        </rowsFrom>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <detail>
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+        </detail>
+        <multiplicityValue multiplicity="true"/>
+      </compartments>
+    </children>
+    <children name="PackageNode1" stereotype="Package" icon="▣">
+      <style href="#packageStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+      <layoutOptions key="elk.direction" value="DOWN"/>
+      <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+      <layoutOptions key="elk.separateConnectedComponents" value="true"/>
+      <layoutOptions key="elk.aspectRatio" value="2.5"/>
+      <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+      <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="60"/>
+      <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+      <layoutOptions key="elk.spacing.edgeNode" value="20"/>
+      <children name="ClassNode2" stereotype="Class" icon="◼">
+        <style href="#classStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Class"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <italicWhen kind="EQUALS" value="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/isAbstract"/>
+        </italicWhen>
+        <headerBadges icon="abstract" color="#94a3b8">
+          <when kind="EQUALS" value="true">
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/isAbstract"/>
+          </when>
+        </headerBadges>
+        <compartments title="ATTRIBUTES">
+          <when kind="SWITCH" switch="attributes"/>
+          <rowsFrom>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+              <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute"/>
+            </steps>
+          </rowsFrom>
+          <label separator="">
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
+              <literalMap literal="vk_public" text="+"/>
+              <literalMap literal="vk_protected" text="#"/>
+              <literalMap literal="vk_private" text="-"/>
+              <literalMap literal="vk_package" text="~"/>
+              <literalMap literal="vk_notapplicable" text=""/>
+              <when kind="SWITCH" switch="visibilityMarkers"/>
+            </parts>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+            </parts>
+            <parts prefix=" = ">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+                </steps>
+              </query>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+              <when kind="SWITCH" switch="initialValues"/>
+            </parts>
+          </label>
+          <detail>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+            <when kind="SWITCH" switch="attributeTypes"/>
+          </detail>
+          <multiplicityValue multiplicity="true">
+            <when kind="SWITCH" switch="multiplicities"/>
+          </multiplicityValue>
+          <badges icon="S" color="#0891b2">
+            <when kind="AND">
+              <operands kind="SWITCH" switch="scopeMarkers"/>
+              <operands kind="EQUALS" value="sk_classifier">
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Feature/ownerScope"/>
+              </operands>
+            </when>
+          </badges>
+          <badges icon="F" color="#dc2626">
+            <when kind="AND">
+              <operands kind="SWITCH" switch="changeabilityMarkers"/>
+              <operands kind="EQUALS" value="ck_frozen">
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/changeability"/>
+              </operands>
+            </when>
+          </badges>
+        </compartments>
+        <compartments title="ASSOCIATIONS" color="#22c55e">
+          <when kind="SWITCH" switch="associationCompartment"/>
+          <rowsFrom>
+            <steps inverse="true">
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+              <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd"/>
+            </steps>
+            <steps siblings="true"/>
+          </rowsFrom>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <detail>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+            <when kind="SWITCH" switch="attributeTypes"/>
+          </detail>
+          <multiplicityValue multiplicity="true">
+            <when kind="SWITCH" switch="multiplicities"/>
+          </multiplicityValue>
+        </compartments>
+        <compartments title="OPERATIONS" color="#eab308">
+          <when kind="SWITCH" switch="operations"/>
+          <rowsFrom>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+              <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Operation"/>
+            </steps>
+          </rowsFrom>
+          <label separator="">
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
+              <literalMap literal="vk_public" text="+"/>
+              <literalMap literal="vk_protected" text="#"/>
+              <literalMap literal="vk_private" text="-"/>
+              <literalMap literal="vk_package" text="~"/>
+              <literalMap literal="vk_notapplicable" text=""/>
+              <when kind="SWITCH" switch="visibilityMarkers"/>
+            </parts>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+            </parts>
+          </label>
+          <detail>
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+                <where kind="EQUALS" value="pdk_return">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+                </where>
+              </steps>
+            </query>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+          </detail>
+          <subRowsFrom>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+              <where kind="NOT">
+                <operands kind="EQUALS" value="pdk_return">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+                </operands>
+              </where>
+            </steps>
+          </subRowsFrom>
+          <subLabel>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+              <literalMap literal="pdk_in" text="→"/>
+              <literalMap literal="pdk_out" text="←"/>
+              <literalMap literal="pdk_inout" text="↔"/>
+              <literalMap literal="pdk_return" text="⏎"/>
+            </parts>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+            </parts>
+          </subLabel>
+          <subDetail>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+          </subDetail>
+        </compartments>
+      </children>
+      <children name="InterfaceNode2" stereotype="Interface" icon="◉">
+        <style href="#interfaceStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Interface"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <when kind="SWITCH" switch="interfaces"/>
+        <italicWhen kind="EQUALS" value="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/isAbstract"/>
+        </italicWhen>
+        <headerBadges icon="abstract" color="#94a3b8">
+          <when kind="EQUALS" value="true">
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/isAbstract"/>
+          </when>
+        </headerBadges>
+        <compartments title="ATTRIBUTES">
+          <when kind="SWITCH" switch="attributes"/>
+          <rowsFrom>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+              <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute"/>
+            </steps>
+          </rowsFrom>
+          <label separator="">
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
+              <literalMap literal="vk_public" text="+"/>
+              <literalMap literal="vk_protected" text="#"/>
+              <literalMap literal="vk_private" text="-"/>
+              <literalMap literal="vk_package" text="~"/>
+              <literalMap literal="vk_notapplicable" text=""/>
+              <when kind="SWITCH" switch="visibilityMarkers"/>
+            </parts>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+            </parts>
+            <parts prefix=" = ">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+                </steps>
+              </query>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+              <when kind="SWITCH" switch="initialValues"/>
+            </parts>
+          </label>
+          <detail>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+            <when kind="SWITCH" switch="attributeTypes"/>
+          </detail>
+          <multiplicityValue multiplicity="true">
+            <when kind="SWITCH" switch="multiplicities"/>
+          </multiplicityValue>
+          <badges icon="S" color="#0891b2">
+            <when kind="AND">
+              <operands kind="SWITCH" switch="scopeMarkers"/>
+              <operands kind="EQUALS" value="sk_classifier">
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Feature/ownerScope"/>
+              </operands>
+            </when>
+          </badges>
+          <badges icon="F" color="#dc2626">
+            <when kind="AND">
+              <operands kind="SWITCH" switch="changeabilityMarkers"/>
+              <operands kind="EQUALS" value="ck_frozen">
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/changeability"/>
+              </operands>
+            </when>
+          </badges>
+        </compartments>
+        <compartments title="OPERATIONS" color="#eab308">
+          <when kind="SWITCH" switch="operations"/>
+          <rowsFrom>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+              <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Operation"/>
+            </steps>
+          </rowsFrom>
+          <label separator="">
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
+              <literalMap literal="vk_public" text="+"/>
+              <literalMap literal="vk_protected" text="#"/>
+              <literalMap literal="vk_private" text="-"/>
+              <literalMap literal="vk_package" text="~"/>
+              <literalMap literal="vk_notapplicable" text=""/>
+              <when kind="SWITCH" switch="visibilityMarkers"/>
+            </parts>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+            </parts>
+          </label>
+          <detail>
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+                <where kind="EQUALS" value="pdk_return">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+                </where>
+              </steps>
+            </query>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+          </detail>
+          <subRowsFrom>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+              <where kind="NOT">
+                <operands kind="EQUALS" value="pdk_return">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+                </operands>
+              </where>
+            </steps>
+          </subRowsFrom>
+          <subLabel>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+              <literalMap literal="pdk_in" text="→"/>
+              <literalMap literal="pdk_out" text="←"/>
+              <literalMap literal="pdk_inout" text="↔"/>
+              <literalMap literal="pdk_return" text="⏎"/>
+            </parts>
+            <parts>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+            </parts>
+          </subLabel>
+          <subDetail>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+          </subDetail>
+        </compartments>
+      </children>
+      <children name="EnumerationNode2" stereotype="Enumeration" icon="☰">
+        <style href="#enumStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/foundation/datatypes#//Enumeration"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <when kind="SWITCH" switch="enumerations"/>
+        <compartments title="LITERALS">
+          <when kind="SWITCH" switch="literals"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/foundation/datatypes#//Enumeration/literal"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        </compartments>
+      </children>
+      <children name="DataTypeNode2" stereotype="DataType" icon="◈">
+        <style href="#datatypeStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//DataType"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <when kind="SWITCH" switch="dataTypes"/>
+      </children>
+      <children name="AssociationNode2" stereotype="Association" icon="◇">
+        <style href="#associationStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Association"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <when kind="SWITCH" switch="associationNodes"/>
+        <compartments title="ENDS">
+          <rowsFrom>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+              <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd"/>
+            </steps>
+          </rowsFrom>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <detail>
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+          </detail>
+          <multiplicityValue multiplicity="true"/>
+        </compartments>
+      </children>
+      <children name="PackageNode2" stereotype="Package" icon="▣">
+        <style href="#packageStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+        <layoutOptions key="elk.direction" value="DOWN"/>
+        <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+        <layoutOptions key="elk.separateConnectedComponents" value="true"/>
+        <layoutOptions key="elk.aspectRatio" value="2.5"/>
+        <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+        <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="60"/>
+        <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+        <layoutOptions key="elk.spacing.edgeNode" value="20"/>
+        <children name="ClassNode3" stereotype="Class" icon="◼">
+          <style href="#classStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Class"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <italicWhen kind="EQUALS" value="true">
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/isAbstract"/>
+          </italicWhen>
+          <headerBadges icon="abstract" color="#94a3b8">
+            <when kind="EQUALS" value="true">
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/isAbstract"/>
+            </when>
+          </headerBadges>
+          <compartments title="ATTRIBUTES">
+            <when kind="SWITCH" switch="attributes"/>
+            <rowsFrom>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+                <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute"/>
+              </steps>
+            </rowsFrom>
+            <label separator="">
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
+                <literalMap literal="vk_public" text="+"/>
+                <literalMap literal="vk_protected" text="#"/>
+                <literalMap literal="vk_private" text="-"/>
+                <literalMap literal="vk_package" text="~"/>
+                <literalMap literal="vk_notapplicable" text=""/>
+                <when kind="SWITCH" switch="visibilityMarkers"/>
+              </parts>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+              </parts>
+              <parts prefix=" = ">
+                <query>
+                  <steps>
+                    <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+                  </steps>
+                </query>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+                <when kind="SWITCH" switch="initialValues"/>
+              </parts>
+            </label>
+            <detail>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+              <when kind="SWITCH" switch="attributeTypes"/>
+            </detail>
+            <multiplicityValue multiplicity="true">
+              <when kind="SWITCH" switch="multiplicities"/>
+            </multiplicityValue>
+            <badges icon="S" color="#0891b2">
+              <when kind="AND">
+                <operands kind="SWITCH" switch="scopeMarkers"/>
+                <operands kind="EQUALS" value="sk_classifier">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Feature/ownerScope"/>
+                </operands>
+              </when>
+            </badges>
+            <badges icon="F" color="#dc2626">
+              <when kind="AND">
+                <operands kind="SWITCH" switch="changeabilityMarkers"/>
+                <operands kind="EQUALS" value="ck_frozen">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/changeability"/>
+                </operands>
+              </when>
+            </badges>
+          </compartments>
+          <compartments title="ASSOCIATIONS" color="#22c55e">
+            <when kind="SWITCH" switch="associationCompartment"/>
+            <rowsFrom>
+              <steps inverse="true">
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+                <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd"/>
+              </steps>
+              <steps siblings="true"/>
+            </rowsFrom>
+            <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+            <detail>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+              <when kind="SWITCH" switch="attributeTypes"/>
+            </detail>
+            <multiplicityValue multiplicity="true">
+              <when kind="SWITCH" switch="multiplicities"/>
+            </multiplicityValue>
+          </compartments>
+          <compartments title="OPERATIONS" color="#eab308">
+            <when kind="SWITCH" switch="operations"/>
+            <rowsFrom>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+                <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Operation"/>
+              </steps>
+            </rowsFrom>
+            <label separator="">
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
+                <literalMap literal="vk_public" text="+"/>
+                <literalMap literal="vk_protected" text="#"/>
+                <literalMap literal="vk_private" text="-"/>
+                <literalMap literal="vk_package" text="~"/>
+                <literalMap literal="vk_notapplicable" text=""/>
+                <when kind="SWITCH" switch="visibilityMarkers"/>
+              </parts>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+              </parts>
+            </label>
+            <detail>
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+                  <where kind="EQUALS" value="pdk_return">
+                    <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+                  </where>
+                </steps>
+              </query>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+            </detail>
+            <subRowsFrom>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+                <where kind="NOT">
+                  <operands kind="EQUALS" value="pdk_return">
+                    <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+                  </operands>
+                </where>
+              </steps>
+            </subRowsFrom>
+            <subLabel>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+                <literalMap literal="pdk_in" text="→"/>
+                <literalMap literal="pdk_out" text="←"/>
+                <literalMap literal="pdk_inout" text="↔"/>
+                <literalMap literal="pdk_return" text="⏎"/>
+              </parts>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+              </parts>
+            </subLabel>
+            <subDetail>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+            </subDetail>
+          </compartments>
+        </children>
+        <children name="InterfaceNode3" stereotype="Interface" icon="◉">
+          <style href="#interfaceStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Interface"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <when kind="SWITCH" switch="interfaces"/>
+          <italicWhen kind="EQUALS" value="true">
+            <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/isAbstract"/>
+          </italicWhen>
+          <headerBadges icon="abstract" color="#94a3b8">
+            <when kind="EQUALS" value="true">
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/isAbstract"/>
+            </when>
+          </headerBadges>
+          <compartments title="ATTRIBUTES">
+            <when kind="SWITCH" switch="attributes"/>
+            <rowsFrom>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+                <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute"/>
+              </steps>
+            </rowsFrom>
+            <label separator="">
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
+                <literalMap literal="vk_public" text="+"/>
+                <literalMap literal="vk_protected" text="#"/>
+                <literalMap literal="vk_private" text="-"/>
+                <literalMap literal="vk_package" text="~"/>
+                <literalMap literal="vk_notapplicable" text=""/>
+                <when kind="SWITCH" switch="visibilityMarkers"/>
+              </parts>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+              </parts>
+              <parts prefix=" = ">
+                <query>
+                  <steps>
+                    <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Attribute/initialValue"/>
+                  </steps>
+                </query>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Expression/body"/>
+                <when kind="SWITCH" switch="initialValues"/>
+              </parts>
+            </label>
+            <detail>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+              <when kind="SWITCH" switch="attributeTypes"/>
+            </detail>
+            <multiplicityValue multiplicity="true">
+              <when kind="SWITCH" switch="multiplicities"/>
+            </multiplicityValue>
+            <badges icon="S" color="#0891b2">
+              <when kind="AND">
+                <operands kind="SWITCH" switch="scopeMarkers"/>
+                <operands kind="EQUALS" value="sk_classifier">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Feature/ownerScope"/>
+                </operands>
+              </when>
+            </badges>
+            <badges icon="F" color="#dc2626">
+              <when kind="AND">
+                <operands kind="SWITCH" switch="changeabilityMarkers"/>
+                <operands kind="EQUALS" value="ck_frozen">
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/changeability"/>
+                </operands>
+              </when>
+            </badges>
+          </compartments>
+          <compartments title="OPERATIONS" color="#eab308">
+            <when kind="SWITCH" switch="operations"/>
+            <rowsFrom>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+                <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Operation"/>
+              </steps>
+            </rowsFrom>
+            <label separator="">
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/visibility"/>
+                <literalMap literal="vk_public" text="+"/>
+                <literalMap literal="vk_protected" text="#"/>
+                <literalMap literal="vk_private" text="-"/>
+                <literalMap literal="vk_package" text="~"/>
+                <literalMap literal="vk_notapplicable" text=""/>
+                <when kind="SWITCH" switch="visibilityMarkers"/>
+              </parts>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+              </parts>
+            </label>
+            <detail>
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+                  <where kind="EQUALS" value="pdk_return">
+                    <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+                  </where>
+                </steps>
+              </query>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+            </detail>
+            <subRowsFrom>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//BehavioralFeature/parameter"/>
+                <where kind="NOT">
+                  <operands kind="EQUALS" value="pdk_return">
+                    <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+                  </operands>
+                </where>
+              </steps>
+            </subRowsFrom>
+            <subLabel>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/kind"/>
+                <literalMap literal="pdk_in" text="→"/>
+                <literalMap literal="pdk_out" text="←"/>
+                <literalMap literal="pdk_inout" text="↔"/>
+                <literalMap literal="pdk_return" text="⏎"/>
+              </parts>
+              <parts>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+              </parts>
+            </subLabel>
+            <subDetail>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/behavioral#//Parameter/type"/>
+            </subDetail>
+          </compartments>
+        </children>
+        <children name="EnumerationNode3" stereotype="Enumeration" icon="☰">
+          <style href="#enumStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/foundation/datatypes#//Enumeration"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <when kind="SWITCH" switch="enumerations"/>
+          <compartments title="LITERALS">
+            <when kind="SWITCH" switch="literals"/>
+            <from href="http://www.omg.org/spec/CWM/1.1/foundation/datatypes#//Enumeration/literal"/>
+            <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          </compartments>
+        </children>
+        <children name="DataTypeNode3" stereotype="DataType" icon="◈">
+          <style href="#datatypeStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//DataType"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <when kind="SWITCH" switch="dataTypes"/>
+        </children>
+        <children name="AssociationNode3" stereotype="Association" icon="◇">
+          <style href="#associationStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Association"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <when kind="SWITCH" switch="associationNodes"/>
+          <compartments title="ENDS">
+            <rowsFrom>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+                <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd"/>
+              </steps>
+            </rowsFrom>
+            <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+            <detail>
+              <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+            </detail>
+            <multiplicityValue multiplicity="true"/>
+          </compartments>
+        </children>
+      </children>
+    </children>
+  </nodes>
+
+  <edges name="Inheritance" kind="INHERITANCE">
+    <when kind="SWITCH" switch="generalizations"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization"/>
+    <sourcePath href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/child"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/parent"/>
+  </edges>
+  <edges name="Association" kind="ASSOCIATION">
+    <when kind="AND">
+      <operands kind="SWITCH" switch="associations"/>
+      <operands kind="NOT">
+        <operands kind="SWITCH" switch="associationNodes"/>
+      </operands>
+    </when>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Association"/>
+    <sourceQuery>
+      <steps index="0">
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+      </steps>
+      <steps>
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+      </steps>
+    </sourceQuery>
+    <targetQuery>
+      <steps index="1">
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+      </steps>
+      <steps>
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+      </steps>
+    </targetQuery>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+    <sourceLabelValue>
+      <query>
+        <steps index="0">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="associationEndLabels"/>
+    </sourceLabelValue>
+    <targetLabelValue>
+      <query>
+        <steps index="1">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="associationEndLabels"/>
+    </targetLabelValue>
+    <sourceCardinalityValue multiplicity="true">
+      <query>
+        <steps index="0">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <when kind="SWITCH" switch="cardinalities"/>
+    </sourceCardinalityValue>
+    <targetCardinalityValue multiplicity="true">
+      <query>
+        <steps index="1">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <when kind="SWITCH" switch="cardinalities"/>
+    </targetCardinalityValue>
+    <sourceDecorationValue>
+      <query>
+        <steps index="0">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd/aggregation"/>
+      <literalMap literal="ak_aggregate" text="DIAMOND_HOLLOW"/>
+      <literalMap literal="ak_composite" text="DIAMOND_FILLED"/>
+      <literalMap literal="ak_none" text=""/>
+      <when kind="SWITCH" switch="aggregationDecorations"/>
+    </sourceDecorationValue>
+    <targetDecorationValue>
+      <query>
+        <steps index="1">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd/aggregation"/>
+      <literalMap literal="ak_aggregate" text="DIAMOND_HOLLOW"/>
+      <literalMap literal="ak_composite" text="DIAMOND_FILLED"/>
+      <literalMap literal="ak_none" text=""/>
+      <when kind="SWITCH" switch="aggregationDecorations"/>
+    </targetDecorationValue>
+  </edges>
+  <edges name="AssociationEnd" kind="ASSOCIATION" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="associationNodes"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+  </edges>
+  <edges name="Dependency" kind="DEPENDENCY" lineStyle="DASHED" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="dependencies"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Dependency"/>
+    <sourcePath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Dependency/client"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Dependency/supplier"/>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Dependency/kind"/>
+  </edges>
+  <edges name="InheritanceDepth2" kind="INHERITANCE">
+    <when kind="SWITCH" switch="generalizations"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization"/>
+    <sourcePath href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/child"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/parent"/>
+  </edges>
+  <edges name="AssociationDepth2" kind="ASSOCIATION">
+    <when kind="AND">
+      <operands kind="SWITCH" switch="associations"/>
+      <operands kind="NOT">
+        <operands kind="SWITCH" switch="associationNodes"/>
+      </operands>
+    </when>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Association"/>
+    <sourceQuery>
+      <steps index="0">
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+      </steps>
+      <steps>
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+      </steps>
+    </sourceQuery>
+    <targetQuery>
+      <steps index="1">
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+      </steps>
+      <steps>
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+      </steps>
+    </targetQuery>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+    <sourceLabelValue>
+      <query>
+        <steps index="0">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="associationEndLabels"/>
+    </sourceLabelValue>
+    <targetLabelValue>
+      <query>
+        <steps index="1">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="associationEndLabels"/>
+    </targetLabelValue>
+    <sourceCardinalityValue multiplicity="true">
+      <query>
+        <steps index="0">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <when kind="SWITCH" switch="cardinalities"/>
+    </sourceCardinalityValue>
+    <targetCardinalityValue multiplicity="true">
+      <query>
+        <steps index="1">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <when kind="SWITCH" switch="cardinalities"/>
+    </targetCardinalityValue>
+    <sourceDecorationValue>
+      <query>
+        <steps index="0">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd/aggregation"/>
+      <literalMap literal="ak_aggregate" text="DIAMOND_HOLLOW"/>
+      <literalMap literal="ak_composite" text="DIAMOND_FILLED"/>
+      <literalMap literal="ak_none" text=""/>
+      <when kind="SWITCH" switch="aggregationDecorations"/>
+    </sourceDecorationValue>
+    <targetDecorationValue>
+      <query>
+        <steps index="1">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd/aggregation"/>
+      <literalMap literal="ak_aggregate" text="DIAMOND_HOLLOW"/>
+      <literalMap literal="ak_composite" text="DIAMOND_FILLED"/>
+      <literalMap literal="ak_none" text=""/>
+      <when kind="SWITCH" switch="aggregationDecorations"/>
+    </targetDecorationValue>
+  </edges>
+  <edges name="AssociationEndDepth2" kind="ASSOCIATION" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="associationNodes"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+  </edges>
+  <edges name="DependencyDepth2" kind="DEPENDENCY" lineStyle="DASHED" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="dependencies"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Dependency"/>
+    <sourcePath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Dependency/client"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Dependency/supplier"/>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Dependency/kind"/>
+  </edges>
+  <edges name="InheritanceDepth3" kind="INHERITANCE">
+    <when kind="SWITCH" switch="generalizations"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization"/>
+    <sourcePath href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/child"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Generalization/parent"/>
+  </edges>
+  <edges name="AssociationDepth3" kind="ASSOCIATION">
+    <when kind="AND">
+      <operands kind="SWITCH" switch="associations"/>
+      <operands kind="NOT">
+        <operands kind="SWITCH" switch="associationNodes"/>
+      </operands>
+    </when>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//Association"/>
+    <sourceQuery>
+      <steps index="0">
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+      </steps>
+      <steps>
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+      </steps>
+    </sourceQuery>
+    <targetQuery>
+      <steps index="1">
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+      </steps>
+      <steps>
+        <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+      </steps>
+    </targetQuery>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+    <sourceLabelValue>
+      <query>
+        <steps index="0">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="associationEndLabels"/>
+    </sourceLabelValue>
+    <targetLabelValue>
+      <query>
+        <steps index="1">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <when kind="SWITCH" switch="associationEndLabels"/>
+    </targetLabelValue>
+    <sourceCardinalityValue multiplicity="true">
+      <query>
+        <steps index="0">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <when kind="SWITCH" switch="cardinalities"/>
+    </sourceCardinalityValue>
+    <targetCardinalityValue multiplicity="true">
+      <query>
+        <steps index="1">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <when kind="SWITCH" switch="cardinalities"/>
+    </targetCardinalityValue>
+    <sourceDecorationValue>
+      <query>
+        <steps index="0">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd/aggregation"/>
+      <literalMap literal="ak_aggregate" text="DIAMOND_HOLLOW"/>
+      <literalMap literal="ak_composite" text="DIAMOND_FILLED"/>
+      <literalMap literal="ak_none" text=""/>
+      <when kind="SWITCH" switch="aggregationDecorations"/>
+    </sourceDecorationValue>
+    <targetDecorationValue>
+      <query>
+        <steps index="1">
+          <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+        </steps>
+      </query>
+      <feature href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd/aggregation"/>
+      <literalMap literal="ak_aggregate" text="DIAMOND_HOLLOW"/>
+      <literalMap literal="ak_composite" text="DIAMOND_FILLED"/>
+      <literalMap literal="ak_none" text=""/>
+      <when kind="SWITCH" switch="aggregationDecorations"/>
+    </targetDecorationValue>
+  </edges>
+  <edges name="AssociationEndDepth3" kind="ASSOCIATION" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="associationNodes"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Classifier/feature"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/relationships#//AssociationEnd"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//StructuralFeature/type"/>
+  </edges>
+  <edges name="DependencyDepth3" kind="DEPENDENCY" lineStyle="DASHED" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="dependencies"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Dependency"/>
+    <sourcePath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Dependency/client"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Dependency/supplier"/>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Dependency/kind"/>
+  </edges>
+</diagrammodel:DiagramModel>

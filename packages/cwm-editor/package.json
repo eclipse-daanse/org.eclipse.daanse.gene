@@ -8,6 +8,7 @@
     "dompurify": "^3.4.13",
     "marked": "^16.4.2",
     "mermaid": "^12.1.0",
+    "ui-diagram-preview": "*",
     "vue": "^3.5.26"
   },
   "peerDependencies": {
