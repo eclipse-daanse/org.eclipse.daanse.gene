@@ -64,13 +64,50 @@ function evalOclSubset(body: string, ctx: EObject): boolean {
   return negate ? !result : result
 }
 
+/*
+ * Helpers for JS expressions. `self` is the object behind a proxy that reads
+ * features by name; `it` is the object itself, for identity checks. get()
+ * reads a feature (lists as arrays), all() always gives an array, cls() the
+ * class name, isA() checks the class or a supertype by name.
+ */
+function list(v: unknown): any[] {
+  if (v == null) return []
+  if (Array.isArray(v)) return v
+  const anyV = v as { toArray?: () => any[] }
+  return typeof anyV.toArray === 'function' ? anyV.toArray() : [v]
+}
+
+function getFeature(o: any, name: string): any {
+  const f = o?.eClass?.()?.getEStructuralFeature?.(name)
+  if (!f) return undefined
+  const v = o.eGet(f)
+  return f.isMany?.() ? list(v) : v
+}
+
+const HELPERS = {
+  get: getFeature,
+  all: (o: any, name: string) => list(getFeature(o, name)),
+  cls: (o: any) => String(o?.eClass?.()?.getName?.() ?? ''),
+  isA: (o: any, name: string) => {
+    const c = o?.eClass?.()
+    if (!c) return false
+    if (c.getName?.() === name) return true
+    return list(c.getEAllSuperTypes?.()).some((s: any) => s.getName?.() === name)
+  },
+  literal: (v: any) => (v == null ? '' : String(v.getLiteral?.() ?? v.getName?.() ?? v))
+}
+
+function runJs(body: string, ctx: EObject): unknown {
+  const fn = new Function('self', 'it', 'get', 'all', 'cls', 'isA', 'literal', `"use strict"; return (${body});`)
+  return fn(wrap(ctx), ctx, HELPERS.get, HELPERS.all, HELPERS.cls, HELPERS.isA, HELPERS.literal)
+}
+
 export function evaluateBoolean(expr: ExpressionLike | null | undefined, ctx: EObject): boolean {
   if (!expr || !expr.body) return true
   const lang = (expr.language || 'JS').toUpperCase()
   try {
     if (lang === 'JS') {
-      const fn = new Function('self', `"use strict"; return (${expr.body});`)
-      return Boolean(fn(wrap(ctx)))
+      return Boolean(runJs(expr.body, ctx))
     }
     if (lang === 'OCL') {
       return evalOclSubset(expr.body, ctx)

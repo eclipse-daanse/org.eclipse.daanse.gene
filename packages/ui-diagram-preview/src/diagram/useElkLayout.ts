@@ -69,7 +69,12 @@ export interface ElkLayout {
 
 export function useElkLayout(
   model: Ref<EObject | null>,
-  root: Ref<EObject | null>,
+  /** The diagram root - or several, for a focus diagram spanning top-level containers */
+  root: Ref<EObject | EObject[] | null>,
+  /** Switch settings to use: a preset name of the definition; none = its first preset */
+  preset?: Ref<string | undefined>,
+  /** Focus diagram: only these objects and their containers; none = everything under the root */
+  focus?: Ref<EObject[] | null>,
 ): ElkLayout {
   const layoutVersion = ref(0)
   const renderVersion = ref(0)
@@ -119,7 +124,7 @@ export function useElkLayout(
     const thisRun = ++runId
     const m = model.value
     const r = root.value
-    if (!m || !r) {
+    if (!m || !r || (Array.isArray(r) && r.length === 0)) {
       laidOut.value = null
       layoutPending.value = false
       return
@@ -128,7 +133,7 @@ export function useElkLayout(
     await new Promise(resolve => setTimeout(resolve, 0))
     if (thisRun !== runId) return
 
-    const { graph, index, edgeMeta: meta, portNodeMap: ports } = await interpret(m, r)
+    const { graph, index, edgeMeta: meta, portNodeMap: ports } = await interpret(m, r, preset?.value, focus?.value)
     if (thisRun !== runId) return
     nodeIndex.value = index
     edgeMeta.value = meta
@@ -143,9 +148,11 @@ export function useElkLayout(
   }
 
   watch(
-    [model, root],
+    [model, root, () => preset?.value, () => focus?.value],
     () => {
-      attachAdapter(root.value)
+      // Changes are watched under the first root
+      const r = root.value
+      attachAdapter(Array.isArray(r) ? r[0] ?? null : r)
       layoutVersion.value++
     },
     { immediate: true },

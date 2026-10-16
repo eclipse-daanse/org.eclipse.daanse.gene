@@ -13,6 +13,7 @@ import {
 import type { ElkNode } from 'elkjs/lib/elk.bundled.js'
 import { get, items } from './emf'
 import { evaluateBoolean } from './evaluateExpression'
+import { createContext, evalCondition, readValue, runQuery, type DiagramContext } from './query'
 
 export const HEADER_H = 34
 export const ROW_H = 20
@@ -23,14 +24,21 @@ export const MIN_NODE_W = 160
 export interface NodeRef {
   obj: EObject
   mapping: EObject
+  /** The context the node was built in; its view is resolved in the same one */
+  ctx?: DiagramContext
 }
 export interface EdgeMeta {
   kind: string
+  /** SOLID | DASHED; '' = by kind */
+  lineStyle: string
   sourceCardinality: string
   targetCardinality: string
   sourceDecoration: string
   targetDecoration: string
   sourcePortY?: number
+  /** Texts at the ends (role names) */
+  sourceLabel?: string
+  targetLabel?: string
 }
 export interface InterpretResult {
   graph: ElkNode
@@ -51,13 +59,24 @@ export interface RowView {
   subRows: SubRowView[]
   op: boolean
   key: boolean
+  /** Foreign-key icon before the row */
+  fk: boolean
+  /** Free leading glyphs (parameter direction ...), with colours */
+  glyphs: { glyph: string; color: string }[]
+  /** Colour per badge, parallel to badges; '' = default */
+  badgeColors: string[]
   marker: string
   rowObjId: string
+  /** Section colour of the row's compartment, '' = none */
+  color: string
+  /** Rows of this node the row connects to (index row -> its columns), by rowObjId */
+  links: string[]
 }
 export interface CompartmentView {
   separator: boolean
   title: string
   rows: RowView[]
+  color: string
 }
 export interface NodeView {
   title: string
@@ -65,10 +84,13 @@ export interface NodeView {
   subtitle: string
   icon: string
   compartments: CompartmentView[]
+  /** Badges in the header (TMP, SYS, abstract) */
+  headerBadges: { icon: string; color: string }[]
+  italic: boolean
 }
 
 export type LayoutItem =
-  | { type: 'title'; y: number; h: number; title: string; sep: boolean }
+  | { type: 'title'; y: number; h: number; title: string; sep: boolean; color: string }
   | { type: 'row'; y: number; h: number; row: RowView; sep: boolean }
   | { type: 'subrow'; y: number; h: number; sub: SubRowView }
 
@@ -177,13 +199,60 @@ function multiplicityOf(
   return formatMultiplicity(lowerF ? r.eGet(lowerF) : null, upperF ? r.eGet(upperF) : null)
 }
 
-export function resolveNodeView(obj: EObject, mapping: EObject): NodeView {
+function attrText(o: EObject, name: string): string {
+  const f = o.eClass().getEStructuralFeature(name)
+  const v = f ? o.eGet(f) : null
+  return v == null ? '' : String(v)
+}
+
+function child(o: EObject, name: string): EObject | null {
+  const f = o.eClass().getEStructuralFeature(name)
+  return f ? ((o.eGet(f) as EObject | null) ?? null) : null
+}
+
+function kids(o: EObject, name: string): EObject[] {
+  const f = o.eClass().getEStructuralFeature(name)
+  const v = f ? o.eGet(f) : null
+  return v && typeof (v as any).toArray === 'function' ? (v as any).toArray() : []
+}
+
+/**
+ * Whether a definition element's `when` holds for a domain object (the node,
+ * row or edge object). A SWITCH condition ignores the object. Without a
+ * context every element applies.
+ */
+export function applies(el: EObject, obj: EObject, ctx?: DiagramContext): boolean {
+  if (!ctx) return true
+  return evalCondition(child(el, 'when'), obj, ctx)
+}
+
+const EMPTY_CTX: DiagramContext = { settings: new Map(), inverse: new Map(), scope: () => [] }
+
+export function resolveNodeView(obj: EObject, mapping: EObject, ctx?: DiagramContext): NodeView {
+  const c = ctx ?? EMPTY_CTX
   const title = readScalar(obj, featureOf(mapping, 'labelFeature'))
+  const headerBadges = kids(mapping, 'headerBadges')
+    .filter(b => applies(b, obj, ctx))
+    .filter(b => {
+      const wf = featureOf(b, 'whenFeature')
+      return !wf || truthy(readScalar(obj, wf))
+    })
+    .map(b => ({ icon: String(get(b, 'icon') ?? ''), color: attrText(b, 'color') }))
+  const italicWhen = child(mapping, 'italicWhen')
+  const italic = italicWhen ? evalCondition(italicWhen, obj, c) : false
   const stereotype = String(get(mapping, 'stereotype') ?? '')
   const subtitle = readScalar(obj, featureOf(mapping, 'subtitleFeature'))
   const icon = String(get(mapping, 'icon') ?? '')
   const compartments: CompartmentView[] = []
   for (const comp of items(mapping, 'compartments')) {
+    if (!applies(comp, obj, ctx)) continue
+    const color = attrText(comp, 'color')
+    const rowsFrom = child(comp, 'rowsFrom')
+    const labelValue = child(comp, 'label')
+    const detailValue = child(comp, 'detail')
+    const rowWhen = child(comp, 'rowWhen')
+    const icons = kids(comp, 'icons')
+    const links = child(comp, 'links')
     const labelFeature = featureOf(comp, 'labelFeature')
     const detailFeature = featureOf(comp, 'detailFeature')
     const lowerF = featureOf(comp, 'lowerBoundFeature')
@@ -199,9 +268,11 @@ export function resolveNodeView(obj: EObject, mapping: EObject): NodeView {
     const rowCond = get(comp, 'rowCondition') as EObject | undefined | null
     const rowSC = deproxy(get(comp, 'sourceClass') as EObject | undefined, comp)
     const rowSCName = rowSC ? String(get(rowSC, 'name') ?? '') : ''
-    const callable = subFromPath.length > 0
-    const rows: RowView[] = follow(obj, pathOf(comp, 'from'))
+    const callable = subFromPath.length > 0 || !!child(comp, 'subRowsFrom')
+    const rowObjects = rowsFrom ? runQuery(rowsFrom, obj, c) : follow(obj, pathOf(comp, 'from'))
+    const rows: RowView[] = rowObjects
       .filter((r) => !rowSCName || r.eClass().getName() === rowSCName)
+      .filter((r) => !rowWhen || evalCondition(rowWhen, r, c))
       .filter(
         (r) =>
           !rowCond ||
@@ -211,40 +282,54 @@ export function resolveNodeView(obj: EObject, mapping: EObject): NodeView {
           ),
       )
       .map((r) => {
-        const base = readScalar(r, labelFeature)
-        const subRows: SubRowView[] = callable
-          ? follow(r, subFromPath).map((sr) => ({
-              label: readScalar(sr, subLabelF),
-              detail: readScalar(sr, subDetailF),
+        const base = labelValue ? readValue(labelValue, r, c) : readScalar(r, labelFeature)
+        const shownIcons = icons.filter(i => evalCondition(child(i, 'when'), r, c))
+        const iconKinds = shownIcons.map(i => attrText(i, 'kind').toUpperCase())
+        const subRowsQuery = child(comp, 'subRowsFrom')
+        const subObjects = subRowsQuery ? runQuery(subRowsQuery, r, c) : callable ? follow(r, subFromPath) : []
+        const subRows: SubRowView[] = subObjects.length || callable
+          ? subObjects.map((sr) => ({
+              label: child(comp, 'subLabel') ? readValue(child(comp, 'subLabel'), sr, c) : readScalar(sr, subLabelF),
+              detail: child(comp, 'subDetail') ? readValue(child(comp, 'subDetail'), sr, c) : readScalar(sr, subDetailF),
               multiplicity: multiplicityOf(sr, lowerF, upperF),
             }))
           : []
         return {
           label: callable ? `${base}(${subRows.length ? '…' : ''})` : base,
-          detail: readScalar(r, detailFeature),
-          multiplicity: multiplicityOf(r, lowerF, upperF),
-          badges: badges
-            .filter((b) => {
-              const wf = featureOf(b, 'whenFeature')
-              return !wf || truthy(readScalar(r, wf))
-            })
-            .map((b) => String(get(b, 'icon'))),
+          detail: detailValue ? readValue(detailValue, r, c) : readScalar(r, detailFeature),
+          multiplicity: child(comp, 'multiplicityValue') ? readValue(child(comp, 'multiplicityValue'), r, c) : multiplicityOf(r, lowerF, upperF),
+          badges: badges.filter((b) => badgeShows(b, r, c)).map((b) => String(get(b, 'icon'))),
+          badgeColors: badges.filter((b) => badgeShows(b, r, c)).map((b) => attrText(b, 'color')),
+          glyphs: shownIcons
+            .filter(i => attrText(i, 'glyph'))
+            .map(i => ({ glyph: attrText(i, 'glyph'), color: attrText(i, 'color') })),
           subRows,
           op: callable,
-          key: keyF ? truthy(readScalar(r, keyF)) : false,
+          key: iconKinds.includes('PRIMARY_KEY') || (keyF ? truthy(readScalar(r, keyF)) : false),
+          fk: iconKinds.includes('FOREIGN_KEY'),
+          color,
+          links: links ? runQuery(links, r, c).filter(x => x !== r).map(x => nodeId(x)) : [],
           marker: markerF ? (truthy(readScalar(r, markerF)) ? 'diamond' : 'arrow') : '',
           rowObjId: nodeId(r),
         }
       })
-    if (rows.length) compartments.push({ separator, title, rows })
+    if (rows.length) compartments.push({ separator, title, rows, color })
   }
-  return { title, stereotype, subtitle, icon, compartments }
+  return { title, stereotype, subtitle, icon, compartments, headerBadges, italic }
+}
+
+/** A row badge shows when its whenFeature is truthy - and, in a context, its `when` holds for the row */
+function badgeShows(b: EObject, r: EObject, c: DiagramContext): boolean {
+  const wf = featureOf(b, 'whenFeature')
+  if (wf && !truthy(readScalar(r, wf))) return false
+  return evalCondition(child(b, 'when'), r, c)
 }
 
 /** Estimate text width in px (approximate char widths for SVG fonts). */
 function textWidth(text: string, fontSize: number, mono = false): number {
   if (!text) return 0
-  const avgChar = mono ? fontSize * 0.6 : fontSize * 0.55
+  // Generous averages: an underestimate lets a long name run into its type
+  const avgChar = mono ? fontSize * 0.62 : fontSize * 0.6
   return text.length * avgChar
 }
 
@@ -253,24 +338,27 @@ export function computeNodeWidth(view: NodeView): number {
   // Header: icon(18) + stereotype/title
   const titleW = textWidth(view.title, 13) + (view.icon ? 28 : 10) + 10
   const subtitleW = view.subtitle ? textWidth(view.subtitle, 9, true) + (view.icon ? 28 : 10) + 10 : 0
+  // Badge, key and glyph columns are laid out for the whole node, not per row
+  const rowsAll = view.compartments.flatMap(c => c.rows)
+  const maxBadges = Math.max(0, ...rowsAll.map(r => r.badges.length))
+  const anyKey = rowsAll.some(r => r.key || r.fk)
+  const anyOp = rowsAll.some(r => r.op)
+  const maxGlyphs = Math.max(0, ...rowsAll.map(r => r.glyphs.length))
+  const anyMarker = rowsAll.some(r => r.marker)
+  const anyMult = rowsAll.some(r => r.multiplicity)
+  const padLeft = (anyKey ? 26 : anyOp ? 22 : maxGlyphs ? 8 : 12) + maxGlyphs * 12
+  const right = maxBadges * 13 + (maxBadges ? 4 : 0) + (anyMarker ? 14 : 0) + (anyMult ? 34 : 0) + 10
   let maxRow = 0
-  for (const comp of view.compartments) {
-    for (const r of comp.rows) {
-      const labelW = textWidth(r.label, 11)
-      const typeW = textWidth(r.detail, 10, true)
-      const multW = r.multiplicity ? textWidth(r.multiplicity, 10, true) : 0
-      const badgeW = r.badges.length * 13
-      const markerW = r.marker ? 14 : 0
-      const padLeft = r.key ? 20 : r.op ? 22 : 12
-      const rowW = padLeft + labelW + 12 + typeW + 8 + multW + badgeW + markerW + 8
-      if (rowW > maxRow) maxRow = rowW
-      for (const sr of r.subRows) {
-        const subW = 26 + textWidth(sr.label, 10) + 12 + textWidth(sr.detail, 9, true) + 8
-        if (subW > maxRow) maxRow = subW
-      }
+  for (const r of rowsAll) {
+    const rowW = padLeft + textWidth(r.label, 11) + 16 + textWidth(r.detail, 10, true) + right
+    if (rowW > maxRow) maxRow = rowW
+    for (const sr of r.subRows) {
+      const subW = 26 + textWidth(sr.label, 10) + 12 + textWidth(sr.detail, 9, true) + right
+      if (subW > maxRow) maxRow = subW
     }
   }
-  return Math.max(MIN_NODE_W, titleW, subtitleW, maxRow)
+  const headerBadgesW = view.headerBadges.reduce((w, b) => w + Math.max(22, b.icon.length * 6 + 12) + 4, 0)
+  return Math.max(MIN_NODE_W, titleW + headerBadgesW, subtitleW, maxRow)
 }
 
 export function layoutNode(view: NodeView): { items: LayoutItem[]; height: number; width: number } {
@@ -278,7 +366,7 @@ export function layoutNode(view: NodeView): { items: LayoutItem[]; height: numbe
   let y = 0
   for (const comp of view.compartments) {
     if (comp.title) {
-      items.push({ type: 'title', y, h: TITLE_H, title: comp.title, sep: comp.separator })
+      items.push({ type: 'title', y, h: TITLE_H, title: comp.title, sep: comp.separator, color: comp.color })
       y += TITLE_H
     }
     comp.rows.forEach((r, ri) => {
@@ -302,6 +390,12 @@ function formatMultiplicity(lowVal: unknown, upVal: unknown): string {
   return `${low}..${upN === -1 ? '*' : upN}`
 }
 
+/** Rows with connectors to other rows of the same node - each takes a lane at the right */
+export function connectorCount(items: LayoutItem[]): number {
+  const ids = new Set(items.filter(i => i.type === 'row').map(i => (i as any).row.rowObjId))
+  return items.filter(i => i.type === 'row' && i.row.links.some(l => ids.has(l))).length
+}
+
 export function rowCount(view: NodeView): number {
   return view.compartments.reduce(
     (n, c) => n + c.rows.reduce((m, r) => m + 1 + r.subRows.length, 0),
@@ -322,11 +416,13 @@ async function buildNodes(
   index: Map<string, NodeRef>,
   portNodeMap: Map<string, string>,
   rowYMap: Map<string, number>,
+  ctx: DiagramContext,
 ): Promise<NonNullable<ElkNode['children']>> {
   const out: NonNullable<ElkNode['children']> = []
   for (const nm of mappings) {
     if (truthy(get(nm, 'group'))) {
-      const groupChildren = await buildNodes(items(nm, 'children'), parentObj, index, portNodeMap, rowYMap)
+      if (!applies(nm, parentObj, ctx)) continue
+      const groupChildren = await buildNodes(items(nm, 'children'), parentObj, index, portNodeMap, rowYMap, ctx)
       if (groupChildren.length) {
         out.push({
           id: `${nodeId(parentObj)}::${String(get(nm, 'name') ?? 'group')}`,
@@ -340,18 +436,22 @@ async function buildNodes(
     const condition = get(nm, 'condition') as EObject | undefined | null
     const sc = deproxy(get(nm, 'sourceClass') as EObject | undefined, nm)
     const sourceClassName = sc ? String(get(sc, 'name') ?? '') : ''
-    const objs = follow(parentObj, pathOf(nm, 'from'))
+    const rowsFrom = child(nm, 'rowsFrom')
+    const objs = rowsFrom ? runQuery(rowsFrom, parentObj, ctx) : follow(parentObj, pathOf(nm, 'from'))
     for (let oi = 0; oi < objs.length; oi++) {
       const obj = objs[oi]
       if (sourceClassName && obj.eClass().getName() !== sourceClassName) continue
+      // Focus diagram: only the focus objects, and their containers as frames
+      if (ctx.focus && !ctx.focus.has(obj) && !ctx.focusAncestors?.has(obj)) continue
+      if (!applies(nm, obj, ctx)) continue
       if (condition && !evaluateBoolean(
         { language: String(get(condition, 'language') ?? ''), body: String(get(condition, 'body') ?? '') },
         obj,
       )) continue
       const id = nodeId(obj)
-      index.set(id, { obj, mapping: nm })
-      const view = resolveNodeView(obj, nm)
-      const childNodes = await buildNodes(items(nm, 'children'), obj, index, portNodeMap, rowYMap)
+      index.set(id, { obj, mapping: nm, ctx })
+      const view = resolveNodeView(obj, nm, ctx)
+      const childNodes = await buildNodes(items(nm, 'children'), obj, index, portNodeMap, rowYMap, ctx)
 
       let bracketCount = 0
       if (!childNodes.length) {
@@ -371,16 +471,19 @@ async function buildNodes(
           }
         }
         for (const c of rowIdCounts.values()) if (c >= 2) bracketCount++
+        bracketCount += connectorCount(lay.items)
       }
 
       const bracketExtra = bracketCount > 0 ? 10 + bracketCount * 9 : 0
 
       if (childNodes.length) {
+        const own: Record<string, string> = {}
+        for (const opt of items(nm, 'layoutOptions')) own[String(get(opt, 'key'))] = String(get(opt, 'value'))
         out.push({
           id,
           labels: [{ text: view.title }],
           children: childNodes,
-          layoutOptions: { 'elk.padding': `[top=${HEADER_H + 16},left=20,bottom=20,right=20]`, 'elk.spacing.nodeNode': '80', 'elk.layered.spacing.nodeNodeBetweenLayers': '100' },
+          layoutOptions: { 'elk.padding': `[top=${HEADER_H + 16},left=20,bottom=20,right=20]`, 'elk.spacing.nodeNode': '80', 'elk.layered.spacing.nodeNodeBetweenLayers': '100', ...own },
         })
       } else {
         const lay = layoutNode(view)
@@ -398,17 +501,30 @@ async function buildNodes(
   return out
 }
 
-export async function interpret(model: EObject, root: EObject): Promise<InterpretResult> {
+/**
+ * Interprets a definition against a root object. `preset` names the switch
+ * settings to use (the definition's first preset when omitted); `focus`
+ * limits the nodes to those objects and their containers.
+ */
+export async function interpret(model: EObject, rootOrRoots: EObject | EObject[], preset?: string, focus?: EObject[] | null): Promise<InterpretResult> {
+  // Several roots: a focus diagram whose objects lie under different top-level containers
+  const roots = Array.isArray(rootOrRoots) ? rootOrRoots : [rootOrRoots]
+  const root = roots[0]
+  const ctx = createContext(model, root, preset, focus)
   const index = new Map<string, NodeRef>()
   const portNodeMap = new Map<string, string>()
   const rowYMap = new Map<string, number>()
-  const children = await buildNodes(items(model, 'nodes'), root, index, portNodeMap, rowYMap)
+  const children: NonNullable<ElkNode['children']> = []
+  for (const r of roots) children.push(...await buildNodes(items(model, 'nodes'), r, index, portNodeMap, rowYMap, ctx))
 
   const edges: NonNullable<ElkNode['edges']> = []
   const edgeMeta = new Map<string, EdgeMeta>()
   const usedPorts = new Set<string>()
   const edgeMappings = items(model, 'edges')
   for (const em of edgeMappings) {
+    const lineStyle = attrText(em, 'lineStyle').toUpperCase()
+    const sourceCardValue = child(em, 'sourceCardinalityValue')
+    const targetCardValue = child(em, 'targetCardinalityValue')
     const sourcePath = pathOf(em, 'sourcePath')
     const targetPath = pathOf(em, 'targetPath')
     const labelFeature = featureOf(em, 'labelFeature')
@@ -419,35 +535,64 @@ export async function interpret(model: EObject, root: EObject): Promise<Interpre
     const targetDecoration = String(get(em, 'targetDecoration') ?? '')
     const edgeSC = deproxy(get(em, 'sourceClass') as EObject | undefined, em)
     const edgeSCName = edgeSC ? String(get(edgeSC, 'name') ?? '') : ''
-    const edgeObjs = follow(root, pathOf(em, 'fromPath'))
+    const edgeObjs = roots.flatMap(r => follow(r, pathOf(em, 'fromPath')))
     for (let ei = 0; ei < edgeObjs.length; ei++) {
       const e = edgeObjs[ei]
       if (edgeSCName && e.eClass().getName() !== edgeSCName) continue
-      const srcObj = sourcePath.length ? (follow(e, sourcePath)[0] ?? null) : e
-      const srcNode = nodeContaining(srcObj, index)
+      if (!applies(em, e, ctx)) continue
+      // One edge per source object that has a row (a composite foreign key: one per column), else one from the node
+      const sourceQuery = child(em, 'sourceQuery')
+      const targetQuery = child(em, 'targetQuery')
+      const srcObjs = sourceQuery ? runQuery(sourceQuery, e, ctx) : sourcePath.length ? follow(e, sourcePath) : [e]
+      const srcNode = nodeContaining(srcObjs[0] ?? null, index)
       if (!srcNode) continue
       const label = labelFeature ? readScalar(e, labelFeature) : ''
-      const portId = `${srcNode}__port__${nodeId(e)}`
-      const hasPort = portNodeMap.has(portId)
-      follow(e, targetPath).forEach((tObj, i) => {
-        const tgtNode = nodeContaining(tObj, index)
-        if (!tgtNode) return
-        const id = `${nodeId(e)}#${i}`
-        const usePort = hasPort && tgtNode !== srcNode
-        if (usePort) usedPorts.add(portId)
-        edges.push({
-          id,
-          sources: [usePort ? portId : srcNode],
-          targets: [tgtNode],
-          labels: label ? [{ text: label, width: label.length * 6 + 4, height: 12 }] : [],
-        })
-        edgeMeta.set(id, {
-          kind,
-          sourceCardinality,
-          targetCardinality,
-          sourceDecoration,
-          targetDecoration,
-          sourcePortY: usePort ? rowYMap.get(portId) : undefined,
+      const rowPorts = srcObjs
+        .map(o => `${nodeContaining(o, index)}__port__${nodeId(o)}`)
+        .filter(p => portNodeMap.has(p))
+      const fallback = `${srcNode}__port__${nodeId(e)}`
+      const ports = rowPorts.length ? rowPorts : [portNodeMap.has(fallback) ? fallback : '']
+      const sourceCard = sourceCardValue ? readValue(sourceCardValue, e, ctx) : sourceCardinality
+      const targetCard = targetCardValue ? readValue(targetCardValue, e, ctx) : targetCardinality
+      // The target nodes, each once (a key's several columns lie in one table)
+      const tgtObjs = targetQuery ? runQuery(targetQuery, e, ctx) : follow(e, targetPath)
+      // In a focus diagram an end that is only a frame (a package around the focus) takes no edge
+      const shown = (id: string | null): id is string => {
+        if (!id) return false
+        if (!ctx.focus) return true
+        const o = index.get(id)?.obj
+        return !!o && !(ctx.focusAncestors?.has(o) && !ctx.focus.has(o))
+      }
+      if (!shown(srcNode)) continue
+      const tgtNodes = [...new Set(tgtObjs.map(t => nodeContaining(t, index)).filter(shown))]
+      const sourceLabel = readValue(child(em, 'sourceLabelValue'), e, ctx)
+      const targetLabel = readValue(child(em, 'targetLabelValue'), e, ctx)
+      const srcDeco = child(em, 'sourceDecorationValue') ? readValue(child(em, 'sourceDecorationValue'), e, ctx) : sourceDecoration
+      const tgtDeco = child(em, 'targetDecorationValue') ? readValue(child(em, 'targetDecorationValue'), e, ctx) : targetDecoration
+      ports.forEach((portId, pi) => {
+        const fromNode = portId ? portNodeMap.get(portId)! : srcNode
+        tgtNodes.forEach((tgtNode, i) => {
+          const id = `${nodeId(e)}#${pi}.${i}`
+          const usePort = !!portId && tgtNode !== fromNode
+          if (usePort) usedPorts.add(portId)
+          const first = pi === 0 && i === 0
+          edges.push({
+            id,
+            sources: [usePort ? portId : fromNode],
+            targets: [tgtNode],
+            labels: label && first ? [{ text: label, width: label.length * 6 + 4, height: 12 }] : [],
+          })
+          edgeMeta.set(id, {
+            kind,
+            lineStyle,
+            sourceCardinality: first ? sourceCard : '',
+            targetCardinality: first ? targetCard : '',
+            sourceDecoration: srcDeco,
+            targetDecoration: tgtDeco,
+            sourcePortY: usePort ? rowYMap.get(portId) : undefined,
+            sourceLabel: first ? sourceLabel : '',
+            targetLabel: first ? targetLabel : '',
+          })
         })
       })
 
@@ -473,10 +618,35 @@ export async function interpret(model: EObject, root: EObject): Promise<Interpre
     node.layoutOptions = { ...((node.layoutOptions as Record<string, string>) ?? {}), 'elk.portConstraints': 'FIXED_POS' }
   }
 
+  // Every edge lives in the innermost container holding both ends, so each container lays out on its own
+  const parentOf = new Map<string, string | null>()
+  const walkParents = (ch: NonNullable<ElkNode['children']>, parent: string | null) => {
+    for (const c of ch) {
+      parentOf.set(c.id, parent)
+      if (c.children) walkParents(c.children, c.id)
+    }
+  }
+  walkParents(children, null)
+  const chain = (id: string): string[] => {
+    const out: string[] = []
+    for (let p = parentOf.get(id) ?? null; p; p = parentOf.get(p) ?? null) out.push(p)
+    return out
+  }
+  const rootEdges: NonNullable<ElkNode['edges']> = []
+  for (const edge of edges) {
+    const src = portNodeMap.get(edge.sources[0]) ?? edge.sources[0]
+    const tgt = edge.targets[0]
+    const tgtChain = new Set(chain(tgt))
+    const lca = chain(src).find(p => tgtChain.has(p) && p !== src && p !== tgt) ?? null
+    const host = lca ? (elkNodeMap.get(lca) as unknown as ElkNode | undefined) : undefined
+    if (host) (host.edges ??= []).push(edge)
+    else rootEdges.push(edge)
+  }
+
   const layoutOptions: Record<string, string> = {}
   for (const opt of items(model, 'layoutOptions')) {
     layoutOptions[String(get(opt, 'key'))] = String(get(opt, 'value'))
   }
 
-  return { graph: { id: 'root', layoutOptions, children, edges }, index, edgeMeta, portNodeMap }
+  return { graph: { id: 'root', layoutOptions, children, edges: rootEdges }, index, edgeMeta, portNodeMap }
 }

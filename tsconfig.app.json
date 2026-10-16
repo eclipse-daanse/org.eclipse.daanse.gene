@@ -32,6 +32,8 @@
       "core-extension": ["./packages/core-extension/src/index.ts"],
       "gene-contracts": ["./packages/gene-contracts/src/index.ts"],
       "gene-app": ["./packages/app/src/index.ts"],
+      "ui-diagram-preview": ["./packages/ui-diagram-preview/src/index.ts"],
+      "tsrouter": ["./packages/tsrouter/src/index.ts"],
       "core": ["./.tsm/types/core/index.d.ts"]
     }
   }

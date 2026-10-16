@@ -32,6 +32,15 @@
         upperBound="-1" eType="#//EdgeMapping" containment="true"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="styles"
         upperBound="-1" eType="#//DiagramStyle" containment="true"/>
+      <!-- Settings of the diagram, like the feature records of daanse: what is shown and how -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="switches" upperBound="-1"
+        eType="#//Switch" containment="true"/>
+    <!-- Named settings combinations (minimal, full, ...); the first is the default -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="presets" upperBound="-1"
+        eType="#//Preset" containment="true"/>
+      <!-- Which objects show this diagram, from which root, focused on which objects -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="bindings" upperBound="-1"
+        eType="#//Binding" containment="true"/>
   </eClassifiers>
 
   <eClassifiers xsi:type="ecore:EClass" name="LayoutOption">
@@ -89,6 +98,21 @@
          their 'from' path is relative to THIS node's domain object. -->
     <eStructuralFeatures xsi:type="ecore:EReference" name="children"
         upperBound="-1" eType="#//NodeMapping" containment="true"/>
+      <!-- Only when this condition holds - typically a switch of the diagram -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="when"
+        eType="#//Condition" containment="true"/>
+    <!-- Declarative alternative to from: a query from the parent object -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="rowsFrom"
+        eType="#//Query" containment="true"/>
+    <!-- Badges in the node header (TMP, SYS, abstract) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="headerBadges" upperBound="-1"
+        eType="#//Badge" containment="true"/>
+    <!-- Title in italics when this holds (abstract classes) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="italicWhen"
+        eType="#//Condition" containment="true"/>
+      <!-- ELK options for this node's own content when it is a container (direction, aspect ratio, spacing) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="layoutOptions" upperBound="-1"
+        eType="#//LayoutOption" containment="true"/>
   </eClassifiers>
 
   <eClassifiers xsi:type="ecore:EClass" name="Compartment">
@@ -138,6 +162,42 @@
         eType="http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
     <eStructuralFeatures xsi:type="ecore:EReference" name="badges"
         upperBound="-1" eType="#//Badge" containment="true"/>
+      <!-- Only when this condition holds - typically a switch of the diagram -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="when"
+        eType="#//Condition" containment="true"/>
+    <!-- Section colour: tints the title band and the rows -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="color"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Declarative alternative to from: a query from the node object to the rows -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="rowsFrom"
+        eType="#//Query" containment="true"/>
+    <!-- Declarative alternative to labelFeature -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="label"
+        eType="#//Value" containment="true"/>
+    <!-- Declarative alternative to detailFeature -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="detail"
+        eType="#//Value" containment="true"/>
+    <!-- Declarative row filter -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="rowWhen"
+        eType="#//Condition" containment="true"/>
+    <!-- Leading icons of a row, each with its condition (PK, FK, parameter direction) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="icons" upperBound="-1"
+        eType="#//RowIcon" containment="true"/>
+      <!-- Connectors inside the node: from each row to the rows of the objects this query leads to (index row -> its column rows) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="links"
+        eType="#//Query" containment="true"/>
+      <!-- Declarative alternative to subFrom: the sub-rows of a row (an operation's parameters) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="subRowsFrom"
+        eType="#//Query" containment="true"/>
+      <!-- Declarative multiplicity of a row (e.g. a Value with multiplicity=true) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="multiplicityValue"
+        eType="#//Value" containment="true"/>
+    <!-- Declarative label of a sub-row -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="subLabel"
+        eType="#//Value" containment="true"/>
+    <!-- Declarative detail of a sub-row -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="subDetail"
+        eType="#//Value" containment="true"/>
   </eClassifiers>
 
   <eClassifiers xsi:type="ecore:EClass" name="Expression">
@@ -159,6 +219,12 @@
     <!-- EStructuralFeature (typically EAttribute of EBoolean) evaluated for truthiness -->
     <eStructuralFeatures xsi:type="ecore:EReference" name="whenFeature"
         eType="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature"/>
+      <!-- Only when this condition holds - typically a switch of the diagram -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="when"
+        eType="#//Condition" containment="true"/>
+    <!-- Badge colour; default amber -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="color"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
   </eClassifiers>
 
   <eClassifiers xsi:type="ecore:EClass" name="EdgeMapping">
@@ -196,6 +262,36 @@
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="targetDecoration"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <!-- Only when this condition holds - typically a switch of the diagram -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="when"
+        eType="#//Condition" containment="true"/>
+    <!-- SOLID | DASHED; default by kind -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="lineStyle"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Cardinality at the source end, computed (e.g. the multiplicity of an association end) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="sourceCardinalityValue"
+        eType="#//Value" containment="true"/>
+    <!-- Cardinality at the target end, computed -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="targetCardinalityValue"
+        eType="#//Value" containment="true"/>
+      <!-- Declarative alternative to sourcePath, from the edge object -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="sourceQuery"
+        eType="#//Query" containment="true"/>
+    <!-- Declarative alternative to targetPath, from the edge object -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="targetQuery"
+        eType="#//Query" containment="true"/>
+    <!-- Text at the source end (role name) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="sourceLabelValue"
+        eType="#//Value" containment="true"/>
+    <!-- Text at the target end (role name) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="targetLabelValue"
+        eType="#//Value" containment="true"/>
+    <!-- Decoration of the source end, computed (aggregation literal mapped to DIAMOND_HOLLOW / DIAMOND_FILLED) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="sourceDecorationValue"
+        eType="#//Value" containment="true"/>
+    <!-- Decoration of the target end, computed -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="targetDecorationValue"
+        eType="#//Value" containment="true"/>
   </eClassifiers>
 
   <eClassifiers xsi:type="ecore:EClass" name="DiagramStyle">
@@ -210,4 +306,149 @@
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
   </eClassifiers>
 
+  <eClassifiers xsi:type="ecore:EClass" name="Query">
+    <eAnnotations source="documentation">
+      <details key="documentation" value="A navigation from a start object: an ordered list of steps; every step maps each current object to zero or more objects."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="steps" upperBound="-1"
+        eType="#//Step" containment="true"/>
+      <!-- Further queries from the same start object; their results are added (partners via associations AND via generalizations) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="union" upperBound="-1"
+        eType="#//Query" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Step">
+    <eAnnotations source="documentation">
+      <details key="documentation" value="One navigation step: follow 'feature' forward, or inverse (the objects whose 'feature' holds the current object, searched in the diagram's resource), or go to the container. 'filterClass' keeps only instances of that class or its subclasses."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="feature"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="inverse"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="container"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="filterClass"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+      <!-- Keep only the objects of this step for which the condition holds -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="where"
+        eType="#//Condition" containment="true"/>
+    <!-- Instead of a feature: the other objects in the same containment list as the current one (the other end of an association) -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="siblings"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <!-- Keep only the n-th object of this step per current object (0-based; "last") -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="index"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+      <!-- Instead of a feature: an ancestor whose class is filterClass - "nearest" or "outermost" -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="ancestor"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Condition">
+    <eAnnotations source="documentation">
+      <details key="documentation" value="A declarative condition on an object. kind: EXISTS (query not empty), EQUALS (feature at the query's end has the value or literal), SET (feature set), NOT / AND / OR (over operands), SWITCH (the diagram's switch has one of the values), EXPRESSION (escape hatch: 'expression')."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="query"
+        eType="#//Query" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="feature"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature"/>
+    <!-- Value, literal or comma-separated switch values -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Switch name for kind SWITCH -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="switch"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="operands" upperBound="-1"
+        eType="#//Condition" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="expression"
+        eType="#//Expression" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Value">
+    <eAnnotations source="documentation">
+      <details key="documentation" value="A text read from an object: follow 'query', read 'feature' (a referenced object gives its name), join several results with ', '; 'multiplicity' reads a CWM-style multiplicity range as lower..upper; prefix/suffix wrap a non-empty text; 'text' is a fixed text."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="query"
+        eType="#//Query" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="feature"
+        eType="http://www.eclipse.org/emf/2002/Ecore#//EStructuralFeature"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="text"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="prefix"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="suffix"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="multiplicity"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <!-- Maps a literal to a text (pdk_in -> arrow) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="literalMap" upperBound="-1"
+        eType="#//LiteralText" containment="true"/>
+      <!-- Several values joined into one text (e.g. timing, event, orientation), with 'separator' (default a space) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="parts" upperBound="-1"
+        eType="#//Value" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="separator"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="upperCase"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+      <!-- Empty text unless this holds (e.g. a switch: column types on) -->
+    <eStructuralFeatures xsi:type="ecore:EReference" name="when"
+        eType="#//Condition" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="LiteralText">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="literal"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="text"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="RowIcon">
+    <eAnnotations source="documentation">
+      <details key="documentation" value="A leading icon of a row: PRIMARY_KEY, FOREIGN_KEY or a free glyph in 'glyph', shown when 'when' holds for the row object."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="glyph"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="color"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="when"
+        eType="#//Condition" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Switch">
+    <eAnnotations source="documentation">
+      <details key="documentation" value="A diagram setting: kind BOOLEAN (values true/false) or CHOICE (values e.g. HIDDEN, INLINE, OBJECT, BOTH)."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="label"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="kind"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="values" upperBound="-1"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="defaultValue"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Preset">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="name"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="label"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="settings" upperBound="-1"
+        eType="#//Setting" containment="true"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Setting">
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="switch"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="value"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+  </eClassifiers>
+  <eClassifiers xsi:type="ecore:EClass" name="Binding">
+    <eAnnotations source="documentation">
+      <details key="documentation" value="An object of exactly 'sourceClass' shows this diagram. 'root' leads from it to the diagram root (none: the object itself). 'focus' leads to the objects to show; without it everything under the root shows. With a focus only those objects and their containers become nodes, and only edges between shown objects are drawn. The object itself is the diagram's main object."/>
+    </eAnnotations>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="sourceClass"
+        eType="ecore:EClass http://www.eclipse.org/emf/2002/Ecore#//EClass"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="root"
+        eType="#//Query" containment="true"/>
+    <eStructuralFeatures xsi:type="ecore:EReference" name="focus"
+        eType="#//Query" containment="true"/>
+  </eClassifiers>
 </ecore:EPackage>
