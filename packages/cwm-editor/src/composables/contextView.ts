@@ -9,7 +9,8 @@
  * Columns of a table are no rows of their own; they are rows of the table's
  * columns table (PH-8). The same holds for descriptions the table already
  * shows: its own and those of its columns. Likewise a class shows its
- * attributes as a table (attributes.ts). Outside of a table or class, a
+ * attributes as a table (attributes.ts), and a responsible party its
+ * contacts as a business card (contactCard.ts). Outside of a table or class, a
  * column or attribute keeps its own row.
  *
  * The context object itself comes first, as a row of its own; everything
@@ -18,6 +19,9 @@
 import { toRaw } from 'tsm:vue'
 import { attr, className, isRemark, isTable, many, objectSlug } from './documentation'
 import { isAttributeContainer, shownByClass } from './attributes'
+import { isResponsibleParty, shownByParty } from './contactCard'
+import { shownPrivileges } from './privileges'
+import { isAccessRole, shownByRole } from './grants'
 
 export interface ContextRow {
   key: string
@@ -92,6 +96,8 @@ function keyOf(o: any): string {
 function shownBy(o: any): Set<any> | null {
   if (isTable(o)) return shownByTable(o)
   if (isAttributeContainer(o)) return shownByClass(o)
+  if (isResponsibleParty(o)) return new Set([...shownByParty(o), ...shownPrivileges(o)])
+  if (isAccessRole(o)) return shownByRole(o)
   return null
 }
 

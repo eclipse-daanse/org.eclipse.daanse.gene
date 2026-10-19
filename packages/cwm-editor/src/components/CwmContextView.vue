@@ -23,6 +23,7 @@ import { classifiers } from '../composables/attributes'
 import { setCreatedHook } from '../composables/creation'
 import { backendDefaults } from '../composables/fieldDefaults'
 import { applyBackendDefaults } from '../composables/rowContent'
+import { buildGrantIndex } from '../composables/grants'
 
 const props = defineProps<{ context: any }>()
 
@@ -81,6 +82,58 @@ watch(contextObject, o => {
   // Two frames: the animation gets painted before the rows block the page
   requestAnimationFrame(() => requestAnimationFrame(() => { rowsReady.value = true }))
 }, { immediate: true })
+
+/*
+ * The rows are drawn in batches, a few per frame: the first ones show at
+ * once, the rest follow while a progress line at the end says how far it got.
+ * A new context starts again with the first batch.
+ */
+const FIRST_BATCH = 12
+const BATCH = 10
+const renderCount = ref(FIRST_BATCH)
+const renderedRows = computed(() => shownRows.value.slice(0, renderCount.value))
+const stillRendering = computed(() => rowsReady.value && renderCount.value < shownRows.value.length)
+let growTimer = 0
+
+function growRows(): void {
+  if (growTimer) return
+  // A frame to paint what is there, then the next batch
+  growTimer = requestAnimationFrame(() => {
+    growTimer = window.setTimeout(() => {
+      growTimer = 0
+      if (renderCount.value >= shownRows.value.length) return
+      renderCount.value = Math.min(shownRows.value.length, renderCount.value + BATCH)
+      growRows()
+    }, 0)
+  })
+}
+
+/** Draws at least up to the row of o, so it can be scrolled to */
+function ensureRendered(o: any): void {
+  const target = o ? rowObjectFor(o) : null
+  const index = target ? shownRows.value.findIndex(r => r.object === target) : -1
+  if (index >= renderCount.value) renderCount.value = index + BATCH
+}
+
+watch(contextObject, () => { renderCount.value = FIRST_BATCH })
+watch([rowsReady, shownRows], () => { if (rowsReady.value) growRows() })
+
+/** A jump asked for before the rows were there; done once they are */
+let pendingJump: { object: any; gently: boolean } | null = null
+
+watch(rowsReady, async ready => {
+  if (!ready || !pendingJump) return
+  const { object, gently } = pendingJump
+  pendingJump = null
+  ensureRendered(object)
+  await nextTick()
+  jumpTo(object, gently)
+})
+
+onBeforeUnmount(() => {
+  cancelAnimationFrame(growTimer)
+  clearTimeout(growTimer)
+})
 /** Context line plus one slot per level, plus one for the deepest row's toggle */
 const gutter = computed(() => rows.value.reduce((m, r) => Math.max(m, r.depth), 0) + 2)
 
@@ -185,6 +238,7 @@ provide(CWM_EDITING, {
     void version.value
     return contextObject.value ? buildReferenceIndex(contextObject.value) : new Map()
   }),
+  grants: computed(() => buildGrantIndex(everything.value)),
   referenceCandidates: (target: any) => (contextObject.value ? referenceCandidates(contextObject.value, target) : [])
 })
 
@@ -271,6 +325,12 @@ watch(selected, async (o) => {
   selectingFromView = false
   // Rows of collapsed ancestors would hide the selection
   for (const a of pathTo(o)) collapsed.delete(a)
+  await nextTick()
+  if (!rowsReady.value) {
+    pendingJump = { object: o, gently: fromView }
+    return
+  }
+  ensureRendered(o)
   await nextTick()
   jumpTo(o, fromView)
 }, { immediate: true })
@@ -369,13 +429,13 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
       <i class="pi pi-sitemap"></i>
       <p>Ein Element im Baum wählen — die Ansicht zeigt dann alles in seiner Umgebung.</p>
     </div>
-    <div v-else-if="!rowsReady" class="empty loading" data-testid="cwm.Editor.ContextView.Loading">
-      <i class="pi pi-spin pi-spinner"></i>
-      <p>Editor wird geladen …</p>
+    <div v-else-if="!rowsReady" class="empty loading" data-testid="cwm.Editor.ContextView.Loading" role="status">
+      <span class="ring" aria-hidden="true"></span>
+      <p class="loading-title">Ansicht wird aufgebaut</p>
     </div>
     <div v-else class="rows">
       <ContextObjectRow
-        v-for="(row, i) in shownRows"
+        v-for="(row, i) in renderedRows"
         :key="row.key"
         :row="row"
         :prev-depth="shownRows[i - 1]?.depth ?? -1"
@@ -388,6 +448,10 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
         @toggle="toggle(row.object)"
         @select="select"
       />
+      <div v-if="stillRendering" class="rendering" data-testid="cwm.Editor.ContextView.Rendering" role="status">
+        <span>Lade Einträge … {{ renderCount }} von {{ shownRows.length }}</span>
+        <span class="bar"><span :style="{ width: `${(renderCount / shownRows.length) * 100}%` }"></span></span>
+      </div>
     </div>
   </div>
 </template>
@@ -499,7 +563,59 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
   font-size: 2rem;
 }
 
-.loading i {
+/* Spinner and title as in the app's loading overlay */
+.ring {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--primary-color) 20%, transparent);
+  border-top-color: var(--primary-color);
+  animation: cwm-spin 0.8s linear infinite;
+  will-change: transform;
+}
+
+@keyframes cwm-spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--primary-color);
+}
+
+/* Progress while the rows are still being drawn */
+.rendering {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.5rem 0 0;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-color-secondary);
+  background: var(--surface-card, var(--surface-ground));
+  border: 1px solid var(--surface-border);
+  border-top: 2px solid var(--primary-color);
+  border-radius: 6px;
+}
+
+.rendering .bar {
+  flex: 1 1 auto;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-border);
+  overflow: hidden;
+}
+
+.rendering .bar span {
+  display: block;
+  height: 100%;
+  background: var(--primary-color);
+  transition: width 0.2s ease-out;
 }
 </style>

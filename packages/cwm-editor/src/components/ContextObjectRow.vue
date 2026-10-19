@@ -26,6 +26,12 @@ import DiagramArea from './DiagramArea.vue'
 import ReferencesTable from './ReferencesTable.vue'
 import RowFields from './RowFields.vue'
 import RowDocumentView from './RowDocumentView.vue'
+import RowContactCard from './RowContactCard.vue'
+import RowGrants from './RowGrants.vue'
+import RowPrivileges from './RowPrivileges.vue'
+import { isAccessRole, shownByRole } from '../composables/grants'
+import { isResponsibleParty, shownByParty } from '../composables/contactCard'
+import { shownPrivileges } from '../composables/privileges'
 import RowReferenceFields from './RowReferenceFields.vue'
 import { hiddenReferenceCount } from '../composables/references'
 import RowRightRail from './RowRightRail.vue'
@@ -237,6 +243,8 @@ const shown = computed(() => {
   void props.version
   if (isTable(props.row.object)) return shownByTable(props.row.object)
   if (attributeTable.value) return shownByClass(props.row.object)
+  if (isResponsibleParty(props.row.object)) return new Set([...shownByParty(props.row.object), ...shownPrivileges(props.row.object)])
+  if (isAccessRole(props.row.object)) return shownByRole(props.row.object)
   return new Set<any>()
 })
 </script>
@@ -352,6 +360,13 @@ const shown = computed(() => {
           />
           <!-- A table's remark leads the body, a description's text follows its fields -->
           <RowTextView v-if="table" :object="row.object" :test-id="`${id}.Row.Body.TextView`" :version="version" />
+          <!-- A responsible party leads with its business card: who, what, how to reach -->
+          <RowContactCard
+            v-if="row.kind === 'ResponsibleParty'"
+            :object="row.object"
+            :test-id="`${id}.Row.Body.ContactCard`"
+            :version="version"
+          />
           <!-- A document's file leads the body: the image, or a link to open it -->
           <RowDocumentView
             v-if="row.kind === 'Document'"
@@ -389,6 +404,10 @@ const shown = computed(() => {
             :test-id="`${id}.Row.Body.${hasAssociationEnds(row.object) ? 'Ends' : 'Attributes'}`"
             :version="version"
           />
+          <!-- A responsible party or access role: its grants ("Zugriffe"); there is no row for a grant -->
+          <RowGrants :object="row.object" :test-id="`${id}.Row.Body.Grants`" :version="version" />
+          <!-- Table, view, column, procedure: who may do what; a responsible party: what it may do -->
+          <RowPrivileges :object="row.object" :test-id="`${id}.Row.Body.Privileges`" :version="version" />
           <ReferencesTable
             :object="row.object"
             :shown="shown"

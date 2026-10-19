@@ -7,6 +7,7 @@
  */
 import { toRaw } from 'tsm:vue'
 import { many } from './documentation'
+import { displayName, pathTo } from './contextView'
 import { fieldRule } from './fieldDefaults'
 import { classKey, conforms } from './references'
 
@@ -23,6 +24,10 @@ export interface GlossaryColumn {
 export interface GlossaryRow {
   object: any
   className: string
+  /** The containers from the root down to the object */
+  path: any[]
+  /** The path as text, for sorting and filtering */
+  pathText: string
   /** Cell text per column key; undefined = the object has no such attribute */
   cells: Record<string, string | undefined>
 }
@@ -88,7 +93,14 @@ export function glossaryTable(objects: any[]): { columns: GlossaryColumn[]; rows
       }
       cells[key] = cellText(o, f)
     }
-    rows.push({ object: o, className: String(toRaw(o).eClass().getName()), cells })
+    const path = pathTo(o)
+    rows.push({
+      object: o,
+      className: String(toRaw(o).eClass().getName()),
+      path,
+      pathText: path.map(displayName).join(' › '),
+      cells
+    })
   }
   const sorted = [...columns.values()].sort((a, b) =>
     a.depth - b.depth || a.column.owner.localeCompare(b.column.owner) || a.order - b.order)

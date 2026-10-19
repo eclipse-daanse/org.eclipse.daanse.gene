@@ -64,26 +64,34 @@ export function fieldsOf(object: any, all = false): RowField[] {
   for (const feature of many(o?.eClass?.()?.getEAllAttributes?.())) {
     const name = feature.getName?.()
     if (!name || NOT_A_FIELD.has(name) || feature.isMany?.() || feature.isDerived?.()) continue
-    const isSet = typeof o.eIsSet === 'function' ? o.eIsSet(feature) : o.eGet(feature) != null
-    const rule = fieldRule(o, name)
-    if (!all && (rule?.hidden || (!isSet && rule?.uiDefault == null))) continue
-    const kind = kindOf(feature)
-    const raw = toRaw(o.eGet(feature))
-    fields.push({
-      feature,
-      name,
-      label: name,
-      kind,
-      value: kind === 'enum' ? literalString(raw) : kind === 'boolean' ? !!raw : raw == null ? null : kind === 'number' ? Number(raw) : String(raw),
-      isSet,
-      typeName: String(feature.getEType?.()?.getName?.() ?? ''),
-      options: kind === 'enum' ? many(feature.getEType().getELiterals()).map((l: any) => String(l.getLiteral?.() ?? l.getName?.())) : [],
-      suggestions: rule?.suggestions ?? [],
-      uiDefault: rule?.uiDefault ?? null,
-      hidden: !!rule?.hidden
-    })
+    const field = fieldFor(o, feature)
+    if (!all && (field.hidden || (!field.isSet && field.uiDefault == null))) continue
+    fields.push(field)
   }
   return fields
+}
+
+/** One single-valued attribute of an object as a field - for the row and the glossary's cells */
+export function fieldFor(object: any, feature: any): RowField {
+  const o = toRaw(object)
+  const name = String(feature.getName?.())
+  const isSet = typeof o.eIsSet === 'function' ? o.eIsSet(feature) : o.eGet(feature) != null
+  const rule = fieldRule(o, name)
+  const kind = kindOf(feature)
+  const raw = toRaw(o.eGet(feature))
+  return {
+    feature,
+    name,
+    label: name,
+    kind,
+    value: kind === 'enum' ? literalString(raw) : kind === 'boolean' ? !!raw : raw == null ? null : kind === 'number' ? Number(raw) : String(raw),
+    isSet,
+    typeName: String(feature.getEType?.()?.getName?.() ?? ''),
+    options: kind === 'enum' ? many(feature.getEType().getELiterals()).map((l: any) => String(l.getLiteral?.() ?? l.getName?.())) : [],
+    suggestions: rule?.suggestions ?? [],
+    uiDefault: rule?.uiDefault ?? null,
+    hidden: !!rule?.hidden
+  }
 }
 
 /** How many single-valued attributes stay out of the row until it shows all */
@@ -119,6 +127,33 @@ export function setAttributeFromText(object: any, feature: any, text: string): v
     return
   }
   o.eSet(feature, text)
+}
+
+/**
+ * Checks a text for an attribute before it is written - as pasted into the
+ * glossary. Returns the text to write (booleans as "true"/"false"), or why
+ * it does not fit.
+ */
+export function checkAttributeText(feature: any, text: string): { text: string } | { error: string } {
+  if (feature.isChangeable?.() === false) return { error: `${feature.getName()} ist nicht änderbar` }
+  const value = text.trim()
+  const kind = kindOf(feature)
+  if (kind === 'boolean') {
+    const v = value.toLowerCase()
+    if (['true', 'ja', 'yes', '1', 'x', '✓'].includes(v)) return { text: 'true' }
+    if (['false', 'nein', 'no', '0', ''].includes(v)) return { text: 'false' }
+    return { error: `„${value}“ ist kein Ja/Nein-Wert` }
+  }
+  if (value === '') return { text: '' }
+  if (kind === 'number') {
+    return Number.isNaN(Number(value)) ? { error: `„${value}“ ist keine Zahl` } : { text: value }
+  }
+  if (kind === 'enum') {
+    const literals = many(feature.getEType().getELiterals()).map((l: any) => String(l.getLiteral?.() ?? l.getName?.()))
+    const hit = literals.find(l => l === value) ?? literals.find(l => l.toLowerCase() === value.toLowerCase())
+    return hit ? { text: hit } : { error: `„${value}“ ist kein Wert von ${feature.getEType().getName()} (${literals.join(', ')})` }
+  }
+  return { text }
 }
 
 /** Writes a field's input back into the model; an empty text or number unsets it */

@@ -208,17 +208,52 @@ orthogonalen Metamodell (ChangeRequest CR-2 im Pflichtenheft):
 Offen: Daanse-Validierungen im Menü (sobald Daanse sie anbietet), ein Editor
 für Feldregeln (bis dahin Instanz-Editor oder XMI).
 
-## Glossar-Ansicht (2026-10-15)
+## Overview (Glossar-Ansicht, 2026-10-15)
 
 Anforderung: `Glossar-Ansicht.md` (Stand 13.10.2026).
 
-- Schalter **Glossar** im Kopf der Kontextansicht blendet die Glossar-Ansicht als Splitscreen ein (`GlossaryView.vue`, `composables/glossary.ts`).
+- Schalter **Overview** im Kopf der Kontextansicht blendet die Glossar-Ansicht als Splitscreen ein (`GlossaryView.vue`, `composables/glossary.ts`).
 - Classifier-Filter: mehrere Classifier als Chips; „mit erbenden Klassen" nimmt die Unterklassen dazu.
 - Tabelle: Spalte „Klasse", dann eine Spalte je einwertigem Attribut (je definierender Klasse einmal), allgemeinste Klasse zuerst (`name` vorn). Durch Feldregeln ausgeblendete Attribute erscheinen zunächst nicht; im Menü „Spalten“ stehen sie grau mit ◌ und lassen sich einschalten. `body` bleibt draußen.
 - Zellen von Attributen, die das Objekt nicht hat, sind grau hinterlegt; leere Werte bleiben weiß.
-- Sortierung per Klick auf den Spaltenkopf (auf-/absteigend, leere Zellen immer am Ende, Zahlen numerisch).
+- Klick auf den Spaltenkopf öffnet wie in einer Tabellenkalkulation ein Dropdown: Sortierung (auf-/absteigend, leere Zellen immer am Ende, Zahlen numerisch), alle Werte der Spalte (mit Anzahl, „(leer)“ für leere Zellen) zum An-/Abhaken und ein Freitextfeld „enthält …“; ist Freitext gesetzt, filtert er allein (unabhängig von den Haken). Filtert alles weg, bleiben die Spaltenköpfe stehen. Die Werteliste berücksichtigt die Filter der anderen Spalten; gefilterte Spalten sind im Kopf markiert, die Fußzeile zeigt „x von y Einträgen“.
+- Spalte „Pfad“ (nach „Klasse“): die Container von der Wurzel bis zum Objekt als Breadcrumbs, jeder springt zu seinem Objekt; sortier-/filterbar, im Spaltenmenü abschaltbar.
+- Zellen wie in einer Tabellenkalkulation: Klick wählt (Pfeiltasten bewegen), Doppelklick/Enter/F2 bearbeitet wie die Felder der Kontextansicht (`fieldFor` aus `rowContent.ts`: Text mit Vorschlagswerten, Zahl, Ja/Nein, Enum), Esc bricht ab. Ziehen mit gedrückter Maus, Umschalt+Klick oder Umschalt+Pfeil wählt einen Bereich (ein Rahmen um den ganzen Bereich), Strg+Klick einzelne Zellen dazu, Strg+A die ganze Spalte. Strg+C kopiert die Auswahl tabulatorgetrennt (wie Tabellenkalkulationen), Strg+V schreibt einen Wert in alle gewählten Zellen bzw. legt einen kopierten Block ab der linken oberen gewählten Zelle ab – jeweils nach Prüfung (`checkAttributeText`); passt der Wert nicht (keine Zahl, kein Literal, Klasse/Pfad, Attribut fehlt, nicht änderbar), erscheint eine Warnung.
 - Sprung über das Pfeil-Icon am Zeilenanfang (wie Auswahl im Baum); das ausgewählte Objekt ist markiert.
+- „CSV“ exportiert die Tabelle wie angezeigt (gefiltert, sortiert, nur eingeschaltete Spalten inkl. Klasse/Pfad) als `overview-<Classifier>.csv`: Semikolon-getrennt, UTF-8 mit BOM, damit Excel Umlaute richtig öffnet.
 - Teilung nebeneinander/untereinander umschaltbar, Trenner verschiebbar; offen/Teilung/Anteil im `localStorage`.
+
+## Responsible Party als Visitenkarte (2026-10-16)
+
+- Eine ResponsibleParty zeigt oben im Zeilenkörper eine Visitenkarte (`RowContactCard.vue`, `composables/contactCard.ts`): Initialen, Name, Zuständigkeit (`responsibility`) und je Contact die E-Mails (mailto), Telefonnummern (tel), Adressen (Location) und Web-Links (ResourceLocator), jeweils mit Art.
+- Contacts und ihre Teile, die die Party enthält, bekommen keine eigenen Zeilen mehr; untergeordnete Responsible Parties schon.
+- Stift auf der Karte: Werte direkt bearbeiten, Teile entfernen (×), „+ E-Mail / Telefon / Adresse / Web“, „+ Kontakt“. Neue Teile liegen in der Party und werden mit dem Contact verknüpft; der Hauptwert ist zugleich ihr Name.
+- Rückweg: In „Siehe auch“ eines Elements stehen die Responsible Parties, die es als `modelElement` nennen, mit Personen-Icon; Hover zeigt ihre Visitenkarte (ohne Bearbeiten), Klick wählt die Party.
+
+## Grants (daanse rolap.mapping, 2026-10-19)
+
+- Kein eigenes UI-Element für Grants: Sie erscheinen über die Responsible Party.
+  - An der Responsible Party: Rubrik „Zugriffe“ mit den Grants der AccessRoles, die sie enthält (eingerückt: Katalog → Cube/Dimension/Hierarchie, Schema → Tabelle → Spalte), Zugriff (`all`/`none`/`custom` …) per Auswahl änderbar (`RowGrants.vue`).
+  - Am Objekt (Schema, Tabelle inkl. Spalten, Cube, Dimension, Hierarchie): die Party steht unter „Siehe auch“ mit „Zugriff“ und farbigem Zugriffswert; Hover zeigt ihre Visitenkarte.
+  - AccessRoles außerhalb einer Party (z. B. im ROLAP-Katalog) zeigen ihre Grants ebenso in ihrer Zeile.
+- Anlegen wie überall über „+“ in der Struktur: in der Grant-Tabelle je Zeile „+ Schema/Cube/Tabelle/Spalte/Dimension/Hierarchie“ (Ziel aus dem Passenden gewählt) und ×; „+ Katalog-Grant“.
+- Assistent „+ Zugriff“ (`GrantDialog.vue`, `grantForParty` in `grants.ts`): an der Party (Objekt wählen) oder unter „Siehe auch“ eines Schemas/einer Tabelle/Spalte/eines Cubes (Party wählen), dazu der Zugriff. **Designentscheidung (Stefan, 19.10.2026, 10:45):** Über den Assistenten angelegte Grants liegen immer unter der gewählten Responsible Party – in deren erster AccessRole (sonst neu angelegt, benannt nach der Party); fehlende Zwischen-Grants (Katalog, Schema, Tabelle) entstehen als `custom`. Über Baum oder „+“ kann der Nutzer Grants auch anders ablegen.
+- Testdaten in UDP_MIT_ORM: Rollen Administration, Sachbearbeitung Kataster, Öffentlichkeit (Default-Rolle) im ROLAP-Katalog Liegenschaftskataster.
+
+## Laden der Kontextansicht (2026-10-19)
+
+- Die Zeilen werden in Portionen gezeichnet (erst 12, dann je 10 pro Frame). Die ersten erscheinen sofort, am Ende zeigt eine mitlaufende Fortschrittszeile „Lade Einträge … x von y“ mit Balken.
+- Eine Auswahl weiter unten zeichnet sofort bis zu ihrer Zeile und springt dann dorthin; eine Auswahl während der Ladeanimation wird nach dem Laden nachgeholt.
+
+## Privileges nach privilege.ecore (2026-10-19)
+
+Grundlage: daanse `resource.relational.privilege/model/privilege.ecore` (im Workspace unter `model/privilege.ecore`, in der `.wsp` registriert). Träger ist die Responsible Party selbst, das Privileg ist ihr `ownedElement`: `TablePrivilege` (Aktion SELECT/INSERT/UPDATE/DELETE/REFERENCES auf Table/View, optional auf Spalten eingeschränkt), `ProcedurePrivilege` (EXECUTE), `RolePrivilege` (Mitgliedschaft); dazu `grantable` (WITH GRANT OPTION) und `grantor`. Logik in `composables/privileges.ts`.
+
+- Abschnitt „Privileges“ (`RowPrivileges.vue`) an Tabelle, View, Spalte (Privileges der Tabelle, die die Spalte abdecken) und Prozedur: Responsible Party mit Pfad (Hover: Visitenkarte), Aktion (änderbar), Spalten („alle“ = ganze Tabelle), „weitergeben“, × entfernt. An einer Responsible Party: ihre Privileges mit Objekt; als eigene Zeilen erscheinen sie nicht mehr.
+- „+ Privileg“ (`PrivilegeDialog.vue`): Spalten (ganze Tabelle oder Auswahl; bei einer Spalte vorbelegt) und „darf weitergeben“ für alle; Tabelle aller Responsible Parties mit Pfad, vorhandene Rechte gestrichelt/grau, zu vergebende Aktionen als Umschalter; Responsible Parties legt der Dialog nicht an – sie werden ausschließlich in ihrer eigenen Sektion gepflegt. Je angehakter Party ein Privileg pro Aktion; gleiche vorhandene Privileges werden nicht doppelt angelegt.
+- Modellierung (Entscheidung 2026-10-19): Eine Responsible Party mit Privileges ist eine **Person**, die die Privileges direkt trägt – keine Rollen-Ebene, kein PUBLIC. Organisationseinheiten (TLBG, Datenbankadministration …) sind Responsible Parties, die Personen enthalten.
+- Der Assistent zeigt je Zeile die Namen der vorhandenen Privileges (grau) und der anzulegenden („+ SELECT flurstueck (uuid)“, `privilegeName`).
+- Die rolap-Zugriffs-Grants (AccessRole …) bleiben für den OLAP-Teil (`RowGrants.vue`), „Siehe auch“ zeigt keine Grants mehr.
 
 ## Offen / nächste Etappen
 

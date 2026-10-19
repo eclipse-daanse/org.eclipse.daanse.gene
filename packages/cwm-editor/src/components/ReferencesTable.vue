@@ -4,9 +4,13 @@
  * divider above and a smaller font. One row per Description, Document,
  * Responsible Party, Measurement or Change Request pointing at the object -
  * Name, Pfad, Description, Typ; hovering shows the referenced object's data,
- * a click goes there. "+ Siehe auch" opens a window to add one or several.
+ * a click goes there - a responsible party shows its business card on hover.
+ * Access grants on the object have their own section, "Privileges".
+ * "+ Siehe auch" opens a window to add one or several.
  */
-import { computed, inject, ref } from 'tsm:vue'
+import { computed, inject, onBeforeUnmount, ref, shallowRef } from 'tsm:vue'
+import RowContactCard from './RowContactCard.vue'
+import { isResponsibleParty } from '../composables/contactCard'
 import { addReferences, referenceRows } from '../composables/references'
 import { className, slug } from '../composables/documentation'
 import { displayName, pathTo } from '../composables/contextView'
@@ -26,6 +30,32 @@ const rows = computed(() => {
   void props.version
   return referenceRows(editing.references.value, props.object, props.shown)
 })
+
+/* The business card of the hovered responsible party; it stays while the pointer moves onto it */
+const card = shallowRef<any>(null)
+const cardAt = ref({ top: 0, left: 0 })
+let hideTimer = 0
+const CARD_WIDTH = 560
+
+function showCard(o: any, event: MouseEvent): void {
+  if (!isResponsibleParty(o)) return
+  clearTimeout(hideTimer)
+  const r = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  const below = r.bottom + 4
+  cardAt.value = { top: below, left: Math.max(8, Math.min(r.left + 24, window.innerWidth - CARD_WIDTH - 8)) }
+  card.value = o
+}
+
+function hideCard(): void {
+  clearTimeout(hideTimer)
+  hideTimer = window.setTimeout(() => { card.value = null }, 200)
+}
+
+function keepCard(): void {
+  clearTimeout(hideTimer)
+}
+
+onBeforeUnmount(() => clearTimeout(hideTimer))
 
 const picking = ref(false)
 const filter = ref('')
@@ -73,13 +103,16 @@ function confirm(): void {
       <tbody>
         <tr
           v-for="r in rows"
-          :key="r.name + r.type + r.path"
+          :key="r.name + r.type + r.path + r.description"
           :data-testid="`${testId}.Row@${slug(r.name)}`"
-          :title="r.details"
+          :class="{ party: isResponsibleParty(r.object) }"
+          :title="isResponsibleParty(r.object) ? undefined : r.details"
           @click="editing.select(r.object)"
+          @mouseenter="showCard(r.object, $event)"
+          @mouseleave="hideCard"
         >
           <td class="name">
-            {{ r.name }}<span v-if="r.via.length" class="via" :title="`Verweist auf ${r.via.join(', ')}`"> → {{ r.via.join(', ') }}</span>
+            <i v-if="isResponsibleParty(r.object)" class="pi pi-user party-icon" title="Responsible Party – Visitenkarte beim Darüberfahren"></i>{{ r.name }}<span v-if="r.via.length" class="via" :title="`Verweist auf ${r.via.join(', ')}`"> → {{ r.via.join(', ') }}</span>
           </td>
           <td class="path"><template v-for="(c, ci) in r.crumbs" :key="ci"><span v-if="ci > 0" class="sep"> › </span><a class="crumb" :title="`${c.name} wählen`" @click.stop="editing.select(c.object)">{{ c.name }}</a></template></td>
           <td class="desc">{{ r.description }}</td>
@@ -87,7 +120,18 @@ function confirm(): void {
         </tr>
       </tbody>
     </table>
+    <div
+      v-if="card"
+      class="card-popover"
+      :style="{ top: `${cardAt.top}px`, left: `${cardAt.left}px` }"
+      :data-testid="`${testId}.ContactCard`"
+      @mouseenter="keepCard"
+      @mouseleave="hideCard"
+    >
+      <RowContactCard :object="card" :test-id="`${testId}.ContactCard.Content`" :version="version" readonly />
+    </div>
 
+    <div class="adds">
     <button
       type="button"
       class="add"
@@ -95,6 +139,7 @@ function confirm(): void {
       data-wire-kind="CONTROL"
       @click="openPicker"
     >+ Siehe auch</button>
+    </div>
 
     <div v-if="picking" class="picker-backdrop" @click.self="picking = false">
       <div class="picker" role="dialog" aria-label="Siehe auch hinzufügen">
@@ -207,9 +252,15 @@ tbody tr:hover {
   padding: 0.15rem 0.3rem;
 }
 
+.adds {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+}
+
 .add {
   display: block;
-  margin: 0.3rem 0 0 auto;
   font: inherit;
   padding: 0.1rem 0.4rem;
   border: 1px dashed var(--surface-border);
@@ -299,5 +350,23 @@ tbody tr:hover {
 .picker footer button:disabled {
   opacity: 0.5;
   cursor: default;
+}
+.party-icon {
+  margin-right: 0.3rem;
+  font-size: 0.65rem;
+  color: var(--primary-color);
+}
+
+.card-popover {
+  position: fixed;
+  z-index: 1000;
+  width: 560px;
+  max-width: calc(100vw - 16px);
+}
+
+.card-popover :deep(.card) {
+  margin: 0;
+  max-width: none;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 </style>
