@@ -7,10 +7,10 @@
  * 2. Model Editor Perspective - edit EMF instances with model browser and properties panel
  */
 
-import { ref, inject, computed, onMounted, shallowRef, watch, watchEffect, type Component, type ComputedRef, markRaw, defineComponent, h, provide } from 'tsm:vue'
+import { ref, inject, computed, onMounted, shallowRef, watch, watchEffect, type Component, type ComputedRef, markRaw, defineComponent, h, provide, nextTick } from 'tsm:vue'
 import type { TsmPluginSystem } from '@/tsm'
 import type { Resource } from 'tsm:emfts'
-import { Dialog, InputText, Dropdown, Button, ProgressSpinner } from 'tsm:primevue'
+import { Dialog, InputText, Dropdown, Button } from 'tsm:primevue'
 import type { File, Repository } from 'storage-core'
 import { getGlobalEditorConfig } from '@/services/useEditorConfig'
 import { createMetamodelResolver, nsUrisDeclaredIn } from './services/metamodelResolver'
@@ -495,13 +495,17 @@ const loadingModelName = ref('')
 const isLoadingInstance = ref(false)
 const loadingInstanceName = ref('')
 
+// Editor loading state: from "open with" until the editor's tab has drawn
+const isLoadingEditor = ref(false)
+const loadingEditorName = ref('')
+
 // Workspace loading state: from opening the .wsp until its models and instances are in
 const isLoadingWorkspace = ref(false)
 const loadingWorkspaceName = ref('')
 
 // Combined loading state (for central overlay)
 const isLoading = computed(() => {
-  const loading = isLoadingWorkspace.value || isLoadingModel.value || isLoadingInstance.value
+  const loading = isLoadingWorkspace.value || isLoadingModel.value || isLoadingInstance.value || isLoadingEditor.value
   if (loading) {
     console.log('[App] isLoading computed:', loading, 'model:', isLoadingModel.value, 'instance:', isLoadingInstance.value)
   }
@@ -510,15 +514,18 @@ const isLoading = computed(() => {
 
 const loadingText = computed(() => {
   if (isLoadingModel.value) {
-    return { title: 'Loading Model', name: loadingModelName.value }
+    return { title: 'Modell wird geladen', name: loadingModelName.value }
   }
   if (isLoadingInstance.value) {
-    return { title: 'Loading Instances', name: loadingInstanceName.value }
+    return { title: 'Instanzen werden geladen', name: loadingInstanceName.value }
   }
   if (isLoadingWorkspace.value) {
-    return { title: 'Loading Workspace', name: loadingWorkspaceName.value }
+    return { title: 'Workspace wird geladen', name: loadingWorkspaceName.value }
   }
-  return { title: 'Loading...', name: '' }
+  if (isLoadingEditor.value) {
+    return { title: 'Editor wird geladen', name: loadingEditorName.value }
+  }
+  return { title: 'Wird geladen …', name: '' }
 })
 
 const repoTypes = [
@@ -1977,10 +1984,23 @@ async function resolveDeclaredMetamodels(content: string, entry: unknown): Promi
 
 /** A CWM file in the CWM editor: the same loading as the instance editor, under its own tab. */
 async function handleCwmOpen(entry: any, content: string): Promise<void> {
-  await handleInstanceAdd(entry, content, 'STANDALONE', {
-    tabId: `cwm:${entry.path}`,
-    oeffne: (tabId, titel) => oeffneCwmTab(tabId, titel)
-  })
+  // Loading, validating and drawing block the page for seconds: the overlay
+  // gets two frames to show before, and stays until the tab has drawn
+  const frame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+  loadingEditorName.value = entry?.name ?? ''
+  isLoadingEditor.value = true
+  try {
+    await frame()
+    await frame()
+    await handleInstanceAdd(entry, content, 'STANDALONE', {
+      tabId: `cwm:${entry.path}`,
+      oeffne: (tabId, titel) => oeffneCwmTab(tabId, titel)
+    })
+    await nextTick()
+    await frame()
+  } finally {
+    isLoadingEditor.value = false
+  }
 }
 
 function oeffneCwmTab(tabId: string, titel: string): void {
@@ -2897,16 +2917,12 @@ onMounted(() => {
   </Dialog>
 
   <!-- Central Loading Overlay with Blur -->
-  <div v-if="isLoading" class="loading-overlay">
+  <div v-if="isLoading" class="loading-overlay" role="status" aria-live="polite" data-testid="gene.LoadingOverlay">
     <div class="loading-content">
-      <ProgressSpinner
-        style="width: 50px; height: 50px"
-        strokeWidth="4"
-        animationDuration=".8s"
-      />
+      <span class="loading-ring" aria-hidden="true"></span>
       <div class="loading-text">
         <span class="loading-title">{{ loadingText.title }}</span>
-        <span class="loading-name">{{ loadingText.name }}</span>
+        <span v-if="loadingText.name" class="loading-name" :title="loadingText.name">{{ loadingText.name }}</span>
       </div>
     </div>
   </div>
@@ -3041,41 +3057,72 @@ html, body, #app {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: color-mix(in srgb, var(--surface-ground, #121212) 55%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: loading-fade-in 0.15s ease-out;
 }
 
+/* A card like the panels: surface, thin border, the primary colour as accent */
 .loading-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 0.9rem;
+  min-width: 16rem;
+  max-width: 22rem;
+  padding: 1.4rem 1.6rem 1.1rem;
   text-align: center;
-  padding: 2rem;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  background: var(--surface-card, var(--surface-section, #1e1e1e));
+  border: 1px solid var(--surface-border, #333);
+  border-top: 2px solid var(--primary-color);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+/* Spinner in the primary colour; transform only, so it keeps turning while the page works */
+.loading-ring {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--primary-color) 20%, transparent);
+  border-top-color: var(--primary-color);
+  animation: loading-spin 0.8s linear infinite;
+  will-change: transform;
 }
 
 .loading-text {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.3rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
+/* Titled like the panel headings (EXPLORER, MODELLE …) */
 .loading-title {
+  font-size: 0.75rem;
   font-weight: 600;
-  color: var(--text-color, #1e293b);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--primary-color);
 }
 
 .loading-name {
-  font-size: 0.875rem;
-  color: var(--text-color-secondary, #64748b);
-  font-family: monospace;
-  max-width: 250px;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary, #94a3b8);
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@keyframes loading-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes loading-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 </style>
