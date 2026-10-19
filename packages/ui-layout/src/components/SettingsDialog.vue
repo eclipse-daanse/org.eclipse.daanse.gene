@@ -18,9 +18,9 @@ const emit = defineEmits<{
 const { settings, setTheme, setLanguage, setPrimaryColor } = useGlobalSettings()
 
 const themes: { value: Theme; label: string }[] = [
-  { value: 'dark', label: 'Dark' },
+  { value: 'auto', label: 'System' },
   { value: 'light', label: 'Light' },
-  { value: 'auto', label: 'Auto' }
+  { value: 'dark', label: 'Dark' }
 ]
 
 const languages: { value: Language; label: string }[] = [

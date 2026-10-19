@@ -2,6 +2,9 @@
  * Global Settings Composable
  *
  * Manages application-wide settings: theme, language, primary color.
+ *
+ * The theme follows the browser's light/dark setting ("auto") unless the
+ * user picks light or dark in the settings.
  */
 
 import { reactive, watch, onMounted } from 'tsm:vue'
@@ -13,6 +16,8 @@ export type Language = 'de' | 'en'
 
 export interface GlobalSettings {
   theme: Theme
+  /** Light or dark picked in the settings; until then the theme follows the system */
+  themeChosen?: boolean
   language: Language
   primaryColor: string
 }
@@ -30,7 +35,7 @@ export const COLOR_PRESETS = {
 } as const
 
 const DEFAULT_SETTINGS: GlobalSettings = {
-  theme: 'dark',
+  theme: 'auto',
   language: 'de',
   primaryColor: 'blue'
 }
@@ -42,7 +47,10 @@ function loadSettings(): GlobalSettings {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) }
+      const loaded: GlobalSettings = { ...DEFAULT_SETTINGS, ...JSON.parse(stored) }
+      // Stored before the theme followed the system - "dark" was only the old default
+      if (!loaded.themeChosen) loaded.theme = 'auto'
+      return loaded
     }
   } catch (e) {
     console.warn('Failed to load settings:', e)
@@ -112,6 +120,12 @@ function initializeTheme() {
   applyTheme(settings.theme)
   applyColor(settings.primaryColor)
   applyLanguage(settings.language)
+
+  // Once for the app: a change of the system's light/dark setting applies while on "auto"
+  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    const theme = sharedSettings?.theme ?? loadSettings().theme
+    if (theme === 'auto') applyTheme('auto')
+  })
 }
 
 // Apply theme immediately on module load
@@ -126,11 +140,6 @@ export function useGlobalSettings() {
     applyTheme(settings.theme)
     applyColor(settings.primaryColor)
     applyLanguage(settings.language)
-
-    // Listen for system theme changes
-    window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      if (settings.theme === 'auto') applyTheme('auto')
-    })
   })
 
   watch(() => ({ ...settings }), (s) => {
@@ -142,7 +151,10 @@ export function useGlobalSettings() {
 
   return {
     settings,
-    setTheme: (t: Theme) => { settings.theme = t },
+    setTheme: (t: Theme) => {
+      settings.theme = t
+      settings.themeChosen = t !== 'auto'
+    },
     setLanguage: (l: Language) => { settings.language = l },
     setPrimaryColor: (c: string) => { settings.primaryColor = c },
     COLOR_PRESETS
