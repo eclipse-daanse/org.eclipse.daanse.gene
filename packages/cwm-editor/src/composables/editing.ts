@@ -5,6 +5,7 @@
  */
 import type { ComputedRef, InjectionKey, Ref } from 'tsm:vue'
 import type { ReferenceIndex } from './references'
+import type { GrantIndex } from './grants'
 
 export interface CwmEditing {
   /** Runs a model change, then marks the document dirty and re-renders */
@@ -35,6 +36,8 @@ export interface CwmEditing {
   descriptionClass: ComputedRef<any | null>
   /** target -> reference objects pointing at it */
   references: ComputedRef<ReferenceIndex>
+  /** object -> the access grants on it */
+  grants: ComputedRef<GrantIndex>
   /** Reference objects that could still point at the target */
   referenceCandidates: (target: any) => any[]
 }

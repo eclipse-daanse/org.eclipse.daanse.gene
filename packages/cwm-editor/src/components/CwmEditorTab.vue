@@ -81,6 +81,13 @@ function startDrag(event: PointerEvent): void {
   window.addEventListener('pointerup', up)
 }
 
+/** A change made in the glossary: written like one in the context view */
+function edit(write: () => void): void {
+  write()
+  ctx?.markDirty?.()
+  ctx?.triggerUpdate?.()
+}
+
 /** A jump from the glossary works like a click in the tree: the row moves to the top */
 function jumpTo(object: any): void {
   ctx?.selectObject?.(object)
@@ -135,9 +142,9 @@ function treeItemTestId(object: any): string {
                   class="glossary-toggle"
                   :class="{ active: glossaryOpen }"
                   data-testid="cwm.Editor.ContextView.Header.Glossary"
-                  title="Glossar ein-/ausblenden"
+                  title="Overview ein-/ausblenden"
                   @click="glossaryOpen = !glossaryOpen"
-                >Glossar</button>
+                >Overview</button>
               </template>
             </CwmContextView>
           </div>
@@ -153,6 +160,7 @@ function treeItemTestId(object: any): string {
                 @jump="jumpTo"
                 @close="glossaryOpen = false"
                 @orientation="orientation = $event"
+                @edit="edit"
               />
             </div>
           </template>
