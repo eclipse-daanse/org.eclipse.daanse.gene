@@ -74,22 +74,21 @@ export const NUMBERING_LABELS: Record<NumberingMode, string> = {
 }
 
 /**
- * Outline numbers ("1", "1.2", "1.2.3") for rows in depth-first order. The
- * first row (the context object) has none; the others count by their depth,
- * moved by "deeper"/"higher" of themselves and their ancestors, restarted by
+ * Outline numbers ("1", "1.2", "1.2.3") for rows in depth-first order,
+ * starting at the top: the context object (and any other row at the top) is
+ * "1", "2" …, its children "1.1" … The rows count by their depth, moved by
+ * "deeper"/"higher" of themselves and their ancestors, restarted by
  * "restart", left out with their subtree by "none".
  */
 export function outlineNumbers(rows: { object: any; depth: number; ancestors: any[] }[]): Map<any, string> {
   const numbers = new Map<any, string>()
   const counters: number[] = []
   for (const r of rows) {
-    if (r.depth === 0) continue
-    // The context object's own tag does not count; its descendants' do
-    const chain = [...r.ancestors.slice(1), r.object]
+    const chain = [...r.ancestors, r.object]
     const modes = chain.map(numberingMode)
     if (modes.includes('none')) continue
     const shift = modes.reduce((n, m) => n + (m === 'deeper' ? 1 : m === 'higher' ? -1 : 0), 0)
-    const level = Math.max(1, r.depth + shift)
+    const level = Math.max(1, r.depth + 1 + shift)
     if (modes[modes.length - 1] === 'restart') counters[level] = 0
     counters[level] = (counters[level] ?? 0) + 1
     counters.length = level + 1

@@ -16,7 +16,7 @@ const SLOT = 12
 
 <template>
   <div class="skeleton-row" aria-hidden="true">
-    <div class="indent" :style="{ width: `calc(var(--cwm-number-col, 0px) + ${((depth ?? 1) + 2) * SLOT}px)` }"></div>
+    <div class="indent" :style="{ width: `${((depth ?? 1) + 2) * SLOT}px` }"></div>
     <div class="block icon"></div>
     <div class="body">
       <div class="block title"></div>

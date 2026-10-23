@@ -1,11 +1,12 @@
 <script setup lang="ts">
 /**
- * Right column of an ObjectRow (PH-4) - kept narrow, so the content has the
- * room: the OCL validation result as a small dot (the findings in its title;
- * a click validates anew), below it "⋯" opening one dropdown with the
- * actions from the registry per EClass and the element's editor settings,
- * kept as tagged values in the model: whether its children start folded,
- * and (while the editor numbers) how it counts.
+ * Icon bar of an ObjectRow (PH-4), at the right end of its name's line, all
+ * in one row: the eye shows all fields (or only the filled ones again), "+"
+ * adds "Siehe auch" references, the OCL validation result as a small dot
+ * (the findings in its title; a click validates anew) and "⋯" opening one
+ * dropdown with the actions from the registry per EClass and the element's
+ * editor settings, kept as tagged values in the model: whether its children
+ * start folded, and (while the editor numbers) how it counts.
  */
 import { computed, inject, onBeforeUnmount, ref, watch } from 'tsm:vue'
 import { actionLabel, actionRegistry, type ActionApi, type CwmAction } from '../composables/actions'
@@ -30,7 +31,17 @@ const props = defineProps<{
   hasChildren?: boolean
   /** The editor numbers its rows */
   numbering?: boolean
+  /** Fields hidden while not all are shown */
+  hiddenFields?: number
+  /** All fields are shown */
+  showAll?: boolean
 }>()
+
+const emit = defineEmits<{ 'toggle-show-all': []; 'add-reference': [] }>()
+
+const eyeTitle = computed(() =>
+  props.showAll ? 'Nur gefüllte Felder anzeigen' : props.hiddenFields ? `Alle Felder anzeigen (+${props.hiddenFields})` : 'Alle Felder werden angezeigt'
+)
 
 const editing = inject(CWM_EDITING)!
 
@@ -136,6 +147,25 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
   <div class="right-rail" :data-testid="testId">
     <button
       type="button"
+      class="icon"
+      :class="{ on: showAll }"
+      :disabled="!showAll && !hiddenFields"
+      :data-testid="`${testId}.ShowAll`"
+      :title="eyeTitle"
+      :aria-label="eyeTitle"
+      :aria-pressed="!!showAll"
+      @click="emit('toggle-show-all')"
+    ><i :class="showAll ? 'pi pi-eye-slash' : 'pi pi-eye'"></i></button>
+    <button
+      type="button"
+      class="icon"
+      :data-testid="`${testId}.AddReference`"
+      title="Siehe auch hinzufügen"
+      aria-label="Siehe auch hinzufügen"
+      @click="emit('add-reference')"
+    ><i class="pi pi-plus"></i></button>
+    <button
+      type="button"
       class="badge"
       :class="badge.kind"
       :data-testid="`${testId}.Validation`"
@@ -143,7 +173,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
       :title="badgeTitle"
       :aria-label="badgeTitle"
       @click="editing.validate(object)"
-    >{{ badge.count || '' }}</button>
+    ><span v-if="badge.count" class="count">{{ badge.count }}</span></button>
     <div class="actions-wrap" :data-testid="`${testId}.Actions`" data-wire-kind="CONTROL">
       <button
         type="button"
@@ -206,43 +236,103 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
 </template>
 
 <style scoped>
-/* Narrow: a dot for OCL, "⋯" for the menu */
+/* One row of small icons: eye, "+", the OCL dot, "⋯" */
 .right-rail {
-  flex: 0 0 1.2rem;
+  flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0.35rem;
-  padding-top: 0.2rem;
+  gap: 0.15rem;
 }
 
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+}
+
+.icon i {
+  font-size: 0.75rem;
+}
+
+.icon:hover:not(:disabled),
+.icon.on {
+  background: var(--surface-hover);
+  color: var(--primary-color);
+}
+
+.icon:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* The OCL dot between the icons, a little apart from them; its count centred */
 .badge {
-  min-width: 0.7rem;
-  height: 0.7rem;
-  padding: 0 0.15rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 1rem;
+  height: 1rem;
+  margin: 0 0.25rem;
+  padding: 0 0.25rem;
   border: none;
   border-radius: 999px;
   font: inherit;
-  font-size: 0.55rem;
-  line-height: 0.7rem;
+  font-size: 0.65rem;
+  line-height: 1;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
   color: #fff;
   cursor: pointer;
 }
 
 .badge.ok {
-  width: 0.45rem;
+  width: 0.5rem;
   min-width: 0;
-  height: 0.45rem;
+  height: 0.5rem;
+  padding: 0;
+  /* Takes the room of a count badge (1rem + margins), so the bars line up */
+  margin: 0 0.5rem;
   background: color-mix(in srgb, var(--green-500, #22c55e) 70%, transparent);
 }
 
+/* The count trimmed to its digits' height (cap height to baseline), so the ring centres the digits themselves */
+.count {
+  display: block;
+  line-height: 1;
+  text-box: trim-both cap alphabetic;
+  /* Digits reach a little above the cap height - evens that out */
+  translate: 0 0.04em;
+}
+
+/* Browsers without text-box trimming: the digits sit about 1px high in the line box - moved down by that */
+@supports not (text-box: trim-both cap alphabetic) {
+  .count {
+    translate: 0 0.115em;
+  }
+}
+
+/* Findings as a ring in their colour, the count inside - not filled */
+.badge.warning,
+.badge.error {
+  border: 1.5px solid currentColor;
+  background: transparent;
+}
+
 .badge.warning {
-  background: var(--orange-500, #f97316);
+  color: var(--orange-500, #f97316);
 }
 
 .badge.error {
-  background: var(--red-500, #ef4444);
+  color: var(--red-500, #ef4444);
 }
 
 .actions-wrap {
@@ -253,7 +343,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onDocumentClick)
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.1rem;
+  width: 1.3rem;
   height: 1.3rem;
   padding: 0;
   border: none;

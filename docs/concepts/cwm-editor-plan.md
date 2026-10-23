@@ -262,7 +262,7 @@ Grundlage: daanse `resource.relational.privilege/model/privilege.ecore` (im Work
   - `gene.children = collapsed`: Kinder zuerst eingeklappt (Standard ausgeklappt, ohne Tag). Gilt beim ersten Anzeigen und bei Änderung des Tags; manuelles Auf-/Zuklappen bleibt.
   - `gene.numbering`: `restart` (Ebene beginnt neu bei 1), `deeper` / `higher` (Element samt Teilbaum eine Ebene tiefer/höher nummeriert), `none` (Element samt Teilbaum ohne Nummer, zählt nicht mit); ohne Tag normal.
 - Rechte Spalte schmal: OCL als kleiner Punkt (grün; orange/rot mit Anzahl, Befunde im Tooltip, Klick validiert), „⋮“ öffnet ein Dropdown mit den Aktionen und den Einstellungen „Kinder zuerst: ausgeklappt/eingeklappt“ (bei Elementen mit Kindern) und „Nummerierung: …“ (bei eingeschalteter Nummerierung).
-- **Nummerierung** per Schalter „Nr.“ im Kopf der Kontextansicht (im Browser gemerkt): Gliederungsnummern 1, 1.2, 1.2.3 in einer eigenen Spalte (so breit wie die längste Nummer) vor Icon und Namen, damit die Namen fluchten; das Kontextobjekt selbst ohne Nummer; die Nummern hängen nicht vom Einklappen ab (`outlineNumbers`).
+- **Nummerierung** per Schalter „Nr.“ im Kopf der Kontextansicht (im Browser gemerkt): Gliederungsnummern 1, 1.1, 1.1.1 rechts in der Namenszeile vor „alle anzeigen“; die Zählung beginnt beim obersten Element (Kontextobjekt = 1, weitere oberste Elemente 2, 3 …); die Nummern hängen nicht vom Einklappen ab (`outlineNumbers`).
 
 - Heller Modus: Abstufung der Ebenen-Karten auf 0,9 % verringert (vorher 2 %).
 

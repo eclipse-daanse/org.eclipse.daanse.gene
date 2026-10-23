@@ -83,12 +83,18 @@ watch(numbering, on => {
 const numbers = computed(() => (numbering.value ? outlineNumbers(rows.value) : new Map<any, string>()))
 
 /**
- * Width of the number column, in px: it fits the longest number. In px, not
- * ch, because the rows' card backgrounds are measured from the same value.
+ * Width of the widest type name on the page, in px (as the tags set it:
+ * 0.68rem, semibold). All type tags take it, so the numbers before them
+ * stand in one column.
  */
-const numberColumn = computed(() => {
-  const longest = Math.max(1, ...[...numbers.value.values()].map(n => n.length))
-  return Math.ceil(longest * 7.5 + 12)
+let measure: CanvasRenderingContext2D | null = null
+const kindWidth = computed(() => {
+  measure ??= document.createElement('canvas').getContext('2d')
+  if (!measure) return 0
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+  measure.font = `600 ${0.68 * rem}px ${getComputedStyle(document.body).fontFamily}`
+  const kinds = new Set(rows.value.map(r => r.kind))
+  return Math.ceil(Math.max(0, ...[...kinds].map(k => measure!.measureText(k).width)))
 })
 
 /*
@@ -525,7 +531,7 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
     <div v-else-if="!rowsReady" class="rows skeletons" data-testid="cwm.Editor.ContextView.Loading" role="status" aria-label="Ansicht wird aufgebaut">
       <RowSkeleton v-for="(d, n) in SKELETON_DEPTHS" :key="n" :depth="d" :lines="n % 3 === 0 ? 3 : 2" />
     </div>
-    <div v-else class="rows" :style="{ '--cwm-number-col': numbering ? `${numberColumn}px` : '0px' }">
+    <div v-else class="rows" :style="{ '--cwm-kind-width': `${kindWidth}px` }">
       <ContextObjectRow
         v-for="(row, i) in renderedRows"
         :key="row.key"
@@ -659,7 +665,8 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
 }
 
 .rows {
-  padding: 0 0.75rem 2rem 0.25rem;
+  /* A little room to the document's top and left edge */
+  padding: 5px 0.75rem 2rem calc(0.25rem + 5px);
 }
 
 /* Rows out of sight are neither laid out nor painted - with thousands of rows

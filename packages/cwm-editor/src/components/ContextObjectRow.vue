@@ -4,13 +4,13 @@
  *
  * Left the gutter with a bracket per element: it opens at the element's
  * title and closes after its last descendant, so a row carries the brackets
- * of its ancestors and its own; then the +/- of the row's own subtree. Right of it the Row: Body
- * (diagram, fields, text, columns table, references) and RightRail
- * (validation, actions).
+ * of its ancestors and its own; then the +/- of the row's own subtree. Right of it the Row: its
+ * name's line ending in the icon bar (RowRightRail: all fields, "Siehe auch", validation,
+ * actions), then the Body (diagram, fields, text, columns table, references).
  * Rows stand one below the other, never inside each other; only the lines
  * tell the hierarchy.
  */
-import { computed, inject, nextTick, ref } from 'tsm:vue'
+import { computed, inject, nextTick, ref, toRaw } from 'tsm:vue'
 import type { ContextRow } from '../composables/contextView'
 import { displayName, parentOf, shownByTable } from '../composables/contextView'
 import { attr, className, isTable, objectSlug, tableView } from '../composables/documentation'
@@ -87,11 +87,6 @@ const nameValue = computed(() => {
 /** The dialog's target: a child of the row's object, or a sibling at the row's place */
 const creating = ref<{ parent: any; feature?: any; index?: number } | null>(null)
 
-const canHaveChildren = computed(() => {
-  void props.version
-  return containmentFeatures(props.row.object).length > 0
-})
-
 /** A new sibling goes into the same list, right before this row's object */
 function createSibling(): void {
   const o = props.row.object
@@ -106,11 +101,26 @@ function createChildOf(): void {
   creating.value = { parent: props.row.object }
 }
 
+/** "Kind" at the element's lower edge, "Schwester" in the gap before a sibling */
+const canHaveChildren = computed(() => {
+  void props.version
+  return containmentFeatures(props.row.object).length > 0
+})
+
+const canAddSibling = computed(() => {
+  void props.version
+  const o = props.row.object
+  return !!parentOf(o) && !!o?.eContainingFeature?.()?.isMany?.()
+})
+
 /** Objects that document others show their references (modelElement) below their text */
 const referencesBelowText = computed(() => ['Description', 'Document', 'ResponsibleParty'].includes(props.row.kind))
 
 /** The fields table shows all attributes, also unset and hidden ones */
 const showAllFields = ref(false)
+
+/** The "Siehe auch" list - the icon bar's "+" opens its picker */
+const references = ref<{ openPicker: () => void } | null>(null)
 
 const hiddenFields = computed(() => {
   void props.version
@@ -149,9 +159,32 @@ const SLOT = 12
 
 const id = computed(() => `cwm.Editor.ContextView.ObjectRow@${props.row.slug}`)
 
-/** Gap above a row whose sibling (or a sibling's descendant) comes before it */
-/** Gap before a sibling - room for the "+" that inserts there */
-const GAP = 15
+/**
+ * Height of the two insert zones, alike: the gap before a sibling ("+
+ * Schwester") and the zone at an element's lower edge ("+ Kind"), for which
+ * the row keeps that room free below its content
+ */
+const INSERT_ZONE = 18
+
+/**
+ * The "Kind" zone at a row's lower edge and the "Schwester" zone in the gap
+ * right below it (in the next row) belong together: hovering one shows the
+ * other too. They lie in neighbouring rows, so it is found in the page.
+ */
+function pairZone(event: MouseEvent, on: boolean): void {
+  const zone = event.currentTarget as HTMLElement
+  const row = zone.closest('.object-row')
+  const other = zone.classList.contains('child-zone')
+    ? row?.nextElementSibling?.querySelector(':scope > .insert-zone:not(.child-zone)')
+    : row?.previousElementSibling?.querySelector(':scope > .child-zone')
+  other?.classList.toggle('paired', on)
+}
+
+/** The insert zones span the row's card: from its bracket line (left of it the lines stay free) to its right end */
+const insertLeft = computed(() => `${props.row.depth * SLOT + SLOT / 2 + 2}px`)
+
+/** Gap above a row whose sibling (or a sibling's descendant) comes before it - the "Schwester" zone */
+const GAP = INSERT_ZONE
 
 const gap = computed(() => (props.row.depth > 0 && props.prevDepth >= props.row.depth ? GAP : 0))
 
@@ -183,11 +216,15 @@ function lineEnd(line: { level: number; closes: boolean }): string {
   return `${(line.level - outermost) * END_STEP}px`
 }
 
+/** Radius of an element's upper left corner - its bracket and its card turn round there */
+const CORNER = 15
+
 function lineStyle(line: { level: number; opens: boolean; closes: boolean; owner: any }): Record<string, string> {
   return {
     // On the card's left edge; the ticks lie on its top and bottom edge
     left: `${line.level * SLOT + SLOT / 2}px`,
-    top: line.opens ? `${gap.value}px` : '0',
+    // An opening bracket starts below its rounded corner (drawn by its ::after)
+    top: line.opens ? `${gap.value + CORNER}px` : '0',
     bottom: lineEnd(line),
     // The bracket of the row under the pointer, through all its rows
     color: line.owner === editing.hovered.value
@@ -209,9 +246,9 @@ function lineStyle(line: { level: number; opens: boolean; closes: boolean; owner
 /** Width of a shadow's soft end, in px */
 const SOFT = 10
 
-/** A card's left edge: its bracket - right of the number column, when there is one */
+/** A card's left edge: its bracket */
 function layerX(level: number): string {
-  return `calc(var(--cwm-number-col, 0px) + ${level * SLOT + SLOT / 2}px)`
+  return `${level * SLOT + SLOT / 2}px`
 }
 
 /** Deeper cards cast stronger shadows; --layer-shadow scales them per theme (lighter in light mode) */
@@ -223,22 +260,76 @@ function shadowColor(level: number): string {
 const RIGHT = SOFT
 
 /**
- * With numbering on, titles read like headings: the outline level (parts of
- * the number) sets size and weight - level 0 (the context object, it has no
- * number) largest and boldest, from level 4 on all alike.
+ * Hues for the type tags, neighbours far apart. A class takes the hue of its
+ * place among its package's classifiers (moved by the package), so the
+ * classes of one package - Term, Concept, Glossary … - never share one.
  */
+const KIND_HUES = [210, 28, 145, 320, 55, 185, 275, 95, 350, 245, 165, 5]
+
+/** Trial: all type tags in the complement of the theme's highlight colour instead of a hue per type */
+const KIND_ACCENT = true
+
+function kindHue(object: any): number {
+  const eClass = toRaw(object)?.eClass?.()
+  const pkg = eClass?.getEPackage?.()
+  const classifiers: any[] = pkg ? [...(pkg.getEClassifiers?.() ?? [])] : []
+  let offset = 0
+  for (const ch of String(pkg?.getNsURI?.() ?? '')) offset = (offset * 31 + ch.charCodeAt(0)) >>> 0
+  const index = Math.max(0, classifiers.indexOf(eClass))
+  return KIND_HUES[(index + offset) % KIND_HUES.length]!
+}
+
 /** The row right below its parent: the first of its children */
 const isFirstChild = computed(() => props.row.depth > 1 && props.prevDepth === props.row.depth - 1)
 
+/**
+ * With numbering on, titles read like headings: the outline level (parts of
+ * the number) sets size and weight - the top ("1") largest and boldest, from
+ * the fifth level on all alike.
+ */
 const headingClass = computed(() => {
   if (!props.numbering) return null
-  if (props.row.depth === 0) return 'heading-0'
-  if (!props.number) return null
-  return `heading-${Math.min(props.number.split('.').length, 4)}`
+  if (!props.number) return props.row.depth === 0 ? 'heading-0' : null
+  return `heading-${Math.min(props.number.split('.').length - 1, 4)}`
 })
 
 /** The cards' shadows - switched off; the levels show by a light tint only */
 const SHADOWS = false
+
+/** The cards' tint per level - switched off; only the lines tell the levels */
+const TINT = false
+
+/** The own bracket's top line: from its round corner to the card's right end, in the bracket's colour */
+const topLineStyle = computed(() => {
+  const own = lines.value[lines.value.length - 1]!
+  return {
+    left: `${props.row.depth * SLOT + SLOT / 2 + CORNER}px`,
+    top: `${gap.value}px`,
+    right: `${RIGHT}px`,
+    color: lineStyle(own).color
+  }
+})
+
+/**
+ * The element under the pointer stands out: its card (from its bracket to
+ * the right end, below the gap, the upper left corner round) takes a light
+ * ground (--hover-card, a faint warm grey in light mode)
+ */
+const hoverStyle = computed(() => {
+  if (editing.hovered.value !== props.row.object) return {}
+  const x = layerX(props.row.depth)
+  const g = gap.value
+  const rest = `calc(100% - ${x} - ${RIGHT}px)`
+  const c = 'var(--hover-card)'
+  const flat = `linear-gradient(${c}, ${c})`
+  return {
+    background: [
+      `radial-gradient(circle at ${CORNER}px ${CORNER}px, ${c} ${CORNER - 0.5}px, transparent ${CORNER}px) ${x} ${g}px / ${CORNER}px ${CORNER}px no-repeat`,
+      `${flat} calc(${x} + ${CORNER}px) ${g}px / calc(${rest} - ${CORNER}px) ${CORNER}px no-repeat`,
+      `${flat} ${x} ${g + CORNER}px / ${rest} calc(100% - ${g + CORNER}px) no-repeat`
+    ].join(', ')
+  }
+})
 
 /** Tint of a level's card: children a little lighter than their parents (steps per theme, see the CSS) */
 function tint(level: number): string {
@@ -263,14 +354,19 @@ const tintStyle = computed(() => {
   if (depth > 0) {
     const x = layerX(depth)
     const rest = `calc(100% - ${x} - ${RIGHT}px)`
-    layers.push(`${flat(tint(depth))} ${x} ${g}px / ${rest} calc(100% - ${g}px) no-repeat`)
+    const own = tint(depth)
+    // Outside the rounded corner the parent's card shows (the context object has none)
+    const outside = depth > 1 ? tint(depth - 1) : 'transparent'
+    layers.push(`radial-gradient(circle at ${CORNER}px ${CORNER}px, ${own} ${CORNER - 0.5}px, ${outside} ${CORNER}px) ${x} ${g}px / ${CORNER}px ${CORNER}px no-repeat`)
+    layers.push(`${flat(own)} calc(${x} + ${CORNER}px) ${g}px / calc(${rest} - ${CORNER}px) ${CORNER}px no-repeat`)
+    layers.push(`${flat(own)} ${x} ${g + CORNER}px / ${rest} calc(100% - ${g + CORNER}px) no-repeat`)
     if (g > 0 && depth > 1) layers.push(`${flat(tint(depth - 1))} ${x} 0 / ${rest} ${g}px no-repeat`)
   }
   return layers.length ? { background: layers.join(', ') } : {}
 })
 
 const layerStyle = computed(() => {
-  if (!SHADOWS) return tintStyle.value
+  if (!SHADOWS) return TINT ? tintStyle.value : hoverStyle.value
   const depth = props.row.depth
   const g = gap.value
   const layers: string[] = []
@@ -342,7 +438,7 @@ const shown = computed(() => {
 <template>
   <div
     class="object-row"
-    :class="{ selected }"
+    :class="[{ selected }, headingClass && `name-${headingClass}`]"
     :style="layerStyle"
     :data-testid="id"
     data-wire-kind="LIST"
@@ -350,19 +446,46 @@ const shown = computed(() => {
     @mouseenter="editing.hovered.value = row.object"
     @mouseleave="editing.hovered.value === row.object && (editing.hovered.value = null)"
   >
-    <!-- The gap before a sibling, across the whole row: hovering it offers a new element at this place, on the parent's line -->
-    <div v-if="gap" class="gap-add" :style="{ height: `${gap}px` }">
+    <!-- The gap before this row (it follows a sibling's subtree), right of the lines: hovering it offers a new sister at this place -->
+    <div
+      v-if="gap && canAddSibling"
+      class="insert-zone"
+      :style="{ left: insertLeft, height: `${gap}px` }"
+      :data-testid="`${id}.Insert`"
+      title="Neue Schwester an dieser Stelle"
+      @click.self="createSibling"
+      @mouseenter="pairZone($event, true)"
+      @mouseleave="pairZone($event, false)"
+    >
       <button
         type="button"
-        class="add-button"
-        title="Neues Element hier einfügen"
-        :data-testid="`${id}.InsertBefore`"
-        :style="{ left: `calc(var(--cwm-number-col, 0px) + ${(row.depth - 1) * SLOT + SLOT / 2 - 5}px)` }"
+        class="insert"
+        title="Neue Schwester an dieser Stelle"
+        :data-testid="`${id}.InsertSibling`"
         @click="createSibling"
-      >+</button>
+      ><i class="pi pi-plus"></i> Schwester</button>
     </div>
-    <!-- The outline number in a column of its own at the left edge, flush for all rows -->
-    <div v-if="numbering" class="number-col" :style="{ marginTop: `${gap}px` }" :data-testid="`${id}.Row.Number`">{{ number }}</div>
+    <!-- The element's lower edge: hovering it offers a new child -->
+    <div
+      v-if="canHaveChildren"
+      class="insert-zone child-zone"
+      :style="{ left: insertLeft, height: `${INSERT_ZONE}px` }"
+      :data-testid="`${id}.InsertChildZone`"
+      title="Neues Kind anlegen"
+      @click.self="createChildOf"
+      @mouseenter="pairZone($event, true)"
+      @mouseleave="pairZone($event, false)"
+    >
+      <button
+        type="button"
+        class="insert"
+        title="Neues Kind anlegen"
+        :data-testid="`${id}.InsertChild`"
+        @click="createChildOf"
+      ><i class="pi pi-plus"></i> Kind</button>
+    </div>
+    <!-- The top of the own bracket, after its round corner: a line across the whole card to its right end, fading out - it parts the elements on the right too -->
+    <span class="top-line" :style="topLineStyle"></span>
     <div class="gutter" :style="{ width: `${(row.depth + 2) * SLOT}px` }" :data-testid="`${id}.Lines`">
       <span
         v-for="line in lines"
@@ -391,23 +514,13 @@ const shown = computed(() => {
         :style="{ left: `${(row.depth - 1) * SLOT + SLOT / 2 + 1}px` }"
         @click="emit(parentFolded ? 'unfold-parent' : 'fold-parent')"
       >{{ parentFolded ? '+' : '−' }}</button>
-      <!-- Beside the own bracket: a new child -->
-      <button
-        v-if="canHaveChildren"
-        type="button"
-        class="add-button add-child"
-        title="Neues Kind anlegen"
-        :data-testid="`${id}.AddChild`"
-        :style="{ left: `${row.depth * SLOT + SLOT / 2 - 5}px`, top: `calc(${gap}px + 2.1rem)` }"
-        @click="createChildOf"
-      >+</button>
     </div>
 
     <div class="row-icon" :style="{ marginTop: `${gap}px` }" :title="row.kind">
       <img v-if="icon?.iconDataUrl" :src="icon.iconDataUrl" alt="" />
       <i v-else-if="icon?.iconClass" :class="icon.iconClass"></i>
     </div>
-    <div class="row" :style="{ marginTop: `${gap}px` }" :data-testid="`${id}.Row`">
+    <div class="row" :style="{ marginTop: `${gap}px`, paddingBottom: canHaveChildren ? `${INSERT_ZONE + 2}px` : undefined }" :data-testid="`${id}.Row`">
       <div class="main">
         <header class="row-title" :class="headingClass" :title="row.kind">
           <template v-if="renaming">
@@ -443,15 +556,25 @@ const shown = computed(() => {
               aria-label="Namen bearbeiten"
               @click="startRename"
             ><i class="pi pi-pencil"></i></button>
-            <span class="kind">{{ row.kind }}</span>
           </template>
-          <button
-            v-if="!head && (hiddenFields > 0 || showAllFields)"
-            type="button"
-            class="show-all"
-            :data-testid="`${id}.Row.Body.Fields.ShowAll`"
-            @click="showAllFields = !showAllFields"
-          >{{ showAllFields ? 'weniger anzeigen' : `alle anzeigen (+${hiddenFields})` }}</button>
+          <!-- At the line's end, centred on the name: the outline number, the type tag, the icon bar -->
+          <span class="title-end">
+            <span v-if="numbering && number" class="row-number" :data-testid="`${id}.Row.Number`">{{ number }}</span>
+            <span v-if="!renaming" class="kind" :class="{ accent: KIND_ACCENT }" :style="KIND_ACCENT ? undefined : { '--kind-hue': kindHue(row.object) }">{{ row.kind }}</span>
+            <!-- Icon bar: all fields, "Siehe auch", OCL, actions -->
+            <RowRightRail
+              v-if="!head"
+              :object="row.object"
+              :test-id="`${id}.Row.RightRail`"
+              :version="version"
+              :has-children="row.hasChildren"
+              :numbering="!!numbering"
+              :hidden-fields="hiddenFields"
+              :show-all="showAllFields"
+              @toggle-show-all="showAllFields = !showAllFields"
+              @add-reference="references?.openPicker()"
+            />
+          </span>
         </header>
         <div v-if="!head" class="body" :data-testid="`${id}.Row.Body`">
           <DiagramArea
@@ -511,6 +634,7 @@ const shown = computed(() => {
           <!-- Table, view, column, procedure: who may do what; a responsible party: what it may do -->
           <RowPrivileges :object="row.object" :test-id="`${id}.Row.Body.Privileges`" :version="version" />
           <ReferencesTable
+            ref="references"
             :object="row.object"
             :shown="shown"
             :test-id="`${id}.Row.Body.References`"
@@ -526,33 +650,23 @@ const shown = computed(() => {
         :index="creating.index"
         @close="creating = null"
       />
-      <RowRightRail
-        v-if="!head"
-        :object="row.object"
-        :test-id="`${id}.Row.RightRail`"
-        :version="version"
-        :has-children="row.hasChildren"
-        :numbering="!!numbering"
-      />
     </div>
   </div>
 </template>
 
 <style scoped>
-/* Outline number in a column at the left edge, as wide as the longest number (set by the view) */
-.number-col {
-  flex: 0 0 var(--cwm-number-col, 0px);
-  box-sizing: border-box;
-  padding: 0.5rem 0 0 0.25rem;
-  text-align: left;
+/* Outline number at the line's end, before the type tag - right-aligned, all in one column (the tags are all as wide) */
+.row-number {
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  font-size: 0.85rem;
-  color: var(--text-color-secondary);
+  font-weight: 500;
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--text-color-secondary) 55%, transparent);
   white-space: nowrap;
 }
 
 .object-row {
+  /* Ground of the element under the pointer: a faint warm grey, only hinted */
+  --hover-card: hsl(40 10% 96.5%);
   /* Light mode takes finer steps - stronger grey looks dull */
   --layer-shade-step: 0.9%;
   --layer-shadow: 0.5;
@@ -585,35 +699,69 @@ const shown = computed(() => {
   cursor: help;
 }
 
-/* The top of a bracket: a stroke running right into the element, fading out; the bottom ends plain.
-   It starts right of the vertical line - overlapping, the two translucent strokes would darken the corner */
-.line.opens::before {
+/* The top of a bracket: a rounded corner (radius CORNER), then the top line (.top-line) runs on
+   across the card; the bottom ends plain. The parts touch without overlapping - the
+   translucent strokes would darken where they overlap */
+.line.opens::after {
   content: '';
   position: absolute;
-  left: 2px;
-  width: 14rem;
-  height: 2px;
-  background: linear-gradient(to right, currentColor, transparent);
+  top: -15px;
+  left: 0;
+  box-sizing: border-box;
+  width: 15px;
+  height: 15px;
+  border-top: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+  border-top-left-radius: 15px;
   pointer-events: none;
 }
 
-.line.opens::before {
-  top: 0;
+.top-line {
+  position: absolute;
+  height: 2px;
+  /* Strong at the corner, running out into a faint line that stays to the end */
+  background: linear-gradient(
+    to right,
+    currentColor,
+    color-mix(in srgb, currentColor 35%, transparent) 30%,
+    color-mix(in srgb, currentColor 12%, transparent)
+  );
+  pointer-events: none;
+}
+
+/*
+ * The icon sits in the corner of its element's bracket, as far from the top
+ * line as from the left one (--icon-inset). Left of the icon column lie 16.5px
+ * from the bracket's line (2 slots minus half a slot minus its 2px, plus the
+ * half pixel the 19px icon has in the 20px column); the column moves left by
+ * what the inset is smaller. The name's line is centred on the icon.
+ */
+.object-row {
+  --icon-inset: 10px;
+  --icon-size: 19px;
 }
 
 .row-icon {
   flex: 0 0 1.25rem;
   display: flex;
   justify-content: center;
-  padding-top: 0.55rem;
+  /* Below the top line (2px) by the inset, right of the left line by the same */
+  padding-top: calc(2px + var(--icon-inset));
+  margin-left: calc(var(--icon-inset) - 16.5px);
 }
+
+.object-row.name-heading-0 { --name-size: 1.35rem; }
+.object-row.name-heading-1 { --name-size: 1.2rem; }
+.object-row.name-heading-2 { --name-size: 1.07rem; }
+.object-row.name-heading-3 { --name-size: 0.97rem; }
+.object-row.name-heading-4 { --name-size: 0.9rem; }
 
 .row-icon img,
 .row-icon i {
-  width: 16px;
-  height: 16px;
-  font-size: 14px;
-  line-height: 16px;
+  width: 19px;
+  height: 19px;
+  font-size: 17px;
+  line-height: 19px;
   text-align: center;
 }
 
@@ -638,10 +786,17 @@ const shown = computed(() => {
   min-width: 0;
   display: flex;
   gap: 0.75rem;
-  padding: 0.5rem 0.5rem 0.75rem;
+  /* The name's line (1.3 × the name's size high) centred on the icon */
+  padding: calc(2px + var(--icon-inset) + var(--icon-size) / 2 - 0.65 * var(--name-size, 1em)) 0.5rem 0.4rem;
+}
+
+/* Sections with nothing to show take no room (their margins would still add up below the title) */
+.body > :deep(:empty) {
+  display: none;
 }
 
 :global(.dark-theme) .object-row {
+  --hover-card: color-mix(in srgb, var(--text-color) 6%, transparent);
   --layer-shade-step: 3.5%;
   --layer-shadow: 1;
   /* Dark mode: lighter means more of the (light) text colour towards the children */
@@ -649,46 +804,66 @@ const shown = computed(() => {
   --layer-tint-step: 1%;
 }
 
-/* "+" for new elements: a small round button on a bracket line, shown on hover */
-.add-button {
+/* Right of the lines, on hover a button in the middle: in the gap a new sister, at the lower edge a new child */
+.insert-zone {
   position: absolute;
-  width: 11px;
-  height: 11px;
-  padding: 0;
-  font-size: 10px;
-  line-height: 9px;
-  text-align: center;
+  top: 0;
+  /* Up to the card's right end, not into the room kept for its soft end */
+  right: 10px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  border: 1px dashed transparent;
+  border-radius: 6px;
+  /* The whole zone is clickable, not only its button */
+  cursor: pointer;
+}
+
+.insert {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 16px;
+  padding: 0 0.5rem;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 600;
   border: 1px solid var(--primary-color);
-  border-radius: 50%;
+  border-radius: 999px;
   background: var(--surface-card, var(--surface-ground));
   color: var(--primary-color);
   cursor: pointer;
   visibility: hidden;
-  z-index: 2;
 }
 
-.add-button:hover {
+.insert i {
+  font-size: 0.55rem;
+}
+
+.insert:hover {
   background: var(--primary-color);
   color: var(--primary-color-text, #fff);
 }
 
-/* The gap between siblings (a little beyond, to be easy to hit): hovering it offers the insert button */
-.gap-add {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 3;
+/* At the element's lower edge */
+.insert-zone.child-zone {
+  top: auto;
+  bottom: 0;
 }
 
-.gap-add .add-button {
-  top: 50%;
-  transform: translateY(-50%);
+/* Being there (or at its partner): the zone lights up, framed, and shows its button */
+.insert-zone:hover,
+.insert-zone.paired {
+  background: color-mix(in srgb, var(--primary-color) 20%, transparent);
+  border-color: color-mix(in srgb, var(--primary-color) 65%, transparent);
 }
 
-.gap-add:hover .add-button,
-.object-row:hover .add-child,
-.add-button:focus-visible {
+.insert-zone:hover .insert,
+.insert-zone.paired .insert,
+.insert:focus-visible {
   visibility: visible;
 }
 
@@ -779,21 +954,9 @@ const shown = computed(() => {
   gap: 0.5rem;
 }
 
-/* The fields' "alle anzeigen", on the name's line at the right */
-.show-all {
-  margin-left: auto;
-  font: inherit;
-  font-size: 0.7rem;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--primary-color);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
 .row-title .name,
 .row-title .name-input {
+  line-height: 1.3;
   font-weight: 600;
   color: var(--text-color);
 }
@@ -845,10 +1008,51 @@ const shown = computed(() => {
   font-weight: 500;
 }
 
+/* The type as a tag: framed, pale ground, text in its colour - a hue per type; centred on the name */
+/* Number, type tag and icon bar at the line's end, all centred on the name */
+.title-end {
+  margin-left: auto;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .row-title .kind {
-  font-size: 0.7rem;
-  font-style: italic;
-  color: var(--text-color-secondary);
+  /* Text centred in the tag: trimmed to cap height and baseline, the padding even around it */
+  text-box: trim-both cap alphabetic;
+  padding: 0.22rem 0.5rem;
+  /* As wide as the widest type on the page (set by the view), its text centred */
+  box-sizing: content-box;
+  min-width: var(--cwm-kind-width, auto);
+  text-align: center;
+  border: 1px solid hsl(var(--kind-hue) 55% 50% / 0.5);
+  border-radius: 999px;
+  background: hsl(var(--kind-hue) 75% 50% / 0.1);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  color: hsl(var(--kind-hue) 60% 34%);
+}
+
+:global(.dark-theme) .row-title .kind {
+  border-color: hsl(var(--kind-hue) 60% 65% / 0.45);
+  background: hsl(var(--kind-hue) 70% 60% / 0.14);
+  color: hsl(var(--kind-hue) 75% 75%);
+}
+
+/* All alike in the complement of the theme's highlight colour (its hue turned by 180°), pale */
+.row-title .kind.accent {
+  border-color: hsl(from var(--primary-color) calc(h + 180) calc(s * 0.45) l / 0.45);
+  background: hsl(from var(--primary-color) calc(h + 180) calc(s * 0.45) l / 0.08);
+  color: hsl(from var(--primary-color) calc(h + 180) calc(s * 0.45) 38%);
+}
+
+:global(.dark-theme) .row-title .kind.accent {
+  border-color: hsl(from var(--primary-color) calc(h + 180) calc(s * 0.45) 70% / 0.4);
+  background: hsl(from var(--primary-color) calc(h + 180) calc(s * 0.45) 60% / 0.1);
+  color: hsl(from var(--primary-color) calc(h + 180) calc(s * 0.45) 75%);
 }
 
 .title-action {

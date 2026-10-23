@@ -6,7 +6,8 @@
  * Name, Pfad, Description, Typ; hovering shows the referenced object's data,
  * a click goes there - a responsible party shows its business card on hover.
  * Access grants on the object have their own section, "Privileges".
- * "+ Siehe auch" opens a window to add one or several.
+ * The "+" in the row's icon bar opens a window to add one or several
+ * (`openPicker`, exposed).
  */
 import { computed, inject, onBeforeUnmount, ref, shallowRef } from 'tsm:vue'
 import RowContactCard from './RowContactCard.vue'
@@ -86,6 +87,8 @@ function confirm(): void {
   if (list.length > 0) editing.change(() => addReferences(props.object, list))
   picking.value = false
 }
+
+defineExpose({ openPicker })
 </script>
 
 <template>
@@ -133,16 +136,6 @@ function confirm(): void {
     </div>
     </Teleport>
 
-    <div class="adds">
-    <button
-      type="button"
-      class="add"
-      :data-testid="`${testId}.Add`"
-      data-wire-kind="CONTROL"
-      @click="openPicker"
-    >+ Siehe auch</button>
-    </div>
-
     <Teleport to="body">
     <div v-if="picking" class="picker-backdrop" @click.self="picking = false">
       <div class="picker" role="dialog" aria-label="Siehe auch hinzufügen">
@@ -174,7 +167,7 @@ function confirm(): void {
 </template>
 
 <style scoped>
-/* Category heading of the row body (Attribute, Referenzen, Siehe auch …) - centred between two lines */
+/* Category heading of the row body (Attribute, Referenzen, Siehe auch …) - left, between two lines */
 .section-title {
   margin: 1rem 0 0.5rem;
   padding: 0.25rem 0;
@@ -182,7 +175,7 @@ function confirm(): void {
   border-bottom: 1px solid var(--surface-border);
   font-size: 0.75rem;
   font-weight: 600;
-  text-align: center;
+  text-align: left;
   color: var(--text-color);
 }
 
@@ -253,24 +246,6 @@ tbody tr:hover {
 .none {
   color: var(--text-color-secondary);
   padding: 0.15rem 0.3rem;
-}
-
-.adds {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.4rem;
-  margin-top: 0.3rem;
-}
-
-.add {
-  display: block;
-  font: inherit;
-  padding: 0.1rem 0.4rem;
-  border: 1px dashed var(--surface-border);
-  border-radius: 3px;
-  background: transparent;
-  color: var(--primary-color);
-  cursor: pointer;
 }
 
 .picker-backdrop {
