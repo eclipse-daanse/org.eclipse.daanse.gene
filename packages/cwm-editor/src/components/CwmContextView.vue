@@ -23,6 +23,7 @@ import { dataTypes } from '../composables/columnsEdit'
 import { classifiers } from '../composables/attributes'
 import { setCreatedHook } from '../composables/creation'
 import { childrenDefault, outlineNumbers } from '../composables/taggedValues'
+import { numbering } from '../composables/toolbar'
 import { backendDefaults } from '../composables/fieldDefaults'
 import { applyBackendDefaults } from '../composables/rowContent'
 import { buildGrantIndex } from '../composables/grants'
@@ -51,8 +52,17 @@ const rows = computed(() => {
 })
 /** Children of a folded element opened one by one - they show in full, the others as heads */
 const opened = reactive(new Set<any>())
-const shownRows = computed(() => visibleRows(rows.value, collapsed, opened))
-const headRows = computed(() => new Set(shownRows.value.filter(r => rowMode(r, collapsed, opened) === 'head').map(r => r.object)))
+/** Elements closed with their "−": only their name shows, their children not at all - "+" shows them again */
+const shut = reactive(new Set<any>())
+const shownRows = computed(() =>
+  visibleRows(rows.value, collapsed, opened).filter(r => shut.size === 0 || !r.ancestors.some(a => shut.has(a)))
+)
+const headRows = computed(() => new Set(shownRows.value.filter(r => shut.has(r.object) || rowMode(r, collapsed, opened) === 'head').map(r => r.object)))
+
+function toggleShut(o: any): void {
+  if (shut.has(o)) shut.delete(o)
+  else shut.add(o)
+}
 
 /*
  * Children folded at first: the tag gene.children = collapsed. Applied when a
@@ -72,14 +82,7 @@ watch(rows, list => {
   }
 }, { immediate: true })
 
-/* Outline numbers on the rows - switched on in the header, kept per browser */
-const NUMBERING_KEY = 'cwm.editor.numbering'
-const numbering = ref((() => {
-  try { return localStorage.getItem(NUMBERING_KEY) === 'on' } catch { return false }
-})())
-watch(numbering, on => {
-  try { localStorage.setItem(NUMBERING_KEY, on ? 'on' : 'off') } catch { /* no storage */ }
-})
+/* Outline numbers on the rows - switched on in the toolbar, kept per browser */
 const numbers = computed(() => (numbering.value ? outlineNumbers(rows.value) : new Map<any, string>()))
 
 /**
@@ -323,6 +326,7 @@ function setContext(o: any): void {
   contextObject.value = toRaw(o)
   collapsed.clear()
   opened.clear()
+  shut.clear()
   appliedDefaults = new WeakMap()
 }
 
@@ -470,7 +474,7 @@ function showAsContext(o: any): void {
   void nextTick(() => rootEl.value?.scrollTo({ top: 0 }))
 }
 
-defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
+defineExpose({ setContext: showAsContext, openFieldRules: () => openFieldRules(), objects: everything, modelClasses })
 </script>
 
 <template>
@@ -494,21 +498,6 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
         <button type="button" :disabled="!back" :title="back ? label(back) : ''" @click="setContext(back)">◀ zurück</button>
         <button type="button" :disabled="!forward" :title="forward ? label(forward) : ''" @click="setContext(forward)">▶ vor</button>
       </div>
-      <button
-        type="button"
-        class="field-rules"
-        data-testid="cwm.Editor.ContextView.Header.FieldRules"
-        title="Vorschlagswerte, Defaults und ausgeblendete Attribute"
-        @click="openFieldRules()"
-      >Feldregeln</button>
-      <button
-        type="button"
-        class="numbering"
-        :class="{ active: numbering }"
-        data-testid="cwm.Editor.ContextView.Header.Numbering"
-        title="Nummerierung der Elemente ein-/ausblenden"
-        @click="numbering = !numbering"
-      >Nr.</button>
       <button
         type="button"
         class="set-context"
@@ -549,9 +538,9 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
         :numbering="numbering"
         :version="version"
         @toggle="toggle(row.object)"
-        @fold-parent="foldAll(row.ancestors[row.ancestors.length - 1])"
-        @unfold-parent="collapsed.delete(row.ancestors[row.ancestors.length - 1])"
         @toggle-opened="toggleOpened(row.object)"
+        :shut="shut.has(row.object)"
+        @toggle-shut="toggleShut(row.object)"
         @select="select"
       />
       <!-- The next rows, while they are still being drawn -->
@@ -652,11 +641,6 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
   background: transparent;
   color: var(--text-color);
   cursor: pointer;
-}
-
-.header button.numbering.active {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
 }
 
 .header button:disabled {

@@ -35,6 +35,41 @@ export interface RowField {
 /** Attributes shown elsewhere in the row - the name in the title, the text in the text view */
 const NOT_A_FIELD = new Set(['name', 'body'])
 
+/**
+ * Text attributes a class shows as editors of their own - multi-line, full
+ * width, always there (also while unset) - instead of a line in the table
+ */
+const TEXT_BLOCKS: Record<string, string[]> = {
+  Concept: ['definition', 'example', 'usage']
+}
+
+/** Names of the text blocks of the object's class, in their order */
+export function textBlockNames(object: any): string[] {
+  const o = toRaw(object)
+  return TEXT_BLOCKS[String(o?.eClass?.()?.getName?.() ?? '')] ?? []
+}
+
+/**
+ * References a class shows as blocks of their own, under a heading as its
+ * text blocks, the targets as a table below it
+ */
+const REFERENCE_BLOCKS: Record<string, string[]> = {
+  Concept: ['relatedConcept']
+}
+
+/** Names of the reference blocks of the object's class, in their order */
+export function referenceBlockNames(object: any): string[] {
+  const o = toRaw(object)
+  return REFERENCE_BLOCKS[String(o?.eClass?.()?.getName?.() ?? '')] ?? []
+}
+
+/** A block's heading from its feature name: "relatedConcept" → "Related Concepts" (plural when many) */
+export function blockHeading(name: string, many = false): string {
+  const words = name.replace(/([a-z0-9])([A-Z])/g, '$1 $2').split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1))
+  const heading = words.join(' ')
+  return many && !heading.endsWith('s') ? `${heading}s` : heading
+}
+
 const NUMBER_TYPES = /^(EInt|EIntegerObject|ELong|ELongObject|EShort|EShortObject|EDouble|EDoubleObject|EFloat|EFloatObject|EBigInteger|EBigDecimal|Integer|Float|Double|Long)$/
 const BOOLEAN_TYPES = /^(EBoolean|EBooleanObject|Boolean)$/
 
@@ -61,11 +96,13 @@ function literalString(value: any): string | null {
 export function fieldsOf(object: any, all = false): RowField[] {
   const o = toRaw(object)
   const fields: RowField[] = []
+  const blocks = textBlockNames(o)
   for (const feature of many(o?.eClass?.()?.getEAllAttributes?.())) {
     const name = feature.getName?.()
     if (!name || NOT_A_FIELD.has(name) || feature.isMany?.() || feature.isDerived?.()) continue
     const field = fieldFor(o, feature)
-    if (!all && (field.hidden || (!field.isSet && field.uiDefault == null))) continue
+    // Text blocks are always there, also while unset
+    if (!all && (field.hidden || (!field.isSet && field.uiDefault == null && !blocks.includes(name)))) continue
     fields.push(field)
   }
   return fields

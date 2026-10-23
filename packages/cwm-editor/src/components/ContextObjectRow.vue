@@ -59,16 +59,17 @@ const props = defineProps<{
   opened?: boolean
   /** Its parent is folded */
   parentFolded?: boolean
+  /** Closed with its "−": only the name shows, the children not at all */
+  shut?: boolean
   /** Model version, read to re-render after edits */
   version?: number
 }>()
 
 const emit = defineEmits<{
+  /** All children to heads, or in full again */
   toggle: []
-  /** All the parent's children to heads - from the "−" on the first child's row */
-  'fold-parent': []
-  /** All the parent's children in full - from the "+" on the first head's row */
-  'unfold-parent': []
+  /** "−" behind the name: the element down to its name, its children hidden - "+" shows them again */
+  'toggle-shut': []
   /** This child of a folded element: in full, or back to its head */
   'toggle-opened': []
   select: [object: any]
@@ -121,6 +122,20 @@ const showAllFields = ref(false)
 
 /** The "Siehe auch" list - the icon bar's "+" opens its picker */
 const references = ref<{ openPicker: () => void } | null>(null)
+
+/**
+ * The icon bar's eye and "+" act on the body: a head (minimised, or a child
+ * of a folded element) opens first, then the action follows
+ */
+async function whenOpen(action: () => void): Promise<void> {
+  if (props.head) {
+    if (props.shut) emit('toggle-shut')
+    else if (props.parentFolded) emit('toggle-opened')
+    await nextTick()
+    await nextTick()
+  }
+  action()
+}
 
 const hiddenFields = computed(() => {
   void props.version
@@ -278,9 +293,6 @@ function kindHue(object: any): number {
   const index = Math.max(0, classifiers.indexOf(eClass))
   return KIND_HUES[(index + offset) % KIND_HUES.length]!
 }
-
-/** The row right below its parent: the first of its children */
-const isFirstChild = computed(() => props.row.depth > 1 && props.prevDepth === props.row.depth - 1)
 
 /**
  * With numbering on, titles read like headings: the outline level (parts of
@@ -504,16 +516,6 @@ const shown = computed(() => {
         :style="{ left: `${row.depth * SLOT + SLOT / 2 + 1}px`, top: `calc(${gap}px + 0.9rem)` }"
         title="Ausgewähltes Objekt"
       ></span>
-      <!-- First child, on the parent's line: "−" folds all children to heads, "+" opens all again -->
-      <button
-        v-if="isFirstChild"
-        type="button"
-        class="unfold fold"
-        :title="parentFolded ? 'Alle Kinder aufklappen' : 'Alle Kinder zuklappen'"
-        :data-testid="`${id}.${parentFolded ? 'UnfoldParent' : 'FoldParent'}`"
-        :style="{ left: `${(row.depth - 1) * SLOT + SLOT / 2 + 1}px` }"
-        @click="emit(parentFolded ? 'unfold-parent' : 'fold-parent')"
-      >{{ parentFolded ? '+' : '−' }}</button>
     </div>
 
     <div class="row-icon" :style="{ marginTop: `${gap}px` }" :title="row.kind">
@@ -556,14 +558,23 @@ const shown = computed(() => {
               aria-label="Namen bearbeiten"
               @click="startRename"
             ><i class="pi pi-pencil"></i></button>
+            <!-- Behind the name, for every element: "−" closes it down to its name (and hides its children), "+" shows all again -->
+            <button
+              type="button"
+              class="unfold fold"
+              :title="shut ? 'Wieder anzeigen' : row.hasChildren ? 'Bis auf den Namen schließen, Kinder ausblenden' : 'Bis auf den Namen schließen'"
+              :aria-expanded="!shut"
+              :data-testid="`${id}.${shut ? 'Open' : 'Shut'}`"
+              @click="emit('toggle-shut')"
+            >{{ shut ? '+' : '−' }}</button>
           </template>
           <!-- At the line's end, centred on the name: the outline number, the type tag, the icon bar -->
           <span class="title-end">
             <span v-if="numbering && number" class="row-number" :data-testid="`${id}.Row.Number`">{{ number }}</span>
             <span v-if="!renaming" class="kind" :class="{ accent: KIND_ACCENT }" :style="KIND_ACCENT ? undefined : { '--kind-hue': kindHue(row.object) }">{{ row.kind }}</span>
             <!-- Icon bar: all fields, "Siehe auch", OCL, actions -->
+            <!-- Also on a head (minimised or folded): eye and "+" open it first -->
             <RowRightRail
-              v-if="!head"
               :object="row.object"
               :test-id="`${id}.Row.RightRail`"
               :version="version"
@@ -571,8 +582,8 @@ const shown = computed(() => {
               :numbering="!!numbering"
               :hidden-fields="hiddenFields"
               :show-all="showAllFields"
-              @toggle-show-all="showAllFields = !showAllFields"
-              @add-reference="references?.openPicker()"
+              @toggle-show-all="whenOpen(() => { showAllFields = !showAllFields })"
+              @add-reference="whenOpen(() => references?.openPicker())"
             />
           </span>
         </header>
@@ -917,12 +928,15 @@ const shown = computed(() => {
   background: color-mix(in srgb, var(--primary-color) 10%, transparent);
 }
 
-/* The "−" / "+" on the first child's row, centred on the parent's line */
+/* The "−" / "+" behind the name, centred on its line - only while the row is hovered */
 .fold {
-  position: absolute;
-  top: 0.15rem;
-  transform: translateX(-50%);
-  z-index: 1;
+  align-self: center;
+  visibility: hidden;
+}
+
+.object-row:hover .fold,
+.fold:focus-visible {
+  visibility: visible;
 }
 
 .unfold:hover {

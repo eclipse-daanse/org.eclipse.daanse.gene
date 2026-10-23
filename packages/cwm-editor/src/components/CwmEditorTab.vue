@@ -9,10 +9,11 @@
  * browser work unchanged. Only the middle differs: the context view, and
  * beside it - on demand - the glossary (split side by side or one above the other).
  */
-import { computed, inject, provide, ref, shallowRef, watch } from 'tsm:vue'
+import { computed, inject, onBeforeUnmount, provide, ref, shallowRef, watch } from 'tsm:vue'
 import CwmContextView from './CwmContextView.vue'
 import GlossaryView from './GlossaryView.vue'
 import { objectSlug } from '../composables/documentation'
+import { registerTabTools } from '../composables/toolbar'
 
 const props = defineProps<{ tabId: string }>()
 
@@ -31,7 +32,7 @@ const ModelBrowser = tsm?.getService('ui.model-browser.components')?.ModelBrowse
 /** The object on top of the context view; the tree marks it (PH-3) */
 const topObject = shallowRef<any>(null)
 
-const contextView = ref<{ setContext: (object: any) => void; objects: any[]; modelClasses: any[] } | null>(null)
+const contextView = ref<{ setContext: (object: any) => void; openFieldRules: () => void; objects: any[]; modelClasses: any[] } | null>(null)
 
 /* ── glossary beside the context view ────────────────────────────── */
 
@@ -58,6 +59,13 @@ watch([glossaryOpen, orientation, share], () => {
 })
 
 const version = computed<number>(() => ctx?.version?.value ?? 0)
+
+/* The toolbar's overview and field rules act on this tab while it is in front */
+onBeforeUnmount(registerTabTools(props.tabId, {
+  openFieldRules: () => contextView.value?.openFieldRules(),
+  toggleOverview: () => { glossaryOpen.value = !glossaryOpen.value },
+  overviewOpen: () => glossaryOpen.value
+}))
 
 const splitEl = ref<HTMLElement | null>(null)
 
@@ -135,18 +143,7 @@ function treeItemTestId(object: any): string {
       <template #center>
         <div ref="splitEl" class="split" :class="orientation">
           <div class="pane main">
-            <CwmContextView ref="contextView" :context="ctx" @top-object="topObject = $event">
-              <template #tools>
-                <button
-                  type="button"
-                  class="glossary-toggle"
-                  :class="{ active: glossaryOpen }"
-                  data-testid="cwm.Editor.ContextView.Header.Glossary"
-                  title="Overview ein-/ausblenden"
-                  @click="glossaryOpen = !glossaryOpen"
-                >Overview</button>
-              </template>
-            </CwmContextView>
+            <CwmContextView ref="contextView" :context="ctx" @top-object="topObject = $event" />
           </div>
           <template v-if="glossaryOpen">
             <div class="divider" @pointerdown="startDrag"></div>
@@ -225,22 +222,6 @@ function treeItemTestId(object: any): string {
 
 .divider:hover {
   background: color-mix(in srgb, var(--primary-color) 55%, transparent);
-}
-
-.glossary-toggle {
-  font: inherit;
-  font-size: 0.75rem;
-  padding: 0.15rem 0.5rem;
-  border: 1px solid var(--surface-border);
-  border-radius: 3px;
-  background: transparent;
-  color: var(--text-color);
-  cursor: pointer;
-}
-
-.glossary-toggle.active {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
 }
 
 .missing {

@@ -4,11 +4,15 @@
  * attributes, one table row per non-containment reference of its class, set
  * or empty, with what it points at (contained objects are the row's
  * children). A click on a target selects it; "+" picks existing objects of
- * the reference's type; "×" takes a target out again.
+ * the reference's type; "×" takes a target out again. Some classes show a
+ * reference as a block of its own (a Concept's related concepts -
+ * `referenceBlockNames`): a heading as their text blocks, the targets'
+ * table below it.
  *
  * Test ids: the table carries `<testId>`, each row `<testId>.Row@<feature>`.
  */
 import { computed, inject, ref, shallowRef } from 'tsm:vue'
+import { Button, Dialog, InputText } from 'tsm:primevue'
 import {
   addToReference,
   creatableClasses,
@@ -22,6 +26,7 @@ import { className } from '../composables/documentation'
 import { displayName, pathTo } from '../composables/contextView'
 import { CWM_EDITING } from '../composables/editing'
 import { setFieldHidden } from '../composables/fieldDefaults'
+import { blockHeading, referenceBlockNames } from '../composables/rowContent'
 
 const props = defineProps<{
   object: any
@@ -38,10 +43,17 @@ const editing = inject(CWM_EDITING)!
 /** Targets shown per field before "+n weitere" */
 const LIMIT = 8
 
-const fields = computed(() => {
+const allFields = computed(() => {
   void props.version
   return referenceFields(props.object, props.shown, !!props.showAll)
 })
+
+/** The reference blocks, in their order, and the rest for the table */
+const blocks = computed(() => {
+  const names = referenceBlockNames(props.object)
+  return names.map(n => allFields.value.find(f => f.name === n)).filter((f): f is ReferenceField => !!f)
+})
+const fields = computed(() => allFields.value.filter(f => !blocks.value.includes(f)))
 
 const expanded = ref(new Set<string>())
 
@@ -55,6 +67,9 @@ function toggle(name: string): void {
 function canAdd(f: ReferenceField): boolean {
   return f.many || f.targets.length === 0
 }
+
+/** The block's target whose "×" waits for its "Ja" */
+const confirming = shallowRef<any>(null)
 
 function remove(f: ReferenceField, target: any): void {
   if (f.containment) editing.deleteObject(target)
@@ -70,6 +85,30 @@ const chosen = ref(new Set<any>())
 
 function label(o: any): string {
   return picking.value?.containment ? String(o.getName?.()) : `${className(o)} ${displayName(o)}`
+}
+
+/** What an entry shows as its name: a class's name, or the object's */
+function entryName(o: any): string {
+  return picking.value?.containment ? String(o.getName?.()) : displayName(o)
+}
+
+/** Several targets at once: tick them, then "Hinzufügen" */
+const multiPick = computed(() => !!picking.value && !picking.value.containment && picking.value.many)
+
+const pickerTitle = computed(() => {
+  const f = picking.value
+  if (!f) return ''
+  if (f.containment) return `Neues ${f.typeName} in ${f.name}`
+  return blocks.value.includes(f) ? `${blockHeading(f.name, f.many)} hinzufügen` : `${f.name}: ${f.typeName} wählen`
+})
+
+/** The icon the tree gives the object - or instances of the class */
+function iconOf(o: any): { iconClass?: string; iconDataUrl?: string } | null {
+  try {
+    return editing.iconFor(picking.value?.containment ? { eClass: () => o } : o)
+  } catch {
+    return null
+  }
 }
 
 function hint(o: any): string {
@@ -126,6 +165,54 @@ function toggleHidden(field: { name: string; hidden: boolean }): void {
 </script>
 
 <template>
+  <!-- Reference blocks: a heading, the targets' table below it -->
+  <div v-for="f in blocks" :key="f.name" class="ref-block" :data-testid="`${testId}.Block@${f.name}`">
+    <div class="block-head">
+      <span class="block-label" :title="f.hidden ? 'Durch eine Feldregel ausgeblendet' : f.name">{{ blockHeading(f.name, f.many) }}<span v-if="f.hidden"> ◌</span></span>
+      <button type="button" class="rule" title="Feldregel bearbeiten" @click="editing.openFieldRules(object, f.name)">⚙</button>
+      <button
+        type="button"
+        class="rule eye"
+        :title="f.hidden ? 'Wieder anzeigen (Feldregel)' : 'Für diese Klasse und erbende ausblenden (Feldregel)'"
+        :data-testid="`${testId}.Block@${f.name}.Hide`"
+        @click="toggleHidden(f)"
+      ><i :class="f.hidden ? 'pi pi-eye' : 'pi pi-eye-slash'"></i></button>
+      <!-- As the text blocks' pencil: "+" beside the heading, on hover -->
+      <button
+        v-if="canAdd(f)"
+        type="button"
+        class="rule"
+        :title="`${f.typeName} hinzufügen`"
+        :aria-label="`${f.typeName} hinzufügen`"
+        :data-testid="`${testId}.Block@${f.name}.Add`"
+        @click="openPicker(f)"
+      ><i class="pi pi-plus"></i></button>
+    </div>
+    <!-- The targets all of one kind here - no type column, no column heads -->
+    <table v-if="f.targets.length" class="targets" :data-testid="`${testId}.Block@${f.name}.Targets`">
+      <tbody>
+        <tr v-for="(t, i) in expanded.has(f.name) ? f.targets : f.targets.slice(0, LIMIT)" :key="i">
+          <td class="t-name">
+            <a @click="editing.select(t.object)">{{ t.name }}</a>
+            <!-- Removing asks first -->
+            <span v-if="confirming === t.object" class="confirm-remove">
+              entfernen?
+              <button type="button" class="confirm-yes" :data-testid="`${testId}.Block@${f.name}.RemoveYes`" @click="remove(f, t.object); confirming = null">Ja</button>
+              <button type="button" class="confirm-no" @click="confirming = null">Nein</button>
+            </span>
+            <button v-else type="button" class="remove" title="Verweis entfernen" @click="confirming = t.object">×</button>
+          </td>
+          <td class="t-path" :title="t.path"><template v-for="(c, ci) in t.crumbs" :key="ci"><span v-if="ci > 0" class="sep"> › </span><a class="crumb" :title="`${c.name} wählen`" @click.stop="editing.select(c.object)">{{ c.name }}</a></template></td>
+        </tr>
+      </tbody>
+    </table>
+    <button
+      v-if="f.targets.length > LIMIT"
+      type="button"
+      class="more"
+      @click="toggle(f.name)"
+    >{{ expanded.has(f.name) ? 'weniger' : `+${f.targets.length - LIMIT} weitere` }}</button>
+  </div>
   <div v-if="fields.length" class="section-title">Referenzen</div>
   <table v-if="fields.length" class="reference-fields" :data-testid="testId" data-wire-kind="TABLE">
     <tbody>
@@ -192,42 +279,131 @@ function toggleHidden(field: { name: string; hidden: boolean }): void {
     </tbody>
   </table>
 
-  <!-- On the page, not in the row: rows clip what reaches outside them -->
-  <Teleport to="body">
-  <div v-if="picking" class="picker-backdrop" @click.self="picking = null">
-    <div class="picker" role="dialog" :aria-label="picking.containment ? 'Objekt anlegen' : 'Referenz wählen'">
-      <header>
-        <strong>{{ picking.name }}: {{ picking.containment ? `neues ${picking.typeName}` : picking.typeName }}</strong>
-        <input v-model="filter" placeholder="Filtern …" aria-label="Filtern" />
-      </header>
-      <ul>
-        <li
+  <!-- Choosing targets (or a class to create): a GenE dialog, as the one for new children -->
+  <Dialog
+    :visible="!!picking"
+    modal
+    :header="pickerTitle"
+    :style="{ width: '36rem' }"
+    :pt="{ root: { 'data-testid': `${testId}.Picker` } }"
+    @update:visible="(v: boolean) => { if (!v) picking = null }"
+  >
+    <div v-if="picking" class="ref-picker">
+      <InputText
+        v-model="filter"
+        :placeholder="picking.containment ? 'Klasse suchen…' : `${picking.typeName} suchen…`"
+        class="search"
+        autofocus
+        aria-label="Suchen"
+      />
+      <div class="list">
+        <button
           v-for="(o, i) in filtered"
           :key="i"
+          type="button"
+          class="entry"
           :class="{ chosen: chosen.has(o) }"
           @click="pick(o)"
         >
-          <span>{{ label(o) }}</span>
-          <span class="hint">{{ hint(o) }}</span>
-        </li>
-        <li v-if="filtered.length === 0" class="none">Nichts gefunden</li>
-      </ul>
-      <footer>
-        <button type="button" @click="picking = null">Abbrechen</button>
-        <button
-          v-if="!picking.containment && picking.many"
-          type="button"
-          class="primary"
-          :disabled="chosen.size === 0"
-          @click="confirm"
-        >Hinzufügen ({{ chosen.size }})</button>
-      </footer>
+          <i v-if="multiPick" class="check pi" :class="chosen.has(o) ? 'pi-check-square' : 'pi-stop'"></i>
+          <img v-if="iconOf(o)?.iconDataUrl" :src="iconOf(o)!.iconDataUrl" class="icon" alt="" />
+          <i v-else :class="iconOf(o)?.iconClass || 'pi pi-file'" class="icon"></i>
+          <span class="text">
+            <span class="name">{{ entryName(o) }}</span>
+            <span v-if="hint(o)" class="path">{{ hint(o) }}</span>
+          </span>
+          <span v-if="!picking.containment" class="type">{{ className(o) }}</span>
+        </button>
+        <div v-if="filtered.length === 0" class="empty">
+          {{ filter.trim() ? `Nichts passt zu „${filter.trim()}“` : 'Nichts zur Auswahl' }}
+        </div>
+      </div>
+      <div class="counter">
+        {{ filtered.length }} von {{ options.length }}<template v-if="multiPick"> · {{ chosen.size }} ausgewählt</template>
+      </div>
     </div>
-  </div>
-  </Teleport>
+    <template #footer>
+      <Button label="Abbrechen" severity="secondary" text @click="picking = null" />
+      <Button
+        v-if="multiPick"
+        :label="`Hinzufügen (${chosen.size})`"
+        :disabled="chosen.size === 0"
+        @click="confirm"
+      />
+    </template>
+  </Dialog>
 </template>
 
 <style scoped>
+/* A reference block: its heading as the attributes' text blocks, the targets' table below */
+.ref-block {
+  margin: 0 0 0.6rem;
+  font-size: 0.8rem;
+}
+
+.block-head {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-bottom: 0.2rem;
+}
+
+.block-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-color-secondary);
+}
+
+.ref-block:hover .block-head .rule {
+  visibility: visible;
+}
+
+.block-head .rule i {
+  font-size: 0.65rem;
+}
+
+/* Over the whole width: the name as wide as it needs, the path the rest */
+.ref-block .targets {
+  table-layout: auto;
+}
+
+.ref-block .t-name {
+  width: 1%;
+  white-space: nowrap;
+  padding-left: 0;
+  padding-right: 1.2rem;
+}
+
+.confirm-remove {
+  margin-left: 0.4rem;
+  font-size: 0.72rem;
+  color: var(--red-500, #ef4444);
+}
+
+.confirm-remove button {
+  margin-left: 0.3rem;
+  padding: 0;
+  font: inherit;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.confirm-yes {
+  font-weight: 600;
+  color: var(--red-500, #ef4444);
+}
+
+.confirm-no {
+  color: var(--text-color-secondary);
+}
+
+/* The whole path, wrapping when it is long */
+.ref-block .t-path {
+  white-space: normal;
+  overflow: visible;
+}
+
 /* Category heading of the row body (Attribute, Referenzen, Siehe auch …) - left, between two lines */
 .section-title {
   margin: 1rem 0 0.5rem;
@@ -433,110 +609,105 @@ tr.ref-field:hover .add,
   color: var(--text-color-secondary);
 }
 
-.picker-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.35);
-}
-
-.picker {
-  width: min(32rem, 92vw);
-  max-height: 70vh;
+/* The picker dialog, as the one for new children */
+.ref-picker {
   display: flex;
   flex-direction: column;
-  background: var(--surface-card, var(--surface-ground));
-  border: 1px solid var(--surface-border);
-  border-radius: 6px;
-  font-size: 0.85rem;
-  color: var(--text-color);
+  gap: 0.5rem;
 }
 
-.picker header,
-.picker footer {
+.ref-picker .search {
+  width: 100%;
+}
+
+.ref-picker .list {
+  display: flex;
+  flex-direction: column;
+  max-height: 24rem;
+  overflow-y: auto;
+  border: 1px solid var(--surface-border, #dee2e6);
+  border-radius: 6px;
+}
+
+.ref-picker .entry {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  padding: 0.6rem 0.75rem;
-}
-
-.picker header {
-  border-bottom: 1px solid var(--surface-border);
-}
-
-.picker header input {
-  flex: 1 1 auto;
+  padding: 0.45rem 0.7rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--surface-border, #dee2e6);
+  text-align: left;
+  cursor: pointer;
   font: inherit;
-  color: var(--text-color);
-  background: var(--surface-ground);
-  border: 1px solid var(--surface-border);
-  border-radius: 3px;
-  padding: 0.2rem 0.4rem;
+  color: inherit;
 }
 
-.picker ul {
+.ref-picker .entry:last-child {
+  border-bottom: none;
+}
+
+.ref-picker .entry:hover,
+.ref-picker .entry:focus-visible {
+  background: var(--surface-hover, rgba(0, 0, 0, 0.04));
+  outline: none;
+}
+
+.ref-picker .entry.chosen {
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
+
+.ref-picker .check {
+  flex: 0 0 auto;
+  font-size: 0.9rem;
+  color: var(--text-color-secondary);
+}
+
+.ref-picker .entry.chosen .check {
+  color: var(--primary-color);
+}
+
+.ref-picker .icon {
+  flex: 0 0 1rem;
+  width: 1rem;
+  height: 1rem;
+  font-size: 0.9rem;
+  object-fit: contain;
+  color: var(--text-color-secondary, #6c757d);
+}
+
+.ref-picker .text {
   flex: 1 1 auto;
-  overflow: auto;
-  margin: 0;
-  padding: 0.3rem 0;
-  list-style: none;
-}
-
-.picker li {
+  min-width: 0;
   display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.25rem 0.75rem;
-  cursor: pointer;
+  flex-direction: column;
 }
 
-.picker li:hover {
-  background: var(--surface-hover);
+.ref-picker .name {
+  font-weight: 600;
 }
 
-.picker li.chosen {
-  background: color-mix(in srgb, var(--primary-color) 15%, transparent);
-}
-
-.picker li.none {
-  cursor: default;
+.ref-picker .path {
+  font-size: 0.72rem;
   color: var(--text-color-secondary);
 }
 
-.hint {
+.ref-picker .type {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
   color: var(--text-color-secondary);
-  font-size: 0.75rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.picker footer {
-  justify-content: flex-end;
-  border-top: 1px solid var(--surface-border);
+.ref-picker .empty {
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
 }
 
-.picker footer button {
-  font: inherit;
-  padding: 0.25rem 0.7rem;
-  border: 1px solid var(--surface-border);
-  border-radius: 4px;
-  background: var(--surface-ground);
-  color: var(--text-color);
-  cursor: pointer;
-}
-
-.picker footer button.primary {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-  color: var(--primary-color-text, #fff);
-}
-
-.picker footer button:disabled {
-  opacity: 0.5;
-  cursor: default;
+.ref-picker .counter {
+  font-size: 0.72rem;
+  color: var(--text-color-secondary);
+  text-align: right;
 }
 </style>

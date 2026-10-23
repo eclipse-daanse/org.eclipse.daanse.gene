@@ -134,6 +134,48 @@ const ctxExpandedKeys = computed({
   set: (v) => { ctx.expandedKeys.value = v }
 })
 const ctxSelectedObject = computed(() => ctx.selectedObject.value)
+
+/*
+ * Search: keeps the entries whose label matches, with the entries above
+ * them; while searching, everything shown is expanded (as in the model browser).
+ */
+const search = ref('')
+const searchQuery = computed(() => search.value.trim().toLowerCase())
+
+function matchingNodes(nodes: any[], q: string): any[] {
+  const out: any[] = []
+  for (const n of nodes) {
+    if (String(n.label ?? '').toLowerCase().includes(q)) {
+      out.push(n)
+      continue
+    }
+    const children = matchingNodes(n.children ?? [], q)
+    if (children.length) out.push({ ...n, children })
+  }
+  return out
+}
+
+const shownNodes = computed(() => (searchQuery.value ? matchingNodes(ctxTreeNodes.value, searchQuery.value) : ctxTreeNodes.value))
+
+/** Expansion while searching: every entry above a hit */
+const searchExpandedKeys = computed(() => {
+  const keys: Record<string, boolean> = {}
+  const walk = (nodes: any[]) => {
+    for (const n of nodes) {
+      if (n.children?.length && !String(n.label ?? '').toLowerCase().includes(searchQuery.value)) {
+        keys[n.key] = true
+        walk(n.children)
+      }
+    }
+  }
+  walk(shownNodes.value)
+  return keys
+})
+
+const treeExpandedKeys = computed({
+  get: () => (searchQuery.value ? searchExpandedKeys.value : ctxExpandedKeys.value),
+  set: (v) => { if (!searchQuery.value) ctxExpandedKeys.value = v }
+})
 const ctxSelectedNode = computed(() => ctx.selectedNode.value)
 const ctxAllPackages = computed(() => ctx.allPackages.value)
 
@@ -1425,10 +1467,23 @@ watch(ctxSelectedObject, (obj) => {
       @keydown="handleClipboardShortcut"
       @dragend.capture="clearDragFeedback"
     >
+      <div class="tree-search">
+        <i class="pi pi-search"></i>
+        <input
+          v-model="search"
+          type="search"
+          placeholder="Objekt suchen …"
+          aria-label="Objekte durchsuchen"
+          data-testid="InstanceTree.Search"
+          @keydown.escape="search = ''"
+          @keydown.stop
+        />
+      </div>
+      <div v-if="searchQuery && shownNodes.length === 0" class="no-match">Nichts gefunden für „{{ search.trim() }}“</div>
       <Tree
-        :value="ctxTreeNodes"
+        :value="shownNodes"
         v-model:selectionKeys="ctxSelectedKeys"
-        v-model:expandedKeys="ctxExpandedKeys"
+        v-model:expandedKeys="treeExpandedKeys"
         selectionMode="single"
         :draggableNodes="true"
         :droppableNodes="true"
@@ -1865,6 +1920,43 @@ watch(ctxSelectedObject, (obj) => {
   font-size: 1rem;
   font-weight: 600;
   color: var(--primary-700);
+}
+
+/* Search above the tree, stays in view while it scrolls */
+.tree-search {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0.5rem 0;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--border-radius, 4px);
+  background: var(--surface-ground);
+  color: var(--text-color-secondary);
+  font-size: 0.8rem;
+}
+
+.tree-search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  color: var(--text-color);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.tree-search:focus-within {
+  border-color: var(--primary-color);
+}
+
+.no-match {
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary);
 }
 
 /* PrimeVue 4 Tree Styles */
