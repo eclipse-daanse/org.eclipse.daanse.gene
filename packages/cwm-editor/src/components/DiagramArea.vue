@@ -38,6 +38,8 @@ function select(o: any): void {
 </script>
 
 <template>
+  <!-- Full screen leaves the row for the page: rows clip what reaches outside them -->
+  <Teleport to="body" :disabled="!expanded">
   <div class="diagram" :class="{ expanded, drawing }" :data-testid="testId" data-wire-kind="REGION">
     <div v-if="expanded" class="toolbar">
       <span class="tool-title">Diagramm: {{ title }}</span>
@@ -67,6 +69,7 @@ function select(o: any): void {
       @click="expanded = !expanded"
     >{{ expanded ? '⤡ Verkleinern' : '⤢ Vollbild' }}</button>
   </div>
+  </Teleport>
 </template>
 
 <style scoped>

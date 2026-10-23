@@ -6,9 +6,11 @@
  * writes the file through EMF's serializer.
  *
  * Opened from the context view's header, or from a field with its class
- * and attribute preselected.
+ * and attribute preselected. A GenE dialog: the rules as a table (a search
+ * narrows it), below it the form for a new rule.
  */
-import { computed, nextTick, ref, shallowRef, toRaw, watch } from 'tsm:vue'
+import { computed, nextTick, onMounted, ref, shallowRef, toRaw, watch } from 'tsm:vue'
+import { Button, Checkbox, Dialog, Dropdown, InputText, ProgressBar } from 'tsm:primevue'
 import {
   addRule,
   editableFieldDefaultsFile,
@@ -38,10 +40,26 @@ const error = ref('')
 const highlighted = shallowRef<any>(null)
 const listEl = ref<HTMLElement | null>(null)
 
+const visible = ref(true)
+
+/*
+ * The dialog shows at once with a progress bar; its table and dropdowns
+ * follow a frame later - the user sees it react instead of waiting.
+ */
+const ready = ref(false)
+onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => { ready.value = true })))
+
 const rows = computed(() => {
   void fieldDefaultsVersion.value
   const f = file.value
   return f ? ruleObjects(f).map(rule => ({ rule, ...ruleTargetNames(rule), values: valuesOf(rule) })) : []
+})
+
+/** The rules the search leaves: class or attribute contains it */
+const ruleFilter = ref('')
+const shownRows = computed(() => {
+  const f = ruleFilter.value.trim().toLowerCase()
+  return f ? rows.value.filter(r => `${r.className} ${r.attributeName}`.toLowerCase().includes(f)) : rows.value
 })
 
 function get(o: any, name: string): any {
@@ -61,7 +79,6 @@ function valuesOf(rule: any) {
 
 /* ── new rule ─────────────────────────────────────────────────────── */
 
-const classFilter = ref('')
 const newClass = shallowRef<any>(null)
 const newAttribute = ref('')
 const newIncludeSubclasses = ref(false)
@@ -69,9 +86,14 @@ const newIncludeSubclasses = ref(false)
 const sortedClasses = computed(() =>
   [...props.classes].sort((a, b) => String(a.getName?.()).localeCompare(String(b.getName?.())))
 )
-const filteredClasses = computed(() => {
-  const f = classFilter.value.trim().toLowerCase()
-  return f ? sortedClasses.value.filter(c => String(c.getName?.()).toLowerCase().includes(f)) : sortedClasses.value
+/** The dropdown's options: the classes by index - the dropdown filters them itself */
+const classOptions = computed(() => sortedClasses.value.map((c, i) => ({ label: classLabel(c), value: i })))
+const newClassIndex = computed({
+  get: () => (newClass.value ? sortedClasses.value.indexOf(newClass.value) : null),
+  set: (i: number | null) => {
+    newClass.value = i == null ? null : sortedClasses.value[i] ?? null
+    newAttribute.value = ''
+  }
 })
 /** Single-valued attributes, then the references the row shows (not containments) */
 const attributes = computed(() => {
@@ -93,11 +115,7 @@ function classLabel(c: any): string {
   return ns ? `${c.getName()} (${ns})` : c.getName()
 }
 
-function onPickClass(event: Event): void {
-  const i = Number((event.target as HTMLSelectElement).value)
-  newClass.value = filteredClasses.value[i] ?? null
-  newAttribute.value = ''
-}
+const attributeOptions = computed(() => attributes.value.map((a: any) => ({ label: featureLabel(a), value: a.getName() })))
 
 function add(): void {
   const f = file.value
@@ -122,9 +140,14 @@ function onSuggestions(rule: any, event: Event): void {
   status.value = ''
 }
 
-function onFlag(rule: any, field: 'hidden' | 'includeSubclasses', event: Event): void {
-  if (file.value) setRuleValue(file.value, rule, field, (event.target as HTMLInputElement).checked)
+function onFlag(rule: any, field: 'hidden' | 'includeSubclasses', value: boolean): void {
+  if (file.value) setRuleValue(file.value, rule, field, value)
   status.value = ''
+}
+
+function close(): void {
+  visible.value = false
+  emit('close')
 }
 
 function remove(rule: any): void {
@@ -147,6 +170,8 @@ async function save(): Promise<void> {
 
 async function reveal(rule: any): Promise<void> {
   highlighted.value = toRaw(rule)
+  // The table appears a frame after the dialog
+  if (!ready.value) await new Promise<void>(resolve => { const stop = watch(ready, v => { if (v) { stop(); resolve() } }) })
   await nextTick()
   listEl.value?.querySelector('tr.highlighted')?.scrollIntoView({ block: 'nearest' })
 }
@@ -161,7 +186,6 @@ watch(() => props.focus, async (focus) => {
   if (existing) {
     void reveal(existing.rule)
   } else {
-    classFilter.value = ''
     newClass.value = toRaw(focus.eClass)
     newAttribute.value = focus.attributeName
   }
@@ -175,236 +199,351 @@ const fileCount = computed(() => fieldDefaultsFiles.size)
 </script>
 
 <template>
-  <div class="backdrop" @click.self="emit('close')">
-    <div class="dialog" role="dialog" aria-label="Feldregeln" data-testid="cwm.Editor.FieldRules">
-      <header>
-        <strong>Feldregeln</strong>
+  <Dialog
+    v-model:visible="visible"
+    modal
+    header="Feldregeln"
+    :style="{ width: 'min(68rem, 95vw)' }"
+    :pt="{ root: { 'data-testid': 'cwm.Editor.FieldRules' } }"
+    @hide="emit('close')"
+  >
+    <div v-if="!ready" class="loading" role="status">
+      <ProgressBar mode="indeterminate" style="height: 4px" />
+      <span>Feldregeln werden geladen …</span>
+    </div>
+    <div v-else class="field-rules">
+      <div class="top">
         <span class="file" :title="fileCount > 1 ? 'Weitere Dateien werden angewendet, aber hier nicht bearbeitet' : ''">
-          {{ file?.path }}{{ dirty ? ' *' : '' }}{{ fileCount > 1 ? ` (+${fileCount - 1} weitere)` : '' }}
+          <i class="pi pi-file"></i>
+          {{ file?.path }}<span v-if="dirty" class="dirty" title="Ungespeicherte Änderungen"> ●</span>
+          <span v-if="fileCount > 1" class="more-files">(+{{ fileCount - 1 }} weitere)</span>
         </span>
-      </header>
+        <span class="search">
+          <i class="pi pi-search"></i>
+          <InputText v-model="ruleFilter" placeholder="Regel suchen…" aria-label="Regel suchen" />
+        </span>
+      </div>
 
       <div ref="listEl" class="list">
         <table>
           <thead>
             <tr>
               <th>Klasse</th>
-              <th title="Die Regel gilt auch für alle Klassen, die von dieser Klasse erben">Erbende Klassen</th>
+              <th class="center" title="Die Regel gilt auch für alle Klassen, die von dieser Klasse erben">Erbende</th>
               <th>Attribut</th>
               <th>Vorschläge</th>
               <th>UI-Default</th>
               <th>Backend-Default</th>
-              <th title="Erst nach „alle anzeigen“ sichtbar">Aus&shy;blenden</th>
+              <th class="center" title="Erst nach „alle anzeigen“ sichtbar">Ausblenden</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(r, i) in rows" :key="i" :class="{ highlighted: r.rule === highlighted }">
-              <td :title="r.nsUri">{{ r.className || '?' }}</td>
+            <tr v-for="(r, i) in shownRows" :key="i" :class="{ highlighted: r.rule === highlighted }">
+              <td class="cls" :title="r.nsUri">{{ r.className || '?' }}</td>
               <td class="center">
-                <input
-                  type="checkbox"
-                  :checked="r.values.includeSubclasses"
+                <Checkbox
+                  :model-value="r.values.includeSubclasses"
+                  binary
                   aria-label="Erbende Klassen"
-                  @change="onFlag(r.rule, 'includeSubclasses', $event)"
+                  @update:model-value="onFlag(r.rule, 'includeSubclasses', !!$event)"
                 />
               </td>
-              <td>{{ r.attributeName || '?' }}</td>
-              <td><input :value="r.values.suggestions" placeholder="a, b, c" aria-label="Vorschläge" @change="onSuggestions(r.rule, $event)" /></td>
-              <td><input :value="r.values.uiDefault" aria-label="UI-Default" @change="onText(r.rule, 'uiDefault', $event)" /></td>
-              <td><input :value="r.values.backendDefault" aria-label="Backend-Default" @change="onText(r.rule, 'backendDefault', $event)" /></td>
-              <td class="center"><input type="checkbox" :checked="r.values.hidden" aria-label="Ausblenden" @change="onFlag(r.rule, 'hidden', $event)" /></td>
-              <td><button type="button" class="remove" title="Regel löschen" @click="remove(r.rule)">×</button></td>
+              <td class="attr">{{ r.attributeName || '?' }}</td>
+              <td><input class="cell" :value="r.values.suggestions" placeholder="a, b, c" aria-label="Vorschläge" @change="onSuggestions(r.rule, $event)" /></td>
+              <td><input class="cell" :value="r.values.uiDefault" placeholder="–" aria-label="UI-Default" @change="onText(r.rule, 'uiDefault', $event)" /></td>
+              <td><input class="cell" :value="r.values.backendDefault" placeholder="–" aria-label="Backend-Default" @change="onText(r.rule, 'backendDefault', $event)" /></td>
+              <td class="center">
+                <Checkbox
+                  :model-value="r.values.hidden"
+                  binary
+                  aria-label="Ausblenden"
+                  @update:model-value="onFlag(r.rule, 'hidden', !!$event)"
+                />
+              </td>
+              <td class="end">
+                <button type="button" class="remove" title="Regel löschen" @click="remove(r.rule)"><i class="pi pi-trash"></i></button>
+              </td>
             </tr>
-            <tr v-if="rows.length === 0">
-              <td colspan="8" class="none">Noch keine Regeln</td>
+            <tr v-if="shownRows.length === 0">
+              <td colspan="8" class="none">{{ rows.length ? 'Keine Regel passt zur Suche' : 'Noch keine Regeln' }}</td>
             </tr>
           </tbody>
         </table>
       </div>
 
       <div class="add">
-        <input v-model="classFilter" placeholder="Klasse filtern …" aria-label="Klasse filtern" />
-        <select aria-label="Klasse" :value="filteredClasses.indexOf(newClass)" @change="onPickClass">
-          <option :value="-1" disabled>Klasse wählen</option>
-          <option v-for="(c, i) in filteredClasses" :key="i" :value="i">{{ classLabel(c) }}</option>
-        </select>
-        <label class="subclasses" title="Die Regel gilt auch für alle Klassen, die von der gewählten Klasse erben">
-          <input v-model="newIncludeSubclasses" type="checkbox" />
-          alle erbenden Klassen
-        </label>
-        <select v-model="newAttribute" aria-label="Attribut" :disabled="!newClass">
-          <option value="" disabled>Attribut wählen</option>
-          <option v-for="a in attributes" :key="a.getName()" :value="a.getName()">{{ featureLabel(a) }}</option>
-        </select>
-        <button type="button" :disabled="!newClass || !newAttribute" @click="add">Regel hinzufügen</button>
+        <div class="add-title"><i class="pi pi-plus-circle"></i> Neue Regel</div>
+        <div class="add-row">
+          <Dropdown
+            v-model="newClassIndex"
+            :options="classOptions"
+            option-label="label"
+            option-value="value"
+            filter
+            filter-placeholder="Klasse suchen…"
+            placeholder="Klasse wählen"
+            class="add-class"
+            aria-label="Klasse"
+          />
+          <Dropdown
+            v-model="newAttribute"
+            :options="attributeOptions"
+            option-label="label"
+            option-value="value"
+            filter
+            placeholder="Attribut wählen"
+            :disabled="!newClass"
+            class="add-attr"
+            aria-label="Attribut"
+          />
+          <label class="subclasses" title="Die Regel gilt auch für alle Klassen, die von der gewählten Klasse erben">
+            <Checkbox v-model="newIncludeSubclasses" binary input-id="new-rule-subclasses" />
+            <span>erbende Klassen</span>
+          </label>
+          <Button label="Hinzufügen" icon="pi pi-plus" size="small" :disabled="!newClass || !newAttribute" @click="add" />
+        </div>
       </div>
-
-      <footer>
-        <span v-if="error" class="error">{{ error }}</span>
-        <span v-else class="status">{{ status }}</span>
-        <button type="button" @click="emit('close')">Schließen</button>
-        <button type="button" class="primary" :disabled="!dirty" @click="save">Speichern</button>
-      </footer>
     </div>
-  </div>
+
+    <template #footer>
+      <span v-if="error" class="error">{{ error }}</span>
+      <span v-else class="status">{{ status }}</span>
+      <Button label="Schließen" severity="secondary" text @click="close" />
+      <Button label="Speichern" icon="pi pi-save" :disabled="!dirty" @click="save" />
+    </template>
+  </Dialog>
 </template>
 
 <style scoped>
-/* Native checkboxes in the primary colour */
-input[type='checkbox'] {
-  accent-color: var(--primary-color);
-}
-
-.subclasses {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  white-space: nowrap;
-}
-
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.35);
-}
-
-.dialog {
-  width: min(64rem, 94vw);
-  max-height: 80vh;
+.loading {
   display: flex;
   flex-direction: column;
-  background: var(--surface-card, var(--surface-ground));
-  border: 1px solid var(--surface-border);
-  border-radius: 6px;
-  font-size: 0.85rem;
-  color: var(--text-color);
+  gap: 0.6rem;
+  padding: 2rem 0;
+  font-size: 0.8rem;
+  color: var(--text-color-secondary, #6c757d);
+  text-align: center;
 }
 
-header,
-footer,
-.add {
+.field-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.top {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 0.75rem;
+  gap: 1rem;
 }
 
-header .file {
-  font-size: 0.75rem;
-  color: var(--text-color-secondary);
+.file {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.78rem;
+  color: var(--text-color-secondary, #6c757d);
+}
+
+.dirty {
+  color: var(--primary-color);
+}
+
+.more-files {
+  font-family: inherit;
+}
+
+.search {
+  position: relative;
+  margin-left: auto;
+}
+
+.search i {
+  position: absolute;
+  left: 0.6rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.8rem;
+  color: var(--text-color-secondary, #6c757d);
+}
+
+.search :deep(input) {
+  width: 16rem;
+  padding-left: 1.9rem;
 }
 
 .list {
-  flex: 1 1 auto;
+  max-height: 50vh;
   overflow: auto;
-  border-top: 1px solid var(--surface-border);
-  border-bottom: 1px solid var(--surface-border);
+  border: 1px solid var(--surface-border, #dee2e6);
+  border-radius: 6px;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 0.85rem;
 }
 
 th {
   position: sticky;
   top: 0;
-  background: var(--surface-card, var(--surface-ground));
+  z-index: 1;
+  padding: 0.55rem 0.6rem;
   text-align: left;
   font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-color-secondary);
-  padding: 0.35rem 0.4rem;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  color: var(--text-color-secondary, #6c757d);
+  background: var(--surface-ground);
+  border-bottom: 1px solid var(--surface-border, #dee2e6);
 }
 
 td {
-  padding: 0.2rem 0.4rem;
-  border-top: 1px solid color-mix(in srgb, var(--surface-border) 60%, transparent);
+  padding: 0.3rem 0.6rem;
+  vertical-align: middle;
+}
+
+tbody tr:hover {
+  background: var(--surface-hover, rgba(0, 0, 0, 0.04));
+}
+
+tbody tr.highlighted {
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+.cls {
+  font-weight: 600;
   white-space: nowrap;
 }
 
-tr.highlighted td {
-  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+.attr {
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 .center {
   text-align: center;
 }
 
-.none {
-  color: var(--text-color-secondary);
-  padding: 0.6rem 0.4rem;
-}
-
-input:not([type='checkbox']),
-select {
-  font: inherit;
-  color: var(--text-color);
-  background: var(--surface-ground);
-  border: 1px solid var(--surface-border);
-  border-radius: 3px;
-  padding: 0.15rem 0.35rem;
-}
-
-td input:not([type='checkbox']) {
+/* Values edited in place: quiet until hovered or focused */
+.cell {
   width: 100%;
-  min-width: 7rem;
+  min-width: 6rem;
   box-sizing: border-box;
-}
-
-.add select {
-  max-width: 18rem;
-}
-
-button {
   font: inherit;
-  padding: 0.2rem 0.6rem;
-  border: 1px solid var(--surface-border);
-  border-radius: 3px;
-  background: transparent;
   color: var(--text-color);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0.25rem 0.45rem;
+}
+
+.cell:hover {
+  border-color: var(--surface-border, #dee2e6);
+}
+
+.cell:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  background: var(--surface-ground);
+}
+
+.cell::placeholder {
+  color: var(--text-color-secondary, #6c757d);
+  opacity: 0.6;
+}
+
+.end {
+  width: 2rem;
+  text-align: right;
+}
+
+.remove {
+  padding: 0.2rem 0.35rem;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-color-secondary, #6c757d);
+  cursor: pointer;
+  opacity: 0;
+}
+
+tr:hover .remove {
+  opacity: 1;
+}
+
+.remove:hover {
+  color: var(--red-500, #ef4444);
+  background: color-mix(in srgb, var(--red-500, #ef4444) 10%, transparent);
+}
+
+.none {
+  padding: 1rem 0.6rem;
+  font-style: italic;
+  color: var(--text-color-secondary, #6c757d);
+}
+
+.add {
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border, #dee2e6);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--primary-color) 4%, transparent);
+}
+
+.add-title {
+  margin-bottom: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-color-secondary, #6c757d);
+}
+
+.add-title i {
+  color: var(--primary-color);
+}
+
+.add-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.add-class {
+  flex: 1 1 16rem;
+}
+
+.add-attr {
+  flex: 1 1 14rem;
+}
+
+.subclasses {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-button.primary {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-  color: var(--primary-color-text, #fff);
-}
-
-button.remove {
-  border: none;
-  font-size: 1rem;
-  line-height: 1;
-  color: var(--text-color-secondary);
-}
-
-footer {
-  justify-content: flex-end;
-}
-
-footer .status,
-footer .error {
+.status,
+.error {
   margin-right: auto;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
 }
 
-footer .status {
-  color: var(--text-color-secondary);
+.status {
+  color: var(--text-color-secondary, #6c757d);
 }
 
-footer .error {
+.error {
   color: var(--red-500, #ef4444);
 }
 </style>

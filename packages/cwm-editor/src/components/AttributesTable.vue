@@ -166,7 +166,6 @@ input[type='checkbox'] {
   text-align: left;
   vertical-align: top;
   padding: 0.15rem 0.3rem;
-  border-bottom: 1px solid var(--surface-border);
 }
 
 .attributes-table th {

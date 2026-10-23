@@ -11,6 +11,7 @@
 import { computed, inject } from 'tsm:vue'
 import { fieldsOf, setField, type RowField } from '../composables/rowContent'
 import { CWM_EDITING } from '../composables/editing'
+import { setFieldHidden } from '../composables/fieldDefaults'
 
 const props = defineProps<{
   object: any
@@ -27,6 +28,11 @@ const fields = computed(() => {
 
 function write(field: RowField, value: string | boolean): void {
   editing.change(() => setField(props.object, field, value))
+}
+
+/** The eye: hides the field for this class and its subclasses (a field rule) - or shows it again */
+function toggleHidden(field: RowField): void {
+  setFieldHidden(props.object, field.name, !field.hidden).catch(e => console.warn('[cwm-editor] Feldregel nicht gespeichert:', e))
 }
 
 function onInput(field: RowField, event: Event): void {
@@ -59,6 +65,13 @@ function onInput(field: RowField, event: Event): void {
               title="Feldregel bearbeiten"
               @click="editing.openFieldRules(object, f.name)"
             >⚙</button>
+            <button
+              type="button"
+              class="rule eye"
+              :title="f.hidden ? 'Wieder anzeigen (Feldregel)' : 'Für diese Klasse und erbende ausblenden (Feldregel)'"
+              :data-testid="`${testId}.${f.name}.Hide`"
+              @click="toggleHidden(f)"
+            ><i :class="f.hidden ? 'pi pi-eye' : 'pi pi-eye-slash'"></i></button>
           </td>
           <td class="col-value">
             <input
@@ -106,16 +119,16 @@ input[type='checkbox'] {
   accent-color: var(--primary-color);
 }
 
-/* Category heading of the row body: Attribute, Referenzen, Siehe auch - centred between two lines */
+/* Category heading of the row body (Attribute, Referenzen, Siehe auch …) - centred between two lines */
 .section-title {
   margin: 1rem 0 0.5rem;
   padding: 0.25rem 0;
   border-top: 1px solid var(--surface-border);
+  border-bottom: 1px solid var(--surface-border);
   font-size: 0.75rem;
   font-weight: 600;
   text-align: center;
   color: var(--text-color);
-  border-bottom: 1px solid var(--surface-border);
 }
 
 .fields {
@@ -136,13 +149,11 @@ input[type='checkbox'] {
   letter-spacing: 0.05em;
   color: var(--text-color-secondary);
   padding: 0.3rem;
-  border-bottom: 1px solid var(--surface-border);
 }
 
 .fields-table td {
   padding: 0.1rem 0.3rem;
   vertical-align: middle;
-  border-bottom: 1px solid var(--surface-border);
 }
 
 .fields-table tbody tr:hover {
@@ -189,6 +200,14 @@ tr.unset .col-name label {
 
 tr:hover .rule {
   visibility: visible;
+}
+
+.rule.eye i {
+  font-size: 0.7rem;
+}
+
+.rule:hover {
+  color: var(--primary-color);
 }
 
 .hidden-mark {

@@ -358,3 +358,30 @@ export function backendDefaults(object: any): Map<string, string> {
   }
   return out
 }
+
+/**
+ * The shortcut beside a field: hides it (or shows it again) for the object's
+ * class and the classes inheriting from it - through the class's own rule,
+ * made when missing - and saves the rule file.
+ */
+export async function setFieldHidden(object: any, featureName: string, hidden: boolean): Promise<void> {
+  const t0 = performance.now()
+  const eClass = toRaw(object)?.eClass?.()
+  const feature = eClass?.getEStructuralFeature?.(featureName)
+  if (!eClass || !feature) return
+  const file = await editableFieldDefaultsFile()
+  if (!file) return
+  const nsUri = eClass.getEPackage?.()?.getNsURI?.() ?? ''
+  let rule = ruleObjects(file).find(fr => {
+    const t = ruleTargetNames(fr)
+    return t.className === eClass.getName() && t.nsUri === nsUri && t.attributeName === featureName
+  })
+  if (!rule) rule = addRule(file, eClass, feature, true)
+  if (!rule) return
+  setRuleValue(file, rule, 'includeSubclasses', true)
+  setRuleValue(file, rule, 'hidden', hidden)
+  const t1 = performance.now()
+  await saveFieldDefaultsFile(file)
+  // Temporary timing, to find what makes the shortcut slow
+  requestAnimationFrame(() => console.info(`[cwm-perf] Feld ausblenden: Regel ${(t1 - t0).toFixed(0)} ms, Speichern ${(performance.now() - t1).toFixed(0)} ms (inkl. Zeichnen)`))
+}

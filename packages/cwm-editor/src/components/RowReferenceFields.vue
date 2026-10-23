@@ -21,6 +21,7 @@ import { createIn } from '../composables/creation'
 import { className } from '../composables/documentation'
 import { displayName, pathTo } from '../composables/contextView'
 import { CWM_EDITING } from '../composables/editing'
+import { setFieldHidden } from '../composables/fieldDefaults'
 
 const props = defineProps<{
   object: any
@@ -117,6 +118,11 @@ function confirm(): void {
   if (f && list.length > 0) editing.change(() => list.forEach(o => addToReference(props.object, f.feature, o)))
   picking.value = null
 }
+
+/** The eye: hides the reference for this class and its subclasses (a field rule) - or shows it again */
+function toggleHidden(field: { name: string; hidden: boolean }): void {
+  setFieldHidden(props.object, field.name, !field.hidden).catch(e => console.warn('[cwm-editor] Feldregel nicht gespeichert:', e))
+}
 </script>
 
 <template>
@@ -132,6 +138,13 @@ function confirm(): void {
             title="Feldregel bearbeiten"
             @click="editing.openFieldRules(object, f.name)"
           >⚙</button>
+          <button
+            type="button"
+            class="rule eye"
+            :title="f.hidden ? 'Wieder anzeigen (Feldregel)' : 'Für diese Klasse und erbende ausblenden (Feldregel)'"
+            :data-testid="`${testId}.Row@${f.name}.Hide`"
+            @click="toggleHidden(f)"
+          ><i :class="f.hidden ? 'pi pi-eye' : 'pi pi-eye-slash'"></i></button>
         </td>
         <td class="col-targets">
           <table v-if="f.targets.length" class="targets" :data-testid="`${testId}.Row@${f.name}.Targets`">
@@ -179,6 +192,8 @@ function confirm(): void {
     </tbody>
   </table>
 
+  <!-- On the page, not in the row: rows clip what reaches outside them -->
+  <Teleport to="body">
   <div v-if="picking" class="picker-backdrop" @click.self="picking = null">
     <div class="picker" role="dialog" :aria-label="picking.containment ? 'Objekt anlegen' : 'Referenz wählen'">
       <header>
@@ -209,19 +224,20 @@ function confirm(): void {
       </footer>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <style scoped>
-/* Category heading of the row body: Attribute, Referenzen, Siehe auch - centred between two lines */
+/* Category heading of the row body (Attribute, Referenzen, Siehe auch …) - centred between two lines */
 .section-title {
   margin: 1rem 0 0.5rem;
   padding: 0.25rem 0;
   border-top: 1px solid var(--surface-border);
+  border-bottom: 1px solid var(--surface-border);
   font-size: 0.75rem;
   font-weight: 600;
   text-align: center;
   color: var(--text-color);
-  border-bottom: 1px solid var(--surface-border);
 }
 
 .reference-fields {
@@ -239,13 +255,11 @@ function confirm(): void {
   letter-spacing: 0.05em;
   color: var(--text-color-secondary);
   padding: 0.3rem;
-  border-bottom: 1px solid var(--surface-border);
 }
 
 .reference-fields td {
   padding: 0.15rem 0.3rem;
   vertical-align: top;
-  border-bottom: 1px solid var(--surface-border);
 }
 
 .reference-fields tbody tr:hover {
@@ -267,6 +281,14 @@ function confirm(): void {
   font-size: 0.75rem;
   color: var(--text-color-secondary);
   cursor: pointer;
+}
+
+.rule.eye i {
+  font-size: 0.7rem;
+}
+
+.rule:hover {
+  color: var(--primary-color);
 }
 
 tr:hover .rule {

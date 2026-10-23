@@ -255,6 +255,35 @@ Grundlage: daanse `resource.relational.privilege/model/privilege.ecore` (im Work
 - Der Assistent zeigt je Zeile die Namen der vorhandenen Privileges (grau) und der anzulegenden („+ SELECT flurstueck (uuid)“, `privilegeName`).
 - Die rolap-Zugriffs-Grants (AccessRole …) bleiben für den OLAP-Teil (`RowGrants.vue`), „Siehe auch“ zeigt keine Grants mehr.
 
+## Feldregel-Auge, Kinder eingeklappt, Nummerierung (2026-10-23)
+
+- **Auge** neben jedem Attribut und jeder Referenz (beim Überfahren, neben ⚙): blendet das Feld per Feldregel für die Klasse des Elements und alle erbenden Klassen aus (`includeSubclasses`, `hidden`); bei ausgeblendeten (mit „alle anzeigen“ sichtbaren) Feldern zeigt es wieder an. Die Regel wird angelegt oder angepasst und die Feldregel-Datei gespeichert (`setFieldHidden` in `fieldDefaults.ts`).
+- **Tagged Values** als Einstellungen im Modell (`composables/taggedValues.ts`, CWM `ModelElement.taggedValue`); TaggedValues erscheinen nicht als Zeilen.
+  - `gene.children = collapsed`: Kinder zuerst eingeklappt (Standard ausgeklappt, ohne Tag). Gilt beim ersten Anzeigen und bei Änderung des Tags; manuelles Auf-/Zuklappen bleibt.
+  - `gene.numbering`: `restart` (Ebene beginnt neu bei 1), `deeper` / `higher` (Element samt Teilbaum eine Ebene tiefer/höher nummeriert), `none` (Element samt Teilbaum ohne Nummer, zählt nicht mit); ohne Tag normal.
+- Rechte Spalte schmal: OCL als kleiner Punkt (grün; orange/rot mit Anzahl, Befunde im Tooltip, Klick validiert), „⋮“ öffnet ein Dropdown mit den Aktionen und den Einstellungen „Kinder zuerst: ausgeklappt/eingeklappt“ (bei Elementen mit Kindern) und „Nummerierung: …“ (bei eingeschalteter Nummerierung).
+- **Nummerierung** per Schalter „Nr.“ im Kopf der Kontextansicht (im Browser gemerkt): Gliederungsnummern 1, 1.2, 1.2.3 in einer eigenen Spalte (so breit wie die längste Nummer) vor Icon und Namen, damit die Namen fluchten; das Kontextobjekt selbst ohne Nummer; die Nummern hängen nicht vom Einklappen ab (`outlineNumbers`).
+
+- Heller Modus: Abstufung der Ebenen-Karten auf 0,9 % verringert (vorher 2 %).
+
+## Skeletons beim Laden (2026-10-23)
+
+- Kontextansicht: statt Spinner Platzhalter-Zeilen (`RowSkeleton.vue`) – eingerückt wie ein kleiner Baum, Icon, Titel, Textzeilen, schimmernd. Beim schrittweisen Zeichnen stehen unter den fertigen Zeilen drei Platzhalter mit der Einrückung der nächsten Zeilen (über der Fortschrittsanzeige).
+- Diagramm: statt „Diagramm wird gezeichnet …“ schimmernde Kästen an Stelle der Knoten.
+- Bei `prefers-reduced-motion` ohne Animation.
+
+## Dialoge im GenE-Stil (2026-10-23)
+
+- „Neues Kind / Neues Element“ (`CreateChildDialog.vue`) und „Feldregeln“ (`FieldRulesDialog.vue`) nutzen die PrimeVue-Komponenten von GenE (`Dialog`, `Dropdown`, `InputText`, `Checkbox`, `Button` aus `tsm:primevue`) und das Layout der Klassenauswahl des Instanzbaums: Suche, Liste mit Icon, Name und Paket, Zähler.
+- Feldregeln: Suche über die Regeln, Werte direkt in der Tabelle bearbeitbar, „Neue Regel“ mit filterbaren Dropdowns für Klasse und Attribut.
+
+## Eingeklappte Kinder als Köpfe (2026-10-23)
+
+- Ein eingeklapptes Element zeigt seine direkten Kinder nur als Kopf (Titel und Typ, ohne Inhalt und rechte Spalte); deren Nachfahren sind ausgeblendet (`rowMode` in `contextView.ts`: full / head / hidden).
+- Jedes Kind lässt sich einzeln auf- und zuklappen (Chevron vor dem Namen); aufgeklappt zeigt es sich vollständig samt Teilbaum.
+- Alle auf einmal: an der ersten Kind-Zeile auf der Linie des Elternelements „−“ (alle zu Köpfen) bzw. „+“ (alle aufklappen).
+- `gene.children = collapsed` startet entsprechend mit Köpfen.
+
 ## Offen / nächste Etappen
 
 - **Relational:** Katalog → Schema → Tabelle → Spalte als Domänenbaum und
