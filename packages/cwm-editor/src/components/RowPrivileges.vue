@@ -170,7 +170,7 @@ const adding = ref(false)
 </template>
 
 <style scoped>
-/* Category heading of the row body (Attribute, Referenzen, Siehe auch …) - centred between two lines */
+/* Category heading of the row body (Attribute, Referenzen, Siehe auch …) - left, between two lines */
 .section-title {
   margin: 1rem 0 0.5rem;
   padding: 0.25rem 0;
@@ -178,7 +178,7 @@ const adding = ref(false)
   border-bottom: 1px solid var(--surface-border);
   font-size: 0.75rem;
   font-weight: 600;
-  text-align: center;
+  text-align: left;
   color: var(--text-color);
 }
 
