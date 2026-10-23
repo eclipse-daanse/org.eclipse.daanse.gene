@@ -13,14 +13,16 @@
  */
 import { computed, inject, nextTick, onBeforeUnmount, provide, reactive, ref, shallowReactive, shallowRef, toRaw, watch } from 'tsm:vue'
 import ContextObjectRow from './ContextObjectRow.vue'
-import FieldRulesDialog from './FieldRulesDialog.vue'
-import { contextRows, displayName, isInside, parentOf, pathTo, siblingOf, visibleRows } from '../composables/contextView'
+import RowSkeleton from './RowSkeleton.vue'
+import FieldRulesHost from './FieldRulesHost.vue'
+import { type ContextRow, contextRows, displayName, isInside, parentOf, pathTo, rowMode, siblingOf, visibleRows } from '../composables/contextView'
 import { attr, className, isDescription, slug } from '../composables/documentation'
 import { CWM_EDITING } from '../composables/editing'
 import { allObjects, buildReferenceIndex, referenceCandidates } from '../composables/references'
 import { dataTypes } from '../composables/columnsEdit'
 import { classifiers } from '../composables/attributes'
 import { setCreatedHook } from '../composables/creation'
+import { childrenDefault, outlineNumbers } from '../composables/taggedValues'
 import { backendDefaults } from '../composables/fieldDefaults'
 import { applyBackendDefaults } from '../composables/rowContent'
 import { buildGrantIndex } from '../composables/grants'
@@ -47,7 +49,47 @@ const rows = computed(() => {
   void version.value
   return contextObject.value ? contextRows(contextObject.value) : []
 })
-const shownRows = computed(() => visibleRows(rows.value, collapsed))
+/** Children of a folded element opened one by one - they show in full, the others as heads */
+const opened = reactive(new Set<any>())
+const shownRows = computed(() => visibleRows(rows.value, collapsed, opened))
+const headRows = computed(() => new Set(shownRows.value.filter(r => rowMode(r, collapsed, opened) === 'head').map(r => r.object)))
+
+/*
+ * Children folded at first: the tag gene.children = collapsed. Applied when a
+ * row is first seen and whenever its tag changes; folding by hand in between
+ * stays as it is.
+ */
+let appliedDefaults = new WeakMap<object, string>()
+watch(rows, list => {
+  for (const r of list) {
+    if (!r.hasChildren) continue
+    const wanted = childrenDefault(r.object)
+    if (appliedDefaults.get(r.object) === wanted) continue
+    const first = !appliedDefaults.has(r.object)
+    appliedDefaults.set(r.object, wanted)
+    if (wanted === 'collapsed') collapsed.add(r.object)
+    else if (!first) collapsed.delete(r.object)
+  }
+}, { immediate: true })
+
+/* Outline numbers on the rows - switched on in the header, kept per browser */
+const NUMBERING_KEY = 'cwm.editor.numbering'
+const numbering = ref((() => {
+  try { return localStorage.getItem(NUMBERING_KEY) === 'on' } catch { return false }
+})())
+watch(numbering, on => {
+  try { localStorage.setItem(NUMBERING_KEY, on ? 'on' : 'off') } catch { /* no storage */ }
+})
+const numbers = computed(() => (numbering.value ? outlineNumbers(rows.value) : new Map<any, string>()))
+
+/**
+ * Width of the number column, in px: it fits the longest number. In px, not
+ * ch, because the rows' card backgrounds are measured from the same value.
+ */
+const numberColumn = computed(() => {
+  const longest = Math.max(1, ...[...numbers.value.values()].map(n => n.length))
+  return Math.ceil(longest * 7.5 + 12)
+})
 
 /*
  * Rendering many rows blocks the page for a moment. Before that the view
@@ -88,6 +130,9 @@ watch(contextObject, o => {
  * once, the rest follow while a progress line at the end says how far it got.
  * A new context starts again with the first batch.
  */
+/** Indentation of the placeholders while the view loads - like a small tree */
+const SKELETON_DEPTHS = [0, 1, 2, 2, 1, 2, 3, 1]
+
 const FIRST_BATCH = 12
 const BATCH = 10
 const renderCount = ref(FIRST_BATCH)
@@ -174,12 +219,24 @@ async function validate(o: any): Promise<void> {
 
 /* ── field rule editor ─────────────────────────────────────────── */
 
-const fieldRulesOpen = ref(false)
-const fieldRulesFocus = shallowRef<{ eClass: any; attributeName: string } | null>(null)
+/** The field rule dialog lives in a component of its own - opening it does not re-render the rows */
+const fieldRulesHost = ref<{ open: (o?: any, attributeName?: string) => void } | null>(null)
+
+/*
+ * Timing of an edit (temporary, to find what makes edits slow): the write
+ * itself, and from there until the view has updated and painted. In the
+ * console as "[cwm-perf]" and in DevTools' Performance panel as measures.
+ */
+function reportTiming(what: string, t0: number, t1: number): void {
+  void nextTick(() => requestAnimationFrame(() => {
+    const t2 = performance.now()
+    try { performance.measure(`cwm ${what}`, { start: t0, end: t2 }) } catch { /* older browsers */ }
+    console.info(`[cwm-perf] ${what}: Schreiben ${(t1 - t0).toFixed(0)} ms, Aktualisieren und Zeichnen ${(t2 - t1).toFixed(0)} ms, ${rows.value.length} Zeilen`)
+  }))
+}
 
 function openFieldRules(o?: any, attributeName?: string): void {
-  fieldRulesFocus.value = o && attributeName ? { eClass: toRaw(o).eClass(), attributeName } : null
-  fieldRulesOpen.value = true
+  fieldRulesHost.value?.open(o, attributeName)
 }
 
 /** Classes of the loaded objects and their supertypes - what a rule can name */
@@ -214,9 +271,12 @@ const hovered = shallowRef<any>(null)
 
 provide(CWM_EDITING, {
   change(write: () => void) {
+    const t0 = performance.now()
     write()
+    const t1 = performance.now()
     props.context.markDirty?.()
     props.context.triggerUpdate?.()
+    reportTiming('Änderung', t0, t1)
   },
   select: (o: any) => select(o),
   selected,
@@ -256,6 +316,8 @@ function setContext(o: any): void {
   if (!o) return
   contextObject.value = toRaw(o)
   collapsed.clear()
+  opened.clear()
+  appliedDefaults = new WeakMap()
 }
 
 /** A selection made inside this view: keep the view where it is, only bring the row into sight */
@@ -269,7 +331,19 @@ function select(o: any): void {
 
 function toggle(o: any): void {
   if (collapsed.has(o)) collapsed.delete(o)
-  else collapsed.add(o)
+  else foldAll(o)
+}
+
+/** All children of o to heads - also those opened one by one */
+function foldAll(o: any): void {
+  collapsed.add(o)
+  for (const r of rows.value) if (r.ancestors[r.ancestors.length - 1] === o) opened.delete(r.object)
+}
+
+/** One child of a folded element: in full, or back to its head */
+function toggleOpened(o: any): void {
+  if (opened.has(o)) opened.delete(o)
+  else opened.add(o)
 }
 
 /** The row that shows o: its own, or the nearest ancestor's (a column shows in its table) */
@@ -287,29 +361,44 @@ let frame = 0
 let lastTop: any = null
 
 /** The first row whose bottom lies below the sticky header */
+let settle = 0
+
+/** The first row whose bottom lies below the sticky header - rows are in order, so a binary search */
 function reportTopRow(): void {
   frame = 0
   const root = rootEl.value
   if (!root) return
   const headerBottom = root.querySelector('.header')?.getBoundingClientRect().bottom ?? root.getBoundingClientRect().top
   const els = root.querySelectorAll<HTMLElement>('.rows > [data-wire-kind="LIST"]')
-  for (let i = 0; i < els.length; i++) {
-    if (els[i]!.getBoundingClientRect().bottom > headerBottom + 1) {
-      const top = shownRows.value[i]?.object ?? null
-      if (top !== lastTop) {
-        lastTop = top
-        emit('top-object', top)
-      }
-      return
+  let lo = 0
+  let hi = els.length - 1
+  let found = -1
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1
+    if (els[mid]!.getBoundingClientRect().bottom > headerBottom + 1) {
+      found = mid
+      hi = mid - 1
+    } else {
+      lo = mid + 1
     }
   }
+  if (found < 0) return
+  const top = shownRows.value[found]?.object ?? null
+  if (top === lastTop) return
+  lastTop = top
+  // The tree follows once scrolling rests - marking it on every frame makes scrolling heavy
+  clearTimeout(settle)
+  settle = window.setTimeout(() => emit('top-object', top), 150)
 }
 
 function onScroll(): void {
   if (!frame) frame = requestAnimationFrame(reportTopRow)
 }
 
-onBeforeUnmount(() => { if (frame) cancelAnimationFrame(frame) })
+onBeforeUnmount(() => {
+  if (frame) cancelAnimationFrame(frame)
+  clearTimeout(settle)
+})
 
 // A new context or other rows change what is on top
 watch(shownRows, () => { lastTop = null; void nextTick(reportTopRow) })
@@ -408,6 +497,14 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
       >Feldregeln</button>
       <button
         type="button"
+        class="numbering"
+        :class="{ active: numbering }"
+        data-testid="cwm.Editor.ContextView.Header.Numbering"
+        title="Nummerierung der Elemente ein-/ausblenden"
+        @click="numbering = !numbering"
+      >Nr.</button>
+      <button
+        type="button"
         class="set-context"
         data-testid="cwm.Editor.ContextView.Header.SetContext"
         data-wire-kind="CONTROL"
@@ -418,22 +515,17 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
       <slot name="tools" />
     </div>
 
-    <FieldRulesDialog
-      v-if="fieldRulesOpen"
-      :classes="modelClasses"
-      :focus="fieldRulesFocus"
-      @close="fieldRulesOpen = false"
-    />
+    <FieldRulesHost ref="fieldRulesHost" :classes="() => modelClasses" />
 
     <div v-if="!contextObject" class="empty">
       <i class="pi pi-sitemap"></i>
       <p>Ein Element im Baum wählen — die Ansicht zeigt dann alles in seiner Umgebung.</p>
     </div>
-    <div v-else-if="!rowsReady" class="empty loading" data-testid="cwm.Editor.ContextView.Loading" role="status">
-      <span class="ring" aria-hidden="true"></span>
-      <p class="loading-title">Ansicht wird aufgebaut</p>
+    <!-- Loading: placeholders shaped like the rows to come -->
+    <div v-else-if="!rowsReady" class="rows skeletons" data-testid="cwm.Editor.ContextView.Loading" role="status" aria-label="Ansicht wird aufgebaut">
+      <RowSkeleton v-for="(d, n) in SKELETON_DEPTHS" :key="n" :depth="d" :lines="n % 3 === 0 ? 3 : 2" />
     </div>
-    <div v-else class="rows">
+    <div v-else class="rows" :style="{ '--cwm-number-col': numbering ? `${numberColumn}px` : '0px' }">
       <ContextObjectRow
         v-for="(row, i) in renderedRows"
         :key="row.key"
@@ -444,10 +536,27 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
         :gutter="gutter"
         :expanded="!collapsed.has(row.object)"
         :selected="row.object === selectedRowObject"
+        :number="numbers.get(row.object)"
+        :head="headRows.has(row.object)"
+        :opened="opened.has(row.object)"
+        :parent-folded="collapsed.has(row.ancestors[row.ancestors.length - 1])"
+        :numbering="numbering"
         :version="version"
         @toggle="toggle(row.object)"
+        @fold-parent="foldAll(row.ancestors[row.ancestors.length - 1])"
+        @unfold-parent="collapsed.delete(row.ancestors[row.ancestors.length - 1])"
+        @toggle-opened="toggleOpened(row.object)"
         @select="select"
       />
+      <!-- The next rows, while they are still being drawn -->
+      <template v-if="stillRendering">
+        <RowSkeleton
+          v-for="n in 3"
+          :key="`s${n}`"
+          :depth="shownRows[renderCount + n - 1]?.depth ?? 1"
+          :lines="2"
+        />
+      </template>
       <div v-if="stillRendering" class="rendering" data-testid="cwm.Editor.ContextView.Rendering" role="status">
         <span>Lade Einträge … {{ renderCount }} von {{ shownRows.length }}</span>
         <span class="bar"><span :style="{ width: `${(renderCount / shownRows.length) * 100}%` }"></span></span>
@@ -539,6 +648,11 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
   cursor: pointer;
 }
 
+.header button.numbering.active {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
 .header button:disabled {
   opacity: 0.45;
   cursor: default;
@@ -546,6 +660,15 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
 
 .rows {
   padding: 0 0.75rem 2rem 0.25rem;
+}
+
+/* Rows out of sight are neither laid out nor painted - with thousands of rows
+   every change of the page would otherwise lay out all of them. Their last
+   height is kept. Menus, dialogs and popups of a row are teleported to the
+   page, since a row clips what reaches outside it. */
+.rows > :deep(.object-row) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
 }
 
 .empty {
@@ -561,30 +684,6 @@ defineExpose({ setContext: showAsContext, objects: everything, modelClasses })
 
 .empty i {
   font-size: 2rem;
-}
-
-/* Spinner and title as in the app's loading overlay */
-.ring {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  border: 3px solid color-mix(in srgb, var(--primary-color) 20%, transparent);
-  border-top-color: var(--primary-color);
-  animation: cwm-spin 0.8s linear infinite;
-  will-change: transform;
-}
-
-@keyframes cwm-spin {
-  to { transform: rotate(360deg); }
-}
-
-.loading-title {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--primary-color);
 }
 
 /* Progress while the rows are still being drawn */

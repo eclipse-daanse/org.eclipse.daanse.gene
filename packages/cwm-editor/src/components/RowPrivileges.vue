@@ -150,6 +150,7 @@ const adding = ref(false)
       @click="adding = true"
     >+ Privileg</button>
 
+    <Teleport to="body">
     <div
       v-if="card"
       class="card-popover"
@@ -160,13 +161,16 @@ const adding = ref(false)
     >
       <RowContactCard :object="card" :test-id="`${testId}.ContactCard.Content`" :version="version" readonly />
     </div>
+    </Teleport>
 
-    <PrivilegeDialog v-if="adding" :target="object" @close="adding = false" />
+    <Teleport to="body">
+      <PrivilegeDialog v-if="adding" :target="object" @close="adding = false" />
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
-/* Category heading of the row body - as Attribute, Referenzen, Siehe auch */
+/* Category heading of the row body (Attribute, Referenzen, Siehe auch …) - centred between two lines */
 .section-title {
   margin: 1rem 0 0.5rem;
   padding: 0.25rem 0;
@@ -200,7 +204,6 @@ th {
 
 td {
   padding: 0.2rem 0.3rem;
-  border-top: 1px solid color-mix(in srgb, var(--surface-border) 60%, transparent);
   vertical-align: middle;
 }
 

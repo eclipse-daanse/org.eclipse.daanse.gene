@@ -111,7 +111,14 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
     >
       <option v-for="v in variants" :key="v.name" :value="v.name">{{ v.label }}</option>
     </select>
-    <div v-if="loading || layoutPending" class="state"><i class="pi pi-spin pi-spinner"></i> Diagramm wird gezeichnet …</div>
+    <!-- Loading: placeholder boxes where the diagram's nodes will be -->
+    <div v-if="loading || layoutPending" class="state skeleton" role="status" aria-label="Diagramm wird gezeichnet">
+      <span class="node" style="left: 8%; top: 14%; width: 22%; height: 30%"></span>
+      <span class="node" style="left: 42%; top: 8%; width: 18%; height: 22%"></span>
+      <span class="node" style="left: 70%; top: 20%; width: 22%; height: 34%"></span>
+      <span class="node" style="left: 20%; top: 58%; width: 24%; height: 28%"></span>
+      <span class="node" style="left: 56%; top: 62%; width: 20%; height: 24%"></span>
+    </div>
     <div v-else-if="!definition || !root" class="state">Kein Diagramm verfügbar</div>
     <DiagramRenderer
       v-show="!loading && !layoutPending && definition && root"
@@ -181,5 +188,30 @@ onBeforeUnmount(() => resizeObserver?.disconnect())
   gap: 0.4rem;
   font-size: 0.8rem;
   color: var(--text-color-secondary);
+}
+
+/* Diagram placeholder: shimmering boxes */
+.state.skeleton {
+  display: block;
+}
+
+.state.skeleton .node {
+  position: absolute;
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, transparent 0, color-mix(in srgb, var(--surface-card, #fff) 60%, transparent) 50%, transparent 100%) 0 0 / 200% 100% no-repeat,
+    color-mix(in srgb, var(--text-color) 7%, transparent);
+  animation: cwm-diagram-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes cwm-diagram-shimmer {
+  from { background-position: -150% 0, 0 0; }
+  to { background-position: 250% 0, 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .state.skeleton .node {
+    animation: none;
+  }
 }
 </style>

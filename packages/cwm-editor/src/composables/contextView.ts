@@ -21,6 +21,7 @@ import { attr, className, isRemark, isTable, many, objectSlug } from './document
 import { isAttributeContainer, shownByClass } from './attributes'
 import { isResponsibleParty, shownByParty } from './contactCard'
 import { shownPrivileges } from './privileges'
+import { isTaggedValue } from './taggedValues'
 import { isAccessRole, shownByRole } from './grants'
 
 export interface ContextRow {
@@ -121,7 +122,8 @@ export function contextRows(context: any): ContextRow[] {
     if (ancestors.length > MAX_DEPTH) return
     const hidden = shownBy(parent)
     for (const child of children(parent)) {
-      if (hidden?.has(child)) continue
+      // Tagged values are settings of their element, not rows
+      if (hidden?.has(child) || isTaggedValue(child)) continue
       const row = rowFor(child, ancestors)
       rows.push(row)
       const before = rows.length
@@ -139,10 +141,28 @@ export function contextRows(context: any): ContextRow[] {
   return rows
 }
 
-/** Rows that stay visible when the rows in `collapsed` hide their descendants */
-export function visibleRows(rows: ContextRow[], collapsed: Set<any>): ContextRow[] {
+export type RowMode = 'full' | 'head' | 'hidden'
+
+/**
+ * How a row shows: below a folded element its children show as heads only
+ * (title and type) and their descendants not at all - unless a child was
+ * opened on its own, then it shows in full and its subtree as usual.
+ */
+export function rowMode(r: ContextRow, collapsed: Set<any>, opened: Set<any>): RowMode {
+  const chain = [...r.ancestors, r.object]
+  for (let i = 0; i < r.ancestors.length; i++) {
+    if (!collapsed.has(r.ancestors[i])) continue
+    const child = chain[i + 1]
+    if (opened.has(child)) continue
+    return child === r.object ? 'head' : 'hidden'
+  }
+  return 'full'
+}
+
+/** Rows that stay visible, each with how it shows */
+export function visibleRows(rows: ContextRow[], collapsed: Set<any>, opened: Set<any> = new Set()): ContextRow[] {
   if (collapsed.size === 0) return rows
-  return rows.filter(r => !r.ancestors.some(a => collapsed.has(a)))
+  return rows.filter(r => rowMode(r, collapsed, opened) !== 'hidden')
 }
 
 /** Siblings of o in its container - or in its resource for a root object - for the jumps back and forward (PH-6) */

@@ -120,6 +120,7 @@ function confirm(): void {
         </tr>
       </tbody>
     </table>
+    <Teleport to="body">
     <div
       v-if="card"
       class="card-popover"
@@ -130,6 +131,7 @@ function confirm(): void {
     >
       <RowContactCard :object="card" :test-id="`${testId}.ContactCard.Content`" :version="version" readonly />
     </div>
+    </Teleport>
 
     <div class="adds">
     <button
@@ -141,6 +143,7 @@ function confirm(): void {
     >+ Siehe auch</button>
     </div>
 
+    <Teleport to="body">
     <div v-if="picking" class="picker-backdrop" @click.self="picking = false">
       <div class="picker" role="dialog" aria-label="Siehe auch hinzufügen">
         <header>
@@ -166,20 +169,21 @@ function confirm(): void {
         </footer>
       </div>
     </div>
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
-/* Category heading of the row body: Attribute, Referenzen, Siehe auch - centred between two lines */
+/* Category heading of the row body (Attribute, Referenzen, Siehe auch …) - centred between two lines */
 .section-title {
   margin: 1rem 0 0.5rem;
   padding: 0.25rem 0;
   border-top: 1px solid var(--surface-border);
+  border-bottom: 1px solid var(--surface-border);
   font-size: 0.75rem;
   font-weight: 600;
   text-align: center;
   color: var(--text-color);
-  border-bottom: 1px solid var(--surface-border);
 }
 
 .references {
@@ -207,7 +211,6 @@ th {
 td {
   padding: 0.15rem 0.3rem;
   vertical-align: top;
-  border-top: 1px solid color-mix(in srgb, var(--surface-border) 60%, transparent);
 }
 
 tbody tr {

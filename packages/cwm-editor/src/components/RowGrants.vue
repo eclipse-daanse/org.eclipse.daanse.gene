@@ -157,13 +157,15 @@ const assistant = ref(false)
       >+ Katalog-Grant</button>
     </div>
 
-    <GrantDialog v-if="assistant" :party="object" @close="assistant = false" />
-    <GrantDialog v-if="dialog" :parent="dialog.parent" :kind="dialog.kind" @close="dialog = null" />
+    <Teleport to="body">
+      <GrantDialog v-if="assistant" :party="object" @close="assistant = false" />
+      <GrantDialog v-if="dialog" :parent="dialog.parent" :kind="dialog.kind" @close="dialog = null" />
+    </Teleport>
   </div>
 </template>
 
 <style scoped>
-/* Category heading of the row body - as Attribute, Referenzen, Siehe auch */
+/* Category heading of the row body (Attribute, Referenzen, Siehe auch …) - centred between two lines */
 .section-title {
   margin: 1rem 0 0.5rem;
   padding: 0.25rem 0;
@@ -199,7 +201,6 @@ th {
 td {
   padding: 0.15rem 0.3rem;
   vertical-align: middle;
-  border-top: 1px solid color-mix(in srgb, var(--surface-border) 60%, transparent);
 }
 
 .level {

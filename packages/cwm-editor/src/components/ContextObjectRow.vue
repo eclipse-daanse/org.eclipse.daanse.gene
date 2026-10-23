@@ -49,12 +49,28 @@ const props = defineProps<{
   gutter: number
   expanded: boolean
   selected: boolean
+  /** Outline number, when the editor numbers its rows */
+  number?: string
+  /** The editor numbers its rows */
+  numbering?: boolean
+  /** Below a folded element: only the head - title and type */
+  head?: boolean
+  /** Below a folded element, opened on its own */
+  opened?: boolean
+  /** Its parent is folded */
+  parentFolded?: boolean
   /** Model version, read to re-render after edits */
   version?: number
 }>()
 
 const emit = defineEmits<{
   toggle: []
+  /** All the parent's children to heads - from the "−" on the first child's row */
+  'fold-parent': []
+  /** All the parent's children in full - from the "+" on the first head's row */
+  'unfold-parent': []
+  /** This child of a folded element: in full, or back to its head */
+  'toggle-opened': []
   select: [object: any]
 }>()
 
@@ -134,7 +150,8 @@ const SLOT = 12
 const id = computed(() => `cwm.Editor.ContextView.ObjectRow@${props.row.slug}`)
 
 /** Gap above a row whose sibling (or a sibling's descendant) comes before it */
-const GAP = 8
+/** Gap before a sibling - room for the "+" that inserts there */
+const GAP = 15
 
 const gap = computed(() => (props.row.depth > 0 && props.prevDepth >= props.row.depth ? GAP : 0))
 
@@ -153,12 +170,25 @@ const lines = computed(() =>
   }))
 )
 
+/** How much earlier each deeper bracket ends than the one around it, in px */
+const END_STEP = 7
+
+/**
+ * Brackets closing in the same row end staggered - the innermost first, each
+ * outer one a step further down - as they started staggered row by row.
+ */
+function lineEnd(line: { level: number; closes: boolean }): string {
+  if (!line.closes) return '0'
+  const outermost = Math.max(props.nextDepth, 0)
+  return `${(line.level - outermost) * END_STEP}px`
+}
+
 function lineStyle(line: { level: number; opens: boolean; closes: boolean; owner: any }): Record<string, string> {
   return {
     // On the card's left edge; the ticks lie on its top and bottom edge
     left: `${line.level * SLOT + SLOT / 2}px`,
     top: line.opens ? `${gap.value}px` : '0',
-    bottom: '0',
+    bottom: lineEnd(line),
     // The bracket of the row under the pointer, through all its rows
     color: line.owner === editing.hovered.value
       ? 'color-mix(in srgb, var(--primary-color) 55%, transparent)'
@@ -172,45 +202,105 @@ function lineStyle(line: { level: number; opens: boolean; closes: boolean; owner
  * rows, so each row paints the cards of all its ancestors and its own.
  * Each card is shaded from the text colour (lighter in dark mode, darker in
  * light mode) - stacked, the deepest lies on top. A card casts its shadow
- * left onto its parent's, and where it ends down onto what follows.
+ * left onto its parent's, where it ends down onto what follows, and at its
+ * right end - a little before the view's edge - outwards, so it ends softly.
  * Siblings are separate cards with a gap between them.
  */
 /** Width of a shadow's soft end, in px */
 const SOFT = 10
 
+/** A card's left edge: its bracket - right of the number column, when there is one */
 function layerX(level: number): string {
-  return `${level * SLOT + SLOT / 2}px`
+  return `calc(var(--cwm-number-col, 0px) + ${level * SLOT + SLOT / 2}px)`
 }
 
+/** Deeper cards cast stronger shadows; --layer-shadow scales them per theme (lighter in light mode) */
 function shadowColor(level: number): string {
-  return `rgba(0, 0, 0, ${Math.min(0.15 + level * 0.04, 0.3).toFixed(2)})`
+  return `rgb(0 0 0 / calc(var(--layer-shadow, 1) * ${Math.min(0.15 + level * 0.04, 0.3).toFixed(2)}))`
 }
 
-const layerStyle = computed(() => {
+/** Room right of the cards for their right shadow, so they end softly instead of at the view's edge */
+const RIGHT = SOFT
+
+/**
+ * With numbering on, titles read like headings: the outline level (parts of
+ * the number) sets size and weight - level 0 (the context object, it has no
+ * number) largest and boldest, from level 4 on all alike.
+ */
+/** The row right below its parent: the first of its children */
+const isFirstChild = computed(() => props.row.depth > 1 && props.prevDepth === props.row.depth - 1)
+
+const headingClass = computed(() => {
+  if (!props.numbering) return null
+  if (props.row.depth === 0) return 'heading-0'
+  if (!props.number) return null
+  return `heading-${Math.min(props.number.split('.').length, 4)}`
+})
+
+/** The cards' shadows - switched off; the levels show by a light tint only */
+const SHADOWS = false
+
+/** Tint of a level's card: children a little lighter than their parents (steps per theme, see the CSS) */
+function tint(level: number): string {
+  const pct = `max(0%, calc(var(--layer-tint-base) + var(--layer-tint-step) * ${level - 1}))`
+  return `color-mix(in srgb, var(--text-color) ${pct}, transparent)`
+}
+
+/**
+ * Tint only: each level paints its own strip - an ancestor from its bracket
+ * to the next one, the row's own card from its bracket to the right end
+ * (below the gap; in the gap the parent's tint goes on). The strips do not
+ * overlap, so the tints do not add up.
+ */
+const tintStyle = computed(() => {
   const depth = props.row.depth
   const g = gap.value
   const layers: string[] = []
+  const flat = (c: string) => `linear-gradient(${c}, ${c})`
+  for (let level = 1; level < depth; level++) {
+    layers.push(`${flat(tint(level))} ${layerX(level)} 0 / ${SLOT}px 100% no-repeat`)
+  }
+  if (depth > 0) {
+    const x = layerX(depth)
+    const rest = `calc(100% - ${x} - ${RIGHT}px)`
+    layers.push(`${flat(tint(depth))} ${x} ${g}px / ${rest} calc(100% - ${g}px) no-repeat`)
+    if (g > 0 && depth > 1) layers.push(`${flat(tint(depth - 1))} ${x} 0 / ${rest} ${g}px no-repeat`)
+  }
+  return layers.length ? { background: layers.join(', ') } : {}
+})
+
+const layerStyle = computed(() => {
+  if (!SHADOWS) return tintStyle.value
+  const depth = props.row.depth
+  const g = gap.value
+  const layers: string[] = []
+  const width = `calc(100% - ${RIGHT}px)`
   // Cards ending in the row above cast their shadow down onto this one,
   // rounded off at the corner left of the bracket
   for (let level = props.prevDepth; level >= Math.max(depth, 1); level--) {
     const x = layerX(level)
     const c = shadowColor(level)
     layers.push(`radial-gradient(farthest-side at 100% 0, ${c}, transparent) calc(${x} - ${SOFT}px) 0 / ${SOFT}px ${SOFT}px no-repeat`)
-    layers.push(`linear-gradient(${c}, transparent) ${x} 0 / 100% ${SOFT}px no-repeat`)
+    layers.push(`linear-gradient(${c}, transparent) ${x} 0 / calc(100% - ${x} - ${RIGHT}px) ${SOFT}px no-repeat`)
+    // ... and at its right corner
+    layers.push(`radial-gradient(farthest-side at 0 0, ${c}, transparent) ${width} 0 / ${SOFT}px ${SOFT}px no-repeat`)
   }
   for (let level = depth; level > 0; level--) {
     const x = layerX(level)
     const c = shadowColor(level)
     const shade = `linear-gradient(to right, transparent ${x}, color-mix(in srgb, var(--text-color) var(--layer-shade-step), transparent) ${x})`
     const leftShadow = `linear-gradient(to right, transparent calc(${x} - ${SOFT}px), ${c} ${x}, transparent ${x})`
+    const rightShadow = `linear-gradient(to right, ${c}, transparent)`
     if (level < depth) {
-      layers.push(leftShadow, shade)
+      layers.push(`${rightShadow} ${width} 0 / ${SOFT}px 100% no-repeat`, leftShadow, `${shade} 0 0 / ${width} 100% no-repeat`)
       continue
     }
-    // The row's own card starts below the gap; its left shadow fades in at the top corner
+    // The row's own card starts below the gap; its left and right shadows fade in at the top corners
     layers.push(`radial-gradient(farthest-side at 100% 100%, ${c}, transparent) calc(${x} - ${SOFT}px) ${g}px / ${SOFT}px ${SOFT}px no-repeat`)
+    layers.push(`radial-gradient(farthest-side at 0 100%, ${c}, transparent) ${width} ${g}px / ${SOFT}px ${SOFT}px no-repeat`)
     layers.push(`${leftShadow} 0 ${g + SOFT}px / 100% calc(100% - ${g + SOFT}px) no-repeat`)
-    layers.push(`${shade} 0 ${g}px / 100% calc(100% - ${g}px) no-repeat`)
+    layers.push(`${rightShadow} ${width} ${g + SOFT}px / ${SOFT}px calc(100% - ${g + SOFT}px) no-repeat`)
+    layers.push(`${shade} 0 ${g}px / ${width} calc(100% - ${g}px) no-repeat`)
   }
   return layers.length ? { background: layers.join(', ') } : {}
 })
@@ -261,16 +351,18 @@ const shown = computed(() => {
     @mouseleave="editing.hovered.value === row.object && (editing.hovered.value = null)"
   >
     <!-- The gap before a sibling, across the whole row: hovering it offers a new element at this place, on the parent's line -->
-    <div v-if="gap" class="gap-add" :style="{ height: `${gap + 6}px` }">
+    <div v-if="gap" class="gap-add" :style="{ height: `${gap}px` }">
       <button
         type="button"
         class="add-button"
         title="Neues Element hier einfügen"
         :data-testid="`${id}.InsertBefore`"
-        :style="{ left: `${(row.depth - 1) * SLOT + SLOT / 2 - 5}px` }"
+        :style="{ left: `calc(var(--cwm-number-col, 0px) + ${(row.depth - 1) * SLOT + SLOT / 2 - 5}px)` }"
         @click="createSibling"
       >+</button>
     </div>
+    <!-- The outline number in a column of its own at the left edge, flush for all rows -->
+    <div v-if="numbering" class="number-col" :style="{ marginTop: `${gap}px` }" :data-testid="`${id}.Row.Number`">{{ number }}</div>
     <div class="gutter" :style="{ width: `${(row.depth + 2) * SLOT}px` }" :data-testid="`${id}.Lines`">
       <span
         v-for="line in lines"
@@ -289,6 +381,16 @@ const shown = computed(() => {
         :style="{ left: `${row.depth * SLOT + SLOT / 2 + 1}px`, top: `calc(${gap}px + 0.9rem)` }"
         title="Ausgewähltes Objekt"
       ></span>
+      <!-- First child, on the parent's line: "−" folds all children to heads, "+" opens all again -->
+      <button
+        v-if="isFirstChild"
+        type="button"
+        class="unfold fold"
+        :title="parentFolded ? 'Alle Kinder aufklappen' : 'Alle Kinder zuklappen'"
+        :data-testid="`${id}.${parentFolded ? 'UnfoldParent' : 'FoldParent'}`"
+        :style="{ left: `${(row.depth - 1) * SLOT + SLOT / 2 + 1}px` }"
+        @click="emit(parentFolded ? 'unfold-parent' : 'fold-parent')"
+      >{{ parentFolded ? '+' : '−' }}</button>
       <!-- Beside the own bracket: a new child -->
       <button
         v-if="canHaveChildren"
@@ -299,16 +401,6 @@ const shown = computed(() => {
         :style="{ left: `${row.depth * SLOT + SLOT / 2 - 5}px`, top: `calc(${gap}px + 2.1rem)` }"
         @click="createChildOf"
       >+</button>
-      <button
-        v-if="row.hasChildren"
-        class="toggle"
-        type="button"
-        :data-testid="`${id}.Toggle`"
-        :aria-expanded="expanded"
-        :title="expanded ? 'Teilbaum einklappen' : 'Teilbaum ausklappen'"
-        :style="{ left: `${(row.depth + 1) * SLOT}px`, marginTop: `${gap}px` }"
-        @click="emit('toggle')"
-      >{{ expanded ? '−' : '+' }}</button>
     </div>
 
     <div class="row-icon" :style="{ marginTop: `${gap}px` }" :title="row.kind">
@@ -317,7 +409,7 @@ const shown = computed(() => {
     </div>
     <div class="row" :style="{ marginTop: `${gap}px` }" :data-testid="`${id}.Row`">
       <div class="main">
-        <header class="row-title" :title="row.kind">
+        <header class="row-title" :class="headingClass" :title="row.kind">
           <template v-if="renaming">
             <input
               ref="nameInput"
@@ -332,6 +424,16 @@ const shown = computed(() => {
             <button type="button" class="title-action muted" @click="cancelRename">Abbrechen</button>
           </template>
           <template v-else>
+            <!-- Below a folded element: open or close this child on its own -->
+            <button
+              v-if="parentFolded"
+              type="button"
+              class="open-child"
+              :title="head ? 'Aufklappen' : 'Zuklappen'"
+              :aria-expanded="!head"
+              :data-testid="`${id}.${head ? 'Open' : 'Close'}`"
+              @click="emit('toggle-opened')"
+            ><i :class="head ? 'pi pi-chevron-right' : 'pi pi-chevron-down'"></i></button>
             <span class="name" @click="emit('select', row.object)">{{ row.name }}</span>
             <button
               v-if="nameFeature"
@@ -344,14 +446,14 @@ const shown = computed(() => {
             <span class="kind">{{ row.kind }}</span>
           </template>
           <button
-            v-if="hiddenFields > 0 || showAllFields"
+            v-if="!head && (hiddenFields > 0 || showAllFields)"
             type="button"
             class="show-all"
             :data-testid="`${id}.Row.Body.Fields.ShowAll`"
             @click="showAllFields = !showAllFields"
           >{{ showAllFields ? 'weniger anzeigen' : `alle anzeigen (+${hiddenFields})` }}</button>
         </header>
-        <div class="body" :data-testid="`${id}.Row.Body`">
+        <div v-if="!head" class="body" :data-testid="`${id}.Row.Body`">
           <DiagramArea
             v-if="hasDiagram(row.object)"
             :title="`${row.kind} ${row.name}`"
@@ -424,18 +526,44 @@ const shown = computed(() => {
         :index="creating.index"
         @close="creating = null"
       />
-      <RowRightRail :object="row.object" :test-id="`${id}.Row.RightRail`" :version="version" />
+      <RowRightRail
+        v-if="!head"
+        :object="row.object"
+        :test-id="`${id}.Row.RightRail`"
+        :version="version"
+        :has-children="row.hasChildren"
+        :numbering="!!numbering"
+      />
     </div>
   </div>
 </template>
 
 <style scoped>
+/* Outline number in a column at the left edge, as wide as the longest number (set by the view) */
+.number-col {
+  flex: 0 0 var(--cwm-number-col, 0px);
+  box-sizing: border-box;
+  padding: 0.5rem 0 0 0.25rem;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+}
+
 .object-row {
   /* Light mode takes finer steps - stronger grey looks dull */
-  --layer-shade-step: 2%;
+  --layer-shade-step: 0.9%;
+  --layer-shadow: 0.5;
+  /* Tint per level: light mode starts at 4 % and gets lighter towards the children */
+  --layer-tint-base: 4%;
+  --layer-tint-step: -0.8%;
   position: relative;
   display: flex;
   align-items: stretch;
+  /* The cards end before the view's edge with a soft shadow; the content (and the right rail) stays on them */
+  padding-right: 10px;
   /* Keeps the row title clear of the sticky header when scrolled to */
   scroll-margin-top: 3rem;
 }
@@ -457,22 +585,20 @@ const shown = computed(() => {
   cursor: help;
 }
 
-.line.opens::before,
-.line.closes::after {
+/* The top of a bracket: a stroke running right into the element, fading out; the bottom ends plain.
+   It starts right of the vertical line - overlapping, the two translucent strokes would darken the corner */
+.line.opens::before {
   content: '';
   position: absolute;
-  left: 0;
-  width: 6px;
+  left: 2px;
+  width: 14rem;
   height: 2px;
-  background: currentColor;
+  background: linear-gradient(to right, currentColor, transparent);
+  pointer-events: none;
 }
 
 .line.opens::before {
   top: 0;
-}
-
-.line.closes::after {
-  bottom: 0;
 }
 
 .row-icon {
@@ -517,6 +643,10 @@ const shown = computed(() => {
 
 :global(.dark-theme) .object-row {
   --layer-shade-step: 3.5%;
+  --layer-shadow: 1;
+  /* Dark mode: lighter means more of the (light) text colour towards the children */
+  --layer-tint-base: 3%;
+  --layer-tint-step: 1%;
 }
 
 /* "+" for new elements: a small round button on a bracket line, shown on hover */
@@ -545,7 +675,7 @@ const shown = computed(() => {
 /* The gap between siblings (a little beyond, to be easy to hit): hovering it offers the insert button */
 .gap-add {
   position: absolute;
-  top: -3px;
+  top: 0;
   left: 0;
   right: 0;
   z-index: 3;
@@ -563,6 +693,68 @@ const shown = computed(() => {
 }
 
 /* The selected object: a marker on its own bracket, level with the title - no background */
+.unfold {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.unfold {
+  flex: 0 0 auto;
+  display: inline-block;
+  box-sizing: border-box;
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  font: inherit;
+  font-size: 0.75rem;
+  line-height: 0.9rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-color-secondary);
+  background: var(--surface-card, var(--surface-ground));
+  border: 1px solid color-mix(in srgb, var(--text-color-secondary) 45%, transparent);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+/* Below a folded element: the chevron opening or closing one child */
+.open-child {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+  align-self: center;
+}
+
+.open-child i {
+  font-size: 0.65rem;
+}
+
+.open-child:hover {
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+}
+
+/* The "−" / "+" on the first child's row, centred on the parent's line */
+.fold {
+  position: absolute;
+  top: 0.15rem;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.unfold:hover {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
 .selected-marker {
   position: absolute;
   width: 8px;
@@ -600,7 +792,6 @@ const shown = computed(() => {
   white-space: nowrap;
 }
 
-
 .row-title .name,
 .row-title .name-input {
   font-weight: 600;
@@ -626,6 +817,32 @@ const shown = computed(() => {
 
 .row-title .name {
   cursor: pointer;
+}
+
+/* Titles as headings while numbered: larger and bolder towards the top */
+.row-title.heading-0 .name {
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.row-title.heading-1 .name {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.row-title.heading-2 .name {
+  font-size: 1.07rem;
+  font-weight: 650;
+}
+
+.row-title.heading-3 .name {
+  font-size: 0.97rem;
+  font-weight: 600;
+}
+
+.row-title.heading-4 .name {
+  font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .row-title .kind {
