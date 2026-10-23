@@ -103,8 +103,11 @@ function getSeverityIcon(severity: IssueSeverity): string {
 }
 
 // Format timestamp
+/* One formatter for all rows - toLocaleTimeString builds a new one per call, which adds up with thousands of issues */
+const timeFormat = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+
 function formatTime(date: Date): string {
-  return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  return timeFormat.format(date)
 }
 
 // Get file name from path
@@ -193,6 +196,10 @@ function clearSearch() {
       dataKey="id"
       scrollable
       scrollHeight="flex"
+      paginator
+      :rows="100"
+      :rowsPerPageOptions="[50, 100, 250]"
+      :alwaysShowPaginator="false"
       class="issues-table"
       :loading="problemsService.isValidating.value"
       @row-select="onRowSelect"
