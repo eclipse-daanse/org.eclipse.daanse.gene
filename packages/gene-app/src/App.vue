@@ -1273,7 +1273,7 @@ function handleSearchNavigate(hit: any) {
 }
 
 // Handle reference search request from PropertiesPanel
-function handleReferenceSearch(feature: any, resource: any, callback: (obj: any) => void, candidates?: any[]) {
+async function handleReferenceSearch(feature: any, resource: any, callback: (obj: any) => void, candidates?: any[]) {
   console.log('[App] Opening search for reference:', feature.getName())
   referenceSearchFeature.value = feature
   referenceSearchCallback.value = callback
@@ -1286,13 +1286,31 @@ function handleReferenceSearch(feature: any, resource: any, callback: (obj: any)
     ?? vorderesMetamodell()?.selectedElement?.value
     ?? null
 
-  // Extract OCL referenceFilter from annotation
-  referenceSearchOclConstraint.value = getOclReferenceFilter(feature)
+  // OCL referenceFilter: from the annotation on the reference, else from a
+  // loaded constraint file (.c-ocl, role REFERENCE_FILTER) for the owner's class
+  referenceSearchOclConstraint.value =
+    getOclReferenceFilter(feature) ?? (await coclReferenceFilterFor(referenceSearchSourceObject.value, feature))
   if (referenceSearchOclConstraint.value) {
     console.log('[App] Found OCL referenceFilter:', referenceSearchOclConstraint.value)
   }
 
   showSearchDialog.value = true
+}
+
+/**
+ * The reference filter a constraint file declares for this reference of the
+ * owner's class - tried with the qualified name (package.Class) first.
+ */
+async function coclReferenceFilterFor(owner: any, feature: any): Promise<string | null> {
+  const eClass = owner?.eClass?.()
+  const featureName = feature?.getName?.()
+  if (!eClass || !featureName || !problemsService.getCoclReferenceFilter) return null
+  const className = eClass.getName?.()
+  const packageName = eClass.getEPackage?.()?.getName?.()
+  const qualified = packageName ? `${packageName}.${className}` : className
+  return (await problemsService.getCoclReferenceFilter(qualified, featureName))
+    ?? (await problemsService.getCoclReferenceFilter(className, featureName))
+    ?? null
 }
 
 // Handle show problems request (from OCL blocked assignment)

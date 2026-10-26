@@ -937,7 +937,7 @@ export function useProblemsService(options: OclServiceOptions = {}) {
   /**
    * Execute an OCL query
    */
-  async function query(obj: EObject, expression: string): Promise<unknown> {
+  async function query(obj: EObject, expression: string, variables?: Record<string, unknown>): Promise<unknown> {
     if (!await loadOclModules()) return undefined
     try {
       // Parse just the expression (not a full constraint context)
@@ -946,10 +946,24 @@ export function useProblemsService(options: OclServiceOptions = {}) {
         // Wrap EObject so that property access works via dot notation
         // The OclEvaluator uses eGet(featureName:string) but emfts eGet expects EStructuralFeature
         const wrapped = wrapEObjectForOcl(obj)
+        /*
+         * Further variables beside self - a reference filter names the
+         * candidate `target` while `self` is the owner of the reference.
+         * Objects are wrapped like self, so identity comparisons hold.
+         */
+        const bound = variables
+          ? Object.fromEntries(Object.entries(variables).map(([name, value]) => [
+              name,
+              value && typeof value === 'object' && typeof (value as any).eClass === 'function'
+                ? wrapEObjectForOcl(value as EObject)
+                : value
+            ]))
+          : undefined
         return oclEvaluator.evaluateExpression(exprResult.expression, wrapped, {
           maxDepth: 500,
           timeoutMs: 10000,
-          nullHandling: 'lenient'
+          nullHandling: 'lenient',
+          ...(bound ? { variables: bound } : {})
         })
       }
       return undefined

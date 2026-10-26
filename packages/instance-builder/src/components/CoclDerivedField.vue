@@ -337,7 +337,7 @@ watch(() => props.eObject, (newObj, oldObj) => {
 }
 
 .error-icon {
-  color: var(--red-500);
+  color: var(--p-red-500, #ef4444);
 }
 
 .error-text {

@@ -8,7 +8,7 @@
  * - Containment: Create new button (with subclass selection for abstract types)
  */
 
-import { computed, ref, watch, onMounted, inject } from 'tsm:vue'
+import { computed, ref, watch, onMounted, inject, toRaw } from 'tsm:vue'
 import { Button } from 'tsm:primevue'
 import { Dropdown } from 'tsm:primevue'
 import { Menu } from 'tsm:primevue'
@@ -42,7 +42,7 @@ const props = defineProps<{
   sourceObject?: EObject
   /** Problems service for OCL evaluation */
   problemsService?: {
-    query: (obj: EObject, expression: string) => Promise<unknown>
+    query: (obj: EObject, expression: string, variables?: Record<string, unknown>) => Promise<unknown>
   }
 }>()
 
@@ -142,114 +142,72 @@ function getObjectDisplayName(obj: EObject): string {
 const oclFilteredOptions = ref<Map<EObject, { disabled: boolean; reason?: string }>>(new Map())
 const isEvaluatingOcl = ref(false)
 
-/**
- * Transform OCL referenceFilter expression: replace 'target' with 'self'
- */
-function transformOclExpression(expression: string): string {
-  return expression.replace(/\btarget\b/g, 'self')
+/** The current values of the reference, single or many */
+function currentValues(): EObject[] {
+  const raw = props.value as unknown
+  if (!raw) return []
+  if (Array.isArray(raw)) return raw as EObject[]
+  if (typeof (raw as any)[Symbol.iterator] === 'function') return Array.from(raw as Iterable<EObject>)
+  return [raw as EObject]
 }
 
+/** The filter verdict on one object, whichever wrapper it comes in */
+function filterStatusOf(obj: EObject): { disabled: boolean; reason?: string } | undefined {
+  return oclFilteredOptions.value.get(toRaw(obj) as EObject) ?? oclFilteredOptions.value.get(obj)
+}
+
+/** Counts evaluations, so a slow one cannot overwrite a newer result */
+let evaluationRun = 0
+
 /**
- * Evaluate OCL filter for all available objects
+ * Evaluate the reference filter for every candidate - and for the values
+ * already assigned.
+ *
+ * The filter speaks of two objects: `self` is the owner of the reference (the
+ * student), `target` the candidate (a course). Each candidate is evaluated
+ * with `target` bound to it. The former way rewrote the expression into a
+ * set and matched candidates by name: it only understood one pattern, and
+ * two courses of the same name in different universities counted as one.
  */
 async function evaluateOclFilter() {
-  if (!props.oclFilter || !props.problemsService?.query || !props.availableObjects) {
+  const filter = props.oclFilter
+  const service = props.problemsService
+  const owner = props.sourceObject
+  const run = ++evaluationRun
+  if (!filter || !service?.query || !owner) {
     oclFilteredOptions.value = new Map()
     return
   }
 
   isEvaluatingOcl.value = true
+  const candidates = new Set<EObject>(
+    [...(props.availableObjects ?? []), ...currentValues()].map((o) => toRaw(o) as EObject)
+  )
   const results = new Map<EObject, { disabled: boolean; reason?: string }>()
-
-  const sourceObj = props.sourceObject
-  if (!sourceObj) {
-    oclFilteredOptions.value = new Map()
-    isEvaluatingOcl.value = false
-    return
-  }
-
-  // The REFERENCE_FILTER expression uses 'self' for the owner (e.g. Student)
-  // and 'target' for the candidate (e.g. Kurs).
-  // We evaluate the expression on the sourceObject (self=Student).
-  // To handle 'target', we replace it with a navigation path that identifies
-  // each candidate uniquely. For objects with a 'name' attribute, we use:
-  //   target  →  oclContainer().kurse->any(x | x.name = 'Informatik')
-  // But this is fragile. Instead, we use the simpler approach:
-  // evaluate the expression on sourceObject and check each candidate.
-
-  // Collect the valid set by evaluating a modified expression on sourceObject.
-  // Transform: "...->exists(uk | uk = target)" → "...->asSet()"
-  // to get the valid collection, then check membership.
-  //
-  // For the common pattern "GUARD implies COLLECTION->exists(v | v = target)":
-  // Extract COLLECTION and evaluate it on sourceObject to get the valid set.
-
-  try {
-    // Try to extract the valid collection from the expression.
-    // Common pattern: "condition implies collection->exists(v | v = target)"
-    // We transform to: "if condition then collection else Set{} endif"
-    const expr = props.oclFilter
-    const existsMatch = expr.match(/^(.+?)\s*implies\s+(.+?)->exists\s*\(\s*\w+\s*\|\s*\w+\s*=\s*target\s*\)$/)
-    const simpleExistsMatch = expr.match(/^(.+?)->exists\s*\(\s*\w+\s*\|\s*\w+\s*=\s*target\s*\)$/)
-
-    let validSet: Set<EObject> | null = null
-
-    if (existsMatch) {
-      // Pattern: "guard implies collection->exists(v | v = target)"
-      const guard = existsMatch[1]
-      const collection = existsMatch[2]
-      const setExpr = `if ${guard} then ${collection} else Set{} endif`
-      const result = await props.problemsService.query(sourceObj, setExpr)
-
-      if (result && Symbol.iterator in Object(result)) {
-        const validArray = Array.from(result as Iterable<EObject>)
-
-        // Use name-based matching since object identity may differ
-        const validNames = new Set(validArray.map(o => getObjectDisplayName(o)))
-        for (const candidate of props.availableObjects) {
-          const candidateName = getObjectDisplayName(candidate)
-          const pass = validNames.has(candidateName)
-          results.set(candidate, { disabled: !pass, reason: pass ? undefined : `OCL: ${props.oclFilter}` })
-        }
-        oclFilteredOptions.value = results
-        isEvaluatingOcl.value = false
-        return
-      }
-    } else if (simpleExistsMatch) {
-      // Pattern: "collection->exists(v | v = target)"
-      const collection = simpleExistsMatch[1]
-      const setExpr = collection
-      const result = await props.problemsService.query(sourceObj, setExpr)
-      if (result && Symbol.iterator in Object(result)) {
-        const validArray = Array.from(result as Iterable<EObject>)
-        const validNames = new Set(validArray.map(o => getObjectDisplayName(o)))
-        for (const candidate of props.availableObjects) {
-          const pass = validNames.has(getObjectDisplayName(candidate))
-          results.set(candidate, { disabled: !pass, reason: pass ? undefined : `OCL: ${props.oclFilter}` })
-        }
-        oclFilteredOptions.value = results
-        isEvaluatingOcl.value = false
-        return
-      }
-    }
-
-    if (results.size === 0) {
-      // Fallback: can't parse expression, allow all
-      console.warn('[ReferenceField] Could not parse OCL referenceFilter, allowing all:', props.oclFilter)
-      for (const candidate of props.availableObjects) {
-        results.set(candidate, { disabled: false })
-      }
-    }
-  } catch (e: any) {
-    console.error('[ReferenceField] OCL filter evaluation error:', e?.message || e)
-    for (const candidate of props.availableObjects) {
+  for (const candidate of candidates) {
+    try {
+      const pass = (await service.query(owner, filter, { target: candidate })) === true
+      results.set(candidate, { disabled: !pass, reason: pass ? undefined : `OCL: ${filter}` })
+    } catch {
+      // A filter that cannot be evaluated blocks nothing
       results.set(candidate, { disabled: false })
     }
   }
-
+  if (run !== evaluationRun) return
   oclFilteredOptions.value = results
   isEvaluatingOcl.value = false
 }
+
+/** Values already assigned that the filter does not allow */
+const forbiddenValues = computed(() => currentValues().filter((v) => filterStatusOf(v)?.disabled))
+
+/** The field's message: its own error first, else what the filter rejects */
+const fieldError = computed(() => {
+  if (props.error) return props.error
+  if (forbiddenValues.value.length === 0) return undefined
+  const names = forbiddenValues.value.map((v: EObject) => getObjectDisplayName(v)).join(', ')
+  return `Nicht zulässig nach OCL-Filter: ${names}`
+})
 
 // Evaluate OCL filter when props change or any feature on the source object changes
 watch(
@@ -307,7 +265,7 @@ const dropdownOptions = computed<(ReferenceOption & { key: string })[]>(() => {
   return props.availableObjects.map((obj, idx) => {
     const name = getObjectDisplayName(obj)
     const eClass = obj.eClass()
-    const filterStatus = oclFilteredOptions.value.get(obj)
+    const filterStatus = filterStatusOf(obj)
 
     // For EStructuralFeature: show "featureName (OwnerClass)" instead of "featureName (EAttribute)"
     const container = (obj as any).eContainer?.()
@@ -440,7 +398,7 @@ function handleCreate(event: Event) {
 // Handle select from dropdown
 function handleSelect(obj: EObject) {
   // Check if OCL blocks this selection
-  const filterStatus = oclFilteredOptions.value.get(obj)
+  const filterStatus = filterStatusOf(obj)
   if (filterStatus?.disabled) {
     emit('ocl-blocked', obj, filterStatus.reason || 'OCL constraint not satisfied')
     return
@@ -486,7 +444,7 @@ function handleAddToList() {
   if (!selectedObjectToAdd.value) return
 
   // Check if OCL blocks this selection
-  const filterStatus = oclFilteredOptions.value.get(selectedObjectToAdd.value)
+  const filterStatus = selectedObjectToAdd.value ? filterStatusOf(selectedObjectToAdd.value) : undefined
   if (filterStatus?.disabled) {
     emit('ocl-blocked', selectedObjectToAdd.value, filterStatus.reason || 'OCL constraint not satisfied')
     selectedObjectToAdd.value = null
@@ -516,7 +474,7 @@ const addDropdownOptions = computed<ReferenceOption[]>(() => {
   return availableObjectsFiltered.value.map(obj => {
     const name = getObjectDisplayName(obj)
     const eClass = obj.eClass()
-    const filterStatus = oclFilteredOptions.value.get(obj)
+    const filterStatus = filterStatusOf(obj)
 
     const container = (obj as any).eContainer?.()
     const ownerName = container && typeof container.getName === 'function' ? container.getName() : null
@@ -554,7 +512,7 @@ const addMenuItems = computed(() => {
 </script>
 
 <template>
-  <div class="reference-field">
+  <div class="reference-field" :class="{ 'reference-field--invalid': !!fieldError }">
     <label class="field-label">
       {{ displayName }}
       <span v-if="isRequired(feature)" class="required-indicator">*</span>
@@ -572,7 +530,7 @@ const addMenuItems = computed(() => {
         optionValue="key"
         optionDisabled="disabled"
         :disabled="readonly"
-        :invalid="!!error"
+        :invalid="!!fieldError"
         placeholder="Select..."
         showClear
       >
@@ -632,6 +590,8 @@ const addMenuItems = computed(() => {
           v-for="(item, index) in (value as EObject[] || [])"
           :key="index"
           class="reference-item"
+          :class="{ 'reference-item--invalid': filterStatusOf(item)?.disabled }"
+          :title="filterStatusOf(item)?.reason"
         >
           <span class="item-text" @click="handleNavigate(item)">
             {{ getObjectDisplayName(item) }}
@@ -674,8 +634,8 @@ const addMenuItems = computed(() => {
       </div>
     </div>
 
-    <!-- Error message -->
-    <small v-if="error" class="field-error">{{ error }}</small>
+    <!-- Error message: the field's own, or which assigned values the filter rejects -->
+    <small v-if="fieldError" class="field-error">{{ fieldError }}</small>
 
     <!-- Subclass selection menu -->
     <Menu ref="createMenu" :model="createMenuItems" :popup="true">
@@ -899,8 +859,27 @@ const addMenuItems = computed(() => {
 }
 
 .field-error {
-  color: var(--red-500);
+  color: var(--p-red-500, #ef4444);
   font-size: 0.75rem;
+}
+
+/* A value the reference filter does not allow, and the field holding it */
+.reference-field--invalid .field-label {
+  color: var(--p-red-500, #ef4444);
+}
+
+.reference-field--invalid .reference-list {
+  border-color: var(--p-red-500, #ef4444);
+}
+
+.reference-item--invalid {
+  color: var(--p-red-500, #ef4444);
+  background: color-mix(in srgb, var(--p-red-500, #ef4444) 10%, transparent);
+  border-radius: 4px;
+}
+
+.reference-item--invalid .item-text {
+  text-decoration: underline wavy var(--p-red-500, #ef4444);
 }
 
 :deep(.p-invalid.p-inputtext),

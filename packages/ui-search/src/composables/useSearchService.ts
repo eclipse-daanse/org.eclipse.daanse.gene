@@ -247,6 +247,8 @@ export async function search(
   const canEvaluateOcl = oclExpression && problemsService?.query
   const expressionHasSelf = oclExpression ? expressionUsesSelf(oclExpression) : false
   const transformedExpression = oclExpression ? transformReferenceFilterExpression(oclExpression) : null
+  // The owner of the reference - the filter's `self` when it also speaks of `target`
+  const sourceObject = options.filters?.sourceObject
 
   try {
     // Collect all objects from resource
@@ -379,9 +381,33 @@ export async function search(
           // Don't filter on error - let user see the object
         }
       }
+    } else if (canEvaluateOcl && expressionHasSelf && sourceObject) {
+      /*
+       * `self` is the owner of the reference, `target` the candidate - e.g.
+       * "only courses of the student's own university". Evaluated on the
+       * owner with `target` bound to each candidate.
+       */
+      const verdicts = new Map<EObject, boolean | Error>()
+      for (const hit of hits) {
+        if (!verdicts.has(hit.object)) {
+          try {
+            verdicts.set(hit.object, (await problemsService.query(sourceObject, oclExpression, { target: hit.object })) === true)
+          } catch (e) {
+            verdicts.set(hit.object, e as Error)
+          }
+        }
+        const verdict = verdicts.get(hit.object)!
+        hit.oclEvaluated = true
+        if (verdict instanceof Error) {
+          hit.oclFilterReason = `OCL Error: ${verdict.message}`
+        } else if (!verdict) {
+          hit.isFilteredByOcl = true
+          hit.oclFilterReason = `Filter: ${oclExpression}`
+        }
+      }
     } else if (canEvaluateOcl && expressionHasSelf) {
       // Expression uses both 'self' and 'target' - can't evaluate without sourceObject context
-      console.warn('[Search] OCL referenceFilter uses both self and target, cannot evaluate:', oclExpression)
+      console.warn('[Search] OCL referenceFilter uses both self and target, but no source object is known:', oclExpression)
       for (const hit of hits) {
         hit.oclEvaluated = false
         hit.oclFilterReason = 'Complex filter with self reference (not evaluated)'

@@ -585,7 +585,7 @@ function handleCancel() {
 }
 
 .required-marker {
-  color: var(--red-500);
+  color: var(--p-red-500, #ef4444);
 }
 
 .parameter-doc {

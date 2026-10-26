@@ -117,7 +117,7 @@ function clear() {
 }
 
 .eclass-field-value.p-invalid {
-  border-color: var(--red-500);
+  border-color: var(--p-red-500, #ef4444);
 }
 
 .eclass-name {
@@ -138,7 +138,7 @@ function clear() {
 }
 
 .p-error {
-  color: var(--red-500);
+  color: var(--p-red-500, #ef4444);
   font-size: 0.75rem;
 }
 </style>

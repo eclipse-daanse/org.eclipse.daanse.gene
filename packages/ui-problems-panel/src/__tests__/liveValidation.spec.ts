@@ -210,4 +210,16 @@ describe('the reference filter of a constraint file', () => {
     const names = [...(allowed as Iterable<any>)].map((k) => k.eGet('name'))
     expect(names).toEqual(['Mathe'])
   })
+
+  it('evaluates the filter itself with the candidate as target', async () => {
+    const problems = useProblemsService()
+    problems.reset()
+    pkg = loadModel()
+    await problems.registerPackage(pkg)
+    const { martin, mathe, informatik } = universityDocument('a.xmi')
+    const filter = 'self.uni <> null implies self.uni.kurse->exists(uk | uk = target)'
+
+    expect(await problems.query(martin, filter, { target: mathe })).toBe(true)
+    expect(await problems.query(martin, filter, { target: informatik })).toBe(false)
+  })
 })
