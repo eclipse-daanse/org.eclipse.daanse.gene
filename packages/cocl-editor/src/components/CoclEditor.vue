@@ -320,17 +320,33 @@ onUnmounted(() => {
   // The title belongs to the frame now - it follows the tab in front
 })
 
-// Register metamodel packages with OCL LSP for autocompletion
+/*
+ * Register metamodel packages with OCL LSP for autocompletion.
+ *
+ * Each on its own: the built-in packages (Ecore, XMLType) live without a
+ * resource and cannot be serialized for the worker. One of them throwing used
+ * to abort the loop - the workspace's own models never reached the language
+ * server, and `self.` suggested nothing of the context class.
+ */
 function registerPackagesWithOcl() {
+  let oclClient
   try {
-    const oclClient = getSharedOclClient()
-    for (const pkgInfo of modelRegistry.allPackages.value) {
-      oclClient.registerPackage(pkgInfo.ePackage)
-    }
-    console.log('[CoclEditor] Registered', modelRegistry.allPackages.value.length, 'packages with OCL LSP')
+    oclClient = getSharedOclClient()
   } catch (e) {
-    console.warn('[CoclEditor] Failed to register packages with OCL LSP:', e)
+    console.warn('[CoclEditor] OCL LSP not available:', e)
+    return
   }
+  let registered = 0
+  for (const pkgInfo of modelRegistry.allPackages.value) {
+    if (pkgInfo.isBuiltIn) continue
+    try {
+      oclClient.registerPackage(pkgInfo.ePackage)
+      registered++
+    } catch (e) {
+      console.warn('[CoclEditor] Could not register', pkgInfo.nsURI, 'with OCL LSP:', e)
+    }
+  }
+  console.log('[CoclEditor] Registered', registered, 'packages with OCL LSP')
 }
 
 // Re-register when new packages are loaded
