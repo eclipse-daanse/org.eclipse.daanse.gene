@@ -1991,6 +1991,22 @@ export function useSharedEditorConfig() {
 }
 
 /**
+ * Reads a workspace file without loading it - for previewing another
+ * workspace than the open one. Nothing of the shared state is touched.
+ */
+export async function parseEditorConfig(xmiContent: string, filePath: string): Promise<EditorConfig | null> {
+  // The shared instance registers the package (and its fixup) once
+  useSharedEditorConfig()
+  const rs = new BasicResourceSet()
+  const res = new XMIResource(URI.createURI(filePath))
+  rs.getResources().push(res)
+  res.setResourceSet(rs)
+  await res.loadFromString(xmiContent)
+  const contents = res.getContents()
+  return contents.length > 0 ? (contents.get(0) as EditorConfig) : null
+}
+
+/**
  * Get the shared EditorConfig (for use in other packages)
  * Returns null if not initialized
  */
