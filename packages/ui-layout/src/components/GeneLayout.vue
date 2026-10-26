@@ -12,12 +12,13 @@
  */
 
 import '../theme.css'
-import { computed, ref, onMounted, onUnmounted, inject } from 'tsm:vue'
+import { computed, ref, shallowRef, onMounted, onUnmounted, inject } from 'tsm:vue'
 import { Button } from 'tsm:primevue'
 import { useLayoutState } from '../composables/useLayoutState'
 import { usePanelKeyboardShortcuts } from '../composables/usePanelDragDrop'
 import { useGlobalSettings } from '../composables/useGlobalSettings'
 import { useEventBus } from '../composables/useEventBus'
+import { workspaceBadge } from '../composables/workspaceBadge'
 import ActivityBar from './ActivityBar.vue'
 import MenuBar from './MenuBar.vue'
 import PrimarySidebar from './PrimarySidebar.vue'
@@ -34,7 +35,26 @@ const layout = useLayoutState()
 const panelShortcuts = usePanelKeyboardShortcuts()
 const workspaceState = tsm?.getService('ui.workspace.composables')?.useSharedWorkspace()
 const fileSystem = tsm?.getService('ui.file-explorer.composables')?.useSharedFileSystem()
-const perspective = tsm?.getService('ui.perspectives')?.useSharedPerspective()
+/*
+ * Perspective and workspace configuration come from plugins that may start
+ * after this layout - asked once at setup they stayed missing, and the title
+ * showed "Gene Workspace" whatever was loaded. Taken when they arrive.
+ */
+const perspectiveRef = shallowRef<any>(tsm?.getService('ui.perspectives')?.useSharedPerspective?.() ?? null)
+tsm?.whenService?.('ui.perspectives', (svc: any) => { perspectiveRef.value = svc?.useSharedPerspective?.() ?? null })
+const editorConfigService = shallowRef<any>(tsm?.getService('gene.editor.config') ?? null)
+tsm?.whenService?.('gene.editor.config', (svc: any) => { editorConfigService.value = svc })
+const perspective = {
+  get state() { return perspectiveRef.value?.state }
+}
+
+/** The loaded workspace for the title bar: name and a square with its first letter */
+const loadedWorkspace = computed(() =>
+  workspaceBadge(
+    perspectiveRef.value?.state?.workspacePath,
+    editorConfigService.value?.editorConfig?.value?.name
+  )
+)
 const openFileTitle = computed(() => tsm?.getService('gene.layout.openFile')?.value ?? null)
 const eventBus = useEventBus()
 
@@ -228,7 +248,16 @@ onUnmounted(() => {
     <!-- Title Bar -->
     <div class="title-bar">
       <div class="title-bar-left">
-        <span class="workspace-name">{{ workspaceName }}</span>
+        <template v-if="loadedWorkspace">
+          <span
+            class="workspace-initial"
+            :style="{ background: loadedWorkspace.color }"
+            :title="loadedWorkspace.path"
+            aria-hidden="true"
+          >{{ loadedWorkspace.initial }}</span>
+          <span class="workspace-name" :title="loadedWorkspace.path">{{ loadedWorkspace.name }}</span>
+        </template>
+        <span v-else class="workspace-name">{{ workspaceName }}</span>
         <span v-if="openFileTitle" class="open-file-title"> — {{ openFileTitle }}</span>
       </div>
       <div class="title-bar-right">
@@ -350,6 +379,22 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* The loaded workspace: its first letter in a small square */
+.workspace-initial {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+  user-select: none;
 }
 
 .workspace-name {
