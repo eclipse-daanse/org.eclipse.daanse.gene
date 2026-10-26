@@ -3,12 +3,19 @@
  * They used to be lost without a word.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { mayLeaveWorkspace, type LeaveChoice } from '../services/workspaceSwitch'
+import {
+  mayLeaveWorkspace, unloadWorkspace, workspaceTabs, type LeaveChoice, type OpenTab
+} from '../services/workspaceSwitch'
 
-function leaving(over: Partial<{ loaded: boolean; dirty: boolean; choice: LeaveChoice; saveFails: boolean }> = {}) {
-  const ask = vi.fn(async () => over.choice ?? 'cancel')
+function leaving(over: Partial<{
+  loaded: boolean; dirty: boolean; unsavedFiles: string[]; choice: LeaveChoice; saveFails: boolean
+}> = {}) {
+  const ask = vi.fn(async (_name: string, _files: string[]) => over.choice ?? 'cancel')
   const save = vi.fn(async () => { if (over.saveFails) throw new Error('disk full') })
-  return { loaded: over.loaded ?? true, dirty: over.dirty ?? true, name: 'uni', ask, save }
+  return {
+    loaded: over.loaded ?? true, dirty: over.dirty ?? true, unsavedFiles: over.unsavedFiles,
+    name: 'uni', ask, save
+  }
 }
 
 describe('leaving a workspace', () => {
@@ -25,7 +32,7 @@ describe('leaving a workspace', () => {
   it('unsaved changes: asks, naming the workspace', async () => {
     const current = leaving({ choice: 'cancel' })
     await mayLeaveWorkspace(current)
-    expect(current.ask).toHaveBeenCalledWith('uni')
+    expect(current.ask).toHaveBeenCalledWith('uni', [])
   })
 
   it('cancel stays, and saves nothing', async () => {
@@ -51,5 +58,65 @@ describe('leaving a workspace', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     expect(await mayLeaveWorkspace(current)).toBe(false)
     error.mockRestore()
+  })
+})
+
+describe('unsaved files of the workspace', () => {
+  it('a changed file alone is reason to ask - and is named', async () => {
+    const current = leaving({ dirty: false, unsavedFiles: ['university-instance.xmi'], choice: 'cancel' })
+    expect(await mayLeaveWorkspace(current)).toBe(false)
+    expect(current.ask).toHaveBeenCalledWith('uni', ['university-instance.xmi'])
+  })
+})
+
+describe('which tabs go with the workspace', () => {
+  const tabs: OpenTab[] = [
+    { id: 'instance:uni/university-instance.xmi', title: 'university-instance.xmi' },
+    { id: 'metamodel:uni/university.ecore', title: 'university.ecore' },
+    { id: 'workspace-preview', title: 'uni.wsp' },
+    { id: 'model-atlas', title: 'Model Atlas' },
+    { id: 'pinned-file', title: 'fest', closable: false },
+  ]
+  const fileTabs = new Set(['instance:uni/university-instance.xmi', 'metamodel:uni/university.ecore', 'workspace-preview', 'pinned-file'])
+
+  it('the files close; panels, the workspace preview and fixed tabs stay', () => {
+    const closing = workspaceTabs(tabs, (id) => fileTabs.has(id)).map((tab) => tab.id)
+    expect(closing).toEqual(['instance:uni/university-instance.xmi', 'metamodel:uni/university.ecore'])
+  })
+})
+
+describe('unloading the workspace', () => {
+  function parts(failing?: string) {
+    const calls: string[] = []
+    const step = (name: string) => vi.fn((..._args: unknown[]) => {
+      calls.push(name)
+      if (name === failing) throw new Error(`${name} broke`)
+    })
+    return {
+      calls,
+      tabIds: ['instance:a.xmi', 'metamodel:b.ecore'],
+      closeTab: step('tab'),
+      clearInstances: step('instances'),
+      unloadModels: step('models'),
+      resetOcl: step('ocl'),
+      disconnectAtlas: step('atlas'),
+    }
+  }
+
+  it('closes the tabs, then unloads instances, models, OCL and Atlas connections', () => {
+    const p = parts()
+    unloadWorkspace(p)
+    expect(p.closeTab).toHaveBeenCalledWith('instance:a.xmi')
+    expect(p.closeTab).toHaveBeenCalledWith('metamodel:b.ecore')
+    expect(p.calls).toEqual(['tab', 'tab', 'instances', 'models', 'ocl', 'atlas'])
+  })
+
+  it('one part failing does not keep the others loaded', () => {
+    const p = parts('models')
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    unloadWorkspace(p)
+    error.mockRestore()
+    expect(p.resetOcl).toHaveBeenCalledOnce()
+    expect(p.disconnectAtlas).toHaveBeenCalledOnce()
   })
 })

@@ -566,6 +566,35 @@ export function useModelRegistry() {
   }
 
   /**
+   * Unload every model a workspace brought along - everything except the
+   * built-in packages. Removes them from the local state, the global and
+   * canonical EPackageRegistry and drops their resources from the shared
+   * Ecore resource set, so the next workspace starts from a clean slate.
+   */
+  function unloadUserModels(): number {
+    const rs: any = getEcoreResourceSet()
+    let removed = 0
+    const entries = Array.from(state.packages.entries()) as Array<[string, ModelPackageInfo]>
+    for (const [nsURI, info] of entries) {
+      if (info.isBuiltIn) continue
+      state.packages.delete(nsURI)
+      try { (EPackageRegistry.INSTANCE as any)?.delete?.(nsURI) } catch { /* ignore */ }
+      try {
+        if (_canonicalRegistry && _canonicalRegistry !== EPackageRegistry.INSTANCE) {
+          _canonicalRegistry.delete?.(nsURI)
+        }
+      } catch { /* ignore */ }
+      try {
+        const resource: any = info.ePackage?.eResource?.()
+        if (resource) (resource.getResourceSet?.() ?? rs)?.getResources?.()?.remove?.(resource)
+      } catch { /* ignore */ }
+      removed++
+    }
+    console.log('[ModelRegistry] Unloaded', removed, 'workspace package(s)')
+    return removed
+  }
+
+  /**
    * Get package by namespace URI
    */
   function getPackage(nsURI: string): ModelPackageInfo | undefined {
@@ -1078,6 +1107,7 @@ export function useModelRegistry() {
     registerLoadedPackage,
     unregisterPackage,
     unregisterModelBySourceFile,
+    unloadUserModels,
     getPackage,
     getConcreteClasses,
     getAllClasses,

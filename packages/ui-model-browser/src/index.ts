@@ -143,6 +143,7 @@ export async function activate(context: ModuleContext): Promise<void> {
     refreshIcons: registry.refreshIcons,
     getEcoreResourceSet: registry.getEcoreResourceSet,
     unregisterModelBySourceFile: registry.unregisterModelBySourceFile,
+    unloadUserModels: registry.unloadUserModels,
     // Legacy .ecore repair — lives with the loader so every load path can offer
     // "repair & reload" for old files with absolute self-nsURI hrefs.
     repairLegacyEcoreHrefs,
