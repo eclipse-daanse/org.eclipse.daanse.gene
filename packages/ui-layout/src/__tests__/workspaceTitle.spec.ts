@@ -42,4 +42,11 @@ describe('workspace in the title bar', () => {
     const wrapper = mount(WorkspaceTitle, { props: { badge: uni, fallbackName: '', dirty: true, saving: true } })
     expect(wrapper.find('[data-testid="gene.WorkspaceTitle.Dirty"]').attributes('disabled')).toBeDefined()
   })
+
+  it('clicking the name shows the workspace - even after its tab was closed', async () => {
+    const wrapper = mount(WorkspaceTitle, { props: { badge: uni, fallbackName: '' } })
+    await wrapper.find('[data-testid="gene.WorkspaceTitle.Open"]').trigger('click')
+    expect(wrapper.emitted('open')).toHaveLength(1)
+    expect(wrapper.emitted('save')).toBeUndefined()
+  })
 })

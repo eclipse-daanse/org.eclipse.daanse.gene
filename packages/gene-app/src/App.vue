@@ -578,6 +578,22 @@ async function handleAddRepository() {
 function handleFileSelect(file: any) {
   console.log('App.vue handleFileSelect received:', file)
   selectedFile.value = file
+  // The preview lives in the workspace tab - it may have been closed
+  const layout = layoutStateService.value?.useLayoutState?.()
+  if (layout && !hasWorkspaceTab(layout)) zeigeWorkspaceVorschau(layout)
+}
+
+function hasWorkspaceTab(layout: any): boolean {
+  return (layout.state.editorTabs ?? []).some((t: any) => t.id === 'workspace-preview')
+}
+
+/** Brings the workspace tab forward, reopening it if it was closed */
+function zeigeWorkspaceTab(): void {
+  const layout = layoutStateService.value?.useLayoutState?.()
+  if (!layout) return
+  selectedFile.value = null
+  if (hasWorkspaceTab(layout)) layout.selectEditor('workspace-preview')
+  else zeigeWorkspaceVorschau(layout)
 }
 
 // Handle opening a workspace (switch to model perspective)
@@ -2338,6 +2354,8 @@ async function reopenWorkspaceEditors(): Promise<void> {
   if (!editorConfig || !layout) return
   const states = editorConfig.getOpenEditors()
   const fs = tsm.getService<any>('gene.filesystem')
+  // The workspace tab belongs to an open workspace, even if it was closed before
+  if (!hasWorkspaceTab(layout)) zeigeWorkspaceVorschau(layout)
   const failed = await restoreOpenEditors(states, {
     isOpen: (state) => !!tabOfFile(state.filePath, state.editorId),
     open: async (state) => {
@@ -2356,9 +2374,7 @@ async function reopenWorkspaceEditors(): Promise<void> {
     },
   })
   if (failed.length > 0) console.warn('[Workspace] Could not reopen:', failed.join(', '))
-  if (!states.some((state) => state.active && !failed.includes(state.filePath))) {
-    layout.selectEditor('workspace-preview')
-  }
+  if (!states.some((state) => state.active && !failed.includes(state.filePath))) zeigeWorkspaceTab()
 }
 
 async function saveWorkspace(): Promise<void> {
@@ -2834,6 +2850,8 @@ onMounted(() => {
   eventBus.on('instance:showImportDialog', handleShowImportDialog)
 
   // Approval dialog callbacks via EventBus (Vue emit doesn't work with dynamic <component :is>)
+  eventBus.on('show-workspace-editor', () => zeigeWorkspaceTab())
+
   eventBus.on('approval:execute', async (selected: any[]) => {
     // Process pending artifacts
     for (const artifact of pendingArtifacts.value) {

@@ -19,18 +19,21 @@ defineProps<{
   saving?: boolean
 }>()
 
-const emit = defineEmits<{ save: [] }>()
+const emit = defineEmits<{ save: []; open: [] }>()
 </script>
 
 <template>
   <template v-if="badge">
-    <span
-      class="workspace-initial"
-      :style="{ background: badge.color }"
-      :title="badge.path"
-      aria-hidden="true"
-    >{{ badge.initial }}</span>
-    <span class="workspace-name" :title="badge.path">{{ badge.name }}</span>
+    <button
+      type="button"
+      class="workspace-open"
+      :title="`${badge.path} – Workspace anzeigen`"
+      data-testid="gene.WorkspaceTitle.Open"
+      @click="emit('open')"
+    >
+      <span class="workspace-initial" :style="{ background: badge.color }" aria-hidden="true">{{ badge.initial }}</span>
+      <span class="workspace-name">{{ badge.name }}</span>
+    </button>
     <button
       v-if="dirty || saving"
       type="button"
@@ -47,6 +50,22 @@ const emit = defineEmits<{ save: [] }>()
 </template>
 
 <style scoped>
+.workspace-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.1rem 0.35rem;
+  margin: 0 -0.35rem;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.workspace-open:hover {
+  background: var(--surface-hover);
+}
+
 .workspace-initial {
   display: inline-flex;
   align-items: center;

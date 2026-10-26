@@ -20,6 +20,8 @@ export interface EventBusEvents {
    * and (for the icon section) prefilled with a target class typeUri.
    */
   'show-workspace-settings': { section?: string; targetType?: string }
+  /** Bring the workspace tab forward - reopened if it was closed */
+  'show-workspace-editor': void
   // Add more events as needed
 }
 
