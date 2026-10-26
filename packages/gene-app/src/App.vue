@@ -7,12 +7,13 @@
  * 2. Model Editor Perspective - edit EMF instances with model browser and properties panel
  */
 
-import { ref, inject, computed, onMounted, shallowRef, watch, watchEffect, type Component, type ComputedRef, markRaw, defineComponent, h, provide, nextTick } from 'tsm:vue'
+import { ref, inject, computed, onMounted, shallowRef, watch, watchEffect, type Component, type ComputedRef, markRaw, defineComponent, h, provide } from 'tsm:vue'
 import type { TsmPluginSystem } from '@/tsm'
 import type { Resource } from 'tsm:emfts'
 import { Dialog, InputText, Dropdown, Button } from 'tsm:primevue'
 import type { File, Repository } from 'storage-core'
 import { getGlobalEditorConfig } from '@/services/useEditorConfig'
+import { createEditorLoading } from './services/editorLoading'
 import { createMetamodelResolver, nsUrisDeclaredIn } from './services/metamodelResolver'
 import { ProblemsPanel, useSharedProblemsService } from 'ui-problems-panel'
 import { SearchDialog, setViewsService } from 'ui-search'
@@ -496,36 +497,10 @@ const isLoadingInstance = ref(false)
 const loadingInstanceName = ref('')
 
 // Editor loading state: from "open with" until the editor's tab has drawn
-const isLoadingEditor = ref(false)
-const loadingEditorName = ref('')
-/** Editors being opened right now - the overlay stays until the last is drawn */
-let editorsLoading = 0
-
-/**
- * Shows "Editor wird geladen" while a file opens in an editor.
- *
- * Parsing, validating and drawing block the page for a moment: the overlay
- * gets two frames to show before the work starts, and stays until the tab
- * has drawn. Nested calls (a file that loads what it references) keep it up
- * until the outermost one is done.
- */
-async function withEditorLoading<T>(name: string | undefined, work: () => Promise<T>): Promise<T> {
-  const frame = () => new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
-  editorsLoading++
-  loadingEditorName.value = name ?? ''
-  isLoadingEditor.value = true
-  try {
-    await frame()
-    await frame()
-    const result = await work()
-    await nextTick()
-    await frame()
-    return result
-  } finally {
-    editorsLoading--
-    if (editorsLoading === 0) isLoadingEditor.value = false
-  }
-}
+const editorLoading = createEditorLoading()
+const isLoadingEditor = editorLoading.active
+const loadingEditorName = editorLoading.name
+const withEditorLoading = editorLoading.run
 
 // Workspace loading state: from opening the .wsp until its models and instances are in
 const isLoadingWorkspace = ref(false)
