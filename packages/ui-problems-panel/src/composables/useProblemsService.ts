@@ -7,8 +7,9 @@
  * Supports validation via ocl-engine + ocl-langium.
  */
 
-import { ref, computed, shallowRef, type Ref, type ComputedRef } from 'tsm:vue'
-import type { EObject, EPackage, Resource, EClass, EStructuralFeature, Notifier } from '@emfts/core'
+import { ref, computed, shallowRef, toRaw, type Ref, type ComputedRef } from 'tsm:vue'
+import type { EObject, EPackage, Resource, EClass, EStructuralFeature, Notifier, Notification } from '@emfts/core'
+import { EContentAdapter } from '@emfts/core'
 import type {
   OclValidationIssue,
   OclServiceState,
@@ -109,8 +110,47 @@ const registeredPackages: EPackage[] = []
 // Track attached targets for live validation
 const attachedTargets: Set<Notifier | Resource> = new Set()
 
-// Debounce timer
-let debounceTimer: ReturnType<typeof setTimeout> | null = null
+// Debounce timers, one per resource - a change in one document must not delay another
+const debounceTimers = new Map<Resource, ReturnType<typeof setTimeout>>()
+
+/** Notification types that are no change of the model (see @emfts/core NotificationType) */
+const REMOVING_ADAPTER = 8
+const RESOLVE = 9
+
+/**
+ * Re-validates whatever it is attached to when the contents really change.
+ *
+ * An EContentAdapter follows the containment tree on its own: objects added
+ * later are observed too, removed ones are let go. Touch notifications,
+ * adapter removal and proxy resolution change nothing a constraint could see.
+ */
+class LiveValidationAdapter extends EContentAdapter {
+  constructor(private readonly onChange: () => void) {
+    super()
+  }
+
+  notifyChanged(notification: Notification): void {
+    super.notifyChanged(notification)
+    if (notification.isTouch()) return
+    const type = notification.getEventType() as number
+    if (type === REMOVING_ADAPTER || type === RESOLVE) return
+    this.onChange()
+  }
+}
+
+/** The OCL wrapper of each object - see wrapEObjectForOcl */
+const oclWrappers = new WeakMap<object, any>()
+
+/** The live adapter of each attached target, to take it off again on detach */
+const liveAdapters = new Map<object, LiveValidationAdapter>()
+
+/** Sources of issues that come from validating objects - those a re-validation replaces */
+const VALIDATION_SOURCES = new Set<string | undefined>([undefined, 'ocl', 'ocl-live', 'ecore-validation'])
+
+function resourceOf(obj: unknown): Resource | null {
+  const raw = toRaw(obj) as any
+  return raw?.eResource?.() ?? null
+}
 
 // Module-level event bus reference (set via setEventBus or lazily from TSM)
 let _eventBus: any = null
@@ -205,6 +245,7 @@ function constraintToIssue(
     id: generateIssueId(),
     severity,
     message: result.message || `Constraint '${result.constraintName || 'unnamed'}' failed`,
+    source: 'ocl',
     constraintName: result.constraintName,
     object,
     objectLabel: getObjectLabel(object),
@@ -767,8 +808,21 @@ export function useProblemsService(options: OclServiceOptions = {}) {
 
       const newIssues = await validateObjects(objects)
       const oldCount = issues.value.length
-      issues.value = newIssues
-      emitShowProblemsIfNeeded(oldCount, newIssues.length)
+      /*
+       * Replace only what this validation is about: the validation issues of
+       * this resource's objects (and of objects no longer in any resource).
+       * Parser messages and the issues of other documents - other tabs - stay.
+       */
+      const validated = new Set<unknown>(objects.map((o) => toRaw(o)))
+      const replaced = (issue: OclValidationIssue): boolean => {
+        if (!VALIDATION_SOURCES.has(issue.source) || !issue.object) return false
+        const raw = toRaw(issue.object)
+        if (validated.has(raw)) return true
+        const owner = resourceOf(raw)
+        return owner === null || owner === resource
+      }
+      issues.value = [...issues.value.filter((i: OclValidationIssue) => !replaced(i)), ...newIssues]
+      emitShowProblemsIfNeeded(oldCount, issues.value.length)
       lastValidation.value = new Date()
 
       console.log(`[OclService] Validated ${objects.length} objects, found ${newIssues.length} issues`)
@@ -781,14 +835,13 @@ export function useProblemsService(options: OclServiceOptions = {}) {
    * Validate with debouncing (for on-change validation)
    */
   function validateDebounced(resource: Resource): void {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer)
-    }
+    const pending = debounceTimers.get(resource)
+    if (pending) clearTimeout(pending)
 
-    debounceTimer = setTimeout(async () => {
+    debounceTimers.set(resource, setTimeout(async () => {
+      debounceTimers.delete(resource)
       await validateResource(resource)
-      debounceTimer = null
-    }, debounceMs)
+    }, debounceMs))
   }
 
   /**
@@ -916,7 +969,16 @@ export function useProblemsService(options: OclServiceOptions = {}) {
     const eClass = obj.eClass?.()
     if (!eClass) return obj
 
-    return new Proxy(obj, {
+    /*
+     * One wrapper per object. OCL compares objects by identity: with a fresh
+     * Proxy on every access, `self.uni.kurse->exists(uk | uk = k)` compared two
+     * wrappers of the same course and was never true - every course counted
+     * as one of a foreign university.
+     */
+    const raw = toRaw(obj) as object
+    const known = oclWrappers.get(raw)
+    if (known) return known
+    const wrapper = new Proxy(obj, {
       get(target: any, prop: string | symbol) {
         if (typeof prop === 'symbol') return target[prop]
 
@@ -983,6 +1045,8 @@ export function useProblemsService(options: OclServiceOptions = {}) {
         return typeof directVal === 'function' ? directVal.bind(target) : directVal
       }
     })
+    oclWrappers.set(raw, wrapper)
+    return wrapper
   }
 
   /**
@@ -1191,7 +1255,22 @@ export function useProblemsService(options: OclServiceOptions = {}) {
     }
 
     attachedTargets.add(target as any)
-    console.log('[OclService] Target registered for validation (manual trigger)')
+
+    /*
+     * Live: every real change in the target's contents re-validates its
+     * resource, debounced - so a course assigned against a constraint shows
+     * up in the problems panel right away, not only after "Validate".
+     */
+    const owner = 'getContents' in target ? (target as Resource) : resourceOf(target)
+    if (owner) {
+      const adapter = new LiveValidationAdapter(() => validateDebounced(owner))
+      const adapters = (target as any).eAdapters?.()
+      if (adapters) {
+        adapters.push(adapter)
+        adapter.setTarget(target as any)
+        liveAdapters.set(target as any, adapter)
+      }
+    }
 
     if (validateImmediately) {
       if ('getContents' in target) {
@@ -1217,7 +1296,28 @@ export function useProblemsService(options: OclServiceOptions = {}) {
     }
 
     attachedTargets.delete(target as any)
-    issues.value = issues.value.filter(i => i.source !== 'ocl-live' || i.object !== target)
+
+    const adapter = liveAdapters.get(target as any)
+    if (adapter) {
+      liveAdapters.delete(target as any)
+      const adapters = (target as any).eAdapters?.()
+      const index = adapters ? adapters.indexOf(adapter) : -1
+      if (index >= 0) adapters.splice(index, 1)
+      adapter.unsetTarget(target as any)
+    }
+
+    // What was found in a closed document no longer concerns anyone
+    const resource = 'getContents' in target ? (target as Resource) : null
+    if (resource) {
+      const pending = debounceTimers.get(resource)
+      if (pending) clearTimeout(pending)
+      debounceTimers.delete(resource)
+    }
+    issues.value = issues.value.filter((i: OclValidationIssue) => {
+      if (!VALIDATION_SOURCES.has(i.source) || !i.object) return true
+      const raw = toRaw(i.object)
+      return resource ? resourceOf(raw) !== resource : raw !== toRaw(target)
+    })
     return true
   }
 
@@ -1374,10 +1474,15 @@ export function useProblemsService(options: OclServiceOptions = {}) {
     registeredPackages.length = 0
     issueIdCounter = 0
 
-    if (debounceTimer) {
-      clearTimeout(debounceTimer)
-      debounceTimer = null
+    for (const timer of debounceTimers.values()) clearTimeout(timer)
+    debounceTimers.clear()
+    for (const [target, adapter] of liveAdapters) {
+      const adapters = (target as any).eAdapters?.()
+      const index = adapters ? adapters.indexOf(adapter) : -1
+      if (index >= 0) adapters.splice(index, 1)
+      adapter.unsetTarget(target as any)
     }
+    liveAdapters.clear()
 
     // Clear C-OCL
     coclLoader.clearAllConstraintSets?.()
