@@ -27,7 +27,7 @@ export interface SearchFilters {
   sourceObject?: EObject
   /** Problems service for OCL evaluation */
   problemsService?: {
-    query: (obj: EObject, expression: string) => Promise<unknown>
+    query: (obj: EObject, expression: string, variables?: Record<string, unknown>) => Promise<unknown>
   }
 }
 

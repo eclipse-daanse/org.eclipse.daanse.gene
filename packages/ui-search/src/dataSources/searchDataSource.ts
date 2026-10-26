@@ -9,7 +9,7 @@ import { useSearchService, getObjectLabel, buildBreadcrumb } from '../composable
 export interface SearchDataSourceOptions {
   resource: Resource
   referenceOptions?: ReferenceSelectionOptions
-  problemsService?: { query: (obj: any, expression: string) => Promise<unknown> }
+  problemsService?: { query: (obj: any, expression: string, variables?: Record<string, unknown>) => Promise<unknown> }
   browseMode?: boolean
   candidates?: EObject[]
 }
