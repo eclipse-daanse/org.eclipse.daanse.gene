@@ -27,6 +27,7 @@ import EditorTabs from './EditorTabs.vue'
 import SecondarySidebar from './SecondarySidebar.vue'
 import PanelArea from './PanelArea.vue'
 import StatusBar from './StatusBar.vue'
+import WorkspaceTitle from './WorkspaceTitle.vue'
 import SettingsDialog from './SettingsDialog.vue'
 import SaveInstancesDialog from './SaveInstancesDialog.vue'
 
@@ -46,6 +47,25 @@ const editorConfigService = shallowRef<any>(tsm?.getService('gene.editor.config'
 tsm?.whenService?.('gene.editor.config', (svc: any) => { editorConfigService.value = svc })
 const perspective = {
   get state() { return perspectiveRef.value?.state }
+}
+
+/** The loaded workspace has changes no file holds yet */
+const workspaceDirty = computed(() => !!editorConfigService.value?.dirty?.value)
+const savingWorkspace = ref(false)
+
+/** The dot in the title bar: writes the loaded workspace to its .wsp */
+async function saveWorkspace(): Promise<void> {
+  const config = editorConfigService.value
+  const fileSystem = tsm?.getService('gene.filesystem')
+  if (!config?.saveToFileSystem || !fileSystem?.writeTextFile || savingWorkspace.value) return
+  savingWorkspace.value = true
+  try {
+    await config.saveToFileSystem((file: any, text: string) => fileSystem.writeTextFile(file, text))
+  } catch (e) {
+    console.error('[GeneLayout] Saving the workspace failed:', e)
+  } finally {
+    savingWorkspace.value = false
+  }
 }
 
 /** The loaded workspace for the title bar: name and a square with its first letter */
@@ -248,19 +268,27 @@ onUnmounted(() => {
     <!-- Title Bar -->
     <div class="title-bar">
       <div class="title-bar-left">
-        <template v-if="loadedWorkspace">
-          <span
-            class="workspace-initial"
-            :style="{ background: loadedWorkspace.color }"
-            :title="loadedWorkspace.path"
-            aria-hidden="true"
-          >{{ loadedWorkspace.initial }}</span>
-          <span class="workspace-name" :title="loadedWorkspace.path">{{ loadedWorkspace.name }}</span>
-        </template>
-        <span v-else class="workspace-name">{{ workspaceName }}</span>
+        <WorkspaceTitle
+          :badge="loadedWorkspace"
+          :fallback-name="workspaceName"
+          :dirty="workspaceDirty"
+          :saving="savingWorkspace"
+          @save="saveWorkspace"
+        />
         <span v-if="openFileTitle" class="open-file-title"> — {{ openFileTitle }}</span>
       </div>
+      <!-- Appearance belongs to the application, not to the file in front -->
       <div class="title-bar-right">
+        <button
+          type="button"
+          class="title-bar-btn"
+          aria-label="Appearance"
+          data-testid="gene.TitleBar.Appearance"
+          @click="showWorkspaceSettings = true"
+          v-tooltip.bottom="'Appearance'"
+        >
+          <i class="pi pi-palette"></i>
+        </button>
       </div>
     </div>
 
@@ -293,7 +321,7 @@ onUnmounted(() => {
             ihrem Tab statt ueber allem.
           -->
           <EditorTabs />
-          <MenuBar @show-settings="showWorkspaceSettings = true" />
+          <MenuBar />
 
           <!-- Editor Area -->
           <div class="editor-container">
@@ -381,28 +409,6 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-/* The loaded workspace: its first letter in a small square */
-.workspace-initial {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1;
-  flex-shrink: 0;
-  user-select: none;
-}
-
-.workspace-name {
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: var(--text-color);
-}
-
 .open-file-title {
   font-size: 0.875rem;
   color: var(--text-color-secondary);
@@ -412,6 +418,26 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.title-bar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-color-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.title-bar-btn:hover {
+  background: var(--surface-hover);
+  color: var(--text-color);
 }
 
 .main-area {
