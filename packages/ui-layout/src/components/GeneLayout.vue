@@ -274,6 +274,7 @@ onUnmounted(() => {
           :dirty="workspaceDirty"
           :saving="savingWorkspace"
           @save="saveWorkspace"
+          @open="eventBus.emit('show-workspace-editor')"
         />
         <span v-if="openFileTitle" class="open-file-title"> — {{ openFileTitle }}</span>
       </div>
