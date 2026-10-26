@@ -10,10 +10,6 @@ import { ref, computed, watch, inject, onMounted, onUnmounted, type Component } 
 
 const tsm = inject<any>('tsm')
 
-const emit = defineEmits<{
-  'show-settings': []
-}>()
-
 const workspaceLoaded = ref(false)
 
 interface ToolbarItem {
@@ -167,16 +163,6 @@ onMounted(() => {
       </button>
     </template>
 
-    <div class="menu-spacer"></div>
-
-    <button
-      class="menu-btn"
-      @click="emit('show-settings')"
-      v-tooltip.bottom="'Appearance'"
-    >
-      <i class="pi pi-palette"></i>
-    </button>
-
   </div>
 
   <!-- Popover-Dropdown (außerhalb des Toolbars, fixed positioniert) -->
@@ -244,10 +230,6 @@ onMounted(() => {
 
 .menu-btn.loading {
   color: var(--primary-color);
-}
-
-.menu-spacer {
-  flex: 1;
 }
 
 .menu-divider {
