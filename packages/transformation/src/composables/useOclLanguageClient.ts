@@ -5,6 +5,12 @@
  * Provides initialize, document sync, completion, hover, and diagnostics.
  */
 import type { EPackage } from '@emfts/core'
+/*
+ * Through Vite's worker import, not `new URL('…worker.ts', import.meta.url)`:
+ * the plugin build (library mode) does not turn such a URL into a worker - it
+ * embedded the raw TypeScript as a data URL, and the worker never started.
+ */
+import OclLspWorker from '../workers/ocl-lsp-worker.ts?worker'
 
 /**
  * Serialize an EPackage to XMI string for transfer to the worker.
@@ -92,8 +98,8 @@ export class OclLanguageClient {
   private initialized = false
   private diagnosticListeners: Array<(uri: string, diagnostics: LspDiagnostic[]) => void> = []
 
-  constructor(workerUrl: URL | string) {
-    this.worker = new Worker(workerUrl, { type: 'module' })
+  constructor(worker: Worker) {
+    this.worker = worker
     this.worker.onmessage = (event) => this.handleMessage(event.data)
     this.worker.onerror = (err) => console.error('[OclLSP] Worker error:', err)
   }
@@ -253,8 +259,7 @@ let sharedClient: OclLanguageClient | null = null
 
 export function getSharedOclClient(): OclLanguageClient {
   if (!sharedClient) {
-    const workerUrl = new URL('../workers/ocl-lsp-worker.ts', import.meta.url)
-    sharedClient = new OclLanguageClient(workerUrl)
+    sharedClient = new OclLanguageClient(new OclLspWorker())
   }
   return sharedClient
 }

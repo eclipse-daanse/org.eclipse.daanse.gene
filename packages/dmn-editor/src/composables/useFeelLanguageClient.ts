@@ -5,6 +5,9 @@
  * Provides initialize, document sync, completion, hover, and diagnostics.
  */
 
+// Vite's worker import - the plugin build does not bundle a `new URL(…)` worker
+import FeelLspWorker from '../workers/feel-lsp-worker.ts?worker'
+
 // --- JSON-RPC Types ---
 
 interface JsonRpcRequest {
@@ -72,8 +75,8 @@ export class FeelLanguageClient {
   private initialized = false
   private diagnosticListeners: Array<(uri: string, diagnostics: LspDiagnostic[]) => void> = []
 
-  constructor(workerUrl: URL | string) {
-    this.worker = new Worker(workerUrl, { type: 'module' })
+  constructor(worker: Worker) {
+    this.worker = worker
     this.worker.onmessage = (event) => this.handleMessage(event.data)
     this.worker.onerror = (err) => console.error('[FeelLSP] Worker error:', err)
   }
@@ -232,8 +235,7 @@ let sharedClient: FeelLanguageClient | null = null
 
 export function getSharedFeelClient(): FeelLanguageClient {
   if (!sharedClient) {
-    const workerUrl = new URL('../workers/feel-lsp-worker.ts', import.meta.url)
-    sharedClient = new FeelLanguageClient(workerUrl)
+    sharedClient = new FeelLanguageClient(new FeelLspWorker())
   }
   return sharedClient
 }

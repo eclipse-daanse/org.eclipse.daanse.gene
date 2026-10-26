@@ -102,6 +102,15 @@ const rootDir = join(__dirname, '..')
 // Note: main.ts now registers shared libraries, so no plugins need to be library providers
 const LIBRARY_PROVIDERS = []
 
+/*
+ * Libraries the host registers at runtime (src/main.ts, tsmRuntime.register).
+ * Exactly these stay out of a plugin bundle: tsmPlugin rewrites their imports
+ * to the runtime. Everything else is bundled - an external package that the
+ * runtime does not provide stays a bare import the browser cannot resolve
+ * ("Failed to resolve module specifier", as with @emfts/ocl.engine).
+ */
+const SHARED_MODULES = ['vue', 'vue-router', 'primevue', '@emfts/core', '@emfts/vue-registry', '@eclipse-daanse/tsm', '@emfts/codec.jsonschema', '@emfts/uimodel-composer']
+
 // Packages to skip
 const SKIP_PACKAGES = []
 
@@ -211,7 +220,7 @@ async function buildPlugin(plugin) {
       if (source.endsWith('.css')) return false
       if (source === 'primevue/config' || source === 'primevue/tooltip') return false
 
-      const sharedPackages = ['vue', 'vue-router', 'primevue', '@primevue', 'primeicons', '@emfts']
+      const sharedPackages = ['@primevue', 'primeicons', ...SHARED_MODULES]
       for (const pkg of sharedPackages) {
         if (source === pkg || source.startsWith(pkg + '/')) return true
       }
@@ -243,14 +252,18 @@ async function buildPlugin(plugin) {
         // Transform tsm: imports and bare shared module imports
         ...(isLibraryProvider ? [] : [tsmPlugin({
           useRenderChunk: true,
-          // WICHTIG: Jedes Paket, das externalFn ausschliesst, muss hier
-          // stehen — sonst bleibt ein nackter ESM-Import im Bundle, den der
-          // Browser zur Laufzeit nicht aufloesen kann
-          // ("Failed to resolve module specifier"). externalFn schliesst
-          // u. a. ALLE @emfts/* aus; die Liste muss also mitwachsen.
-          sharedModules: ['vue', 'vue-router', 'primevue', '@emfts/core', '@emfts/vue-registry', '@eclipse-daanse/tsm', '@emfts/codec.jsonschema', '@emfts/uimodel-composer']
+          // The same list externalFn keeps out of the bundle - see SHARED_MODULES
+          sharedModules: SHARED_MODULES
         })])
       ],
+      /*
+       * Relative base: assets a plugin emits (worker files) are addressed from
+       * the plugin's own URL (import.meta.url), not from the site root - the
+       * plugin is served below /plugins/<id>/.
+       */
+      base: './',
+      // Workers are ES modules: the OCL language server loads its parts lazily
+      worker: { format: 'es' },
       build: {
         target: 'esnext',
         minify: false,
