@@ -13,7 +13,9 @@ import type { Resource } from 'tsm:emfts'
 import { Dialog, InputText, Dropdown, Button } from 'tsm:primevue'
 import type { File, Repository } from 'storage-core'
 import { getGlobalEditorConfig } from '@/services/useEditorConfig'
-import { loadConstraintFilesBeside } from './services/workspaceConstraints'
+import { constraintFilesBeside, loadConstraintFilesBeside } from './services/workspaceConstraints'
+import { addableFiles, buildWorkspaceOverview, readFeature, type OverviewEntry } from './services/workspaceOverview'
+import WorkspaceEditor, { type AddableFile, type SectionKind } from './workspace/WorkspaceEditor.vue'
 import { mayLeaveWorkspace, unloadWorkspace, workspaceTabs, type LeaveChoice } from './services/workspaceSwitch'
 import { createEditorLoading } from './services/editorLoading'
 import { createMetamodelResolver, nsUrisDeclaredIn } from './services/metamodelResolver'
@@ -648,7 +650,10 @@ async function handleOpenWorkspace(entry: any, content: string) {
       closeTab: (tabId) => layoutState?.closeEditor(tabId),
       clearInstances: () => instanceTreeComposables.value?.setSharedResource?.(null),
       unloadModels: () => tsm.getService<any>('ui.model-browser.composables')?.unloadUserModels?.(),
-      resetOcl: () => problemsService.reset(),
+      resetOcl: () => {
+        problemsService.reset()
+        loadedConstraintFiles.value = new Set()
+      },
       disconnectAtlas: () => {
         const atlas = tsm.getService<any>('gene.atlas.browser')
         for (const connection of [...(atlas?.connections?.value ?? [])]) atlas.disconnect(connection.id)
@@ -779,6 +784,7 @@ async function loadWorkspaceConstraintFiles(workspaceEntry: any) {
     read: (file: any) => fileSystem.readTextFile(file),
     load: (content: string, path: string) => problemsService.loadCoclFile(content, path),
   })
+  loadedConstraintFiles.value = new Set(loaded)
   if (loaded.length > 0) console.log('[App] Constraint files of the workspace loaded:', loaded.join(', '))
 }
 
@@ -980,6 +986,11 @@ async function loadInstancesFromEditorConfig(workspaceEntry: any) {
       console.log('[App] Calling getFileByPath with sourceId:', sourceId, 'path:', absolutePath)
       let fileEntry = fileSystem.getFileByPath(sourceId, absolutePath)
       console.log('[App] getFileByPath result:', fileEntry)
+
+      // addInstanceSource writes paths relative to the source, not to the workspace
+      if (!fileEntry && absolutePath !== location) {
+        fileEntry = fileSystem.getFileByPath(sourceId, location)
+      }
 
       // Fallback: if not found and path has directory component, try just the filename
       if (!fileEntry && absolutePath.includes('/')) {
@@ -2207,6 +2218,174 @@ async function handleDmnLoad(entry: any, content: string) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Workspace editor: the overview of the loaded workspace and its actions
+// ---------------------------------------------------------------------------
+
+/** Constraint files beside the workspace that loaded with it */
+const loadedConstraintFiles = ref<Set<string>>(new Set())
+
+function toArray(list: unknown): unknown[] {
+  return list ? Array.from(list as Iterable<unknown>) : []
+}
+
+function workspaceDisplayName(): string {
+  const config: any = getGlobalEditorConfig()?.editorConfig?.value
+  const name = config ? readFeature(config, 'name') : undefined
+  return (name ? String(name) : '') || String(currentWorkspaceEntry.value?.name ?? 'Workspace').replace(/\.wsp$/, '')
+}
+
+/** All files of the source the workspace lives in, flattened */
+function workspaceSourceFiles(): any[] {
+  const fs = tsm.getService<any>('gene.filesystem')
+  const sourceId = currentWorkspaceEntry.value?.sourceId
+  const tree: any[] = (sourceId && fs?.filesBySource?.get(sourceId)) || []
+  const files: any[] = []
+  const walk = (entries: any[]) => {
+    for (const entry of entries) {
+      if (entry.isDirectory) walk(entry.children ?? [])
+      else files.push(entry)
+    }
+  }
+  walk(tree)
+  return files
+}
+
+/**
+ * The file behind a location of the workspace. Model locations are relative
+ * to the source, instance locations were written relative to the workspace's
+ * folder - the loaders try both and the bare name, so this does too.
+ */
+function findWorkspaceFile(location: string): any | null {
+  const fs = tsm.getService<any>('gene.filesystem')
+  const workspace = currentWorkspaceEntry.value
+  if (!fs?.getFileByPath || !workspace?.sourceId || !location) return null
+  const cut = workspace.path?.lastIndexOf('/') ?? -1
+  const folder = cut > 0 ? workspace.path.slice(0, cut) : ''
+  for (const candidate of [location, folder ? `${folder}/${location}` : '', location.split('/').pop() ?? '']) {
+    if (!candidate) continue
+    const hit = fs.getFileByPath(workspace.sourceId, candidate)
+    if (hit) return hit
+  }
+  return null
+}
+
+const workspaceOverview = computed(() => {
+  const workspace = currentWorkspaceEntry.value
+  const editorConfig = getGlobalEditorConfig()
+  if (!workspace || !editorConfig) return null
+  const config: any = editorConfig.editorConfig?.value
+  const registry = tsm.getService<any>('ui.model-browser.composables')?.useSharedModelRegistry?.()
+  const itc: any = instanceTreeComposables.value
+  const tabIds = new Set<string>(
+    (layoutStateService.value?.useLayoutState?.()?.state.editorTabs ?? []).map((t: any) => t.id))
+  const instanceSources = toArray(editorConfig.instanceSources?.value)
+  const atlas = tsm.getService<any>('gene.atlas.browser')
+  const fs = tsm.getService<any>('gene.filesystem')
+  const tree = (workspace.sourceId && fs?.filesBySource?.get(workspace.sourceId)) || []
+
+  const loadedModels = new Map<string, string>()
+  for (const info of (registry?.userPackages?.value ?? []) as any[]) {
+    if (info.sourceFile && !loadedModels.has(info.sourceFile)) loadedModels.set(info.sourceFile, info.name)
+  }
+  const openInstances = new Set<string>()
+  for (const source of instanceSources) {
+    const location = String(readFeature(source, 'location') ?? readFeature(source, 'path') ?? '')
+    if (location && tabIds.has(itc?.instanzTabIdFuer?.(location) ?? `instance:${location}`)) openInstances.add(location)
+  }
+
+  return buildWorkspaceOverview({
+    modelSources: toArray(editorConfig.modelSources?.value),
+    instanceSources,
+    atlasConnections: config ? toArray(readFeature(config, 'atlasConnections')) : [],
+    resolvers: toArray(readFeature(editorConfig.packageResolverChain?.value, 'resolvers')),
+    loadedModels,
+    openInstances,
+    constraintFiles: constraintFilesBeside(workspace.path, tree).map((f: any) => f.path),
+    loadedConstraints: loadedConstraintFiles.value,
+    liveAtlas: atlas?.connections?.value ?? [],
+    fileExists: (location) => !!findWorkspaceFile(location),
+  })
+})
+
+async function saveWorkspace(): Promise<void> {
+  const fs = tsm.getService<any>('gene.filesystem')
+  try {
+    await getGlobalEditorConfig()?.saveToFileSystem((file: any, text: string) => fs.writeTextFile(file, text))
+  } catch (e) {
+    console.error('[Workspace] Saving failed:', e)
+  }
+}
+
+/** Opens a part of the workspace with its default view - as the explorer does */
+async function openWorkspaceEntry(_kind: SectionKind, entry: OverviewEntry): Promise<void> {
+  const file = findWorkspaceFile(entry.location)
+  if (!file) return
+  const fs = tsm.getService<any>('gene.filesystem')
+  const content: string | null = await fs.readTextFile(file)
+  if (content == null) return
+  const view = tsm.getService<any>('gene.editor.context')?.editorFuer?.(file.path, content)
+  if (view?.open) await view.open(file, content)
+}
+
+/** Takes a model or instance file out of the workspace - and unloads it */
+function removeWorkspaceEntry(kind: SectionKind, entry: OverviewEntry): void {
+  const editorConfig = getGlobalEditorConfig()
+  if (!editorConfig || !entry.source) return
+  if (kind === 'model') {
+    editorConfig.removeModelSource(entry.source as any)
+    tsm.getService<any>('ui.model-browser.composables')?.unregisterModelBySourceFile?.(entry.location)
+  } else if (kind === 'instance') {
+    editorConfig.removeInstanceSource(entry.source as any)
+    const itc: any = instanceTreeComposables.value
+    layoutStateService.value?.useLayoutState?.()?.closeEditor(itc?.instanzTabIdFuer?.(entry.location) ?? `instance:${entry.location}`)
+  }
+}
+
+/** Adds a file of the source - loads it and enters it in the workspace */
+async function addWorkspaceFile(kind: 'model' | 'instance', file: AddableFile): Promise<void> {
+  const entry = workspaceSourceFiles().find((f) => f.path === file.path)
+  if (!entry) return
+  const content: string | null = await tsm.getService<any>('gene.filesystem').readTextFile(entry)
+  if (content == null) return
+  if (kind === 'model') await handleModelAdd(entry, content)
+  else await handleInstanceAdd(entry, content)
+}
+
+function liveAtlasConnectionOf(entry: OverviewEntry): any | null {
+  const atlas = tsm.getService<any>('gene.atlas.browser')
+  const baseUrl = readFeature(entry.source, 'baseUrl')
+  const scopeName = readFeature(entry.source, 'scopeName')
+  return (atlas?.connections?.value ?? []).find((c: any) => c.baseUrl === baseUrl && c.scopeName === scopeName) ?? null
+}
+
+async function connectWorkspaceAtlas(entry: OverviewEntry): Promise<void> {
+  const atlas = tsm.getService<any>('gene.atlas.browser')
+  if (!atlas) return
+  const live = liveAtlasConnectionOf(entry)
+  try {
+    if (live) {
+      await atlas.reconnect(live.id)
+      return
+    }
+    const token = readFeature(entry.source, 'token')
+    await atlas.connect({
+      baseUrl: readFeature(entry.source, 'baseUrl'),
+      scopeName: readFeature(entry.source, 'scopeName'),
+      token: token || '',
+      authKind: readFeature(entry.source, 'authKind') || (token ? 'bearer' : 'none'),
+      user: readFeature(entry.source, 'user') || undefined,
+    })
+  } catch (e) {
+    console.warn('[Workspace] Connecting to the Atlas failed:', e)
+  }
+}
+
+function disconnectWorkspaceAtlas(entry: OverviewEntry): void {
+  const live = liveAtlasConnectionOf(entry)
+  if (live) tsm.getService<any>('gene.atlas.browser')?.disconnect(live.id)
+}
+
 /**
  * Die Workspace-Vorschau in der Mitte — solange keine Datei offen ist.
  *
@@ -2223,14 +2402,49 @@ function zeigeWorkspaceVorschau(layout: any): void {
     return
   }
 
+  /*
+   * With a workspace loaded the tab is its editor. A file selected in the
+   * explorer is still previewed here - with a way back to the workspace.
+   */
   const Wrapper = defineComponent({
     setup() {
-      const aktuelleDatei = computed(() => selectedFile.value)
-      return () => h(WorkspacePreview, {
-        selectedFile: aktuelleDatei.value,
-        onOpenWorkspace: handleOpenWorkspace,
-        onCoclAdd: handleCoclAdd
-      })
+      return () => {
+        const file = selectedFile.value
+        const workspace = currentWorkspaceEntry.value
+        const overview = workspaceOverview.value
+        if (workspace && overview && (!file || file.isDirectory || file.path === workspace.path)) {
+          return h(WorkspaceEditor, {
+            name: workspaceDisplayName(),
+            path: workspace.path,
+            dirty: !!getGlobalEditorConfig()?.dirty?.value,
+            overview,
+            addableModels: addableFiles(workspaceSourceFiles(), ['.ecore'], overview.models),
+            addableInstances: addableFiles(workspaceSourceFiles(), ['.xmi'], overview.instances),
+            onSave: saveWorkspace,
+            onOpen: openWorkspaceEntry,
+            onRemove: removeWorkspaceEntry,
+            onAdd: addWorkspaceFile,
+            onConnect: connectWorkspaceAtlas,
+            onDisconnect: disconnectWorkspaceAtlas,
+            onSettings: (section: string) =>
+              tsm.getService<any>('gene.eventbus')?.emit?.('show-workspace-settings', { section }),
+          })
+        }
+        const preview = h(WorkspacePreview, {
+          selectedFile: file,
+          onOpenWorkspace: handleOpenWorkspace,
+          onCoclAdd: handleCoclAdd
+        })
+        if (!workspace) return preview
+        return h('div', { class: 'workspace-tab-preview' }, [
+          h('button', {
+            class: 'workspace-tab-back',
+            'data-testid': 'gene.WorkspaceTab.Back',
+            onClick: () => { selectedFile.value = null },
+          }, [h('i', { class: 'pi pi-arrow-left' }), ` Workspace ${workspaceDisplayName()}`]),
+          preview,
+        ])
+      }
     }
   })
 
@@ -3229,5 +3443,35 @@ html, body, #app {
 @keyframes loading-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* Workspace tab: a previewed file, with the way back to the workspace */
+.workspace-tab-preview {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.workspace-tab-preview > :last-child {
+  flex: 1;
+  min-height: 0;
+}
+
+.workspace-tab-back {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 1rem;
+  border: none;
+  border-bottom: 1px solid var(--surface-border);
+  background: var(--surface-ground);
+  color: var(--primary-color);
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.workspace-tab-back:hover {
+  background: var(--surface-hover);
 }
 </style>
