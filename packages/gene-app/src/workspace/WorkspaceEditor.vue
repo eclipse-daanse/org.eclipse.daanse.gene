@@ -9,6 +9,10 @@
  * views, widgets, actions) stays in the settings dialog; this links there.
  *
  * Shows; does nothing itself - every change goes out as an event.
+ *
+ * Read-only for a workspace file that is not the open one: what it declares,
+ * which files are missing, and a button to open it. Nothing else applies -
+ * what is loaded or connected belongs to the open workspace.
  */
 import { ref } from 'tsm:vue'
 import type { EntryStatus, OverviewEntry, WorkspaceOverview } from '../services/workspaceOverview'
@@ -27,6 +31,8 @@ const props = defineProps<{
   overview: WorkspaceOverview
   addableModels: AddableFile[]
   addableInstances: AddableFile[]
+  /** Another workspace than the open one - shown, not edited */
+  readonly?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -37,6 +43,7 @@ const emit = defineEmits<{
   connect: [entry: OverviewEntry]
   disconnect: [entry: OverviewEntry]
   settings: [section: string]
+  openWorkspace: []
 }>()
 
 const STATUS_LABEL: Record<EntryStatus, string> = {
@@ -62,11 +69,17 @@ function add(kind: 'model' | 'instance', file: AddableFile) {
   emit('add', kind, file)
 }
 
+/** Read-only, only what concerns the file itself is a state worth naming */
+function showsStatus(status: EntryStatus): boolean {
+  return !props.readonly || status === 'missing' || status === 'disabled'
+}
+
 function addable(kind: 'model' | 'instance'): AddableFile[] {
   return kind === 'model' ? props.addableModels : props.addableInstances
 }
 
 function tone(status: EntryStatus): string {
+  if (props.readonly) return status === 'missing' ? 'bad' : status === 'disabled' ? 'off' : 'plain'
   if (status === 'loaded' || status === 'connected') return 'ok'
   if (status === 'missing' || status === 'error') return 'bad'
   if (status === 'disabled') return 'off'
@@ -82,7 +95,18 @@ function tone(status: EntryStatus): string {
         <span class="ws-head-name">{{ name }}</span>
         <span class="ws-head-path">{{ path }}</span>
       </div>
+      <span v-if="readonly" class="ws-preview-tag">Vorschau</span>
       <button
+        v-if="readonly"
+        class="ws-btn ws-btn--primary"
+        data-testid="gene.WorkspaceEditor.OpenWorkspace"
+        @click="emit('openWorkspace')"
+      >
+        <i class="pi pi-folder-open"></i>
+        <span>Workspace öffnen</span>
+      </button>
+      <button
+        v-if="!readonly"
         class="ws-btn"
         :class="{ 'ws-btn--primary': dirty }"
         :disabled="!dirty"
@@ -93,7 +117,7 @@ function tone(status: EntryStatus): string {
         <i class="pi pi-save"></i>
         <span>{{ dirty ? 'Speichern' : 'Gespeichert' }}</span>
       </button>
-      <button class="ws-btn" title="Darstellung, Aktionen, Storage …" @click="emit('settings', 'icons')">
+      <button v-if="!readonly" class="ws-btn" title="Darstellung, Aktionen, Storage …" @click="emit('settings', 'icons')">
         <i class="pi pi-cog"></i>
         <span>Einstellungen</span>
       </button>
@@ -115,6 +139,7 @@ function tone(status: EntryStatus): string {
           <span class="ws-section-title">{{ section.title }}</span>
           <span class="ws-count">{{ section.entries.length }}</span>
           <button
+            v-if="!readonly"
             class="ws-icon-btn ws-section-add"
             :title="`${section.title} hinzufügen`"
             :data-testid="`gene.WorkspaceEditor.${section.kind}.Add`"
@@ -148,8 +173,9 @@ function tone(status: EntryStatus): string {
                 {{ entry.location }}<template v-if="entry.detail"> · {{ entry.detail }}</template>
               </span>
             </div>
-            <span class="ws-status" :class="`ws-status--${tone(entry.status)}`">{{ STATUS_LABEL[entry.status] }}</span>
+            <span v-if="showsStatus(entry.status)" class="ws-status" :class="`ws-status--${tone(entry.status)}`">{{ STATUS_LABEL[entry.status] }}</span>
             <button
+              v-if="!readonly"
               class="ws-icon-btn"
               title="Öffnen"
               :disabled="entry.status === 'missing' || entry.location.startsWith('atlas://')"
@@ -157,7 +183,7 @@ function tone(status: EntryStatus): string {
             >
               <i class="pi pi-external-link"></i>
             </button>
-            <button class="ws-icon-btn ws-icon-btn--danger" title="Aus dem Workspace entfernen" @click="emit('remove', section.kind, entry)">
+            <button v-if="!readonly" class="ws-icon-btn ws-icon-btn--danger" title="Aus dem Workspace entfernen" @click="emit('remove', section.kind, entry)">
               <i class="pi pi-trash"></i>
             </button>
           </li>
@@ -179,8 +205,8 @@ function tone(status: EntryStatus): string {
               <span class="ws-row-label">{{ entry.label }}</span>
               <span class="ws-row-sub">{{ entry.location }}</span>
             </div>
-            <span class="ws-status" :class="`ws-status--${tone(entry.status)}`">{{ STATUS_LABEL[entry.status] }}</span>
-            <button class="ws-icon-btn" title="Öffnen" @click="emit('open', 'constraints', entry)">
+            <span v-if="showsStatus(entry.status)" class="ws-status" :class="`ws-status--${tone(entry.status)}`">{{ STATUS_LABEL[entry.status] }}</span>
+            <button v-if="!readonly" class="ws-icon-btn" title="Öffnen" @click="emit('open', 'constraints', entry)">
               <i class="pi pi-external-link"></i>
             </button>
           </li>
@@ -204,24 +230,26 @@ function tone(status: EntryStatus): string {
                 {{ entry.location }}<template v-if="entry.detail"> · {{ entry.detail }}</template>
               </span>
             </div>
-            <span class="ws-status" :class="`ws-status--${tone(entry.status)}`">{{ STATUS_LABEL[entry.status] }}</span>
-            <button
-              v-if="entry.status === 'connected' || entry.status === 'connecting'"
-              class="ws-icon-btn"
-              title="Trennen"
-              @click="emit('disconnect', entry)"
-            >
-              <i class="pi pi-times-circle"></i>
-            </button>
-            <button
-              v-else
-              class="ws-icon-btn"
-              title="Verbinden"
-              :disabled="entry.status === 'disabled'"
-              @click="emit('connect', entry)"
-            >
-              <i class="pi pi-sync"></i>
-            </button>
+            <span v-if="showsStatus(entry.status)" class="ws-status" :class="`ws-status--${tone(entry.status)}`">{{ STATUS_LABEL[entry.status] }}</span>
+            <template v-if="!readonly">
+              <button
+                v-if="entry.status === 'connected' || entry.status === 'connecting'"
+                class="ws-icon-btn"
+                title="Trennen"
+                @click="emit('disconnect', entry)"
+              >
+                <i class="pi pi-times-circle"></i>
+              </button>
+              <button
+                v-else
+                class="ws-icon-btn"
+                title="Verbinden"
+                :disabled="entry.status === 'disabled'"
+                @click="emit('connect', entry)"
+              >
+                <i class="pi pi-sync"></i>
+              </button>
+            </template>
           </li>
         </ul>
         <p v-else class="ws-empty">Keine Atlas-Verbindungen eingetragen.</p>
@@ -233,7 +261,7 @@ function tone(status: EntryStatus): string {
           <i class="pi pi-link"></i>
           <span class="ws-section-title">Package-Resolver</span>
           <span class="ws-count">{{ overview.resolvers.length }}</span>
-          <button class="ws-icon-btn ws-section-add" title="Resolver bearbeiten" @click="emit('settings', 'resolvers')">
+          <button v-if="!readonly" class="ws-icon-btn ws-section-add" title="Resolver bearbeiten" @click="emit('settings', 'resolvers')">
             <i class="pi pi-pencil"></i>
           </button>
         </div>
@@ -412,6 +440,15 @@ function tone(status: EntryStatus): string {
 .ws-dot--bad { background: var(--p-red-500, #ef4444); }
 .ws-dot--idle { background: var(--p-amber-500, #f59e0b); }
 .ws-dot--off { background: var(--text-color-secondary); opacity: 0.5; }
+.ws-dot--plain { background: var(--text-color-secondary); }
+
+.ws-preview-tag {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--surface-border);
+  color: var(--text-color-secondary);
+}
 
 .ws-status {
   font-size: 0.7rem;

@@ -12,9 +12,9 @@ import type { TsmPluginSystem } from '@/tsm'
 import type { Resource } from 'tsm:emfts'
 import { Dialog, InputText, Dropdown, Button } from 'tsm:primevue'
 import type { File, Repository } from 'storage-core'
-import { getGlobalEditorConfig } from '@/services/useEditorConfig'
+import { getGlobalEditorConfig, parseEditorConfig } from '@/services/useEditorConfig'
 import { constraintFilesBeside, loadConstraintFilesBeside } from './services/workspaceConstraints'
-import { addableFiles, buildWorkspaceOverview, readFeature, type OverviewEntry } from './services/workspaceOverview'
+import { addableFiles, buildWorkspaceOverview, readFeature, type OverviewEntry, type WorkspaceOverview } from './services/workspaceOverview'
 import { collectOpenEditors, restoreOpenEditors } from './services/openEditors'
 import WorkspaceEditor, { type AddableFile, type SectionKind } from './workspace/WorkspaceEditor.vue'
 import { mayLeaveWorkspace, unloadWorkspace, workspaceTabs, type LeaveChoice } from './services/workspaceSwitch'
@@ -2278,9 +2278,8 @@ function workspaceSourceFiles(): any[] {
  * to the source, instance locations were written relative to the workspace's
  * folder - the loaders try both and the bare name, so this does too.
  */
-function findWorkspaceFile(location: string): any | null {
+function findWorkspaceFile(location: string, workspace: any = currentWorkspaceEntry.value): any | null {
   const fs = tsm.getService<any>('gene.filesystem')
-  const workspace = currentWorkspaceEntry.value
   if (!fs?.getFileByPath || !workspace?.sourceId || !location) return null
   const cut = workspace.path?.lastIndexOf('/') ?? -1
   const folder = cut > 0 ? workspace.path.slice(0, cut) : ''
@@ -2375,6 +2374,52 @@ async function reopenWorkspaceEditors(): Promise<void> {
   })
   if (failed.length > 0) console.warn('[Workspace] Could not reopen:', failed.join(', '))
   if (!states.some((state) => state.active && !failed.includes(state.filePath))) zeigeWorkspaceTab()
+}
+
+/**
+ * Another workspace file selected in the explorer: what it declares, shown
+ * read-only in the same form as the open one - with a way to open it.
+ */
+const previewedWorkspace = shallowRef<{ entry: any; name: string; overview: WorkspaceOverview } | null>(null)
+
+function isWorkspacePath(path: string): boolean {
+  return /\.(wsp|workspace)$/i.test(path)
+}
+
+watch(selectedFile, async (file: any) => {
+  previewedWorkspace.value = null
+  if (!file || file.isDirectory || !isWorkspacePath(file.path ?? file.name ?? '')) return
+  if (file.path === currentWorkspaceEntry.value?.path) return
+  try {
+    const fs = tsm.getService<any>('gene.filesystem')
+    const content: string | null = await fs.readTextFile(file)
+    const config: any = content ? await parseEditorConfig(content, file.path) : null
+    if (!config || selectedFile.value !== file) return
+    const tree = (file.sourceId && fs?.filesBySource?.get(file.sourceId)) || []
+    const overview = buildWorkspaceOverview({
+      modelSources: toArray(readFeature(config, 'modelSources')),
+      instanceSources: toArray(readFeature(config, 'instanceSources')),
+      atlasConnections: toArray(readFeature(config, 'atlasConnections')),
+      resolvers: toArray(readFeature(readFeature(config, 'packageResolverChain'), 'resolvers')),
+      loadedModels: new Map(),
+      openInstances: new Set(),
+      constraintFiles: constraintFilesBeside(file.path, tree).map((f: any) => f.path),
+      loadedConstraints: new Set(),
+      liveAtlas: [],
+      fileExists: (location) => !!findWorkspaceFile(location, file),
+    })
+    const name = readFeature(config, 'name')
+    previewedWorkspace.value = { entry: file, name: (name ? String(name) : '') || file.name.replace(/\.(wsp|workspace)$/i, ''), overview }
+  } catch (e) {
+    console.warn('[Workspace] Preview of', file.path, 'failed:', e)
+  }
+})
+
+async function openPreviewedWorkspace(): Promise<void> {
+  const entry = previewedWorkspace.value?.entry
+  if (!entry) return
+  const content: string | null = await tsm.getService<any>('gene.filesystem').readTextFile(entry)
+  if (content) await handleOpenWorkspace(entry, content)
 }
 
 async function saveWorkspace(): Promise<void> {
@@ -2481,6 +2526,19 @@ function zeigeWorkspaceVorschau(layout: any): void {
         const file = selectedFile.value
         const workspace = currentWorkspaceEntry.value
         const overview = workspaceOverview.value
+        const previewed = previewedWorkspace.value
+        if (previewed && file === previewed.entry) {
+          return h(WorkspaceEditor, {
+            readonly: true,
+            name: previewed.name,
+            path: previewed.entry.path,
+            dirty: false,
+            overview: previewed.overview,
+            addableModels: [],
+            addableInstances: [],
+            onOpenWorkspace: openPreviewedWorkspace,
+          })
+        }
         if (workspace && overview && (!file || file.isDirectory || file.path === workspace.path)) {
           return h(WorkspaceEditor, {
             name: workspaceDisplayName(),
