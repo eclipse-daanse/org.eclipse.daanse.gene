@@ -1,5 +1,6 @@
 /**
- * The text editor as a view on an `.xmi`, `.ecore` or `.xml` file.
+ * The text editor as a view on an `.xmi`, `.ecore` or `.xml` file - and on a
+ * workspace file, which is XMI as well.
  *
  * Never the default: the structured views outrank it, this one is reached
  * through "Open with" - for a look at the raw XML, or a fix by hand. The
@@ -16,7 +17,7 @@ export class XmlView implements EditorArt {
   readonly id = 'xml'
   readonly name = 'XML-Editor'
   readonly icon = 'pi pi-code'
-  readonly extensions = ['.xmi', '.ecore', '.xml']
+  readonly extensions = ['.xmi', '.ecore', '.xml', '.wsp', '.workspace']
   readonly priority = -10
   readonly replacesPerspective = 'xml-editor'
 
