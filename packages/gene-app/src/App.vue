@@ -14,6 +14,7 @@ import { Dialog, InputText, Dropdown, Button } from 'tsm:primevue'
 import type { File, Repository } from 'storage-core'
 import { getGlobalEditorConfig } from '@/services/useEditorConfig'
 import { loadConstraintFilesBeside } from './services/workspaceConstraints'
+import { mayLeaveWorkspace, type LeaveChoice } from './services/workspaceSwitch'
 import { createEditorLoading } from './services/editorLoading'
 import { createMetamodelResolver, nsUrisDeclaredIn } from './services/metamodelResolver'
 import { ProblemsPanel, useSharedProblemsService } from 'ui-problems-panel'
@@ -281,6 +282,25 @@ const xmiImportProps = ref<{ xmiContent: string; name: string }>({ xmiContent: '
 const saveConfirmVisible = ref(false)
 const saveConfirmInfo = ref<{ errorCount: number; totalCount: number }>({ errorCount: 0, totalCount: 0 })
 let saveConfirmResolve: ((proceed: boolean) => void) | null = null
+
+// Unsaved workspace changes before another workspace opens: save, discard or stay
+const leaveWorkspaceVisible = ref(false)
+const leaveWorkspaceName = ref('')
+let leaveWorkspaceResolve: ((choice: LeaveChoice) => void) | null = null
+
+function askLeaveWorkspace(name: string): Promise<LeaveChoice> {
+  leaveWorkspaceResolve?.('cancel')
+  leaveWorkspaceName.value = name
+  leaveWorkspaceVisible.value = true
+  return new Promise((resolve) => { leaveWorkspaceResolve = resolve })
+}
+
+function resolveLeaveWorkspace(choice: LeaveChoice) {
+  leaveWorkspaceVisible.value = false
+  const resolve = leaveWorkspaceResolve
+  leaveWorkspaceResolve = null
+  resolve?.(choice)
+}
 
 function resolveSaveConfirm(proceed: boolean) {
   saveConfirmVisible.value = false
@@ -598,6 +618,20 @@ async function handleOpenWorkspace(entry: any, content: string) {
     console.warn('Perspective service not available')
     return
   }
+
+  // The loaded workspace is replaced - its unsaved changes are asked about first
+  const leaving = getGlobalEditorConfig()
+  const mayLeave = await mayLeaveWorkspace({
+    loaded: !!currentWorkspaceEntry.value,
+    dirty: !!leaving?.dirty?.value,
+    name: (leaving as any)?.editorConfig?.value?.name || currentWorkspaceEntry.value?.name || 'Workspace',
+    ask: askLeaveWorkspace,
+    save: async () => {
+      const fileSystem = tsm.getService<any>('gene.filesystem')
+      await leaving!.saveToFileSystem((file: any, text: string) => fileSystem.writeTextFile(file, text))
+    },
+  })
+  if (!mayLeave) return
 
   loadingWorkspaceName.value = entry.name
   isLoadingWorkspace.value = true
@@ -2831,6 +2865,31 @@ onMounted(() => {
     :xmiContent="xmiImportProps.xmiContent"
     :name="xmiImportProps.name"
   />
+
+  <!-- Unsaved workspace changes before another workspace opens -->
+  <Dialog
+    v-model:visible="leaveWorkspaceVisible"
+    header="Ungespeicherte Änderungen"
+    :modal="true"
+    :closable="false"
+    :style="{ width: '460px' }"
+    data-testid="gene.LeaveWorkspaceDialog"
+  >
+    <div class="save-confirm-body">
+      <i class="pi pi-exclamation-triangle save-confirm-icon"></i>
+      <div class="save-confirm-text">
+        <p class="save-confirm-lead">
+          Der Workspace <strong>{{ leaveWorkspaceName }}</strong> hat ungespeicherte Änderungen.
+        </p>
+        <p class="save-confirm-hint">Vor dem Wechsel speichern?</p>
+      </div>
+    </div>
+    <template #footer>
+      <Button label="Abbrechen" severity="secondary" text @click="resolveLeaveWorkspace('cancel')" />
+      <Button label="Verwerfen" severity="danger" outlined icon="pi pi-trash" @click="resolveLeaveWorkspace('discard')" />
+      <Button label="Speichern" icon="pi pi-save" @click="resolveLeaveWorkspace('save')" />
+    </template>
+  </Dialog>
 
   <!-- Save-validation confirm dialog (Metamodeler) -->
   <Dialog
