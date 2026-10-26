@@ -26,6 +26,13 @@ export default defineConfig({
             setupFiles: ['./vitest.setup.ts'],
             exclude: [...configDefaults.exclude, 'e2e/**', 'packages/*-wizard/**'],
             root: fileURLToPath(new URL('./', import.meta.url)),
+            /*
+             * The OCL packages import their own modules without a file
+             * extension ('./OclEngine'), which Node's ESM loader refuses.
+             * Inlined, Vite resolves them as it does in the browser - and the
+             * problems service can evaluate real constraints in tests.
+             */
+            server: { deps: { inline: [/@emfts\/ocl\./] } },
           },
         }),
       ),
