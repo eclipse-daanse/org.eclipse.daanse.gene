@@ -15,6 +15,7 @@
 import { ref, onMounted, onUnmounted, watch, shallowRef } from 'tsm:vue'
 import * as monaco from 'monaco-editor'
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
+import { oclContextName } from '../composables/oclContext'
 import { getSharedOclClient } from '../composables/useOclLanguageClient'
 import type { LspCompletionItem, LspDiagnostic } from '../composables/useOclLanguageClient'
 
@@ -358,12 +359,9 @@ watch(() => props.contextClass, () => {
 
 // --- Helpers ---
 
-/** Extract the class name from contextClass (which may be URI format nsURI#//ClassName) */
+/** The context class as OCL writes it - see oclContextName */
 function contextClassName(): string {
-  const cc = props.contextClass
-  if (!cc) return ''
-  const hashIdx = cc.indexOf('#//')
-  return hashIdx >= 0 ? cc.substring(hashIdx + 3) : cc
+  return oclContextName(props.contextClass)
 }
 
 function buildDocumentText(expression: string): string {
