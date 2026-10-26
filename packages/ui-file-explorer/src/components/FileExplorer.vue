@@ -174,6 +174,14 @@ const contextMenuItems = computed(() => {
     const entry = contextMenuNode.value.data as FileEntry
     const workspaceOpen = !!getActions()?.isWorkspaceOpen?.value
 
+    if (isWorkspaceFile(entry)) {
+      items.push({
+        label: 'Workspace öffnen',
+        icon: 'pi pi-box',
+        command: () => openWorkspaceFile(entry)
+      })
+    }
+
     const ansichten = kandidatenFuer(entry)
     if (ansichten.length > 0) {
       items.push({
@@ -382,24 +390,26 @@ async function handleNodeDoubleClick(node: FileTreeNode) {
   const entry = treeNode.data as FileEntry
   if (entry.isDirectory) return
 
-  if (isWorkspaceFile(entry)) {
-    // Read content and open workspace via service
-    try {
-      const content = await fileSystem.readTextFile(entry)
-      if (content) {
-        getActions()?.openWorkspace(entry, content)
-        // Track as recent workspace
-        const source = fileSystem.getSource(entry.sourceId)
-        addRecentWorkspace({
-          name: entry.name,
-          filePath: entry.path,
-          sourceId: entry.sourceId,
-          sourceName: source?.name || ''
-        })
-      }
-    } catch (e) {
-      console.error('[FileExplorer] Failed to read workspace file:', e)
+  if (isWorkspaceFile(entry)) await openWorkspaceFile(entry)
+}
+
+/** Opens a workspace file as the workspace - double click and context menu */
+async function openWorkspaceFile(entry: FileEntry): Promise<void> {
+  try {
+    const content = await fileSystem.readTextFile(entry)
+    if (content) {
+      getActions()?.openWorkspace(entry, content)
+      // Track as recent workspace
+      const source = fileSystem.getSource(entry.sourceId)
+      addRecentWorkspace({
+        name: entry.name,
+        filePath: entry.path,
+        sourceId: entry.sourceId,
+        sourceName: source?.name || ''
+      })
     }
+  } catch (e) {
+    console.error('[FileExplorer] Failed to read workspace file:', e)
   }
 }
 
@@ -421,7 +431,7 @@ function hasMenu(node: FileTreeNode): boolean {
   if (node.type === 'source' || node.type === 'directory') return true
   if (node.type === 'file' || node.type === 'workspace') {
     const entry = node.data as FileEntry
-    return isEcoreFile(entry) || (isXmiFile(entry) && !isWspFile(entry)) || isCoclFile(entry) || isDatagenFile(entry)
+    return isWorkspaceFile(entry) || isEcoreFile(entry) || (isXmiFile(entry) && !isWspFile(entry)) || isCoclFile(entry) || isDatagenFile(entry)
       || kandidatenFuer(entry).length > 0 || fileActionRegistry.matching(entry).length > 0
   }
   return false
