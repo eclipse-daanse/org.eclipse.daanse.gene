@@ -13,6 +13,7 @@ import type { Resource } from 'tsm:emfts'
 import { Dialog, InputText, Dropdown, Button, ProgressSpinner } from 'tsm:primevue'
 import type { File, Repository } from 'storage-core'
 import { getGlobalEditorConfig } from '@/services/useEditorConfig'
+import { loadConstraintFilesBeside } from './services/workspaceConstraints'
 import { createMetamodelResolver, nsUrisDeclaredIn } from './services/metamodelResolver'
 import { ProblemsPanel, useSharedProblemsService } from 'ui-problems-panel'
 import { SearchDialog, setViewsService } from 'ui-search'
@@ -675,6 +676,10 @@ async function handleOpenWorkspace(entry: any, content: string) {
     // Load models from EditorConfig (after perspective is set up)
     await loadModelsFromEditorConfig(entry)
 
+    // The constraint files beside the workspace - before the instances, so
+    // their first validation already has the reference filters
+    await loadWorkspaceConstraintFiles(entry)
+
     // Configure cascaded package resolver if configured
     await configureCascadeResolver()
 
@@ -683,6 +688,20 @@ async function handleOpenWorkspace(entry: any, content: string) {
   } catch (e: any) {
     console.error('Failed to open workspace:', e)
   }
+}
+
+/**
+ * Loads the `.c-ocl` files in the workspace's folder (see workspaceConstraints).
+ */
+async function loadWorkspaceConstraintFiles(workspaceEntry: any) {
+  const fileSystem = tsm.getService<any>('gene.filesystem')
+  const tree = workspaceEntry?.sourceId ? fileSystem?.filesBySource?.get(workspaceEntry.sourceId) : null
+  if (!tree || !workspaceEntry?.path) return
+  const loaded = await loadConstraintFilesBeside(workspaceEntry.path, tree, {
+    read: (file: any) => fileSystem.readTextFile(file),
+    load: (content: string, path: string) => problemsService.loadCoclFile(content, path),
+  })
+  if (loaded.length > 0) console.log('[App] Constraint files of the workspace loaded:', loaded.join(', '))
 }
 
 /**
