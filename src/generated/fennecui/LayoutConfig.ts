@@ -7,6 +7,7 @@
 
 import type { EObject } from '@emfts/core';
 import type { PanelPosition } from './PanelPosition';
+import type { OpenEditor } from './OpenEditor';
 
 /**
  * LayoutConfig
@@ -23,5 +24,6 @@ export interface LayoutConfig extends EObject {
   statusBarVisible?: boolean;
   activeActivityId?: string;
   panelPositions: PanelPosition[];
+  openEditors: OpenEditor[];
 
 }

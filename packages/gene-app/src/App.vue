@@ -15,6 +15,7 @@ import type { File, Repository } from 'storage-core'
 import { getGlobalEditorConfig } from '@/services/useEditorConfig'
 import { constraintFilesBeside, loadConstraintFilesBeside } from './services/workspaceConstraints'
 import { addableFiles, buildWorkspaceOverview, readFeature, type OverviewEntry } from './services/workspaceOverview'
+import { collectOpenEditors, restoreOpenEditors } from './services/openEditors'
 import WorkspaceEditor, { type AddableFile, type SectionKind } from './workspace/WorkspaceEditor.vue'
 import { mayLeaveWorkspace, unloadWorkspace, workspaceTabs, type LeaveChoice } from './services/workspaceSwitch'
 import { createEditorLoading } from './services/editorLoading'
@@ -671,6 +672,8 @@ async function handleOpenWorkspace(entry: any, content: string) {
     if (editorConfig) {
       try {
         await editorConfig.loadFromString(content, entry.path, entry)
+        // Saving records which files are open in which editor
+        editorConfig.setOpenEditorsSource(currentOpenEditors)
         console.log('EditorConfig loaded from workspace:', entry.path)
 
         // Register workspace actions and event mappings from EditorConfig
@@ -766,6 +769,9 @@ async function handleOpenWorkspace(entry: any, content: string) {
 
     // Load instances from EditorConfig (after models are loaded)
     await loadInstancesFromEditorConfig(entry)
+
+    // The tabs open when it was saved - or, if none was in front, the workspace itself
+    await reopenWorkspaceEditors()
   } catch (e: any) {
     console.error('Failed to open workspace:', e)
   } finally {
@@ -2307,6 +2313,53 @@ const workspaceOverview = computed(() => {
     fileExists: (location) => !!findWorkspaceFile(location),
   })
 })
+
+/** The file tabs open right now, for the workspace to record */
+function currentOpenEditors() {
+  const layout = layoutStateService.value?.useLayoutState?.()
+  return collectOpenEditors(layout?.state.editorTabs ?? [], layout?.state.activeEditorTabId ?? null, holeEditorFront())
+}
+
+/** The tab showing a file in an editor, if one is open */
+function tabOfFile(filePath: string, editorId: string): string | null {
+  const front = holeEditorFront()
+  const tabs: any[] = layoutStateService.value?.useLayoutState?.()?.state.editorTabs ?? []
+  return tabs.find((t) => front.editorIdOf(t.id) === editorId && front.filePathOf(t.id) === filePath)?.id ?? null
+}
+
+/**
+ * Reopens the file tabs the workspace recorded, each in its editor. Without
+ * a recorded front tab the workspace tab comes forward - it shows what was
+ * just opened.
+ */
+async function reopenWorkspaceEditors(): Promise<void> {
+  const editorConfig = getGlobalEditorConfig()
+  const layout = layoutStateService.value?.useLayoutState?.()
+  if (!editorConfig || !layout) return
+  const states = editorConfig.getOpenEditors()
+  const fs = tsm.getService<any>('gene.filesystem')
+  const failed = await restoreOpenEditors(states, {
+    isOpen: (state) => !!tabOfFile(state.filePath, state.editorId),
+    open: async (state) => {
+      const file = findWorkspaceFile(state.filePath)
+      const view = tsm.getService<any>('gene.editor.context')?.alleEditorArten?.()
+        .find((a: any) => a.id === state.editorId)
+      if (!file || !view?.open) return false
+      const content: string | null = await fs.readTextFile(file)
+      if (content == null) return false
+      await view.open(file, content)
+      return true
+    },
+    activate: (state) => {
+      const tabId = tabOfFile(state.filePath, state.editorId)
+      if (tabId) layout.selectEditor(tabId)
+    },
+  })
+  if (failed.length > 0) console.warn('[Workspace] Could not reopen:', failed.join(', '))
+  if (!states.some((state) => state.active && !failed.includes(state.filePath))) {
+    layout.selectEditor('workspace-preview')
+  }
+}
 
 async function saveWorkspace(): Promise<void> {
   const fs = tsm.getService<any>('gene.filesystem')

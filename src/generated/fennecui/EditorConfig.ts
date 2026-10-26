@@ -11,6 +11,7 @@ import type { ModelRepository } from './ModelRepository';
 import type { InstanceSource } from './InstanceSource';
 import type { ImportRule } from './ImportRule';
 import type { LoadProfile } from './LoadProfile';
+import type { EditorBinding } from './EditorBinding';
 import type { IconMapping } from './IconMapping';
 import type { LabelRule } from './LabelRule';
 import type { HighlightRule } from './HighlightRule';
@@ -45,6 +46,7 @@ export interface EditorConfig extends EObject {
   instanceSources: InstanceSource[];
   importRules: ImportRule[];
   loadProfiles: LoadProfile[];
+  editorBindings: EditorBinding[];
   iconMappings: IconMapping[];
   labelRules: LabelRule[];
   highlightRules: HighlightRule[];

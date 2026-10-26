@@ -67,3 +67,12 @@ describe('A closed tab', () => {
     expect(front.frontArt()).toBeUndefined()
   })
 })
+
+describe('The file of a tab', () => {
+  it('is known for every bound tab, forgotten when it closes', () => {
+    front.bindTab('instance:a.xmi', 'instance', 'a.xmi')
+    expect(front.filePathOf('instance:a.xmi')).toBe('a.xmi')
+    front.releaseTab('instance:a.xmi')
+    expect(front.filePathOf('instance:a.xmi')).toBeUndefined()
+  })
+})

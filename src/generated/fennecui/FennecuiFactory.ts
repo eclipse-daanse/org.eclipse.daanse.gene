@@ -24,6 +24,8 @@ import type { LoadProfile } from './LoadProfile';
 import { LoadProfileImpl } from './LoadProfileImpl';
 import type { KeyValue } from './KeyValue';
 import { KeyValueImpl } from './KeyValueImpl';
+import type { EditorBinding } from './EditorBinding';
+import { EditorBindingImpl } from './EditorBindingImpl';
 import type { IconMapping } from './IconMapping';
 import { IconMappingImpl } from './IconMappingImpl';
 import type { Utf8Icon } from './Utf8Icon';
@@ -92,6 +94,8 @@ import type { NamespaceMapping } from './NamespaceMapping';
 import { NamespaceMappingImpl } from './NamespaceMappingImpl';
 import type { LayoutConfig } from './LayoutConfig';
 import { LayoutConfigImpl } from './LayoutConfigImpl';
+import type { OpenEditor } from './OpenEditor';
+import { OpenEditorImpl } from './OpenEditorImpl';
 import type { PanelPosition } from './PanelPosition';
 import { PanelPositionImpl } from './PanelPositionImpl';
 import type { UiDefaults } from './UiDefaults';
@@ -176,6 +180,13 @@ export class FennecuiFactory extends BasicEFactory {
    */
   createKeyValue(): KeyValue {
     return new KeyValueImpl();
+  }
+
+  /**
+   * Create a new EditorBinding instance
+   */
+  createEditorBinding(): EditorBinding {
+    return new EditorBindingImpl();
   }
 
   /**
@@ -417,6 +428,13 @@ export class FennecuiFactory extends BasicEFactory {
   }
 
   /**
+   * Create a new OpenEditor instance
+   */
+  createOpenEditor(): OpenEditor {
+    return new OpenEditorImpl();
+  }
+
+  /**
    * Create a new PanelPosition instance
    */
   createPanelPosition(): PanelPosition {
@@ -493,6 +511,8 @@ export class FennecuiFactory extends BasicEFactory {
         return this.createLoadProfile();
       case 'KeyValue':
         return this.createKeyValue();
+      case 'EditorBinding':
+        return this.createEditorBinding();
       case 'IconMapping':
         return this.createIconMapping();
       case 'Utf8Icon':
@@ -561,6 +581,8 @@ export class FennecuiFactory extends BasicEFactory {
         return this.createNamespaceMapping();
       case 'LayoutConfig':
         return this.createLayoutConfig();
+      case 'OpenEditor':
+        return this.createOpenEditor();
       case 'PanelPosition':
         return this.createPanelPosition();
       case 'UiDefaults':

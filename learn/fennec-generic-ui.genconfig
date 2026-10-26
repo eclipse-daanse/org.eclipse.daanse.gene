@@ -2,7 +2,7 @@
 <genconfig:GenConfig xmi:version="2.0"
     xmlns:xmi="http://www.omg.org/XMI"
     xmlns:genconfig="http://www.emfts.org/genconfig/1.0"
-    ecorePackage="https://eclipse.org/fennec/ts/generic/ui#/">
+    ecorePackage="#/">
 
   <generation mode="emf" outputDir="src/generated/fennecui"/>
 
