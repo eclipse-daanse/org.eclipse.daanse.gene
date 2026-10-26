@@ -14,7 +14,7 @@ import { Dialog, InputText, Dropdown, Button } from 'tsm:primevue'
 import type { File, Repository } from 'storage-core'
 import { getGlobalEditorConfig } from '@/services/useEditorConfig'
 import { loadConstraintFilesBeside } from './services/workspaceConstraints'
-import { mayLeaveWorkspace, type LeaveChoice } from './services/workspaceSwitch'
+import { mayLeaveWorkspace, unloadWorkspace, workspaceTabs, type LeaveChoice } from './services/workspaceSwitch'
 import { createEditorLoading } from './services/editorLoading'
 import { createMetamodelResolver, nsUrisDeclaredIn } from './services/metamodelResolver'
 import { ProblemsPanel, useSharedProblemsService } from 'ui-problems-panel'
@@ -288,9 +288,12 @@ const leaveWorkspaceVisible = ref(false)
 const leaveWorkspaceName = ref('')
 let leaveWorkspaceResolve: ((choice: LeaveChoice) => void) | null = null
 
-function askLeaveWorkspace(name: string): Promise<LeaveChoice> {
+const leaveWorkspaceFiles = ref<string[]>([])
+
+function askLeaveWorkspace(name: string, unsavedFiles: string[]): Promise<LeaveChoice> {
   leaveWorkspaceResolve?.('cancel')
   leaveWorkspaceName.value = name
+  leaveWorkspaceFiles.value = unsavedFiles
   leaveWorkspaceVisible.value = true
   return new Promise((resolve) => { leaveWorkspaceResolve = resolve })
 }
@@ -621,9 +624,14 @@ async function handleOpenWorkspace(entry: any, content: string) {
 
   // The loaded workspace is replaced - its unsaved changes are asked about first
   const leaving = getGlobalEditorConfig()
+  const layoutState = layoutStateService.value?.useLayoutState?.()
+  const closingTabs = workspaceTabs(layoutState?.state.editorTabs ?? [], isWorkspaceFileTab)
   const mayLeave = await mayLeaveWorkspace({
     loaded: !!currentWorkspaceEntry.value,
     dirty: !!leaving?.dirty?.value,
+    unsavedFiles: closingTabs
+      .filter((tab) => tab.dirty || instanceTabModified(tab.id))
+      .map((tab) => tab.title),
     name: (leaving as any)?.editorConfig?.value?.name || currentWorkspaceEntry.value?.name || 'Workspace',
     ask: askLeaveWorkspace,
     save: async () => {
@@ -632,6 +640,21 @@ async function handleOpenWorkspace(entry: any, content: string) {
     },
   })
   if (!mayLeave) return
+
+  // Nothing of the old workspace may stay behind - models, constraints, tabs, connections
+  if (currentWorkspaceEntry.value) {
+    unloadWorkspace({
+      tabIds: closingTabs.map((tab) => tab.id),
+      closeTab: (tabId) => layoutState?.closeEditor(tabId),
+      clearInstances: () => instanceTreeComposables.value?.setSharedResource?.(null),
+      unloadModels: () => tsm.getService<any>('ui.model-browser.composables')?.unloadUserModels?.(),
+      resetOcl: () => problemsService.reset(),
+      disconnectAtlas: () => {
+        const atlas = tsm.getService<any>('gene.atlas.browser')
+        for (const connection of [...(atlas?.connections?.value ?? [])]) atlas.disconnect(connection.id)
+      },
+    })
+  }
 
   loadingWorkspaceName.value = entry.name
   isLoadingWorkspace.value = true
@@ -1502,6 +1525,24 @@ function holeEditorFront(): EditorFrontService {
  * Nothing is switched: the front service knows the tab, the tab knows its
  * document.
  */
+/**
+ * Whether a tab shows a file of the workspace - those close when it is left.
+ * Files are bound to the front service when opened; the instance builder's
+ * object tabs are not, they are recognised by their id.
+ */
+function isWorkspaceFileTab(tabId: string): boolean {
+  return holeEditorFront().editorIdOf(tabId) !== undefined
+    || tabId.startsWith('instance-') || tabId.startsWith('new-instance-')
+}
+
+/** Whether an instance tab holds changes not yet written to its file. */
+function instanceTabModified(tabId: string): boolean {
+  const itc: any = instanceTreeComposables.value
+  if (!itc?.offeneInstanzTabIds?.().includes(tabId)) return false
+  const resources: any[] = itc.getSharedResources?.(itc.instanzTabDokument?.(tabId)) ?? []
+  return resources.some((r) => !!r.isModified?.())
+}
+
 function vorderesInstanzDokument(): any | null {
   const front = holeEditorFront()
   const tabId = front.frontTabId()
@@ -2879,9 +2920,16 @@ onMounted(() => {
       <i class="pi pi-exclamation-triangle save-confirm-icon"></i>
       <div class="save-confirm-text">
         <p class="save-confirm-lead">
-          Der Workspace <strong>{{ leaveWorkspaceName }}</strong> hat ungespeicherte Änderungen.
+          Im Workspace <strong>{{ leaveWorkspaceName }}</strong> gibt es ungespeicherte Änderungen.
         </p>
-        <p class="save-confirm-hint">Vor dem Wechsel speichern?</p>
+        <template v-if="leaveWorkspaceFiles.length">
+          <p class="save-confirm-hint">Diese Dateien werden beim Wechsel geschlossen, ihre Änderungen gehen verloren:</p>
+          <ul class="save-confirm-files" data-testid="gene.LeaveWorkspaceDialog.Files">
+            <li v-for="file in leaveWorkspaceFiles" :key="file">{{ file }}</li>
+          </ul>
+          <p class="save-confirm-hint">„Speichern" sichert nur den Workspace. Dateien vorher speichern oder abbrechen.</p>
+        </template>
+        <p v-else class="save-confirm-hint">Vor dem Wechsel speichern?</p>
       </div>
     </div>
     <template #footer>
@@ -3075,6 +3123,14 @@ html, body, #app {
   margin: 0;
   font-size: 0.8rem;
   color: var(--text-color-secondary);
+}
+
+.save-confirm-files {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  max-height: 8rem;
+  overflow-y: auto;
 }
 
 .field {
