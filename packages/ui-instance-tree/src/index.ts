@@ -173,9 +173,11 @@ import {
   instanzTabDokument,
   instanzTabIstGeladen,
   instanzTabGeschlossen,
-  offeneInstanzTabIds
+  offeneInstanzTabIds,
+  setDocumentResourceWatcher
 } from './composables/tabDokumente'
 import { createMetamodelContext } from './context/metamodelContext'
+import { validateDocument } from './composables/validateDocument'
 
 // Import icon provider system
 import { iconProviderRegistry, getIconProviderRegistry } from './services/iconProviderRegistry'
@@ -253,6 +255,9 @@ function checkDanglingReferences(): Array<{ className: string; featureName: stri
  * TSM lifecycle: activate
  * Registers instance tree services
  */
+/** Answers "Validate OCL" from the menu; kept to unsubscribe on deactivate */
+let validateRequestHandler: (() => Promise<void>) | null = null
+
 export async function activate(context: ModuleContext): Promise<void> {
   context.log.info('Activating Instance Tree module...')
 
@@ -307,6 +312,39 @@ export async function activate(context: ModuleContext): Promise<void> {
   }
   context.services.register('gene.instance.tree.state', {
     get instance() { return frontDocument()?.instance ?? sharedTree }
+  })
+
+  /*
+   * Validation of the open documents. Every resource of every instance tab is
+   * handed to the problems service, which validates it at once and again on
+   * every change; a closed tab lets its resources go. The problems panel is a
+   * plugin of its own and may arrive later - so it is waited for.
+   */
+  void context.services.whenAvailable<any>('gene.problems').then((problems) => {
+    setDocumentResourceWatcher({
+      attach: (resource) => {
+        problems.attachTo(resource, { validateImmediately: true }).catch((e: unknown) =>
+          context.log.warn('Live validation could not be attached', e))
+      },
+      detach: (resource) => {
+        problems.detachFrom(resource).catch(() => {})
+      }
+    })
+  })
+
+  /*
+   * "Validate OCL" in the menu: the document of the tab in front, all its
+   * resources. The menu only sends the request; for a while nobody answered it.
+   */
+  validateRequestHandler = async () => {
+    const problems = context.services.get<any>('gene.problems')
+    const dokument = frontDocument()
+    if (!problems?.validateResource || !dokument) return
+    await validateDocument(dokument.resources.value, problems, context.services.get<any>('gene.eventbus'))
+  }
+  // The bus comes with the app shell, which may start after this plugin
+  void context.services.whenAvailable<any>('gene.eventbus').then((bus) => {
+    if (validateRequestHandler) bus.on?.('validate-ocl-request', validateRequestHandler)
   })
 
   // Register components as service (legacy)
@@ -696,6 +734,12 @@ context.log.info('ViewsPanel available as component (integrated in InstanceTree)
  */
 export async function deactivate(context: ModuleContext): Promise<void> {
   context.log.info('Deactivating Instance Tree module...')
+
+  setDocumentResourceWatcher(null)
+  if (validateRequestHandler) {
+    context.services.get<any>('gene.eventbus')?.off?.('validate-ocl-request', validateRequestHandler)
+    validateRequestHandler = null
+  }
 
   // Clear PerspectiveManager reference
   setPerspectiveManager(null)

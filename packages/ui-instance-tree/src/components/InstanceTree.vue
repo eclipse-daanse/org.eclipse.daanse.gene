@@ -607,10 +607,6 @@ const canManageResources = computed(() => typeof (ctx as any).createResource ===
 // Check if we're in instance mode (not metamodel mode)
 const isInstanceMode = computed(() => ctx.mode === 'instance')
 
-// OCL Validation state
-const isValidating = ref(false)
-const hasValidationErrors = ref(false)
-
 // Toolbar actions from ActionRegistry (contributed by plugins)
 const toolbarActions = ref<any[]>([])
 const executingActions = ref<Record<string, boolean>>({})
@@ -655,40 +651,6 @@ async function executeToolbarAction(action: any) {
     executingActions.value = rest
   }
 }
-
-async function handleValidateOcl() {
-  const ps = tsm?.getService('gene.problems')
-  if (!ps) {
-    console.warn('[InstanceTree] Problems service not available (gene.problems)')
-    return
-  }
-
-  const { getSharedResource } = await import('../composables/useInstanceTree')
-  const resource = getSharedResource()
-  if (!resource) {
-    console.warn('[InstanceTree] No resource available for validation')
-    return
-  }
-
-  isValidating.value = true
-  try {
-    await ps.validateResource(resource)
-    hasValidationErrors.value = ps.hasErrors?.value ?? false
-
-    const stats = ps.stats?.value
-    console.log(`[InstanceTree] Validation complete: ${stats?.errorCount ?? 0} errors, ${stats?.warningCount ?? 0} warnings`)
-
-    // Show problems panel if errors found
-    if (ps.hasErrors?.value) {
-      eventBus.emit('show-problems')
-    }
-  } catch (e) {
-    console.error('[InstanceTree] Validation failed:', e)
-  } finally {
-    isValidating.value = false
-  }
-}
-
 
 /**
  * Check if a class is a subtype of another
