@@ -34,6 +34,13 @@ import {
 } from '../generated/fennecui'
 
 // Panel position type for layout state sync
+/** A file tab, as the workspace records it */
+export interface OpenEditorState {
+  filePath: string
+  editorId: string
+  active: boolean
+}
+
 interface PanelPositionData {
   panelId: string
   location: 'primary' | 'secondary' | 'editor' | 'bottom'
@@ -563,6 +570,7 @@ export function useEditorConfig() {
 
     // Sync tree views from composable before saving
     syncTreeViewsBeforeSave()
+    syncOpenEditorsBeforeSave()
 
     const rawConfig = toRaw(editorConfig.value) as any
 
@@ -1436,6 +1444,53 @@ export function useEditorConfig() {
     }
   }
 
+  /** Where the open file tabs come from when saving - set by the app */
+  let openEditorsSource: (() => OpenEditorState[]) | null = null
+
+  function setOpenEditorsSource(source: (() => OpenEditorState[]) | null): void {
+    openEditorsSource = source
+  }
+
+  /** The file tabs recorded in the workspace, in tab order */
+  function getOpenEditors(): OpenEditorState[] {
+    const layout = layoutConfig.value
+    if (!layout) return []
+    const list = getFeatureValue(toRaw(layout), 'openEditors')
+    const entries: any[] = list?.toArray?.() ?? (list ? Array.from(list) : [])
+    return entries
+      .map((entry: any) => ({
+        filePath: String(getFeatureValue(entry, 'filePath') ?? ''),
+        editorId: String(getFeatureValue(entry, 'editorId') ?? ''),
+        active: getFeatureValue(entry, 'active') === true || getFeatureValue(entry, 'active') === 'true'
+      }))
+      .filter((entry) => !!entry.filePath && !!entry.editorId)
+  }
+
+  /**
+   * Writes the open file tabs into the layout config. Only when saving: an
+   * opened or closed tab is no unsaved change of its own.
+   */
+  function syncOpenEditorsBeforeSave(): void {
+    if (!openEditorsSource || !editorConfig.value) return
+    try {
+      const rawLayout = toRaw(getOrCreateLayoutConfig()) as any
+      const list = getFeatureValue(rawLayout, 'openEditors')
+      if (!list) return
+      if (typeof list.clear === 'function') list.clear()
+      else if (Array.isArray(list)) list.length = 0
+      for (const state of openEditorsSource()) {
+        const entry = factory.createOpenEditor()
+        setFeatureValue(entry, 'filePath', state.filePath)
+        setFeatureValue(entry, 'editorId', state.editorId)
+        setFeatureValue(entry, 'active', state.active)
+        if (typeof list.add === 'function') list.add(entry)
+        else list.push(entry)
+      }
+    } catch (e) {
+      console.warn('[EditorConfig] Could not record the open editors:', e)
+    }
+  }
+
   /**
    * Get layout values for applying to layout state
    * Returns null if no layout config exists
@@ -1896,6 +1951,9 @@ export function useEditorConfig() {
     getOrCreateLayoutConfig,
     updateLayoutConfig,
     getLayoutValues,
+    // Open file tabs
+    setOpenEditorsSource,
+    getOpenEditors,
     // Tree views methods
     setActiveViewId,
     addTreeView,

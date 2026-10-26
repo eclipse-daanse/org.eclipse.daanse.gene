@@ -43,6 +43,7 @@ export class FennecuiPackage extends BasicEPackage {
     EDITOR_CONFIG__INSTANCE_SOURCES: null as unknown as EAttribute | EReference,
     EDITOR_CONFIG__IMPORT_RULES: null as unknown as EAttribute | EReference,
     EDITOR_CONFIG__LOAD_PROFILES: null as unknown as EAttribute | EReference,
+    EDITOR_CONFIG__EDITOR_BINDINGS: null as unknown as EAttribute | EReference,
     EDITOR_CONFIG__ICON_MAPPINGS: null as unknown as EAttribute | EReference,
     EDITOR_CONFIG__LABEL_RULES: null as unknown as EAttribute | EReference,
     EDITOR_CONFIG__HIGHLIGHT_RULES: null as unknown as EAttribute | EReference,
@@ -108,6 +109,11 @@ export class FennecuiPackage extends BasicEPackage {
     KEY_VALUE: null as unknown as EClass,
     KEY_VALUE__KEY: null as unknown as EAttribute | EReference,
     KEY_VALUE__VALUE: null as unknown as EAttribute | EReference,
+    EDITOR_BINDING: null as unknown as EClass,
+    EDITOR_BINDING__PATTERN: null as unknown as EAttribute | EReference,
+    EDITOR_BINDING__NS_U_R_I: null as unknown as EAttribute | EReference,
+    EDITOR_BINDING__EDITOR_ID: null as unknown as EAttribute | EReference,
+    EDITOR_BINDING__ENABLED: null as unknown as EAttribute | EReference,
     ICON_MAPPING: null as unknown as EClass,
     ICON_MAPPING__TARGET_TYPE_URI: null as unknown as EAttribute | EReference,
     ICON_MAPPING__SCOPE: null as unknown as EAttribute | EReference,
@@ -336,6 +342,11 @@ export class FennecuiPackage extends BasicEPackage {
     LAYOUT_CONFIG__STATUS_BAR_VISIBLE: null as unknown as EAttribute | EReference,
     LAYOUT_CONFIG__ACTIVE_ACTIVITY_ID: null as unknown as EAttribute | EReference,
     LAYOUT_CONFIG__PANEL_POSITIONS: null as unknown as EAttribute | EReference,
+    LAYOUT_CONFIG__OPEN_EDITORS: null as unknown as EAttribute | EReference,
+    OPEN_EDITOR: null as unknown as EClass,
+    OPEN_EDITOR__FILE_PATH: null as unknown as EAttribute | EReference,
+    OPEN_EDITOR__EDITOR_ID: null as unknown as EAttribute | EReference,
+    OPEN_EDITOR__ACTIVE: null as unknown as EAttribute | EReference,
     PANEL_POSITION: null as unknown as EClass,
     PANEL_POSITION__PANEL_ID: null as unknown as EAttribute | EReference,
     PANEL_POSITION__LOCATION: null as unknown as EAttribute | EReference,
@@ -493,6 +504,15 @@ export class FennecuiPackage extends BasicEPackage {
     editorConfig_loadProfiles.setUpperBound(-1);
     editorConfigClass.getEStructuralFeatures().push(editorConfig_loadProfiles);
     FennecuiPackage.Literals.EDITOR_CONFIG__LOAD_PROFILES = editorConfig_loadProfiles;
+
+    // Create editorBindings feature
+    const editorConfig_editorBindings = new BasicEReference();
+    editorConfig_editorBindings.setContainment(true);
+    editorConfig_editorBindings.setName('editorBindings');
+    editorConfig_editorBindings.setLowerBound(0);
+    editorConfig_editorBindings.setUpperBound(-1);
+    editorConfigClass.getEStructuralFeatures().push(editorConfig_editorBindings);
+    FennecuiPackage.Literals.EDITOR_CONFIG__EDITOR_BINDINGS = editorConfig_editorBindings;
 
     // Create iconMappings feature
     const editorConfig_iconMappings = new BasicEReference();
@@ -1043,6 +1063,47 @@ export class FennecuiPackage extends BasicEPackage {
     keyValue_value.setUpperBound(1);
     keyValueClass.getEStructuralFeatures().push(keyValue_value);
     FennecuiPackage.Literals.KEY_VALUE__VALUE = keyValue_value;
+
+    // Create EditorBinding class
+    const editorBindingClass = new BasicEClass();
+    editorBindingClass.setName('EditorBinding');
+    editorBindingClass.setAbstract(false);
+    editorBindingClass.setInterface(false);
+    this.getEClassifiers().push(editorBindingClass);
+    editorBindingClass.setEPackage(this);
+    FennecuiPackage.Literals.EDITOR_BINDING = editorBindingClass;
+
+    // Create pattern feature
+    const editorBinding_pattern = new BasicEAttribute();
+    editorBinding_pattern.setName('pattern');
+    editorBinding_pattern.setLowerBound(0);
+    editorBinding_pattern.setUpperBound(1);
+    editorBindingClass.getEStructuralFeatures().push(editorBinding_pattern);
+    FennecuiPackage.Literals.EDITOR_BINDING__PATTERN = editorBinding_pattern;
+
+    // Create nsURI feature
+    const editorBinding_nsURI = new BasicEAttribute();
+    editorBinding_nsURI.setName('nsURI');
+    editorBinding_nsURI.setLowerBound(0);
+    editorBinding_nsURI.setUpperBound(1);
+    editorBindingClass.getEStructuralFeatures().push(editorBinding_nsURI);
+    FennecuiPackage.Literals.EDITOR_BINDING__NS_U_R_I = editorBinding_nsURI;
+
+    // Create editorId feature
+    const editorBinding_editorId = new BasicEAttribute();
+    editorBinding_editorId.setName('editorId');
+    editorBinding_editorId.setLowerBound(1);
+    editorBinding_editorId.setUpperBound(1);
+    editorBindingClass.getEStructuralFeatures().push(editorBinding_editorId);
+    FennecuiPackage.Literals.EDITOR_BINDING__EDITOR_ID = editorBinding_editorId;
+
+    // Create enabled feature
+    const editorBinding_enabled = new BasicEAttribute();
+    editorBinding_enabled.setName('enabled');
+    editorBinding_enabled.setLowerBound(0);
+    editorBinding_enabled.setUpperBound(1);
+    editorBindingClass.getEStructuralFeatures().push(editorBinding_enabled);
+    FennecuiPackage.Literals.EDITOR_BINDING__ENABLED = editorBinding_enabled;
 
     // Create IconMapping class
     const iconMappingClass = new BasicEClass();
@@ -2929,6 +2990,48 @@ export class FennecuiPackage extends BasicEPackage {
     layoutConfigClass.getEStructuralFeatures().push(layoutConfig_panelPositions);
     FennecuiPackage.Literals.LAYOUT_CONFIG__PANEL_POSITIONS = layoutConfig_panelPositions;
 
+    // Create openEditors feature
+    const layoutConfig_openEditors = new BasicEReference();
+    layoutConfig_openEditors.setContainment(true);
+    layoutConfig_openEditors.setName('openEditors');
+    layoutConfig_openEditors.setLowerBound(0);
+    layoutConfig_openEditors.setUpperBound(-1);
+    layoutConfigClass.getEStructuralFeatures().push(layoutConfig_openEditors);
+    FennecuiPackage.Literals.LAYOUT_CONFIG__OPEN_EDITORS = layoutConfig_openEditors;
+
+    // Create OpenEditor class
+    const openEditorClass = new BasicEClass();
+    openEditorClass.setName('OpenEditor');
+    openEditorClass.setAbstract(false);
+    openEditorClass.setInterface(false);
+    this.getEClassifiers().push(openEditorClass);
+    openEditorClass.setEPackage(this);
+    FennecuiPackage.Literals.OPEN_EDITOR = openEditorClass;
+
+    // Create filePath feature
+    const openEditor_filePath = new BasicEAttribute();
+    openEditor_filePath.setName('filePath');
+    openEditor_filePath.setLowerBound(1);
+    openEditor_filePath.setUpperBound(1);
+    openEditorClass.getEStructuralFeatures().push(openEditor_filePath);
+    FennecuiPackage.Literals.OPEN_EDITOR__FILE_PATH = openEditor_filePath;
+
+    // Create editorId feature
+    const openEditor_editorId = new BasicEAttribute();
+    openEditor_editorId.setName('editorId');
+    openEditor_editorId.setLowerBound(1);
+    openEditor_editorId.setUpperBound(1);
+    openEditorClass.getEStructuralFeatures().push(openEditor_editorId);
+    FennecuiPackage.Literals.OPEN_EDITOR__EDITOR_ID = openEditor_editorId;
+
+    // Create active feature
+    const openEditor_active = new BasicEAttribute();
+    openEditor_active.setName('active');
+    openEditor_active.setLowerBound(0);
+    openEditor_active.setUpperBound(1);
+    openEditorClass.getEStructuralFeatures().push(openEditor_active);
+    FennecuiPackage.Literals.OPEN_EDITOR__ACTIVE = openEditor_active;
+
     // Create PanelPosition class
     const panelPositionClass = new BasicEClass();
     panelPositionClass.setName('PanelPosition');
@@ -3369,6 +3472,7 @@ export class FennecuiPackage extends BasicEPackage {
     (FennecuiPackage.Literals.EDITOR_CONFIG__INSTANCE_SOURCES as BasicEReference).setEType(FennecuiPackage.Literals.INSTANCE_SOURCE);
     (FennecuiPackage.Literals.EDITOR_CONFIG__IMPORT_RULES as BasicEReference).setEType(FennecuiPackage.Literals.IMPORT_RULE);
     (FennecuiPackage.Literals.EDITOR_CONFIG__LOAD_PROFILES as BasicEReference).setEType(FennecuiPackage.Literals.LOAD_PROFILE);
+    (FennecuiPackage.Literals.EDITOR_CONFIG__EDITOR_BINDINGS as BasicEReference).setEType(FennecuiPackage.Literals.EDITOR_BINDING);
     (FennecuiPackage.Literals.EDITOR_CONFIG__ICON_MAPPINGS as BasicEReference).setEType(FennecuiPackage.Literals.ICON_MAPPING);
     (FennecuiPackage.Literals.EDITOR_CONFIG__LABEL_RULES as BasicEReference).setEType(FennecuiPackage.Literals.LABEL_RULE);
     (FennecuiPackage.Literals.EDITOR_CONFIG__HIGHLIGHT_RULES as BasicEReference).setEType(FennecuiPackage.Literals.HIGHLIGHT_RULE);
@@ -3416,6 +3520,7 @@ export class FennecuiPackage extends BasicEPackage {
     (FennecuiPackage.Literals.CANDIDATE_PRESENTATION__SORT_KEYS as BasicEReference).setEType(FennecuiPackage.Literals.SORT_KEY);
     (FennecuiPackage.Literals.STORAGE_LOCATION_RULE__PATH_BINDINGS as BasicEReference).setEType(FennecuiPackage.Literals.ATTRIBUTE_BINDING);
     (FennecuiPackage.Literals.LAYOUT_CONFIG__PANEL_POSITIONS as BasicEReference).setEType(FennecuiPackage.Literals.PANEL_POSITION);
+    (FennecuiPackage.Literals.LAYOUT_CONFIG__OPEN_EDITORS as BasicEReference).setEType(FennecuiPackage.Literals.OPEN_EDITOR);
     (FennecuiPackage.Literals.UI_DEFAULTS__UNKNOWN_TYPE_ICON as BasicEReference).setEType(FennecuiPackage.Literals.UTF8_ICON);
     (FennecuiPackage.Literals.TREE_VIEW__FILTERS as BasicEReference).setEType(FennecuiPackage.Literals.TREE_FILTER);
     (FennecuiPackage.Literals.PACKAGE_RESOLVER_CHAIN__RESOLVERS as BasicEReference).setEType(FennecuiPackage.Literals.PACKAGE_RESOLVER);

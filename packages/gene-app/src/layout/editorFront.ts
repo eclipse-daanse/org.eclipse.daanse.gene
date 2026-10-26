@@ -26,6 +26,8 @@ export interface EditorFrontService {
   frontTabId(): string | null
   /** Which view carries this tab, if any. */
   editorIdOf(tabId: string): string | undefined
+  /** The file this tab shows, if any. */
+  filePathOf(tabId: string): string | undefined
   /** The view carrying the tab in front, if any. */
   frontArt(): EditorArt | undefined
   /** The file of the tab in front - for the title bar and the explorer. */
@@ -64,6 +66,10 @@ export function createEditorFront({ editorArtById }: EditorFrontOptions): Editor
 
     editorIdOf(tabId) {
       return editorIdByTab.get(tabId)
+    },
+
+    filePathOf(tabId) {
+      return filePathByTab.get(tabId)
     },
 
     frontArt() {

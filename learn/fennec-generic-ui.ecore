@@ -2335,6 +2335,37 @@
         <details key="documentation" value="Custom panel positions that override default locations."/>
       </eAnnotations>
     </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EReference" name="openEditors" upperBound="-1" eType="#//OpenEditor" containment="true">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="The file tabs open when the workspace was saved, in tab order. Reopened when the workspace opens."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+  </eClassifiers>
+
+  <!-- Open Editor - a file tab and the editor showing it -->
+  <eClassifiers xsi:type="ecore:EClass" name="OpenEditor">
+    <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+      <details key="documentation" value="A file open in a tab, and which editor shows it."/>
+    </eAnnotations>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="filePath" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Path of the file within the workspace's source."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="editorId" lowerBound="1" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Id of the editor showing the file (e.g. 'instance', 'metamodel', 'xml')."/>
+      </eAnnotations>
+    </eStructuralFeatures>
+
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="active" eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean" defaultValueLiteral="false">
+      <eAnnotations source="http://www.eclipse.org/emf/2002/GenModel">
+        <details key="documentation" value="Whether this tab was in front."/>
+      </eAnnotations>
+    </eStructuralFeatures>
   </eClassifiers>
 
   <!-- Panel Position - maps panel ID to location -->

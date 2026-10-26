@@ -8,6 +8,7 @@
 import { BasicEObject } from '@emfts/core';
 import type { EClass, EStructuralFeature } from '@emfts/core';
 import type { PanelPosition } from './PanelPosition';
+import type { OpenEditor } from './OpenEditor';
 import type { LayoutConfig } from './LayoutConfig';
 import { FennecuiPackage } from './FennecuiPackage';
 
@@ -27,6 +28,7 @@ export class LayoutConfigImpl extends BasicEObject implements LayoutConfig {
   static readonly STATUS_BAR_VISIBLE: number = 7;
   static readonly ACTIVE_ACTIVITY_ID: number = 8;
   static readonly PANEL_POSITIONS: number = 9;
+  static readonly OPEN_EDITORS: number = 10;
 
   // Private fields
   private _primarySidebarWidth: number = 260;
@@ -39,6 +41,7 @@ export class LayoutConfigImpl extends BasicEObject implements LayoutConfig {
   private _statusBarVisible: boolean = true;
   private _activeActivityId?: string;
   private _panelPositions: PanelPosition[] = [];
+  private _openEditors: OpenEditor[] = [];
 
   /**
    * Returns the EClass of this object
@@ -288,6 +291,30 @@ export class LayoutConfigImpl extends BasicEObject implements LayoutConfig {
     }
   }
 
+  get openEditors(): OpenEditor[] {
+    return this._openEditors;
+  }
+
+  set openEditors(value: OpenEditor[]) {
+    const oldValue = this._openEditors;
+    this._openEditors = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(LayoutConfigImpl.OPEN_EDITORS),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => LayoutConfigImpl.OPEN_EDITORS,
+        merge: () => false
+      });
+    }
+  }
+
   // Reflective API
 
   /**
@@ -316,6 +343,8 @@ export class LayoutConfigImpl extends BasicEObject implements LayoutConfig {
         return this.activeActivityId;
       case LayoutConfigImpl.PANEL_POSITIONS:
         return this.panelPositions;
+      case LayoutConfigImpl.OPEN_EDITORS:
+        return this.openEditors;
       default:
         return super.eGet(feature);
     }
@@ -367,6 +396,10 @@ export class LayoutConfigImpl extends BasicEObject implements LayoutConfig {
         this.panelPositions = newValue as PanelPosition[];
         super.eSet(feature, newValue);
         break;
+      case LayoutConfigImpl.OPEN_EDITORS:
+        this.openEditors = newValue as OpenEditor[];
+        super.eSet(feature, newValue);
+        break;
       default:
         super.eSet(feature, newValue);
     }
@@ -398,6 +431,8 @@ export class LayoutConfigImpl extends BasicEObject implements LayoutConfig {
         return this._activeActivityId !== undefined;
       case LayoutConfigImpl.PANEL_POSITIONS:
         return this._panelPositions !== undefined && this._panelPositions.length > 0;
+      case LayoutConfigImpl.OPEN_EDITORS:
+        return this._openEditors !== undefined && this._openEditors.length > 0;
       default:
         return super.eIsSet(feature);
     }
@@ -438,6 +473,9 @@ export class LayoutConfigImpl extends BasicEObject implements LayoutConfig {
         return;
       case LayoutConfigImpl.PANEL_POSITIONS:
         this._panelPositions = [];
+        return;
+      case LayoutConfigImpl.OPEN_EDITORS:
+        this._openEditors = [];
         return;
       default:
         super.eUnset(feature);

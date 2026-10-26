@@ -12,6 +12,7 @@ import type { ModelRepository } from './ModelRepository';
 import type { InstanceSource } from './InstanceSource';
 import type { ImportRule } from './ImportRule';
 import type { LoadProfile } from './LoadProfile';
+import type { EditorBinding } from './EditorBinding';
 import type { IconMapping } from './IconMapping';
 import type { LabelRule } from './LabelRule';
 import type { HighlightRule } from './HighlightRule';
@@ -49,25 +50,26 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
   static readonly INSTANCE_SOURCES: number = 7;
   static readonly IMPORT_RULES: number = 8;
   static readonly LOAD_PROFILES: number = 9;
-  static readonly ICON_MAPPINGS: number = 10;
-  static readonly LABEL_RULES: number = 11;
-  static readonly HIGHLIGHT_RULES: number = 12;
-  static readonly DECORATOR_RULES: number = 13;
-  static readonly SORT_RULES: number = 14;
-  static readonly FEATURE_RULES: number = 15;
-  static readonly QUICK_ACTIONS: number = 16;
-  static readonly ACTIONS: number = 17;
-  static readonly EVENT_MAPPINGS: number = 18;
-  static readonly REFERENCE_SELECTION_RULES: number = 19;
-  static readonly STORAGE_LOCATION_RULES: number = 20;
-  static readonly NAMESPACE_MAPPINGS: number = 21;
-  static readonly UI_DEFAULTS: number = 22;
-  static readonly LAYOUT_CONFIG: number = 23;
-  static readonly TREE_VIEWS: number = 24;
-  static readonly ACTIVE_VIEW_ID: number = 25;
-  static readonly PACKAGE_RESOLVER_CHAIN: number = 26;
-  static readonly ATLAS_CONNECTIONS: number = 27;
-  static readonly CUSTOM_ICON_LIBRARIES: number = 28;
+  static readonly EDITOR_BINDINGS: number = 10;
+  static readonly ICON_MAPPINGS: number = 11;
+  static readonly LABEL_RULES: number = 12;
+  static readonly HIGHLIGHT_RULES: number = 13;
+  static readonly DECORATOR_RULES: number = 14;
+  static readonly SORT_RULES: number = 15;
+  static readonly FEATURE_RULES: number = 16;
+  static readonly QUICK_ACTIONS: number = 17;
+  static readonly ACTIONS: number = 18;
+  static readonly EVENT_MAPPINGS: number = 19;
+  static readonly REFERENCE_SELECTION_RULES: number = 20;
+  static readonly STORAGE_LOCATION_RULES: number = 21;
+  static readonly NAMESPACE_MAPPINGS: number = 22;
+  static readonly UI_DEFAULTS: number = 23;
+  static readonly LAYOUT_CONFIG: number = 24;
+  static readonly TREE_VIEWS: number = 25;
+  static readonly ACTIVE_VIEW_ID: number = 26;
+  static readonly PACKAGE_RESOLVER_CHAIN: number = 27;
+  static readonly ATLAS_CONNECTIONS: number = 28;
+  static readonly CUSTOM_ICON_LIBRARIES: number = 29;
 
   // Private fields
   private _id?: string;
@@ -80,6 +82,7 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
   private _instanceSources: InstanceSource[] = [];
   private _importRules: ImportRule[] = [];
   private _loadProfiles: LoadProfile[] = [];
+  private _editorBindings: EditorBinding[] = [];
   private _iconMappings: IconMapping[] = [];
   private _labelRules: LabelRule[] = [];
   private _highlightRules: HighlightRule[] = [];
@@ -343,6 +346,30 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         isTouch: () => false,
         isReset: () => false,
         getFeatureID: () => EditorConfigImpl.LOAD_PROFILES,
+        merge: () => false
+      });
+    }
+  }
+
+  get editorBindings(): EditorBinding[] {
+    return this._editorBindings;
+  }
+
+  set editorBindings(value: EditorBinding[]) {
+    const oldValue = this._editorBindings;
+    this._editorBindings = value;
+    if (this.eDeliver()) {
+      this.eNotify({
+        getNotifier: () => this,
+        getEventType: () => 1, // SET
+        getFeature: () => this.eClass().getEStructuralFeature(EditorConfigImpl.EDITOR_BINDINGS),
+        getOldValue: () => oldValue,
+        getNewValue: () => value,
+        getPosition: () => -1,
+        wasSet: () => true,
+        isTouch: () => false,
+        isReset: () => false,
+        getFeatureID: () => EditorConfigImpl.EDITOR_BINDINGS,
         merge: () => false
       });
     }
@@ -832,6 +859,8 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         return this.importRules;
       case EditorConfigImpl.LOAD_PROFILES:
         return this.loadProfiles;
+      case EditorConfigImpl.EDITOR_BINDINGS:
+        return this.editorBindings;
       case EditorConfigImpl.ICON_MAPPINGS:
         return this.iconMappings;
       case EditorConfigImpl.LABEL_RULES:
@@ -919,6 +948,10 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         break;
       case EditorConfigImpl.LOAD_PROFILES:
         this.loadProfiles = newValue as LoadProfile[];
+        super.eSet(feature, newValue);
+        break;
+      case EditorConfigImpl.EDITOR_BINDINGS:
+        this.editorBindings = newValue as EditorBinding[];
         super.eSet(feature, newValue);
         break;
       case EditorConfigImpl.ICON_MAPPINGS:
@@ -1028,6 +1061,8 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         return this._importRules !== undefined && this._importRules.length > 0;
       case EditorConfigImpl.LOAD_PROFILES:
         return this._loadProfiles !== undefined && this._loadProfiles.length > 0;
+      case EditorConfigImpl.EDITOR_BINDINGS:
+        return this._editorBindings !== undefined && this._editorBindings.length > 0;
       case EditorConfigImpl.ICON_MAPPINGS:
         return this._iconMappings !== undefined && this._iconMappings.length > 0;
       case EditorConfigImpl.LABEL_RULES:
@@ -1106,6 +1141,9 @@ export class EditorConfigImpl extends BasicEObject implements EditorConfig {
         return;
       case EditorConfigImpl.LOAD_PROFILES:
         this._loadProfiles = [];
+        return;
+      case EditorConfigImpl.EDITOR_BINDINGS:
+        this._editorBindings = [];
         return;
       case EditorConfigImpl.ICON_MAPPINGS:
         this._iconMappings = [];
