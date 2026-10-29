@@ -19,6 +19,8 @@ export interface DiagramContext {
   focus?: Set<EObject> | null
   /** Containers of the focus objects - shown as frames only */
   focusAncestors?: Set<EObject>
+  /** Rows left out (by rowObjId): in a focus diagram the rows of a node's own object no edge starts at */
+  hiddenRows?: Set<string>
 }
 
 function list(v: unknown): EObject[] {

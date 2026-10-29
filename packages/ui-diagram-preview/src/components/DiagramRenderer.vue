@@ -253,6 +253,15 @@ function edgeStyle(meta?: { kind?: string; lineStyle?: string; sourceDecoration?
 }
 
 /** Simple straight-line fallback for large graphs where tsrouter is too slow. */
+/** Where the line from a node's centre towards (x, y) leaves the node */
+function onBorder(n: NodeRect, x: number, y: number): { x: number; y: number } {
+  const cx = n.x + n.w / 2, cy = n.y + n.h / 2
+  const dx = x - cx, dy = y - cy
+  if (!dx && !dy) return { x: cx, y: cy }
+  const scale = Math.min(dx ? (n.w / 2) / Math.abs(dx) : Infinity, dy ? (n.h / 2) / Math.abs(dy) : Infinity)
+  return { x: cx + dx * scale, y: cy + dy * scale }
+}
+
 function straightEdges(
   nodeRects: NodeRect[],
   edgeInputs: EdgeInput[],
@@ -264,9 +273,10 @@ function straightEdges(
     const src = nodeMap.get(edge.srcId)
     const tgt = nodeMap.get(edge.tgtId)
     if (!src || !tgt) continue
-    const sx = src.x + src.w / 2, sy = src.y + src.h / 2
-    const tx = tgt.x + tgt.w / 2, ty = tgt.y + tgt.h / 2
-    result.set(edge.id, { path: [{ x: sx, y: sy }, { x: tx, y: ty }], d: `M${sx},${sy} L${tx},${ty}` })
+    // From border to border on the line between the centres - not through the nodes
+    const s0 = onBorder(src, tgt.x + tgt.w / 2, tgt.y + tgt.h / 2)
+    const t0 = onBorder(tgt, src.x + src.w / 2, src.y + src.h / 2)
+    result.set(edge.id, { path: [s0, t0], d: `M${s0.x},${s0.y} L${t0.x},${t0.y}` })
   }
   return result
 }
@@ -297,31 +307,65 @@ function endLabelAt(path: { x: number; y: number }[], atEnd: boolean): { x: numb
 
 const TSROUTER_LIMIT = 50 // max nodes for full orthogonal routing
 
+/** The colours edges take (EdgeMapping.color), each with an arrow marker of its own */
+const edgeColors = computed(() => {
+  const set = new Set<string>()
+  for (const m of props.edgeMeta.values()) if (m.color) set.add(m.color)
+  return [...set]
+})
+const colorIndex = (c: string) => edgeColors.value.indexOf(c)
+
 const edges = computed(() => {
   const g = props.laidOut
   if (!g) return []
-  const root = nodes.value[0]
+  // The outer frame (the diagram's root) is no obstacle - only when it is one: a frame alone at the top, holding all
+  // (a focus diagram has several frames or plain nodes at the top)
+  const topLevel = nodes.value.filter(n => !nodeParentId.has(n.id))
+  const root = topLevel.length === 1 && topLevel[0].container ? topLevel[0] : null
   const nodeRects: NodeRect[] = nodes.value
     .filter(n => n !== root)
     .map(n => ({ id: n.id, x: n.x, y: n.y, w: n.w, h: n.h, parentId: nodeParentId.get(n.id) }))
-  // Edges live in the innermost container holding both ends - gather them from every level
+  // Edges live in the innermost container holding both ends - gather them from every level,
+  // with where that container lies (ELK gives an edge's bends relative to it)
   const elkEdges: any[] = []
-  const gather = (n: any) => {
-    for (const e of n.edges ?? []) elkEdges.push(e)
-    for (const c of n.children ?? []) gather(c)
+  const edgeOffset = new Map<string, { x: number; y: number }>()
+  const gather = (n: any, ox: number, oy: number) => {
+    for (const e of n.edges ?? []) { elkEdges.push(e); edgeOffset.set(e.id, { x: ox, y: oy }) }
+    for (const c of n.children ?? []) gather(c, ox + (c.x ?? 0), oy + (c.y ?? 0))
   }
-  gather(g)
+  gather(g, 0, 0)
+  // Edges lifted for the layout (gene.liftEdges): the real ones come along on the graph
+  const lifted = (g as any).routeEdges as any[] | undefined
+  if (lifted) elkEdges.splice(0, elkEdges.length, ...lifted)
   const edgeInputs: EdgeInput[] = elkEdges.map(e => {
     const rawSrcId = e.sources?.[0] as string
     const tgtId = e.targets?.[0] as string
     const srcNodeId = props.portNodeMap.get(rawSrcId) ?? rawSrcId
     const meta = props.edgeMeta.get(e.id)
-    return { id: e.id, srcId: srcNodeId, tgtId, sourcePortY: meta?.sourcePortY }
+    // A definition may let edges come in from above, those of one kind (colour) together (gene.edgeEntry = top)
+    const entryTop = g.layoutOptions?.['gene.edgeEntry'] === 'top'
+    return { id: e.id, srcId: srcNodeId, tgtId, sourcePortY: meta?.sourcePortY, entryTop, group: entryTop ? `${meta?.kind ?? ''}${meta?.color ?? ''}` : undefined }
   })
   // Use tsrouter for small graphs, straight lines for large ones
-  const routes = nodeRects.length <= TSROUTER_LIMIT
-    ? routeAllEdges(nodeRects, edgeInputs)
-    : straightEdges(nodeRects, edgeInputs)
+  // A definition may keep the layout's own edge routes (gene.edgeRouting = elk) - layered diagrams route cleanly themselves
+  const elkRoutes = g.layoutOptions?.['gene.edgeRouting'] === 'elk'
+  const routes = elkRoutes
+    ? new Map<string, EdgeRoute>()
+    : nodeRects.length <= TSROUTER_LIMIT
+      ? routeAllEdges(nodeRects, edgeInputs)
+      : straightEdges(nodeRects, edgeInputs)
+  if (elkRoutes) {
+    for (const e of elkEdges) {
+      const sec = e.sections?.[0]
+      const off = edgeOffset.get(e.id)
+      if (!sec || !off) continue
+      const pts = [sec.startPoint, ...(sec.bendPoints ?? []), sec.endPoint].map((p: any) => ({ x: p.x + off.x, y: p.y + off.y }))
+      routes.set(e.id, { path: pts, d: 'M' + pts.map(p => `${p.x},${p.y}`).join(' L') })
+    }
+  }
+  // An edge the router found no way for is drawn straight - not left out (its label would sit at 0,0)
+  const unrouted = edgeInputs.filter(e => !routes.has(e.id))
+  if (unrouted.length) for (const [id, r] of straightEdges(nodeRects, unrouted)) routes.set(id, r)
   return elkEdges.map((e: any) => {
     const lbl = e.labels?.[0]
     const meta = props.edgeMeta.get(e.id)
@@ -340,8 +384,11 @@ const edges = computed(() => {
         mid = { x: (path[i].x + path[i + 1].x) / 2, y: (path[i].y + path[i + 1].y) / 2 }
       }
     }
-    return { id: e.id, d: route?.d ?? '', lx: mid.x, ly: mid.y - 8,
-      label: lbl?.text ?? '', cls, start, end, sp, ep,
+    const color = meta?.color ?? ''
+    const colored = (m: string) => (color && m === 'url(#mk-assoc)' ? `url(#mk-assoc-c${colorIndex(color)})` : m)
+    return { id: e.id, d: route?.d ?? '', lx: mid.x, ly: mid.y - 8, color,
+      start: colored(start), end: colored(end),
+      label: lbl?.text ?? '', cls, sp, ep,
       sourceCard: meta?.sourceCardinality ?? '', targetCard: meta?.targetCardinality ?? '',
       sourceLabel: meta?.sourceLabel ?? '', targetLabel: meta?.targetLabel ?? '',
       sl: endLabelAt(path, false), tl: endLabelAt(path, true),
@@ -385,6 +432,11 @@ defineExpose({ fitToContent, view })
       <marker id="mk-assoc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11"
           markerHeight="11" orient="auto-start-reverse">
         <path d="M1,1 L9,5 L1,9" class="mk-open" />
+      </marker>
+      <!-- The open arrow once per edge colour, so the arrow takes its line's colour -->
+      <marker v-for="(c, i) in edgeColors" :id="`mk-assoc-c${i}`" :key="c" viewBox="0 0 10 10" refX="9" refY="5"
+          markerWidth="11" markerHeight="11" orient="auto-start-reverse">
+        <path d="M1,1 L9,5 L1,9" class="mk-open" :style="{ stroke: c }" />
       </marker>
       <marker id="mk-tri-filled" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12"
           markerHeight="12" orient="auto-start-reverse">
@@ -439,7 +491,7 @@ defineExpose({ fitToContent, view })
 
       <!-- edges -->
       <g v-for="edge in edges" :key="edge.id" class="edge">
-        <path :d="edge.d" class="edge-line" :class="edge.cls"
+        <path :d="edge.d" class="edge-line" :class="edge.cls" :style="edge.color ? { stroke: edge.color } : undefined"
           :marker-start="edge.start || undefined" :marker-end="edge.end || undefined" />
         <text v-if="edge.label" :x="edge.lx" :y="edge.ly" text-anchor="middle" class="edge-label">{{ edge.label }}</text>
         <text v-if="edge.sourceLabel" :x="edge.sl.x" :y="edge.sl.y" :text-anchor="edge.sl.anchor" class="end-label">{{ edge.sourceLabel }}</text>

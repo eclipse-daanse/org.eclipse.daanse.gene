@@ -39,6 +39,8 @@ export interface EdgeMeta {
   /** Texts at the ends (role names) */
   sourceLabel?: string
   targetLabel?: string
+  /** Colour of the line and its arrow; '' = by kind */
+  color?: string
 }
 export interface InterpretResult {
   graph: ElkNode
@@ -244,6 +246,8 @@ export function resolveNodeView(obj: EObject, mapping: EObject, ctx?: DiagramCon
   const subtitle = readScalar(obj, featureOf(mapping, 'subtitleFeature'))
   const icon = String(get(mapping, 'icon') ?? '')
   const compartments: CompartmentView[] = []
+  /** The title of a compartment whose rows are all left out passes on to the next one */
+  let pendingTitle = ''
   for (const comp of items(mapping, 'compartments')) {
     if (!applies(comp, obj, ctx)) continue
     const color = attrText(comp, 'color')
@@ -295,8 +299,8 @@ export function resolveNodeView(obj: EObject, mapping: EObject, ctx?: DiagramCon
             }))
           : []
         return {
-          label: callable ? `${base}(${subRows.length ? '…' : ''})` : base,
-          detail: detailValue ? readValue(detailValue, r, c) : readScalar(r, detailFeature),
+          label: clip(callable ? `${base}(${subRows.length ? '…' : ''})` : base),
+          detail: clip(detailValue ? readValue(detailValue, r, c) : readScalar(r, detailFeature)),
           multiplicity: child(comp, 'multiplicityValue') ? readValue(child(comp, 'multiplicityValue'), r, c) : multiplicityOf(r, lowerF, upperF),
           badges: badges.filter((b) => badgeShows(b, r, c)).map((b) => String(get(b, 'icon'))),
           badgeColors: badges.filter((b) => badgeShows(b, r, c)).map((b) => attrText(b, 'color')),
@@ -310,10 +314,18 @@ export function resolveNodeView(obj: EObject, mapping: EObject, ctx?: DiagramCon
           color,
           links: links ? runQuery(links, r, c).filter(x => x !== r).map(x => nodeId(x)) : [],
           marker: markerF ? (truthy(readScalar(r, markerF)) ? 'diamond' : 'arrow') : '',
-          rowObjId: nodeId(r),
+          // A row showing the node's own object (a reference name, a text) is told apart by its label:
+          // an edge may start at it (sourceRow), and it brackets with nothing
+          rowObjId: r === obj ? `${nodeId(obj)}::${base}` : nodeId(r),
         }
       })
-    if (rows.length) compartments.push({ separator, title, rows, color })
+      .filter(row => !ctx?.hiddenRows?.has(row.rowObjId))
+    if (!rows.length) {
+      if (title && !compartments.length) pendingTitle ||= title
+      continue
+    }
+    compartments.push({ separator, title: title || pendingTitle, rows, color })
+    pendingTitle = ''
   }
   return { title, stereotype, subtitle, icon, compartments, headerBadges, italic }
 }
@@ -326,6 +338,13 @@ function badgeShows(b: EObject, r: EObject, c: DiagramContext): boolean {
 }
 
 /** Estimate text width in px (approximate char widths for SVG fonts). */
+/** Longest text a row shows; longer ones (a definition, a description) end in "…" instead of widening the node */
+const ROW_TEXT_MAX = 50
+
+function clip(text: string): string {
+  return text && text.length > ROW_TEXT_MAX ? `${text.slice(0, ROW_TEXT_MAX - 1).trimEnd()}…` : text
+}
+
 function textWidth(text: string, fontSize: number, mono = false): number {
   if (!text) return 0
   // Generous averages: an underestimate lets a long name run into its type
@@ -417,12 +436,13 @@ async function buildNodes(
   portNodeMap: Map<string, string>,
   rowYMap: Map<string, number>,
   ctx: DiagramContext,
+  roots: EObject[] = [],
 ): Promise<NonNullable<ElkNode['children']>> {
   const out: NonNullable<ElkNode['children']> = []
   for (const nm of mappings) {
     if (truthy(get(nm, 'group'))) {
       if (!applies(nm, parentObj, ctx)) continue
-      const groupChildren = await buildNodes(items(nm, 'children'), parentObj, index, portNodeMap, rowYMap, ctx)
+      const groupChildren = await buildNodes(items(nm, 'children'), parentObj, index, portNodeMap, rowYMap, ctx, roots)
       if (groupChildren.length) {
         out.push({
           id: `${nodeId(parentObj)}::${String(get(nm, 'name') ?? 'group')}`,
@@ -440,6 +460,8 @@ async function buildNodes(
     const objs = rowsFrom ? runQuery(rowsFrom, parentObj, ctx) : follow(parentObj, pathOf(nm, 'from'))
     for (let oi = 0; oi < objs.length; oi++) {
       const obj = objs[oi]
+      // A root of its own (a focus diagram's element) is not drawn a second time inside another root's frame
+      if (obj !== parentObj && roots.includes(obj)) continue
       if (sourceClassName && obj.eClass().getName() !== sourceClassName) continue
       // Focus diagram: only the focus objects, and their containers as frames
       if (ctx.focus && !ctx.focus.has(obj) && !ctx.focusAncestors?.has(obj)) continue
@@ -451,7 +473,7 @@ async function buildNodes(
       const id = nodeId(obj)
       index.set(id, { obj, mapping: nm, ctx })
       const view = resolveNodeView(obj, nm, ctx)
-      const childNodes = await buildNodes(items(nm, 'children'), obj, index, portNodeMap, rowYMap, ctx)
+      const childNodes = await buildNodes(items(nm, 'children'), obj, index, portNodeMap, rowYMap, ctx, roots)
 
       let bracketCount = 0
       if (!childNodes.length) {
@@ -483,14 +505,23 @@ async function buildNodes(
           id,
           labels: [{ text: view.title }],
           children: childNodes,
-          layoutOptions: { 'elk.padding': `[top=${HEADER_H + 16},left=20,bottom=20,right=20]`, 'elk.spacing.nodeNode': '80', 'elk.layered.spacing.nodeNodeBetweenLayers': '100', ...own },
+          layoutOptions: {
+            'elk.padding': `[top=${HEADER_H + 16},left=20,bottom=20,right=20]`,
+            'elk.spacing.nodeNode': '80',
+            'elk.layered.spacing.nodeNodeBetweenLayers': '100',
+            // At least as wide as its title, so the title stays inside the frame
+            'elk.nodeSize.constraints': 'MINIMUM_SIZE',
+            'elk.nodeSize.minimum': `(${Math.ceil(computeNodeWidth(view))}, ${HEADER_H + 40})`,
+            ...own,
+          },
         })
       } else {
         const lay = layoutNode(view)
         out.push({
           id,
           width: lay.width + bracketExtra,
-          height: HEADER_H + lay.height,
+          // A node without compartments is its header alone - no empty body below it
+          height: HEADER_H + (view.compartments.length ? lay.height : 0),
           labels: [{ text: view.title }],
         })
       }
@@ -507,21 +538,49 @@ async function buildNodes(
  * limits the nodes to those objects and their containers.
  */
 export async function interpret(model: EObject, rootOrRoots: EObject | EObject[], preset?: string, focus?: EObject[] | null): Promise<InterpretResult> {
+  const first = await interpretOnce(model, rootOrRoots, preset, focus)
+  // A focus diagram lists only the rows of a node's own object an edge starts at: once more without the others
+  if (!focus || !first.unusedRows.size) return first
+  return interpretOnce(model, rootOrRoots, preset, focus, first.unusedRows)
+}
+
+async function interpretOnce(
+  model: EObject,
+  rootOrRoots: EObject | EObject[],
+  preset?: string,
+  focus?: EObject[] | null,
+  hiddenRows?: Set<string>,
+): Promise<InterpretResult & { unusedRows: Set<string> }> {
   // Several roots: a focus diagram whose objects lie under different top-level containers
   const roots = Array.isArray(rootOrRoots) ? rootOrRoots : [rootOrRoots]
   const root = roots[0]
   const ctx = createContext(model, root, preset, focus)
+  ctx.hiddenRows = hiddenRows
   const index = new Map<string, NodeRef>()
   const portNodeMap = new Map<string, string>()
   const rowYMap = new Map<string, number>()
   const children: NonNullable<ElkNode['children']> = []
-  for (const r of roots) children.push(...await buildNodes(items(model, 'nodes'), r, index, portNodeMap, rowYMap, ctx))
+  for (const r of roots) children.push(...await buildNodes(items(model, 'nodes'), r, index, portNodeMap, rowYMap, ctx, roots))
 
   const edges: NonNullable<ElkNode['edges']> = []
   const edgeMeta = new Map<string, EdgeMeta>()
   const usedPorts = new Set<string>()
   const edgeMappings = items(model, 'edges')
-  for (const em of edgeMappings) {
+  /** Undirected edges drawn so far, per mapping, as "a|b" - the way back between the same two nodes is the same edge */
+  const undirected = new Set<string>()
+  /** Edges drawn so far: the same object, kind and nodes - reached over two paths (a focus diagram's roots), drawn once */
+  const drawn = new Set<string>()
+  /** End labels written so far, per node and text: several edges of one kind into a node name it once */
+  const endLabels = new Set<string>()
+  /**
+   * In a focus diagram an edge's end must be drawn itself - as a node or a row of one. Otherwise it
+   * would hang on the nearest node around it (a collection standing for all it holds).
+   */
+  const drawnItself = (o: EObject | undefined, node: string | null): boolean => {
+    if (!ctx.focus || !o || !node) return true
+    return index.get(node)?.obj === o || portNodeMap.has(`${node}__port__${nodeId(o)}`)
+  }
+  for (const [mi, em] of edgeMappings.entries()) {
     const lineStyle = attrText(em, 'lineStyle').toUpperCase()
     const sourceCardValue = child(em, 'sourceCardinalityValue')
     const targetCardValue = child(em, 'targetCardinalityValue')
@@ -546,12 +605,18 @@ export async function interpret(model: EObject, rootOrRoots: EObject | EObject[]
       const srcObjs = sourceQuery ? runQuery(sourceQuery, e, ctx) : sourcePath.length ? follow(e, sourcePath) : [e]
       const srcNode = nodeContaining(srcObjs[0] ?? null, index)
       if (!srcNode) continue
+      if (!drawnItself(srcObjs[0], srcNode)) continue
       const label = labelFeature ? readScalar(e, labelFeature) : ''
       const rowPorts = srcObjs
         .map(o => `${nodeContaining(o, index)}__port__${nodeId(o)}`)
         .filter(p => portNodeMap.has(p))
       const fallback = `${srcNode}__port__${nodeId(e)}`
-      const ports = rowPorts.length ? rowPorts : [portNodeMap.has(fallback) ? fallback : '']
+      // An edge naming its row starts there (the row of the source node's own object with that label)
+      const sourceRow = attrText(em, 'sourceRow')
+      const namedRow = sourceRow ? `${srcNode}__port__${nodeId(srcObjs[0] ?? e)}::${sourceRow}` : ''
+      const ports = namedRow && portNodeMap.has(namedRow)
+        ? [namedRow]
+        : rowPorts.length ? rowPorts : [portNodeMap.has(fallback) ? fallback : '']
       const sourceCard = sourceCardValue ? readValue(sourceCardValue, e, ctx) : sourceCardinality
       const targetCard = targetCardValue ? readValue(targetCardValue, e, ctx) : targetCardinality
       // The target nodes, each once (a key's several columns lie in one table)
@@ -564,7 +629,7 @@ export async function interpret(model: EObject, rootOrRoots: EObject | EObject[]
         return !!o && !(ctx.focusAncestors?.has(o) && !ctx.focus.has(o))
       }
       if (!shown(srcNode)) continue
-      const tgtNodes = [...new Set(tgtObjs.map(t => nodeContaining(t, index)).filter(shown))]
+      const tgtNodes = [...new Set(tgtObjs.filter(t => drawnItself(t, nodeContaining(t, index))).map(t => nodeContaining(t, index)).filter(shown))]
       const sourceLabel = readValue(child(em, 'sourceLabelValue'), e, ctx)
       const targetLabel = readValue(child(em, 'targetLabelValue'), e, ctx)
       const srcDeco = child(em, 'sourceDecorationValue') ? readValue(child(em, 'sourceDecorationValue'), e, ctx) : sourceDecoration
@@ -572,7 +637,18 @@ export async function interpret(model: EObject, rootOrRoots: EObject | EObject[]
       ports.forEach((portId, pi) => {
         const fromNode = portId ? portNodeMap.get(portId)! : srcNode
         tgtNodes.forEach((tgtNode, i) => {
-          const id = `${nodeId(e)}#${pi}.${i}`
+          // Without arrows an edge has no direction: a relation recorded on both sides is drawn once
+          if (!srcDeco && !tgtDeco) {
+            const pair = [fromNode, tgtNode].sort().join('|')
+            if (undirected.has(`${mi}:${pair}`)) return
+            undirected.add(`${mi}:${pair}`)
+          }
+          // The same object to the same node in the same kind - whichever row or label the first one took
+          const same = `${nodeId(e)}|${kind}|${srcNode}|${tgtNode}`
+          if (drawn.has(same)) return
+          drawn.add(same)
+          // Unique per mapping: an object may start edges of several kinds
+          const id = `${nodeId(e)}#${mi}.${pi}.${i}`
           const usePort = !!portId && tgtNode !== fromNode
           if (usePort) usedPorts.add(portId)
           const first = pi === 0 && i === 0
@@ -585,13 +661,16 @@ export async function interpret(model: EObject, rootOrRoots: EObject | EObject[]
           edgeMeta.set(id, {
             kind,
             lineStyle,
+            color: attrText(em, 'color'),
             sourceCardinality: first ? sourceCard : '',
             targetCardinality: first ? targetCard : '',
             sourceDecoration: srcDeco,
             targetDecoration: tgtDeco,
             sourcePortY: usePort ? rowYMap.get(portId) : undefined,
             sourceLabel: first ? sourceLabel : '',
-            targetLabel: first ? targetLabel : '',
+            targetLabel: first && targetLabel && !endLabels.has(`${tgtNode}:${targetLabel}`)
+              ? (endLabels.add(`${tgtNode}:${targetLabel}`), targetLabel)
+              : '',
           })
         })
       })
@@ -633,11 +712,29 @@ export async function interpret(model: EObject, rootOrRoots: EObject | EObject[]
     return out
   }
   const rootEdges: NonNullable<ElkNode['edges']> = []
+  /*
+   * A definition may lift edges between top-level frames for the layout (gene.liftEdges): ELK then lays
+   * out one edge per pair of frames instead of threading each through the frames' levels - which made
+   * the frames tall. The edges themselves are routed afterwards (routeEdges on the graph).
+   */
+  const lift = items(model, 'layoutOptions').some(o => String(get(o, 'key')) === 'gene.liftEdges' && String(get(o, 'value')) === 'true')
+  const lifted = new Set<string>()
   for (const edge of edges) {
     const src = portNodeMap.get(edge.sources[0]) ?? edge.sources[0]
     const tgt = edge.targets[0]
+    const srcChain = chain(src)
     const tgtChain = new Set(chain(tgt))
-    const lca = chain(src).find(p => tgtChain.has(p) && p !== src && p !== tgt) ?? null
+    const topSrc = srcChain[srcChain.length - 1] ?? src
+    const topTgt = [...tgtChain].pop() ?? tgt
+    if (lift && topSrc !== topTgt) {
+      const id = `lift:${topSrc}->${topTgt}`
+      if (!lifted.has(id) && !lifted.has(`lift:${topTgt}->${topSrc}`)) {
+        lifted.add(id)
+        rootEdges.push({ id, sources: [topSrc], targets: [topTgt] })
+      }
+      continue
+    }
+    const lca = srcChain.find(p => tgtChain.has(p) && p !== src && p !== tgt) ?? null
     const host = lca ? (elkNodeMap.get(lca) as unknown as ElkNode | undefined) : undefined
     if (host) (host.edges ??= []).push(edge)
     else rootEdges.push(edge)
@@ -648,5 +745,14 @@ export async function interpret(model: EObject, rootOrRoots: EObject | EObject[]
     layoutOptions[String(get(opt, 'key'))] = String(get(opt, 'value'))
   }
 
-  return { graph: { id: 'root', layoutOptions, children, edges: rootEdges }, index, edgeMeta, portNodeMap }
+  // Rows of a node's own object (a reference name) no edge starts at - a focus diagram leaves them out
+  const unusedRows = new Set<string>()
+  for (const pid of portNodeMap.keys()) {
+    const rowObjId = pid.split('__port__')[1] ?? ''
+    if (rowObjId.includes('::') && !usedPorts.has(pid)) unusedRows.add(rowObjId)
+  }
+
+  // With lifted edges the real ones travel on the graph (ELK keeps unknown properties) for the renderer to route
+  const graph = { id: 'root', layoutOptions, children, edges: rootEdges, ...(lift ? { routeEdges: edges } : {}) }
+  return { graph, index, edgeMeta, portNodeMap, unusedRows }
 }

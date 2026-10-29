@@ -268,6 +268,13 @@
     <!-- SOLID | DASHED; default by kind -->
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="lineStyle"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- The edge starts at the source node's row with this label among the rows showing the node's own
+         object (e.g. a reference name listed in the node) - instead of at the node -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="sourceRow"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    <!-- Colour of the line and its arrow (CSS colour), e.g. one per kind of reference; empty = by kind -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="color"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EString"/>
     <!-- Cardinality at the source end, computed (e.g. the multiplicity of an association end) -->
     <eStructuralFeatures xsi:type="ecore:EReference" name="sourceCardinalityValue"
         eType="#//Value" containment="true"/>
