@@ -2,7 +2,7 @@
  * The file behind a Document: `reference` names it - a URL, or a path in
  * the workspace (relative to the model file's folder, or to the workspace
  * root) - and `type` says what it is (png, svg, jpg ... or a MIME type).
- * Images show inline, a PDF opens in a new tab.
+ * Images and PDFs show inline.
  */
 import { toRaw } from 'tsm:vue'
 import { attr } from './documentation'
@@ -116,8 +116,10 @@ export async function documentUrl(document: any): Promise<{ url: string; revoke:
   const entry = findFile(document, reference)
   const file = await entry?.handle?.getFile?.()
   if (!file) return null
-  // An SVG needs its type, else the browser will not draw it from a blob
-  const blob = extensionOf(entry!.name) === 'svg' && !file.type ? new Blob([await file.text()], { type: 'image/svg+xml' }) : file
+  // An SVG or PDF needs its type, else the browser will not show it from a blob
+  const ending = extensionOf(entry!.name)
+  const type = file.type ? null : ending === 'svg' ? 'image/svg+xml' : ending === 'pdf' ? 'application/pdf' : null
+  const blob = type ? new Blob([await file.arrayBuffer()], { type }) : file
   return { url: URL.createObjectURL(blob), revoke: true }
 }
 

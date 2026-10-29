@@ -1,11 +1,12 @@
 <script setup lang="ts">
 /**
  * The file of a Document: `reference` is entered as a URL or chosen from the
- * workspace's files; images (png, svg, jpg ...) show inline, a PDF opens in
- * a new tab, anything else is a link.
+ * workspace's files; images (png, svg, jpg ...) and PDFs show inline - a PDF
+ * in the browser's own viewer (pages, zoom), with links to open it in a new
+ * tab or download it - anything else is a link.
  *
  * Test ids: `<testId>` on the block, `.Reference` the input, `.Choose` the
- * workspace button, `.Preview` the image or link.
+ * workspace button, `.Preview` the image, PDF or link.
  */
 import { computed, inject, onBeforeUnmount, ref, watch } from 'tsm:vue'
 import { attr } from '../composables/documentation'
@@ -129,6 +130,18 @@ const local = computed(() => !!reference.value && !isUrl(reference.value) && !!f
         {{ isUrl(reference) ? 'Nicht erreichbar' : 'Datei nicht im Workspace gefunden' }}: {{ reference }}
       </p>
       <img v-else-if="kind === 'image' && url" :src="url" :alt="fileName" class="image" />
+      <template v-else-if="kind === 'pdf' && url">
+        <div class="pdf-bar">
+          <i class="pi pi-file-pdf"></i>
+          <span class="pdf-name">{{ fileName }}</span>
+          <a :href="url" target="_blank" rel="noopener" class="open" title="In neuem Tab öffnen"><i class="pi pi-external-link"></i></a>
+          <a :href="url" :download="fileName" class="open" title="Herunterladen"><i class="pi pi-download"></i></a>
+        </div>
+        <!-- The browser's PDF viewer; the frame's lower edge drags to resize -->
+        <div class="pdf-frame">
+          <iframe :src="url" :title="fileName"></iframe>
+        </div>
+      </template>
       <a v-else-if="url" :href="url" target="_blank" rel="noopener" class="open">
         <i :class="kind === 'pdf' ? 'pi pi-file-pdf' : 'pi pi-external-link'"></i>
         {{ kind === 'pdf' ? `${fileName} öffnen` : fileName }}
@@ -235,6 +248,39 @@ input:focus {
   border: 1px solid var(--surface-border);
   border-radius: 4px;
   background: var(--surface-ground);
+}
+
+.pdf-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+  color: var(--text-color-secondary);
+}
+
+.pdf-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pdf-frame {
+  height: 32rem;
+  min-height: 10rem;
+  resize: vertical;
+  overflow: hidden;
+  border: 1px solid var(--surface-border);
+  border-radius: 4px;
+  background: var(--surface-ground);
+}
+
+.pdf-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: none;
 }
 
 .open {
