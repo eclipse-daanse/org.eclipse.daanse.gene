@@ -2,8 +2,11 @@
 /**
  * Editor for the field rules (CR-2): one table row per FieldRule of the
  * workspace's *.fielddefaults.xmi - class, attribute, suggested values, UI
- * default, backend default, hidden. Changes apply at once; "Speichern"
- * writes the file through EMF's serializer.
+ * default, hidden. The cells follow
+ * the attribute's type: an enum's UI default is chosen from its literals,
+ * yes/no from yes and no, a number is a number; suggestions are for text
+ * only. Changes apply at once;
+ * "Speichern" writes the file through EMF's serializer.
  *
  * Opened from the context view's header, or from a field with its class
  * and attribute preselected. A GenE dialog: the rules as a table (a search
@@ -24,6 +27,7 @@ import {
   type FieldDefaultsFile
 } from '../composables/fieldDefaults'
 import { many } from '../composables/documentation'
+import { kindOf } from '../composables/rowContent'
 
 const props = defineProps<{
   /** EClasses to choose from, e.g. those of the loaded model and their supertypes */
@@ -52,7 +56,10 @@ onMounted(() => requestAnimationFrame(() => requestAnimationFrame(() => { ready.
 const rows = computed(() => {
   void fieldDefaultsVersion.value
   const f = file.value
-  return f ? ruleObjects(f).map(rule => ({ rule, ...ruleTargetNames(rule), values: valuesOf(rule) })) : []
+  return f ? ruleObjects(f).map(rule => {
+    const names = ruleTargetNames(rule)
+    return { rule, ...names, values: valuesOf(rule), type: typeOf(names.className, names.nsUri, names.attributeName) }
+  }) : []
 })
 
 /** The rules the search leaves: class or attribute contains it */
@@ -65,6 +72,26 @@ const shownRows = computed(() => {
 function get(o: any, name: string): any {
   const f = o?.eClass?.()?.getEStructuralFeature?.(name)
   return f ? toRaw(o.eGet(f)) : undefined
+}
+
+/** What the rule's attribute takes: text, number, yes/no, an enum's literals - or a reference */
+interface RuleType {
+  kind: 'text' | 'number' | 'boolean' | 'enum' | 'reference'
+  literals: string[]
+}
+
+function typeOf(className: string, nsUri: string, attributeName: string): RuleType {
+  const cls = props.classes.find((c: any) =>
+    c.getName?.() === className && (!nsUri || c.getEPackage?.()?.getNsURI?.() === nsUri)
+  )
+  const feature = cls?.getEStructuralFeature?.(attributeName)
+  if (!feature) return { kind: 'text', literals: [] }
+  if (typeof feature.isContainment === 'function') return { kind: 'reference', literals: [] }
+  const kind = kindOf(feature)
+  const literals = kind === 'enum'
+    ? many(feature.getEType().getELiterals()).map((l: any) => String(l.getLiteral?.() ?? l.getName?.()))
+    : []
+  return { kind, literals }
 }
 
 function valuesOf(rule: any) {
@@ -130,7 +157,7 @@ function add(): void {
 /* ── editing ──────────────────────────────────────────────────────── */
 
 function onText(rule: any, field: 'uiDefault' | 'backendDefault', event: Event): void {
-  if (file.value) setRuleValue(file.value, rule, field, (event.target as HTMLInputElement).value.trim())
+  if (file.value) setRuleValue(file.value, rule, field, (event.target as HTMLInputElement | HTMLSelectElement).value.trim())
   status.value = ''
 }
 
@@ -233,7 +260,6 @@ const fileCount = computed(() => fieldDefaultsFiles.size)
               <th>Attribut</th>
               <th>Vorschläge</th>
               <th>UI-Default</th>
-              <th>Backend-Default</th>
               <th class="center" title="Erst nach „alle anzeigen“ sichtbar">Ausblenden</th>
               <th></th>
             </tr>
@@ -250,9 +276,48 @@ const fileCount = computed(() => fieldDefaultsFiles.size)
                 />
               </td>
               <td class="attr">{{ r.attributeName || '?' }}</td>
-              <td><input class="cell" :value="r.values.suggestions" placeholder="a, b, c" aria-label="Vorschläge" @change="onSuggestions(r.rule, $event)" /></td>
-              <td><input class="cell" :value="r.values.uiDefault" placeholder="–" aria-label="UI-Default" @change="onText(r.rule, 'uiDefault', $event)" /></td>
-              <td><input class="cell" :value="r.values.backendDefault" placeholder="–" aria-label="Backend-Default" @change="onText(r.rule, 'backendDefault', $event)" /></td>
+              <!-- Suggestions are for text; other types have their own choice -->
+              <td>
+                <input
+                  v-if="r.type.kind === 'text'"
+                  class="cell"
+                  :value="r.values.suggestions"
+                  placeholder="a, b, c"
+                  aria-label="Vorschläge"
+                  @change="onSuggestions(r.rule, $event)"
+                />
+                <span v-else class="not-applicable" :title="`Für ${r.type.kind === 'enum' ? 'Enums' : r.type.kind === 'boolean' ? 'Ja/Nein' : r.type.kind === 'number' ? 'Zahlen' : 'Referenzen'} nicht nötig`">–</span>
+              </td>
+              <!-- The UI default as the attribute's type takes it -->
+              <td>
+                <select
+                  v-if="r.type.kind === 'enum' || r.type.kind === 'boolean'"
+                  class="cell"
+                  :value="r.values.uiDefault"
+                  aria-label="UI-Default"
+                  @change="onText(r.rule, 'uiDefault', $event)"
+                >
+                  <option value="">–</option>
+                  <template v-if="r.type.kind === 'enum'">
+                    <option v-for="l in r.type.literals" :key="l" :value="l">{{ l }}</option>
+                  </template>
+                  <template v-else>
+                    <option value="true">ja</option>
+                    <option value="false">nein</option>
+                  </template>
+                </select>
+                <span v-else-if="r.type.kind === 'reference'" class="not-applicable" title="Für Referenzen nicht nötig">–</span>
+                <input
+                  v-else
+                  class="cell"
+                  :type="r.type.kind === 'number' ? 'number' : 'text'"
+                  :value="r.values.uiDefault"
+                  placeholder="–"
+                  aria-label="UI-Default"
+                  @change="onText(r.rule, 'uiDefault', $event)"
+                />
+                <span class="type-hint">{{ r.type.kind === 'enum' ? 'Enum' : r.type.kind === 'boolean' ? 'Ja/Nein' : r.type.kind === 'number' ? 'Zahl' : r.type.kind === 'reference' ? 'Referenz' : 'Text' }}</span>
+              </td>
               <td class="center">
                 <Checkbox
                   :model-value="r.values.hidden"
@@ -266,7 +331,7 @@ const fileCount = computed(() => fieldDefaultsFiles.size)
               </td>
             </tr>
             <tr v-if="shownRows.length === 0">
-              <td colspan="8" class="none">{{ rows.length ? 'Keine Regel passt zur Suche' : 'Noch keine Regeln' }}</td>
+              <td colspan="7" class="none">{{ rows.length ? 'Keine Regel passt zur Suche' : 'Noch keine Regeln' }}</td>
             </tr>
           </tbody>
         </table>
@@ -452,6 +517,19 @@ tbody tr.highlighted {
   outline: none;
   border-color: var(--primary-color);
   background: var(--surface-ground);
+}
+
+.not-applicable {
+  padding: 0.25rem 0.45rem;
+  color: var(--text-color-secondary, #6c757d);
+}
+
+/* The attribute's type under its UI default */
+.type-hint {
+  display: block;
+  padding: 0 0.45rem;
+  font-size: 0.65rem;
+  color: var(--text-color-secondary, #6c757d);
 }
 
 .cell::placeholder {

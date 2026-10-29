@@ -77,7 +77,8 @@ function isEnum(type: any): boolean {
   return typeof type?.getELiterals === 'function'
 }
 
-function kindOf(feature: any): FieldKind {
+/** How a single-valued attribute is edited - text, number, yes/no or enum (also for the field rules) */
+export function kindOf(feature: any): FieldKind {
   const type = feature.getEType?.()
   if (isEnum(type)) return 'enum'
   const name = type?.getName?.() ?? ''

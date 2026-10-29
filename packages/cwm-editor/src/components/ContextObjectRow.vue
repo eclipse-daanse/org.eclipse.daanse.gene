@@ -162,6 +162,7 @@ function finishRename(): void {
   const value = nameDraft.value.trim()
   if (!nameFeature.value || value === nameValue.value) return
   editing.change(() => setAttributeFromText(props.row.object, nameFeature.value, value))
+  editing.validate(props.row.object)
 }
 
 function cancelRename(): void {

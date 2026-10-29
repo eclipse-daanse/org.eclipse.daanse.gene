@@ -64,8 +64,10 @@ const blocks = computed(() => {
 })
 const fields = computed(() => allFields.value.filter(f => !blocks.value.includes(f)))
 
+/** Writes the value, then validates the object anew - its OCL badge follows the change */
 function write(field: RowField, value: string | boolean): void {
   editing.change(() => setField(props.object, field, value))
+  editing.validate(props.object)
 }
 
 /** The eye: hides the field for this class and its subclasses (a field rule) - or shows it again */
