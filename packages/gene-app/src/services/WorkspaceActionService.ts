@@ -43,6 +43,10 @@ export interface WorkspaceActionService {
   loadDmnFile(entry: FileEntryLike, content: string): Promise<void>
   /** Opens the file's text in the XML editor */
   openXmlFile(entry: FileEntryLike, content: string): Promise<void>
+  /** Opens a PDF file in the PDF viewer */
+  openPdfFile(entry: FileEntryLike): Promise<void>
+  /** Opens a Markdown file, rendered, in the Markdown viewer */
+  openMdFile(entry: FileEntryLike, content: string): Promise<void>
   /** Opens a CWM model in the CWM editor (documentation view) */
   openCwmEditor(entry: FileEntryLike, content: string): Promise<void>
   publishToAtlas(entry: FileEntryLike, content: string): void

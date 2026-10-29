@@ -1,0 +1,20 @@
+{
+  "id": "pdf-viewer",
+  "name": "PDF Viewer",
+  "version": "0.1.0",
+  "description": "Shows PDF files of the workspace in a tab",
+  "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" }
+  ],
+  "dependencies": [
+    "gene-app",
+    "ui-layout"
+  ],
+  "provides": [
+    {
+      "id": "ui.pdf-viewer.components",
+      "description": "PDF viewer UI components"
+    }
+  ]
+}

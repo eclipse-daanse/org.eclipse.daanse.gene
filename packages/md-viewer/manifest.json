@@ -1,0 +1,20 @@
+{
+  "id": "md-viewer",
+  "name": "Markdown Viewer",
+  "version": "0.1.0",
+  "description": "Shows Markdown files of the workspace rendered in a tab",
+  "entry": "src/index.ts",
+  "sharedDependencies": [
+    { "id": "vue", "versionRange": "^3.5.0" }
+  ],
+  "dependencies": [
+    "gene-app",
+    "ui-layout"
+  ],
+  "provides": [
+    {
+      "id": "ui.md-viewer.components",
+      "description": "Markdown viewer UI components"
+    }
+  ]
+}

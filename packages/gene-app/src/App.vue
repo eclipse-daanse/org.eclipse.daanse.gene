@@ -218,6 +218,8 @@ const workspaceActionsService: WorkspaceActionService = {
   loadTransformation: (entry, content) => handleTransformationLoad(entry, content),
   loadDmnFile: (entry, content) => handleDmnLoad(entry, content),
   openXmlFile: (entry, content) => handleXmlOpen(entry, content),
+  openPdfFile: (entry) => handlePdfOpen(entry),
+  openMdFile: (entry, content) => handleMdOpen(entry, content),
   openCwmEditor: (entry, content) => handleCwmOpen(entry, content),
   publishToAtlas: (entry, content) => handleAtlasPublish(entry, content),
   selectObject: (obj) => handleObjectSelect(obj),
@@ -1645,7 +1647,7 @@ function verdrahteTabSchliessen(layout: any): void {
     metamodelerComposables.value?.tabGeschlossen?.(tabId)
     ;(instanceTreeComposables.value as any)?.instanzTabGeschlossen?.(tabId)
     // The file editors keep one document per tab - let them forget it
-    for (const svc of ['ui.cocl-editor.composables', 'ui.transformation.composables', 'ui.dmn-editor.composables', 'ui.xml-editor.composables']) {
+    for (const svc of ['ui.cocl-editor.composables', 'ui.transformation.composables', 'ui.dmn-editor.composables', 'ui.xml-editor.composables', 'ui.pdf-viewer.composables', 'ui.md-viewer.composables']) {
       tsm.getService<any>(svc)?.closeTabDocument?.(tabId)
     }
     holeEditorFront().releaseTab(tabId)
@@ -2192,6 +2194,36 @@ async function handleXmlOpen(entry: any, content: string): Promise<void> {
     component: 'XmlEditorTab',
     composablesService: 'ui.xml-editor.composables',
     document: { content, filePath, fileEntry: entry, dirty: false }
+  })
+}
+
+/** The PDF file in the PDF viewer - one tab per file. */
+async function handlePdfOpen(entry: any): Promise<void> {
+  const filePath: string = entry.path
+  oeffneAnsichtTab({
+    editorId: 'pdf',
+    tabId: `pdf:${filePath}`,
+    titel: entry.name || filePath,
+    icon: 'pi pi-file-pdf',
+    componentsService: 'ui.pdf-viewer.components',
+    component: 'PdfViewerTab',
+    composablesService: 'ui.pdf-viewer.composables',
+    document: { filePath, fileEntry: entry }
+  })
+}
+
+/** The Markdown file, rendered, in the Markdown viewer - one tab per file. */
+async function handleMdOpen(entry: any, content: string): Promise<void> {
+  const filePath: string = entry.path
+  oeffneAnsichtTab({
+    editorId: 'md',
+    tabId: `md:${filePath}`,
+    titel: entry.name || filePath,
+    icon: 'pi pi-file-edit',
+    componentsService: 'ui.md-viewer.components',
+    component: 'MdViewerTab',
+    composablesService: 'ui.md-viewer.composables',
+    document: { content, filePath, fileEntry: entry }
   })
 }
 
