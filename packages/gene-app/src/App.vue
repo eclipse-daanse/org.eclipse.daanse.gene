@@ -16,6 +16,7 @@ import { getGlobalEditorConfig, parseEditorConfig } from '@/services/useEditorCo
 import { constraintFilesBeside, loadConstraintFilesBeside } from './services/workspaceConstraints'
 import { addableFiles, buildWorkspaceOverview, readFeature, type OverviewEntry, type WorkspaceOverview } from './services/workspaceOverview'
 import { collectOpenEditors, restoreOpenEditors } from './services/openEditors'
+import { addModels } from './services/addModels'
 import WorkspaceEditor, { type AddableFile, type SectionKind } from './workspace/WorkspaceEditor.vue'
 import { mayLeaveWorkspace, unloadWorkspace, workspaceTabs, type LeaveChoice } from './services/workspaceSwitch'
 import { createEditorLoading } from './services/editorLoading'
@@ -209,6 +210,7 @@ const selectedFile = ref<any | null>(null)
 let _isWorkspaceOpen: ComputedRef<boolean> | null = null
 const workspaceActionsService: WorkspaceActionService = {
   loadModel: (entry, content) => handleModelAdd(entry, content),
+  loadModels: (items, unreadable) => handleModelsAdd(items, unreadable),
   loadInstances: (entry, content, mode) => withEditorLoading(entry?.name, () => handleInstanceAdd(entry, content, mode)),
   openWorkspace: (entry, content) => handleOpenWorkspace(entry, content),
   openMetamodelInEditor: (entry, content) => withEditorLoading(entry?.name, () => handleMetamodelEdit(entry, content)),
@@ -1459,66 +1461,78 @@ function handleCreateInstance(classInfo: any) {
 }
 
 // Handle adding a model (.ecore file) to the workspace
-async function handleModelAdd(entry: any, content: string) {
-  console.log('[App] handleModelAdd called:', entry.name, 'content length:', content?.length)
+function handleModelAdd(entry: FileEntryLike, content: string): Promise<void> {
+  return handleModelsAdd([{ entry, content }])
+}
 
-  if (!modelBrowserComposables.value?.loadEcoreFile) {
+/**
+ * Adds models (.ecore) to the workspace - one or many. All are loaded before
+ * any is declared, the workspace is saved once, and what failed shows up in
+ * the problems panel instead of only on the console.
+ */
+async function handleModelsAdd(items: { entry: FileEntryLike; content: string }[], unreadable: string[] = []) {
+  const loadEcoreFile = modelBrowserComposables.value?.loadEcoreFile
+  if (!loadEcoreFile) {
     console.warn('Model browser composables not available')
     return
   }
+  const editorConfig = getGlobalEditorConfig()
+  const registry = tsm.getService<any>('ui.model-browser.composables')?.useSharedModelRegistry?.()
+  const isLoaded = (path: string) =>
+    ((registry?.userPackages?.value ?? []) as any[]).some((info) => info.sourceFile === path)
 
-  // Show loading indicator
-  loadingModelName.value = entry.name
   isLoadingModel.value = true
-  console.log('[App] Model loading started:', entry.name)
-
+  loadingModelName.value = items[0]?.entry.name ?? ''
   // Wait for Vue to render the loading overlay
   await new Promise(resolve => setTimeout(resolve, 100))
-  const startTime = Date.now()
 
   try {
-    const packageInfo = await modelBrowserComposables.value.loadEcoreFile(content, entry.path)
-    if (packageInfo) {
-      console.log('Model loaded successfully:', packageInfo.name, packageInfo.nsURI)
-
-      // Register package with OCL service for constraint validation
-      if (packageInfo.ePackage) {
-        await problemsService.registerPackage(packageInfo.ePackage)
-        console.log('Package registered with OCL service:', packageInfo.name)
-      }
-
-      // Add to EditorConfig for persistence
-      const editorConfig = getGlobalEditorConfig()
-      if (editorConfig) {
-        editorConfig.addModelSource(entry.path, packageInfo.name, {
-          registerPackages: true,
-          enabled: true
-        })
-        console.log('Model source added to EditorConfig:', entry.path)
-
-        // Auto-save workspace if file entry is available
+    const result = await addModels(items, {
+      // Declared and loaded: nothing to do. Declared but not loaded is loaded again.
+      isDeclared: (path) => !!editorConfig?.findModelSourceByLocation?.(path) && isLoaded(path),
+      load: (content, path) => loadEcoreFile(content, path),
+      register: (ePackage) => problemsService.registerPackage(ePackage as any),
+      declare: (path, name) => {
+        editorConfig?.addModelSource(path, name, { registerPackages: true, enabled: true })
+      },
+      save: async () => {
         const geneFS = tsm.getService('gene.filesystem')
-        if (geneFS && editorConfig.workspaceFileEntry?.value) {
-          try {
-            await editorConfig.saveToFileSystem(async (fileEntry: any, content: string) => {
-              await geneFS.writeTextFile(fileEntry, content)
-            })
-            console.log('Workspace auto-saved after adding model source')
-          } catch (e) {
-            console.warn('Failed to auto-save workspace:', e)
-          }
+        if (!geneFS || !editorConfig?.workspaceFileEntry?.value) return
+        try {
+          await editorConfig.saveToFileSystem(async (fileEntry: any, content: string) => {
+            await geneFS.writeTextFile(fileEntry, content)
+          })
+        } catch (e) {
+          console.warn('Failed to auto-save workspace:', e)
         }
-      }
+      },
+      reloadInstances: async (sourceIds) => {
+        for (const sourceId of sourceIds) await reloadFailedInstanceFiles(sourceId)
+      },
+      onProgress: (position, total, name) => {
+        loadingModelName.value = total > 1 ? `${position}/${total} ${name}` : name
+      },
+    })
+    console.log('[App] Models added:', result.added.length, 'skipped:', result.skipped.length, 'failed:', result.failed.length)
 
-      // Auto-reload failed XMI files now that model is available
-      await reloadFailedInstanceFiles(entry.sourceId)
-    } else {
-      console.error('Failed to load model')
+    const failed = [
+      ...unreadable.map((path) => ({ path, error: 'Datei nicht lesbar' })),
+      ...result.failed,
+    ]
+    for (const { path, error } of failed) {
+      problemsService.addIssue({
+        severity: 'error',
+        message: `Modell nicht hinzugefügt: ${error}`,
+        source: 'general',
+        objectLabel: path.split('/').pop() || path,
+        eClassName: 'Modell',
+        filePath: path,
+      })
     }
+    if (failed.length > 0) handleShowProblems()
   } catch (e: any) {
-    console.error('Failed to add model:', e)
+    console.error('Failed to add models:', e)
   } finally {
-    // Hide loading indicator
     isLoadingModel.value = false
     loadingModelName.value = ''
   }

@@ -10,7 +10,7 @@
  * Workspace files (.wsp, .xmi) are highlighted and can be opened.
  */
 
-import { ref, computed, inject, onMounted, onUnmounted, watch } from 'tsm:vue'
+import { ref, computed, inject, nextTick, onMounted, onUnmounted, watch } from 'tsm:vue'
 import { Tree } from 'tsm:primevue'
 import { Button } from 'tsm:primevue'
 import { Menu } from 'tsm:primevue'
@@ -21,6 +21,7 @@ import { useSharedFileSystem } from '../composables/useFileSystem'
 import { fileActionRegistry } from '../fileActions'
 import type { FileAction } from '../fileActions'
 import { addRecentWorkspace } from '../composables/useRecentWorkspaces'
+import { ecoreFilesBelow, rangeKeys, selectedEcoreFiles, visibleKeys } from '../selection'
 import type { FileEntry, FileTreeNode, FileSource } from '../types'
 import { isWorkspaceFile } from '../types'
 
@@ -37,6 +38,19 @@ function getActions() {
 // Tree state
 const selectedKey = ref<Record<string, boolean>>({})
 const expandedKeys = ref<Record<string, boolean>>({})
+
+/*
+ * Several rows can be selected: Ctrl/Cmd-click adds one, Shift-click the rows
+ * up to the last one clicked. The tree does not hand the click to its
+ * node-select event, so the modifiers are taken from the click on its way down.
+ */
+const clickModifiers = { add: false, range: false }
+let selectionAnchor: string | null = null
+
+function rememberModifiers(event: MouseEvent | KeyboardEvent) {
+  clickModifiers.add = event.ctrlKey || event.metaKey
+  clickModifiers.range = event.shiftKey
+}
 
 /*
  * Follow the file in front. Whoever sets the shared `selectedFile` from
@@ -197,11 +211,12 @@ const contextMenuItems = computed(() => {
     }
 
     if (isEcoreFile(entry)) {
+      const models = modelsForMenu()
       items.push({
-        label: 'Add Model to Workspace',
+        label: models.length > 1 ? `Add ${models.length} Models to Workspace` : 'Add Model to Workspace',
         icon: 'pi pi-plus-circle',
         disabled: !workspaceOpen,
-        command: () => handleAddModelToWorkspace()
+        command: () => addModelsToWorkspace(models)
       })
     }
     if (isXmiFile(entry) && !isWspFile(entry)) {
@@ -268,6 +283,18 @@ const contextMenuItems = computed(() => {
 
   // For directories and sources, show create options
   if (contextMenuNode.value?.type === 'source' || contextMenuNode.value?.type === 'directory') {
+    const models = ecoreFilesBelow(contextMenuNode.value)
+    if (models.length > 0) {
+      items.push(
+        {
+          label: `Add all Models in Folder (${models.length})`,
+          icon: 'pi pi-plus-circle',
+          disabled: !getActions()?.isWorkspaceOpen?.value,
+          command: () => addModelsToWorkspace(models)
+        },
+        { separator: true }
+      )
+    }
     items.push(
       {
         label: 'New Workspace',
@@ -343,6 +370,18 @@ function handleNodeSelect(node: FileTreeNode) {
     expandedKeys.value[treeNode.key] = true
     return
   }
+
+  // Shift-click: the rows from the last click to this one. The tree has set
+  // its own selection by then - it is replaced once the tree is done.
+  const anchor = selectionAnchor
+  if (clickModifiers.range && anchor) {
+    const order = visibleKeys(fileSystem.treeNodes.value, expandedKeys.value)
+    void nextTick(() => { selectedKey.value = rangeKeys(order, anchor, treeNode.key) })
+    return
+  }
+  selectionAnchor = treeNode.key
+  // Ctrl/Cmd-click only adds to the selection - it does not open the file
+  if (clickModifiers.add) return
 
   const entry = treeNode.data as FileEntry
   console.log('File selected:', entry)
@@ -613,36 +652,37 @@ async function handleCreateWorkspace() {
   }
 }
 
-// Handle adding model (.ecore) to workspace
-async function handleAddModelToWorkspace() {
-  console.log('[FileExplorer] handleAddModelToWorkspace called')
-  console.log('[FileExplorer] contextMenuNode:', contextMenuNode.value?.type, contextMenuNode.value?.data?.name)
+/*
+ * The models a file's menu acts on: the selected ones when the row is part of
+ * a selection, otherwise just the row.
+ */
+function modelsForMenu(): FileEntry[] {
+  const node = contextMenuNode.value
+  if (!node) return []
+  const entry = node.data as FileEntry
+  if (!selectedKey.value[node.key]) return isEcoreFile(entry) ? [entry] : []
+  const selected = selectedEcoreFiles(fileSystem.treeNodes.value, selectedKey.value)
+  return selected.length > 0 ? selected : [entry]
+}
 
-  if (!contextMenuNode.value || contextMenuNode.value.type !== 'file') {
-    console.log('[FileExplorer] Skipping - not a file node')
-    return
-  }
-
-  const entry = contextMenuNode.value.data as FileEntry
-  console.log('[FileExplorer] entry:', entry.name, 'isEcore:', isEcoreFile(entry))
-
-  if (!isEcoreFile(entry)) {
-    console.log('[FileExplorer] Skipping - not an ecore file')
-    return
-  }
-
-  try {
-    // Read the .ecore file content
-    const content = await fileSystem.readTextFile(entry)
-    console.log('[FileExplorer] Read content length:', content?.length)
-
-    if (content) {
-      console.log('[FileExplorer] Emitting model-add:', entry.name)
-      getActions()?.loadModel(entry, content)
+/** Adds models (.ecore) to the workspace - all in one go, saved once. */
+async function addModelsToWorkspace(entries: FileEntry[]) {
+  const actions = getActions()
+  if (!actions || entries.length === 0) return
+  const items: { entry: FileEntry; content: string }[] = []
+  const unreadable: string[] = []
+  for (const entry of entries) {
+    try {
+      const content = await fileSystem.readTextFile(entry)
+      if (content) items.push({ entry, content })
+      else unreadable.push(entry.path)
+    } catch (e: any) {
+      console.error('[FileExplorer] Failed to read .ecore file:', entry.path, e)
+      unreadable.push(entry.path)
     }
-  } catch (e: any) {
-    console.error('[FileExplorer] Failed to read .ecore file:', e)
   }
+  if (actions.loadModels) await actions.loadModels(items, unreadable)
+  else for (const { entry, content } of items) await actions.loadModel(entry, content)
 }
 
 /** Plugin-Aktion ausführen — der Explorer liefert den Dateiinhalt. */
@@ -896,7 +936,10 @@ onUnmounted(() => {
         :value="fileSystem.treeNodes.value"
         v-model:selectionKeys="selectedKey"
         v-model:expandedKeys="expandedKeys"
-        selectionMode="single"
+        selectionMode="multiple"
+        :metaKeySelection="true"
+        @click.capture="rememberModifiers"
+        @keydown.capture="rememberModifiers"
         @node-select="handleNodeSelect"
         @node-dblclick="handleNodeDoubleClick"
         class="file-tree"
