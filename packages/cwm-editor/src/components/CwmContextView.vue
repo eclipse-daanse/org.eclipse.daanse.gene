@@ -15,7 +15,7 @@ import { computed, inject, nextTick, onBeforeUnmount, provide, reactive, ref, sh
 import ContextObjectRow from './ContextObjectRow.vue'
 import RowSkeleton from './RowSkeleton.vue'
 import FieldRulesHost from './FieldRulesHost.vue'
-import { type ContextRow, contextRows, displayName, isInside, parentOf, pathTo, rowMode, siblingOf, visibleRows } from '../composables/contextView'
+import { type ContextRow, children, contextPath, contextRows, contextUp, displayName, isInside, isResource, parentOf, pathTo, rowMode, siblingOf, visibleRows } from '../composables/contextView'
 import { attr, className, isDescription, slug } from '../composables/documentation'
 import { CWM_EDITING } from '../composables/editing'
 import { allObjects, buildReferenceIndex, referenceCandidates } from '../composables/references'
@@ -114,7 +114,7 @@ function descendantsExceed(o: any, limit: number): boolean {
   const stack = [toRaw(o)]
   while (stack.length) {
     const x = stack.pop()
-    for (const c of x?.eContents?.() ?? []) {
+    for (const c of children(x)) {
       if (++n > limit) return true
       stack.push(c)
     }
@@ -263,7 +263,7 @@ const modelClasses = computed(() => {
 function deleteObject(o: any): void {
   const raw = toRaw(o)
   // Deleting the context object, or what holds it, moves the context up
-  if (contextObject.value && isInside(contextObject.value, raw)) setContext(parentOf(raw))
+  if (contextObject.value && isInside(contextObject.value, raw)) setContext(contextUp(raw))
   props.context.deleteObject?.(raw)
   props.context.markDirty?.()
   props.context.triggerUpdate?.()
@@ -311,14 +311,14 @@ provide(CWM_EDITING, {
   referenceCandidates: (target: any) => (contextObject.value ? referenceCandidates(contextObject.value, target) : [])
 })
 
-const hierarchy = computed(() => (contextObject.value ? [...pathTo(contextObject.value), contextObject.value] : []))
-const up = computed(() => (contextObject.value ? parentOf(contextObject.value) : null))
+const hierarchy = computed(() => (contextObject.value ? [...contextPath(contextObject.value), contextObject.value] : []))
+const up = computed(() => contextUp(contextObject.value))
 const back = computed(() => (contextObject.value ? siblingOf(contextObject.value, -1) : null))
 const forward = computed(() => (contextObject.value ? siblingOf(contextObject.value, 1) : null))
 const canSetContext = computed(() => !!selected.value && selected.value !== contextObject.value)
 
 function label(o: any): string {
-  return `${className(o)} ${displayName(o)}`
+  return isResource(o) ? `Datei ${displayName(o)}: alle Wurzelelemente` : `${className(o)} ${displayName(o)}`
 }
 
 function setContext(o: any): void {
@@ -418,7 +418,8 @@ watch(selected, async (o) => {
   // Flow breadcrumb: most recent last, no duplicates
   visited.value = [...visited.value.filter(v => v !== o), o].slice(-FLOW_LENGTH)
   if (!contextObject.value || (o !== contextObject.value && !isInside(o, contextObject.value))) {
-    setContext(parentOf(o) ?? o)
+    // A root object shows with its siblings: the file is the context
+    setContext(contextUp(o) ?? o)
   }
   const fromView = selectingFromView
   selectingFromView = false
@@ -447,7 +448,8 @@ function jumpTo(o: any, gently: boolean): void {
     return
   }
   const rowId = `cwm.Editor.ContextView.ObjectRow@${row.slug}`
-  const rowEl = rootEl.value?.querySelector<HTMLElement>(`[data-testid="${rowId}"]`)
+  // By its key: objects of the same class and name share the test id (e.g. one "library" per model)
+  const rowEl = rootEl.value?.querySelector<HTMLElement>(`[data-row-key="${row.key}"]`)
   if (!rowEl) return
   // A column or attribute inside the row's table
   const name = slug(String(attr(o, 'name') ?? ''))

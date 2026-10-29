@@ -11,7 +11,7 @@
  */
 import { toRaw } from 'tsm:vue'
 import { attr, className, many } from './documentation'
-import { children, displayName, isInside, pathTo } from './contextView'
+import { children, displayName, isInside, isResource, pathTo } from './contextView'
 import { fieldRule } from './fieldDefaults'
 
 /** The classes shown as references, in the order of FR-2.9 */
@@ -52,7 +52,7 @@ export function isReferenceObject(o: any): boolean {
 /** All objects of the resource set the context object lives in, depth first */
 export function allObjects(context: any): any[] {
   const o = toRaw(context)
-  const resource = o?.eResource?.()
+  const resource = isResource(o) ? o : o?.eResource?.()
   const uri = (r: any) => String(r?.getURI?.() ?? '')
   // The object's own resource always counts, even when its set does not list
   // it; older copies of the same file in the set do not

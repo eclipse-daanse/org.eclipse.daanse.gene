@@ -453,6 +453,7 @@ const shown = computed(() => {
     :class="[{ selected }, headingClass && `name-${headingClass}`]"
     :style="layerStyle"
     :data-testid="id"
+    :data-row-key="row.key"
     data-wire-kind="LIST"
     :data-depth="row.depth"
     @mouseenter="editing.hovered.value = row.object"

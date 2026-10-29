@@ -42,9 +42,21 @@ export interface ContextRow {
 /** Deeper than this nobody reads; it also stops a cyclic model from recursing forever */
 const MAX_DEPTH = 30
 
-/** Contained objects in containment order */
+/** A resource (a file): the context above its root objects, showing all of them */
+export function isResource(o: any): boolean {
+  const raw = toRaw(o)
+  return typeof raw?.getContents === 'function' && typeof raw?.eClass !== 'function'
+}
+
+/** The resource an object lives in, or null */
+export function resourceOf(o: any): any | null {
+  return toRaw(toRaw(o)?.eResource?.() ?? null)
+}
+
+/** Contained objects in containment order - of a resource its root objects */
 export function children(o: any): any[] {
   const raw = toRaw(o)
+  if (isResource(raw)) return many(raw.getContents())
   if (typeof raw?.eContents === 'function') return many(raw.eContents())
   return many(attr(raw, 'ownedElement'))
 }
@@ -62,11 +74,13 @@ export function pathTo(o: any): any[] {
 
 export function isInside(o: any, ancestor: any): boolean {
   const target = toRaw(ancestor)
+  if (isResource(target)) return resourceOf(o) === target
   for (let p = toRaw(o); p; p = parentOf(p)) if (p === target) return true
   return false
 }
 
 export function displayName(o: any): string {
+  if (isResource(o)) return String(toRaw(o).getURI?.()?.toString?.() ?? '').split('/').pop() || '(Datei)'
   const name = attr(o, 'name')
   return name == null || name === '' ? '(ohne Namen)' : String(name)
 }
@@ -133,6 +147,11 @@ export function contextRows(context: any): ContextRow[] {
   }
   const root = toRaw(context)
   if (!root) return rows
+  // A file: its root objects at the top, no row of its own
+  if (isResource(root)) {
+    walk(root, [])
+    return rows
+  }
   // The context object first; everything else below it
   const own = rowFor(root, [])
   rows.push(own)
@@ -163,6 +182,19 @@ export function rowMode(r: ContextRow, collapsed: Set<any>, opened: Set<any>): R
 export function visibleRows(rows: ContextRow[], collapsed: Set<any>, opened: Set<any> = new Set()): ContextRow[] {
   if (collapsed.size === 0) return rows
   return rows.filter(r => rowMode(r, collapsed, opened) !== 'hidden')
+}
+
+/** The context above o: its container - for a root object its file */
+export function contextUp(o: any): any | null {
+  if (!o || isResource(o)) return null
+  return parentOf(o) ?? resourceOf(o)
+}
+
+/** The contexts from the file down to (excluding) o, for the breadcrumb */
+export function contextPath(o: any): any[] {
+  if (!o || isResource(o)) return []
+  const file = resourceOf(o)
+  return file ? [file, ...pathTo(o)] : pathTo(o)
 }
 
 /** Siblings of o in its container - or in its resource for a root object - for the jumps back and forward (PH-6) */
