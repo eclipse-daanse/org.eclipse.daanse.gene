@@ -26,6 +26,12 @@ export interface ReferenceSearchOptions {
 export interface WorkspaceActionService {
   // --- Model / Instance Loading ---
   loadModel(entry: FileEntryLike, content: string): Promise<void>
+  /**
+   * Adds several models in one go: all are loaded before any is registered, so
+   * references between them resolve, and the workspace is saved once.
+   * `unreadable` names files the caller could not read - they are reported too.
+   */
+  loadModels?(items: { entry: FileEntryLike; content: string }[], unreadable?: string[]): Promise<void>
   /** Without a mode the file opens in a tab of its own ('STANDALONE'); 'MERGE' adds it to the tab in front */
   loadInstances(entry: FileEntryLike, content: string, mode?: 'STANDALONE' | 'MERGE' | 'REPLACE'): Promise<void>
 
