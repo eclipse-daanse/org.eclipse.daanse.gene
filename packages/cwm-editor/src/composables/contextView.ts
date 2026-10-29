@@ -24,6 +24,7 @@ import { shownPrivileges } from './privileges'
 import { isTaggedValue } from './taggedValues'
 import { isAccessRole, shownByRole } from './grants'
 import { isOrmEntityMappings, shownByEntityMappings } from './ormMapping'
+import { headAttributeName } from './fieldDefaults'
 
 export interface ContextRow {
   key: string
@@ -80,10 +81,17 @@ export function isInside(o: any, ancestor: any): boolean {
   return false
 }
 
+/** An attribute's value as text; enums by literal, empty as null */
+function valueText(o: any, featureName: string): string | null {
+  const value = attr(o, featureName)
+  if (value == null || value === '') return null
+  return typeof value === 'object' ? String(value.getLiteral?.() ?? value.getName?.() ?? value) : String(value)
+}
+
+/** The object's head: the attribute a head rule names, else its name; empty while that is unset */
 export function displayName(o: any): string {
   if (isResource(o)) return String(toRaw(o).getURI?.()?.toString?.() ?? '').split('/').pop() || '(Datei)'
-  const name = attr(o, 'name')
-  return name == null || name === '' ? '(ohne Namen)' : String(name)
+  return valueText(o, headAttributeName(o)) ?? ''
 }
 
 /** Objects a table shows itself, so they get no row of their own */

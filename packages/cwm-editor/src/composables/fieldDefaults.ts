@@ -29,6 +29,8 @@ export interface FieldRuleView {
   uiDefault: string | null
   backendDefault: string | null
   hidden: boolean
+  /** The attribute is the object's head (title) instead of "name" */
+  head: boolean
 }
 
 interface Rule extends FieldRuleView {
@@ -154,7 +156,8 @@ function toRule(fr: any): Rule | null {
     suggestions: many(get(fr, 'suggestions')).map(String),
     uiDefault: text(get(fr, 'uiDefault')),
     backendDefault: text(get(fr, 'backendDefault')),
-    hidden: !!get(fr, 'hidden')
+    hidden: !!get(fr, 'hidden'),
+    head: !!get(fr, 'head')
   }
 }
 
@@ -268,16 +271,27 @@ export function removeRule(file: FieldDefaultsFile, rule: any): void {
   refreshFieldRules()
 }
 
-type RuleField = 'suggestions' | 'uiDefault' | 'backendDefault' | 'hidden' | 'includeSubclasses'
+type RuleField = 'suggestions' | 'uiDefault' | 'backendDefault' | 'hidden' | 'includeSubclasses' | 'head'
 
-/** Changes one value of a rule; suggestions as a list of strings */
+/**
+ * Changes one value of a rule; suggestions as a list of strings. A class has
+ * one head: marking a rule as head clears the mark on the file's other rules
+ * for the same class.
+ */
 export function setRuleValue(file: FieldDefaultsFile, rule: any, field: RuleField, value: string | boolean | string[]): void {
   const r = toRaw(rule)
   if (field === 'suggestions') {
     const list = get(r, 'suggestions')
     list.clear()
     for (const s of value as string[]) list.add(s)
-  } else if (field === 'hidden' || field === 'includeSubclasses') {
+  } else if (field === 'hidden' || field === 'includeSubclasses' || field === 'head') {
+    if (field === 'head' && value) {
+      const own = ruleTargetNames(r)
+      for (const other of ruleObjects(file)) {
+        const t = ruleTargetNames(other)
+        if (toRaw(other) !== r && t.className === own.className && t.nsUri === own.nsUri) set(other, 'head', false)
+      }
+    }
     set(r, field, !!value)
   } else {
     const text = String(value)
@@ -344,6 +358,29 @@ export function fieldRule(object: any, attributeName: string): FieldRuleView | n
     if (rule.attributeName !== attributeName) continue
     const d = distance(eClass, rule)
     if (d >= 0 && d < bestDistance) { best = rule; bestDistance = d }
+  }
+  return best
+}
+
+/**
+ * The attribute an object shows as its head (title): from the most specific
+ * class with a head rule, else "name". Only single-valued attributes the
+ * class has count.
+ */
+export function headAttributeName(object: any): string {
+  void fieldDefaultsVersion.value
+  const eClass = toRaw(object)?.eClass?.()
+  if (!eClass) return 'name'
+  let best = 'name'
+  let bestDistance = Infinity
+  for (const rule of rules) {
+    if (!rule.head) continue
+    const d = distance(eClass, rule)
+    if (d < 0 || d >= bestDistance) continue
+    const feature = eClass.getEStructuralFeature?.(rule.attributeName)
+    if (!feature || feature.isMany?.() || typeof feature.isContainment === 'function') continue
+    best = rule.attributeName
+    bestDistance = d
   }
   return best
 }

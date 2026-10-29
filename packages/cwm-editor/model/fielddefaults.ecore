@@ -44,5 +44,8 @@
     <!-- Not shown until the row shows all attributes (FR-1.2) -->
     <eStructuralFeatures xsi:type="ecore:EAttribute" name="hidden"
         eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
+    <!-- The attribute is the object's head (title) instead of "name"; the most specific class wins -->
+    <eStructuralFeatures xsi:type="ecore:EAttribute" name="head"
+        eType="ecore:EDataType http://www.eclipse.org/emf/2002/Ecore#//EBoolean"/>
   </eClassifiers>
 </ecore:EPackage>

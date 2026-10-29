@@ -8,7 +8,7 @@
  */
 import { toRaw } from 'tsm:vue'
 import { many } from './documentation'
-import { fieldRule } from './fieldDefaults'
+import { fieldRule, headAttributeName } from './fieldDefaults'
 
 export type FieldKind = 'text' | 'number' | 'boolean' | 'enum'
 
@@ -32,8 +32,8 @@ export interface RowField {
   hidden: boolean
 }
 
-/** Attributes shown elsewhere in the row - the name in the title, the text in the text view */
-const NOT_A_FIELD = new Set(['name', 'body'])
+/** Attributes shown elsewhere in the row - the text in the text view; the head attribute (see fieldsOf) in the title */
+const NOT_A_FIELD = new Set(['body'])
 
 /**
  * Text attributes a class shows as editors of their own - multi-line, full
@@ -98,9 +98,11 @@ export function fieldsOf(object: any, all = false): RowField[] {
   const o = toRaw(object)
   const fields: RowField[] = []
   const blocks = textBlockNames(o)
+  // The head attribute stands in the title instead; "name" becomes a field when another attribute is the head
+  const head = headAttributeName(o)
   for (const feature of many(o?.eClass?.()?.getEAllAttributes?.())) {
     const name = feature.getName?.()
-    if (!name || NOT_A_FIELD.has(name) || feature.isMany?.() || feature.isDerived?.()) continue
+    if (!name || name === head || NOT_A_FIELD.has(name) || feature.isMany?.() || feature.isDerived?.()) continue
     const field = fieldFor(o, feature)
     // Text blocks are always there, also while unset
     if (!all && (field.hidden || (!field.isSet && field.uiDefault == null && !blocks.includes(name)))) continue

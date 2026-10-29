@@ -13,11 +13,12 @@
 import { computed, inject, nextTick, ref, toRaw } from 'tsm:vue'
 import type { ContextRow } from '../composables/contextView'
 import { displayName, parentOf, shownByTable } from '../composables/contextView'
-import { attr, className, isTable, objectSlug, tableView } from '../composables/documentation'
+import { className, isTable, objectSlug, tableView } from '../composables/documentation'
 import { hasDiagram } from '../composables/diagrams'
 import { CWM_EDITING } from '../composables/editing'
 import { hasAssociationEnds, isAttributeContainer, shownByClass } from '../composables/attributes'
-import { hiddenFieldCount, setAttributeFromText } from '../composables/rowContent'
+import { fieldFor, hiddenFieldCount, setAttributeFromText } from '../composables/rowContent'
+import { headAttributeName } from '../composables/fieldDefaults'
 import AttributesTable from './AttributesTable.vue'
 import CreateChildDialog from './CreateChildDialog.vue'
 import { containmentFeatures } from '../composables/childCreation'
@@ -79,11 +80,19 @@ const emit = defineEmits<{
 
 const editing = inject(CWM_EDITING)!
 
-/* The name as the title; "Bearbeiten" turns it into an input. An empty name unsets it. */
-const nameFeature = computed(() => props.row.object.eClass?.()?.getEStructuralFeature?.('name') ?? null)
+/*
+ * The head attribute (a head rule's, else the name) as the title; "Bearbeiten"
+ * turns it into an input. An empty value unsets it.
+ */
+const nameFeature = computed(() => props.row.object.eClass?.()?.getEStructuralFeature?.(headAttributeName(props.row.object)) ?? null)
 const nameValue = computed(() => {
   void props.version
-  return String(attr(props.row.object, 'name') ?? '')
+  return nameFeature.value ? String(fieldFor(props.row.object, nameFeature.value).value ?? '') : ''
+})
+/** "Namen", or the head attribute's name */
+const nameLabel = computed(() => {
+  const name = String(nameFeature.value?.getName?.() ?? 'name')
+  return name === 'name' ? 'Namen' : name
 })
 /* ── creating children and siblings ──────────────────────────────── */
 
@@ -535,8 +544,8 @@ const shown = computed(() => {
               ref="nameInput"
               v-model="nameDraft"
               class="name-input"
-              placeholder="(ohne Namen)"
-              aria-label="Name"
+              :placeholder="nameLabel === 'Namen' ? '(ohne Namen)' : `(ohne ${nameLabel})`"
+              :aria-label="nameLabel === 'Namen' ? 'Name' : nameLabel"
               @keydown.enter.prevent="finishRename"
               @keydown.esc.prevent="cancelRename"
             />
@@ -559,8 +568,8 @@ const shown = computed(() => {
               v-if="nameFeature"
               type="button"
               class="rename"
-              title="Namen bearbeiten"
-              aria-label="Namen bearbeiten"
+              :title="`${nameLabel} bearbeiten`"
+              :aria-label="`${nameLabel} bearbeiten`"
               @click="startRename"
             ><i class="pi pi-pencil"></i></button>
             <!-- Behind the name, for every element: "−" closes it down to its name (and hides its children), "+" shows all again -->

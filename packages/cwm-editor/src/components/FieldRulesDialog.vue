@@ -2,7 +2,7 @@
 /**
  * Editor for the field rules (CR-2): one table row per FieldRule of the
  * workspace's *.fielddefaults.xmi - class, attribute, suggested values, UI
- * default, hidden. The cells follow
+ * default, hidden, head (shown as the object's title). The cells follow
  * the attribute's type: an enum's UI default is chosen from its literals,
  * yes/no from yes and no, a number is a number; suggestions are for text
  * only. Changes apply at once;
@@ -100,7 +100,8 @@ function valuesOf(rule: any) {
     uiDefault: String(get(rule, 'uiDefault') ?? ''),
     backendDefault: String(get(rule, 'backendDefault') ?? ''),
     hidden: !!get(rule, 'hidden'),
-    includeSubclasses: !!get(rule, 'includeSubclasses')
+    includeSubclasses: !!get(rule, 'includeSubclasses'),
+    head: !!get(rule, 'head')
   }
 }
 
@@ -167,7 +168,7 @@ function onSuggestions(rule: any, event: Event): void {
   status.value = ''
 }
 
-function onFlag(rule: any, field: 'hidden' | 'includeSubclasses', value: boolean): void {
+function onFlag(rule: any, field: 'hidden' | 'includeSubclasses' | 'head', value: boolean): void {
   if (file.value) setRuleValue(file.value, rule, field, value)
   status.value = ''
 }
@@ -261,6 +262,7 @@ const fileCount = computed(() => fieldDefaultsFiles.size)
               <th>Vorschläge</th>
               <th>UI-Default</th>
               <th class="center" title="Erst nach „alle anzeigen“ sichtbar">Ausblenden</th>
+              <th class="center" title="Als Kopf (Titel) des Objekts statt „name“ anzeigen; die spezifischste Klasse gewinnt">Kopf</th>
               <th></th>
             </tr>
           </thead>
@@ -326,12 +328,21 @@ const fileCount = computed(() => fieldDefaultsFiles.size)
                   @update:model-value="onFlag(r.rule, 'hidden', !!$event)"
                 />
               </td>
+              <td class="center">
+                <Checkbox
+                  v-if="r.type.kind !== 'reference'"
+                  :model-value="r.values.head"
+                  binary
+                  aria-label="Als Kopf anzeigen"
+                  @update:model-value="onFlag(r.rule, 'head', !!$event)"
+                />
+              </td>
               <td class="end">
                 <button type="button" class="remove" title="Regel löschen" @click="remove(r.rule)"><i class="pi pi-trash"></i></button>
               </td>
             </tr>
             <tr v-if="shownRows.length === 0">
-              <td colspan="7" class="none">{{ rows.length ? 'Keine Regel passt zur Suche' : 'Noch keine Regeln' }}</td>
+              <td colspan="8" class="none">{{ rows.length ? 'Keine Regel passt zur Suche' : 'Noch keine Regeln' }}</td>
             </tr>
           </tbody>
         </table>
