@@ -10,15 +10,17 @@ import { toRaw } from 'tsm:vue'
 import { bindingFor, diagrammodelEcore } from 'ui-diagram-preview'
 import erdXmi from '../../model/cwm-erd-diagram.xmi?raw'
 import classXmi from '../../model/cwm-class-diagram.xmi?raw'
+import nomenclatureXmi from '../../model/cwm-nomenclature-diagram.xmi?raw'
 
 const ECORE_NS_URI = 'http://www.eclipse.org/emf/2002/Ecore'
 
-export type DiagramKind = 'erd' | 'class'
+export type DiagramKind = 'erd' | 'class' | 'nomenclature'
 
 /** The definitions, in the order they are asked */
 const DEFINITIONS: Record<DiagramKind, { file: string; xmi: string }> = {
   erd: { file: 'cwm-erd-diagram.xmi', xmi: erdXmi },
-  class: { file: 'cwm-class-diagram.xmi', xmi: classXmi }
+  class: { file: 'cwm-class-diagram.xmi', xmi: classXmi },
+  nomenclature: { file: 'cwm-nomenclature-diagram.xmi', xmi: nomenclatureXmi }
 }
 
 export interface DiagramFor {

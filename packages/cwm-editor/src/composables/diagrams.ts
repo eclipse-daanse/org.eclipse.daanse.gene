@@ -12,7 +12,9 @@ import { className } from './documentation'
 const DEFAULT_CLASSES = [
   'Catalog', 'Schema', 'Table', 'View', 'Column', 'Index', 'Trigger',
   'SQLSimpleType', 'SQLDistinctType', 'SQLStructuredType', 'PrimaryKey', 'ForeignKey',
-  'Package', 'Class', 'Association', 'Generalization', 'DataType'
+  'Package', 'Class', 'Association', 'Generalization', 'DataType',
+  // Business Nomenclature
+  'BusinessDomain', 'Taxonomy', 'Glossary', 'Concept', 'Term'
 ]
 
 const classes = reactive(new Set<string>(DEFAULT_CLASSES))

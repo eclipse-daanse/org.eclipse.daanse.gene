@@ -23,8 +23,14 @@ lassen. Dafür wird das Framework erweitert – generisch, nicht CWM-spezifisch.
 - `ui-diagram-preview` (vom Branch `ui-forms-diagramms`) und `tsrouter` sind
   übernommen und im CWM-Editor eingebunden: Diagrammbereich je Zeile,
   „anzeigen“, Vollbild, Klick auf einen Knoten wählt das Objekt.
-- Definitionen `cwm-erd-diagram.xmi` (Schema, Tabellen, Views) und
-  `cwm-class-diagram.xmi` (Package, Klassen, Assoziationen).
+- Definitionen `cwm-erd-diagram.xmi` (Schema, Tabellen, Views),
+  `cwm-class-diagram.xmi` (Package, Klassen, Assoziationen) und
+  `cwm-nomenclature-diagram.xmi` (Business Nomenclature: BusinessDomain,
+  Taxonomy, Glossary als Rahmen mit Concepts und Terms, zwei Ebenen; Kanten
+  „bedeutet“ Term → Concept, Unterbegriff, bevorzugt, verwandt (gestrichelt),
+  Taxonomien eines Glossars; Concept und Term als Fokusdiagramm mit ihren
+  Nachbarn im Rahmen ihrer nächsten Sammlung; Varianten „Voll“ und „Nur
+  Begriffshierarchie“).
 - Erste Erweiterungen: Varianten (minimal … mit Objekten) mit Auswahl im
   Diagramm, farbige Abschnitte, Badges mit Farbe, PK/FK-Symbol,
   Kardinalitäten an Kantenenden. Abgeleitete Information (PK/FK, Indizes

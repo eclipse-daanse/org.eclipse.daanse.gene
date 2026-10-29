@@ -1,0 +1,1914 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Diagram of a CWM Business Nomenclature (PH-10, FR-4.2), for the generic
+  diagram interpreter of ui-diagram-preview. The mappings repeat per class
+  and depth (the interpreter matches node classes exactly): what changes for
+  one, changes for all.
+
+  A business domain, taxonomy or glossary is drawn as a frame with its
+  concepts and terms; nested taxonomies and glossaries are frames too (two
+  levels). Edges: a term's meaning (Term → Concept), narrower and preferred
+  terms, related terms and concepts (dashed) and a glossary's taxonomies.
+  Concepts and terms list their references by name; each reference's edges
+  start at its row, in one colour per kind of reference, and come into
+  their target from above. A concept or term shows a focus diagram: itself
+  with its neighbours, each in the frame of the collection it lies in.
+-->
+<diagrammodel:DiagramModel xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI"
+    xmlns:diagrammodel="http://diagrammodel/1.0"
+    name="CWM Nomenclature Diagram">
+  <targetClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+  <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+  <layoutOptions key="elk.direction" value="DOWN"/>
+  <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+  <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="60"/>
+  <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+  <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+  <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+  <layoutOptions key="gene.edgeEntry" value="top"/>
+  <layoutOptions key="gene.liftEdges" value="true"/>
+  <layoutOptions key="elk.padding" value="[top=20,left=20,bottom=20,right=20]"/>
+
+  <switches name="meanings" label="Bedeutungen (Term → Concept)" kind="BOOLEAN" defaultValue="true"/>
+  <switches name="narrower" label="Unterbegriffe" kind="BOOLEAN" defaultValue="true"/>
+  <switches name="preferred" label="Bevorzugte Benennung" kind="BOOLEAN" defaultValue="true"/>
+  <switches name="related" label="Verwandte" kind="BOOLEAN" defaultValue="true"/>
+  <switches name="taxonomies" label="Taxonomien eines Glossars" kind="BOOLEAN" defaultValue="true"/>
+
+  <presets name="full" label="Voll">
+    <settings switch="meanings" value="true"/>
+    <settings switch="narrower" value="true"/>
+    <settings switch="preferred" value="true"/>
+    <settings switch="related" value="true"/>
+    <settings switch="taxonomies" value="true"/>
+  </presets>
+  <presets name="hierarchy" label="Nur Begriffshierarchie">
+    <settings switch="meanings" value="true"/>
+    <settings switch="narrower" value="true"/>
+    <settings switch="preferred" value="false"/>
+    <settings switch="related" value="false"/>
+    <settings switch="taxonomies" value="false"/>
+  </presets>
+
+  <styles xmi:id="domainStyle" name="domain" headerColor="#334155"/>
+  <styles xmi:id="taxonomyStyle" name="taxonomy" headerColor="#0f766e"/>
+  <styles xmi:id="glossaryStyle" name="glossary" headerColor="#7c3aed"/>
+  <styles xmi:id="conceptStyle" name="concept" headerColor="#1e40af"/>
+  <styles xmi:id="termStyle" name="term" headerColor="#b45309"/>
+
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//BusinessDomain"/>
+  </bindings>
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Taxonomy"/>
+  </bindings>
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary"/>
+  </bindings>
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+    <root>
+      <steps ancestor="nearest">
+        <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+      </steps>
+    </root>
+    <focus>
+      <union/>
+      <union>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+        </steps>
+      </union>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+        </steps>
+      </union>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+        </steps>
+      </union>
+    </focus>
+  </bindings>
+  <bindings>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+    <root>
+      <steps ancestor="nearest">
+        <filterClass href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Package"/>
+      </steps>
+    </root>
+    <focus>
+      <union/>
+      <union>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+        </steps>
+      </union>
+      <union>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+        </steps>
+      </union>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+        </steps>
+      </union>
+      <union>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+        </steps>
+      </union>
+      <union>
+        <steps inverse="true">
+          <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+        </steps>
+      </union>
+      <union>
+        <steps>
+          <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+        </steps>
+      </union>
+    </focus>
+  </bindings>
+
+  <nodes name="BusinessDomainNode0" stereotype="BusinessDomain" icon="▤">
+    <style href="#domainStyle"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//BusinessDomain"/>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+    <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+    <layoutOptions key="elk.direction" value="DOWN"/>
+    <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+    <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+    <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+    <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+    <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+    <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+    <children name="ConceptNode1" stereotype="Concept" icon="●">
+      <style href="#conceptStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <compartments title="REFERENZEN" color="#db2777">
+        <rowsFrom/>
+        <label text="relatedConcept"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+    </children>
+    <children name="TermNode1" stereotype="Term" icon="◆">
+      <style href="#termStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <compartments title="REFERENZEN" color="#2563eb">
+        <rowsFrom/>
+        <label text="concept"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+      <compartments color="#16a34a">
+        <rowsFrom/>
+        <label text="narrowerTerm"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+      <compartments color="#d97706">
+        <rowsFrom/>
+        <label text="preferredTerm"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+      <compartments color="#9333ea">
+        <rowsFrom/>
+        <label text="relatedTerm"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+    </children>
+    <children name="TaxonomyNode1" stereotype="Taxonomy" icon="▦">
+      <style href="#taxonomyStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Taxonomy"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+      <layoutOptions key="elk.direction" value="DOWN"/>
+      <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+      <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+      <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+      <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+      <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+      <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+      <children name="ConceptNode2" stereotype="Concept" icon="●">
+        <style href="#conceptStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <compartments title="REFERENZEN" color="#db2777">
+          <rowsFrom/>
+          <label text="relatedConcept"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+      </children>
+      <children name="TermNode2" stereotype="Term" icon="◆">
+        <style href="#termStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <compartments title="REFERENZEN" color="#2563eb">
+          <rowsFrom/>
+          <label text="concept"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#16a34a">
+          <rowsFrom/>
+          <label text="narrowerTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#d97706">
+          <rowsFrom/>
+          <label text="preferredTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#9333ea">
+          <rowsFrom/>
+          <label text="relatedTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+      </children>
+      <children name="TaxonomyNode2" stereotype="Taxonomy" icon="▦">
+        <style href="#taxonomyStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Taxonomy"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+        <layoutOptions key="elk.direction" value="DOWN"/>
+        <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+        <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+        <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+        <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+        <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+        <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+        <children name="ConceptNode3" stereotype="Concept" icon="●">
+          <style href="#conceptStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#db2777">
+            <rowsFrom/>
+            <label text="relatedConcept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+        <children name="TermNode3" stereotype="Term" icon="◆">
+          <style href="#termStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#2563eb">
+            <rowsFrom/>
+            <label text="concept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#16a34a">
+            <rowsFrom/>
+            <label text="narrowerTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#d97706">
+            <rowsFrom/>
+            <label text="preferredTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#9333ea">
+            <rowsFrom/>
+            <label text="relatedTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+      </children>
+      <children name="GlossaryNode2" stereotype="Glossary" icon="▧">
+        <style href="#glossaryStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+        <layoutOptions key="elk.direction" value="DOWN"/>
+        <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+        <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+        <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+        <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+        <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+        <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+        <children name="ConceptNode3" stereotype="Concept" icon="●">
+          <style href="#conceptStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#db2777">
+            <rowsFrom/>
+            <label text="relatedConcept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+        <children name="TermNode3" stereotype="Term" icon="◆">
+          <style href="#termStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#2563eb">
+            <rowsFrom/>
+            <label text="concept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#16a34a">
+            <rowsFrom/>
+            <label text="narrowerTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#d97706">
+            <rowsFrom/>
+            <label text="preferredTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#9333ea">
+            <rowsFrom/>
+            <label text="relatedTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+      </children>
+    </children>
+    <children name="GlossaryNode1" stereotype="Glossary" icon="▧">
+      <style href="#glossaryStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+      <layoutOptions key="elk.direction" value="DOWN"/>
+      <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+      <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+      <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+      <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+      <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+      <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+      <children name="ConceptNode2" stereotype="Concept" icon="●">
+        <style href="#conceptStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <compartments title="REFERENZEN" color="#db2777">
+          <rowsFrom/>
+          <label text="relatedConcept"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+      </children>
+      <children name="TermNode2" stereotype="Term" icon="◆">
+        <style href="#termStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <compartments title="REFERENZEN" color="#2563eb">
+          <rowsFrom/>
+          <label text="concept"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#16a34a">
+          <rowsFrom/>
+          <label text="narrowerTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#d97706">
+          <rowsFrom/>
+          <label text="preferredTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#9333ea">
+          <rowsFrom/>
+          <label text="relatedTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+      </children>
+      <children name="TaxonomyNode2" stereotype="Taxonomy" icon="▦">
+        <style href="#taxonomyStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Taxonomy"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+        <layoutOptions key="elk.direction" value="DOWN"/>
+        <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+        <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+        <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+        <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+        <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+        <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+        <children name="ConceptNode3" stereotype="Concept" icon="●">
+          <style href="#conceptStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#db2777">
+            <rowsFrom/>
+            <label text="relatedConcept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+        <children name="TermNode3" stereotype="Term" icon="◆">
+          <style href="#termStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#2563eb">
+            <rowsFrom/>
+            <label text="concept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#16a34a">
+            <rowsFrom/>
+            <label text="narrowerTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#d97706">
+            <rowsFrom/>
+            <label text="preferredTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#9333ea">
+            <rowsFrom/>
+            <label text="relatedTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+      </children>
+      <children name="GlossaryNode2" stereotype="Glossary" icon="▧">
+        <style href="#glossaryStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+        <layoutOptions key="elk.direction" value="DOWN"/>
+        <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+        <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+        <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+        <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+        <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+        <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+        <children name="ConceptNode3" stereotype="Concept" icon="●">
+          <style href="#conceptStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#db2777">
+            <rowsFrom/>
+            <label text="relatedConcept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+        <children name="TermNode3" stereotype="Term" icon="◆">
+          <style href="#termStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#2563eb">
+            <rowsFrom/>
+            <label text="concept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#16a34a">
+            <rowsFrom/>
+            <label text="narrowerTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#d97706">
+            <rowsFrom/>
+            <label text="preferredTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#9333ea">
+            <rowsFrom/>
+            <label text="relatedTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+      </children>
+    </children>
+  </nodes>
+  <nodes name="TaxonomyNode0" stereotype="Taxonomy" icon="▦">
+    <style href="#taxonomyStyle"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Taxonomy"/>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+    <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+    <layoutOptions key="elk.direction" value="DOWN"/>
+    <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+    <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+    <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+    <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+    <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+    <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+    <children name="ConceptNode1" stereotype="Concept" icon="●">
+      <style href="#conceptStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <compartments title="REFERENZEN" color="#db2777">
+        <rowsFrom/>
+        <label text="relatedConcept"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+    </children>
+    <children name="TermNode1" stereotype="Term" icon="◆">
+      <style href="#termStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <compartments title="REFERENZEN" color="#2563eb">
+        <rowsFrom/>
+        <label text="concept"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+      <compartments color="#16a34a">
+        <rowsFrom/>
+        <label text="narrowerTerm"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+      <compartments color="#d97706">
+        <rowsFrom/>
+        <label text="preferredTerm"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+      <compartments color="#9333ea">
+        <rowsFrom/>
+        <label text="relatedTerm"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+    </children>
+    <children name="TaxonomyNode1" stereotype="Taxonomy" icon="▦">
+      <style href="#taxonomyStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Taxonomy"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+      <layoutOptions key="elk.direction" value="DOWN"/>
+      <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+      <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+      <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+      <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+      <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+      <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+      <children name="ConceptNode2" stereotype="Concept" icon="●">
+        <style href="#conceptStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <compartments title="REFERENZEN" color="#db2777">
+          <rowsFrom/>
+          <label text="relatedConcept"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+      </children>
+      <children name="TermNode2" stereotype="Term" icon="◆">
+        <style href="#termStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <compartments title="REFERENZEN" color="#2563eb">
+          <rowsFrom/>
+          <label text="concept"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#16a34a">
+          <rowsFrom/>
+          <label text="narrowerTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#d97706">
+          <rowsFrom/>
+          <label text="preferredTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#9333ea">
+          <rowsFrom/>
+          <label text="relatedTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+      </children>
+      <children name="TaxonomyNode2" stereotype="Taxonomy" icon="▦">
+        <style href="#taxonomyStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Taxonomy"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+        <layoutOptions key="elk.direction" value="DOWN"/>
+        <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+        <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+        <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+        <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+        <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+        <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+        <children name="ConceptNode3" stereotype="Concept" icon="●">
+          <style href="#conceptStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#db2777">
+            <rowsFrom/>
+            <label text="relatedConcept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+        <children name="TermNode3" stereotype="Term" icon="◆">
+          <style href="#termStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#2563eb">
+            <rowsFrom/>
+            <label text="concept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#16a34a">
+            <rowsFrom/>
+            <label text="narrowerTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#d97706">
+            <rowsFrom/>
+            <label text="preferredTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#9333ea">
+            <rowsFrom/>
+            <label text="relatedTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+      </children>
+      <children name="GlossaryNode2" stereotype="Glossary" icon="▧">
+        <style href="#glossaryStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+        <layoutOptions key="elk.direction" value="DOWN"/>
+        <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+        <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+        <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+        <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+        <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+        <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+        <children name="ConceptNode3" stereotype="Concept" icon="●">
+          <style href="#conceptStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#db2777">
+            <rowsFrom/>
+            <label text="relatedConcept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+        <children name="TermNode3" stereotype="Term" icon="◆">
+          <style href="#termStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#2563eb">
+            <rowsFrom/>
+            <label text="concept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#16a34a">
+            <rowsFrom/>
+            <label text="narrowerTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#d97706">
+            <rowsFrom/>
+            <label text="preferredTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#9333ea">
+            <rowsFrom/>
+            <label text="relatedTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+      </children>
+    </children>
+    <children name="GlossaryNode1" stereotype="Glossary" icon="▧">
+      <style href="#glossaryStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+      <layoutOptions key="elk.direction" value="DOWN"/>
+      <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+      <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+      <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+      <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+      <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+      <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+      <children name="ConceptNode2" stereotype="Concept" icon="●">
+        <style href="#conceptStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <compartments title="REFERENZEN" color="#db2777">
+          <rowsFrom/>
+          <label text="relatedConcept"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+      </children>
+      <children name="TermNode2" stereotype="Term" icon="◆">
+        <style href="#termStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <compartments title="REFERENZEN" color="#2563eb">
+          <rowsFrom/>
+          <label text="concept"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#16a34a">
+          <rowsFrom/>
+          <label text="narrowerTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#d97706">
+          <rowsFrom/>
+          <label text="preferredTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#9333ea">
+          <rowsFrom/>
+          <label text="relatedTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+      </children>
+      <children name="TaxonomyNode2" stereotype="Taxonomy" icon="▦">
+        <style href="#taxonomyStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Taxonomy"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+        <layoutOptions key="elk.direction" value="DOWN"/>
+        <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+        <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+        <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+        <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+        <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+        <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+        <children name="ConceptNode3" stereotype="Concept" icon="●">
+          <style href="#conceptStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#db2777">
+            <rowsFrom/>
+            <label text="relatedConcept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+        <children name="TermNode3" stereotype="Term" icon="◆">
+          <style href="#termStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#2563eb">
+            <rowsFrom/>
+            <label text="concept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#16a34a">
+            <rowsFrom/>
+            <label text="narrowerTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#d97706">
+            <rowsFrom/>
+            <label text="preferredTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#9333ea">
+            <rowsFrom/>
+            <label text="relatedTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+      </children>
+      <children name="GlossaryNode2" stereotype="Glossary" icon="▧">
+        <style href="#glossaryStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+        <layoutOptions key="elk.direction" value="DOWN"/>
+        <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+        <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+        <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+        <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+        <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+        <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+        <children name="ConceptNode3" stereotype="Concept" icon="●">
+          <style href="#conceptStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#db2777">
+            <rowsFrom/>
+            <label text="relatedConcept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+        <children name="TermNode3" stereotype="Term" icon="◆">
+          <style href="#termStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#2563eb">
+            <rowsFrom/>
+            <label text="concept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#16a34a">
+            <rowsFrom/>
+            <label text="narrowerTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#d97706">
+            <rowsFrom/>
+            <label text="preferredTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#9333ea">
+            <rowsFrom/>
+            <label text="relatedTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+      </children>
+    </children>
+  </nodes>
+  <nodes name="GlossaryNode0" stereotype="Glossary" icon="▧">
+    <style href="#glossaryStyle"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary"/>
+    <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+    <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+    <layoutOptions key="elk.direction" value="DOWN"/>
+    <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+    <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+    <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+    <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+    <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+    <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+    <children name="ConceptNode1" stereotype="Concept" icon="●">
+      <style href="#conceptStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <compartments title="REFERENZEN" color="#db2777">
+        <rowsFrom/>
+        <label text="relatedConcept"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+    </children>
+    <children name="TermNode1" stereotype="Term" icon="◆">
+      <style href="#termStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <compartments title="REFERENZEN" color="#2563eb">
+        <rowsFrom/>
+        <label text="concept"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+      <compartments color="#16a34a">
+        <rowsFrom/>
+        <label text="narrowerTerm"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+      <compartments color="#d97706">
+        <rowsFrom/>
+        <label text="preferredTerm"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+      <compartments color="#9333ea">
+        <rowsFrom/>
+        <label text="relatedTerm"/>
+        <rowWhen kind="EXISTS">
+          <query>
+            <steps>
+              <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+            </steps>
+          </query>
+        </rowWhen>
+      </compartments>
+    </children>
+    <children name="TaxonomyNode1" stereotype="Taxonomy" icon="▦">
+      <style href="#taxonomyStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Taxonomy"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+      <layoutOptions key="elk.direction" value="DOWN"/>
+      <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+      <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+      <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+      <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+      <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+      <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+      <children name="ConceptNode2" stereotype="Concept" icon="●">
+        <style href="#conceptStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <compartments title="REFERENZEN" color="#db2777">
+          <rowsFrom/>
+          <label text="relatedConcept"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+      </children>
+      <children name="TermNode2" stereotype="Term" icon="◆">
+        <style href="#termStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <compartments title="REFERENZEN" color="#2563eb">
+          <rowsFrom/>
+          <label text="concept"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#16a34a">
+          <rowsFrom/>
+          <label text="narrowerTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#d97706">
+          <rowsFrom/>
+          <label text="preferredTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#9333ea">
+          <rowsFrom/>
+          <label text="relatedTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+      </children>
+      <children name="TaxonomyNode2" stereotype="Taxonomy" icon="▦">
+        <style href="#taxonomyStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Taxonomy"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+        <layoutOptions key="elk.direction" value="DOWN"/>
+        <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+        <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+        <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+        <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+        <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+        <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+        <children name="ConceptNode3" stereotype="Concept" icon="●">
+          <style href="#conceptStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#db2777">
+            <rowsFrom/>
+            <label text="relatedConcept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+        <children name="TermNode3" stereotype="Term" icon="◆">
+          <style href="#termStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#2563eb">
+            <rowsFrom/>
+            <label text="concept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#16a34a">
+            <rowsFrom/>
+            <label text="narrowerTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#d97706">
+            <rowsFrom/>
+            <label text="preferredTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#9333ea">
+            <rowsFrom/>
+            <label text="relatedTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+      </children>
+      <children name="GlossaryNode2" stereotype="Glossary" icon="▧">
+        <style href="#glossaryStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+        <layoutOptions key="elk.direction" value="DOWN"/>
+        <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+        <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+        <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+        <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+        <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+        <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+        <children name="ConceptNode3" stereotype="Concept" icon="●">
+          <style href="#conceptStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#db2777">
+            <rowsFrom/>
+            <label text="relatedConcept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+        <children name="TermNode3" stereotype="Term" icon="◆">
+          <style href="#termStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#2563eb">
+            <rowsFrom/>
+            <label text="concept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#16a34a">
+            <rowsFrom/>
+            <label text="narrowerTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#d97706">
+            <rowsFrom/>
+            <label text="preferredTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#9333ea">
+            <rowsFrom/>
+            <label text="relatedTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+      </children>
+    </children>
+    <children name="GlossaryNode1" stereotype="Glossary" icon="▧">
+      <style href="#glossaryStyle"/>
+      <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary"/>
+      <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+      <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+      <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+      <layoutOptions key="elk.direction" value="DOWN"/>
+      <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+      <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+      <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+      <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+      <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+      <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+      <children name="ConceptNode2" stereotype="Concept" icon="●">
+        <style href="#conceptStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <compartments title="REFERENZEN" color="#db2777">
+          <rowsFrom/>
+          <label text="relatedConcept"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+      </children>
+      <children name="TermNode2" stereotype="Term" icon="◆">
+        <style href="#termStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <compartments title="REFERENZEN" color="#2563eb">
+          <rowsFrom/>
+          <label text="concept"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#16a34a">
+          <rowsFrom/>
+          <label text="narrowerTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#d97706">
+          <rowsFrom/>
+          <label text="preferredTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+        <compartments color="#9333ea">
+          <rowsFrom/>
+          <label text="relatedTerm"/>
+          <rowWhen kind="EXISTS">
+            <query>
+              <steps>
+                <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+              </steps>
+            </query>
+          </rowWhen>
+        </compartments>
+      </children>
+      <children name="TaxonomyNode2" stereotype="Taxonomy" icon="▦">
+        <style href="#taxonomyStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Taxonomy"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+        <layoutOptions key="elk.direction" value="DOWN"/>
+        <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+        <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+        <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+        <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+        <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+        <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+        <children name="ConceptNode3" stereotype="Concept" icon="●">
+          <style href="#conceptStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#db2777">
+            <rowsFrom/>
+            <label text="relatedConcept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+        <children name="TermNode3" stereotype="Term" icon="◆">
+          <style href="#termStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#2563eb">
+            <rowsFrom/>
+            <label text="concept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#16a34a">
+            <rowsFrom/>
+            <label text="narrowerTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#d97706">
+            <rowsFrom/>
+            <label text="preferredTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#9333ea">
+            <rowsFrom/>
+            <label text="relatedTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+      </children>
+      <children name="GlossaryNode2" stereotype="Glossary" icon="▧">
+        <style href="#glossaryStyle"/>
+        <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary"/>
+        <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+        <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+        <layoutOptions key="elk.algorithm" value="org.eclipse.elk.layered"/>
+        <layoutOptions key="elk.direction" value="DOWN"/>
+        <layoutOptions key="elk.edgeRouting" value="ORTHOGONAL"/>
+        <layoutOptions key="elk.spacing.nodeNode" value="30"/>
+        <layoutOptions key="elk.layered.spacing.nodeNodeBetweenLayers" value="40"/>
+        <layoutOptions key="elk.spacing.componentComponent" value="30"/>
+        <layoutOptions key="elk.spacing.edgeNode" value="30"/>
+        <layoutOptions key="elk.padding" value="[top=75,left=50,bottom=15,right=50]"/>
+        <children name="ConceptNode3" stereotype="Concept" icon="●">
+          <style href="#conceptStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#db2777">
+            <rowsFrom/>
+            <label text="relatedConcept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+        <children name="TermNode3" stereotype="Term" icon="◆">
+          <style href="#termStyle"/>
+          <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+          <from href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+          <labelFeature href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//ModelElement/name"/>
+          <compartments title="REFERENZEN" color="#2563eb">
+            <rowsFrom/>
+            <label text="concept"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#16a34a">
+            <rowsFrom/>
+            <label text="narrowerTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#d97706">
+            <rowsFrom/>
+            <label text="preferredTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+          <compartments color="#9333ea">
+            <rowsFrom/>
+            <label text="relatedTerm"/>
+            <rowWhen kind="EXISTS">
+              <query>
+                <steps>
+                  <feature href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+                </steps>
+              </query>
+            </rowWhen>
+          </compartments>
+        </children>
+      </children>
+    </children>
+  </nodes>
+
+  <edges name="Meaning1" kind="ASSOCIATION" lineStyle="SOLID" sourceRow="concept" color="#2563eb" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="meanings"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+  </edges>
+  <edges name="Narrower1" kind="ASSOCIATION" lineStyle="SOLID" sourceRow="narrowerTerm" color="#16a34a" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="narrower"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+  </edges>
+  <edges name="Preferred1" kind="ASSOCIATION" lineStyle="SOLID" sourceRow="preferredTerm" color="#d97706" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="preferred"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+  </edges>
+  <edges name="RelatedTerm1" kind="DEPENDENCY" lineStyle="SOLID" sourceRow="relatedTerm" color="#9333ea">
+    <when kind="SWITCH" switch="related"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+  </edges>
+  <edges name="RelatedConcept1" kind="DEPENDENCY" lineStyle="SOLID" sourceRow="relatedConcept" color="#db2777">
+    <when kind="SWITCH" switch="related"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+  </edges>
+  <edges name="GlossaryTaxonomy1" kind="DEPENDENCY" lineStyle="SOLID" sourceRow="taxonomy" color="#0891b2" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="taxonomies"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary/taxonomy"/>
+  </edges>
+  <edges name="Meaning2" kind="ASSOCIATION" lineStyle="SOLID" sourceRow="concept" color="#2563eb" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="meanings"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/concept"/>
+  </edges>
+  <edges name="Narrower2" kind="ASSOCIATION" lineStyle="SOLID" sourceRow="narrowerTerm" color="#16a34a" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="narrower"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/narrowerTerm"/>
+  </edges>
+  <edges name="Preferred2" kind="ASSOCIATION" lineStyle="SOLID" sourceRow="preferredTerm" color="#d97706" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="preferred"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/preferredTerm"/>
+  </edges>
+  <edges name="RelatedTerm2" kind="DEPENDENCY" lineStyle="SOLID" sourceRow="relatedTerm" color="#9333ea">
+    <when kind="SWITCH" switch="related"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Term/relatedTerm"/>
+  </edges>
+  <edges name="RelatedConcept2" kind="DEPENDENCY" lineStyle="SOLID" sourceRow="relatedConcept" color="#db2777">
+    <when kind="SWITCH" switch="related"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Concept/relatedConcept"/>
+  </edges>
+  <edges name="GlossaryTaxonomy2" kind="DEPENDENCY" lineStyle="SOLID" sourceRow="taxonomy" color="#0891b2" targetDecoration="OPEN_ARROW">
+    <when kind="SWITCH" switch="taxonomies"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <fromPath href="http://www.omg.org/spec/CWM/1.1/objectmodel/core#//Namespace/ownedElement"/>
+    <sourceClass href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary"/>
+    <targetPath href="http://www.omg.org/spec/CWM/1.1/analysis/businessnomenclature#//Glossary/taxonomy"/>
+  </edges>
+</diagrammodel:DiagramModel>
