@@ -23,6 +23,7 @@ import { isResponsibleParty, shownByParty } from './contactCard'
 import { shownPrivileges } from './privileges'
 import { isTaggedValue } from './taggedValues'
 import { isAccessRole, shownByRole } from './grants'
+import { isOrmEntityMappings, shownByEntityMappings } from './ormMapping'
 
 export interface ContextRow {
   key: string
@@ -113,6 +114,7 @@ function shownBy(o: any): Set<any> | null {
   if (isAttributeContainer(o)) return shownByClass(o)
   if (isResponsibleParty(o)) return new Set([...shownByParty(o), ...shownPrivileges(o)])
   if (isAccessRole(o)) return shownByRole(o)
+  if (isOrmEntityMappings(o)) return shownByEntityMappings(o)
   return null
 }
 

@@ -36,6 +36,8 @@ import RowReferenceFields from './RowReferenceFields.vue'
 import { hiddenReferenceCount } from '../composables/references'
 import RowRightRail from './RowRightRail.vue'
 import RowTextView from './RowTextView.vue'
+import RowMapping from './RowMapping.vue'
+import { isOrmEntityMappings, shownByEntityMappings } from '../composables/ormMapping'
 
 const props = defineProps<{
   row: ContextRow
@@ -443,6 +445,7 @@ const shown = computed(() => {
   if (attributeTable.value) return shownByClass(props.row.object)
   if (isResponsibleParty(props.row.object)) return new Set([...shownByParty(props.row.object), ...shownPrivileges(props.row.object)])
   if (isAccessRole(props.row.object)) return shownByRole(props.row.object)
+  if (isOrmEntityMappings(props.row.object)) return shownByEntityMappings(props.row.object)
   return new Set<any>()
 })
 </script>
@@ -612,6 +615,13 @@ const shown = computed(() => {
             :version="version"
           />
           <RowFields :object="row.object" :test-id="`${id}.Row.Body.Fields`" :version="version" :show-all="showAllFields" />
+          <!-- An orm mapping set: its classes and tables side by side, entities and attribute mappings as lines between them -->
+          <RowMapping
+            v-if="isOrmEntityMappings(row.object)"
+            :object="row.object"
+            :test-id="`${id}.Row.Body.Mapping`"
+            :version="version"
+          />
           <RowReferenceFields
             v-if="!referencesBelowText"
             :object="row.object"
