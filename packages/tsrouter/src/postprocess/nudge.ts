@@ -17,7 +17,8 @@ export function nudgePaths(
   lineMargin: number
 ): RoutedPath[] {
   const segments = collectSegments(paths);
-  const groups = groupOverlappingSegments(segments);
+  // Parallel segments closer than the spacing count as on one line too - they are moved apart to it
+  const groups = groupOverlappingSegments(segments, Math.max(nudgeDistance, lineMargin));
   const result = paths.map((p) => ({
     ...p,
     points: p.points.map((pt) => ({ ...pt })),
@@ -29,32 +30,46 @@ export function nudgePaths(
     const orientation = group[0].orientation;
     const spacing = Math.max(nudgeDistance, lineMargin);
 
-    // Center the group
-    const totalWidth = (group.length - 1) * spacing;
+    // Lanes: segments on the same line whose connections share a bundle stay together (merged), the others apart
+    const laneList: Segment[][] = [];
+    for (const seg of group) {
+      const own = paths[seg.pathIndex].groups ?? [];
+      const lane = laneList.find((l) =>
+        l[0].fixedCoord === seg.fixedCoord &&
+        l.some((o) => (paths[o.pathIndex].groups ?? []).some((g) => own.includes(g)))
+      );
+      if (lane) lane.push(seg);
+      else laneList.push([seg]);
+    }
+    if (laneList.length <= 1) continue;
+
+    // Center the lanes
+    const totalWidth = (laneList.length - 1) * spacing;
     const center =
-      group.reduce((sum, s) => sum + s.fixedCoord, 0) / group.length;
+      laneList.reduce((sum, l) => sum + l[0].fixedCoord, 0) / laneList.length;
     const startOffset = center - totalWidth / 2;
 
     // Sort by original fixed coordinate for stable ordering
-    group.sort((a, b) => a.fixedCoord - b.fixedCoord);
+    laneList.sort((a, b) => a[0].fixedCoord - b[0].fixedCoord);
 
-    for (let i = 0; i < group.length; i++) {
-      const seg = group[i];
+    for (let i = 0; i < laneList.length; i++) {
       const newFixed = startOffset + i * spacing;
-      const delta = newFixed - seg.fixedCoord;
+      for (const seg of laneList[i]) {
+        const delta = newFixed - seg.fixedCoord;
 
-      if (Math.abs(delta) < 1e-9) continue;
+        if (Math.abs(delta) < 1e-9) continue;
 
-      const pathPoints = result[seg.pathIndex].points;
-      const p1 = pathPoints[seg.segIndex];
-      const p2 = pathPoints[seg.segIndex + 1];
+        const pathPoints = result[seg.pathIndex].points;
+        const p1 = pathPoints[seg.segIndex];
+        const p2 = pathPoints[seg.segIndex + 1];
 
-      if (orientation === "horizontal") {
-        p1.y += delta;
-        p2.y += delta;
-      } else {
-        p1.x += delta;
-        p2.x += delta;
+        if (orientation === "horizontal") {
+          p1.y += delta;
+          p2.y += delta;
+        } else {
+          p1.x += delta;
+          p2.x += delta;
+        }
       }
     }
   }
@@ -94,7 +109,7 @@ function collectSegments(paths: RoutedPath[]): Segment[] {
   return segments;
 }
 
-function groupOverlappingSegments(segments: Segment[]): Segment[][] {
+function groupOverlappingSegments(segments: Segment[], near: number): Segment[][] {
   const groups: Segment[][] = [];
   const used = new Set<number>();
 
@@ -105,7 +120,7 @@ function groupOverlappingSegments(segments: Segment[]): Segment[][] {
 
     for (let j = i + 1; j < segments.length; j++) {
       if (used.has(j)) continue;
-      if (segmentsAreParallelAndOverlapping(segments[i], segments[j])) {
+      if (segmentsAreParallelAndOverlapping(segments[i], segments[j], near)) {
         group.push(segments[j]);
         used.add(j);
       }
@@ -117,10 +132,10 @@ function groupOverlappingSegments(segments: Segment[]): Segment[][] {
   return groups;
 }
 
-function segmentsAreParallelAndOverlapping(a: Segment, b: Segment): boolean {
+function segmentsAreParallelAndOverlapping(a: Segment, b: Segment, near = 0): boolean {
   if (a.orientation !== b.orientation) return false;
-  // Close enough in the fixed coordinate
-  if (Math.abs(a.fixedCoord - b.fixedCoord) > 1e-9) return false;
+  // Close enough in the fixed coordinate: on one line, or nearer than the spacing
+  if (Math.abs(a.fixedCoord - b.fixedCoord) > Math.max(1e-9, near - 1e-6)) return false;
   // Overlapping range in the variable coordinate
   return a.minVar < b.maxVar && b.minVar < a.maxVar;
 }

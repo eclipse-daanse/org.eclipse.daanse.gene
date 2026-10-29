@@ -10,5 +10,6 @@ export type {
   RoutedPath,
   RoutingResult,
   RoutingError,
+  Zone,
 } from "./types.js";
 export { DEFAULT_OPTIONS } from "./types.js";

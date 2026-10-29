@@ -19,9 +19,11 @@ interface Edge {
 
 export function buildVisibilityGraph(
   expandedRects: Rect[],
-  portPoints: Point[]
+  portPoints: Point[],
+  /** Rects that only add lines to route along (zones' borders) - no obstacles */
+  guideRects: Rect[] = []
 ): VisibilityGraph {
-  const { xs, ys } = collectCoordinates(expandedRects, portPoints);
+  const { xs, ys } = collectCoordinates([...expandedRects, ...guideRects], portPoints);
   const points: Point[] = [];
   const adjacency: Edge[][] = [];
 
