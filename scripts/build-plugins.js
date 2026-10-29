@@ -219,6 +219,9 @@ async function buildPlugin(plugin) {
       if (source.startsWith('@primevue/themes')) return false
       if (source.endsWith('.css')) return false
       if (source === 'primevue/config' || source === 'primevue/tooltip') return false
+      // The OCL engine is loaded lazily by the plugin that needs it and not shared by the host
+      // (not in sharedModules, not in the import map) - bundled, so its dynamic import resolves
+      if (source.startsWith('@emfts/ocl.')) return false
 
       const sharedPackages = ['@primevue', 'primeicons', ...SHARED_MODULES]
       for (const pkg of sharedPackages) {
@@ -236,7 +239,10 @@ async function buildPlugin(plugin) {
     // Resolve @emfts/codec.jsonschema from root node_modules
     { find: '@emfts/codec.jsonschema', replacement: join(rootDir, 'node_modules/@emfts/codec.jsonschema/dist/index.js') },
     // Resolve @emfts/vue-registry from root node_modules
-    { find: '@emfts/vue-registry', replacement: join(rootDir, 'node_modules/@emfts/vue-registry/dist/index.js') }
+    { find: '@emfts/vue-registry', replacement: join(rootDir, 'node_modules/@emfts/vue-registry/dist/index.js') },
+    // Local diagram packages (no npm packages yet) - bundled into the plugin that uses them, as vite.config.ts resolves them
+    { find: 'ui-diagram-preview', replacement: join(rootDir, 'packages/ui-diagram-preview/src/index.ts') },
+    { find: 'tsrouter', replacement: join(rootDir, 'packages/tsrouter/src/index.ts') }
   ]
 
   try {
