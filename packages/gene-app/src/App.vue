@@ -857,6 +857,11 @@ async function loadModelsFromEditorConfig(workspaceEntry: any) {
     return undefined
   }
 
+  // Relative locations (RELATIVE_TO_CONFIG) lie next to the workspace file - as for the instances
+  const workspacePath = String(workspaceEntry.path ?? '')
+  const lastSlash = workspacePath.lastIndexOf('/')
+  const workspaceParentPath = lastSlash > 0 ? workspacePath.substring(0, lastSlash) : ''
+
   // Load each model source
   for (const source of modelSources) {
     const location = getFeatureValue(source, 'location')
@@ -870,10 +875,11 @@ async function loadModelsFromEditorConfig(workspaceEntry: any) {
     try {
       console.log('[App] Loading model from:', location)
 
-      // Find the file entry by path
-      const fileEntry = fileSystem.getFileByPath(sourceId, location)
+      // Find the file entry by path: next to the workspace file, else from the source's root
+      const besideWorkspace = !location.startsWith('/') && workspaceParentPath ? `${workspaceParentPath}/${location}` : location
+      const fileEntry = fileSystem.getFileByPath(sourceId, besideWorkspace) ?? fileSystem.getFileByPath(sourceId, location)
       if (!fileEntry) {
-        console.warn('[App] File not found:', location)
+        console.warn('[App] File not found:', besideWorkspace)
         continue
       }
 
