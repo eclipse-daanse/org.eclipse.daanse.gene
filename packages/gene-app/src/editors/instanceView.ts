@@ -1,5 +1,5 @@
 /**
- * The instance editor as a view on an `.xmi` file.
+ * The instance editor as a view on an `.xmi` or `.xml` file.
  *
  * The editor tab comes from the instance tree plugin; the reference to it is
  * mandatory, so the view exists only while the plugin does.
@@ -16,7 +16,7 @@ export class InstanceView implements EditorArt {
   readonly id = 'instance'
   readonly name = 'Instanz-Editor'
   readonly icon = 'pi pi-database'
-  readonly extensions = ['.xmi']
+  readonly extensions = ['.xmi', '.xml']
   readonly priority = 10
   readonly replacesPerspective = 'model-editor'
 
